@@ -200,7 +200,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] AI tools registry exposes fit-to-view and other canvas operations. `(auto: AI/FitToViewToolTests, AI/AiToolRegistryTests)`
 - [ ] AI grid service applies tool results to the design model. `(auto: AI/AiGridServiceTests)`
 - [ ] AI settings page configures the API key / endpoint. `(manual)`
-- [ ] Agent bridge (MCP): off by default; Settings → Agent bridge (MCP) → enable shows "Listening on http://127.0.0.1:39271/mcp"; the copied `claude mcp add …` command connects Claude Code, `list_connections` lists the open design's blocked routes, and an agent `move_component` is reverted by Ctrl+Z. Requests without the token get 401. `(auto: AgentBridge/*Tests; manual: real Claude Code connect on Windows, Linux, macOS)`
+- [ ] Agent bridge (MCP): off by default; Settings → Agent bridge (MCP) → **Connect Claude Code → Connect** turns it on ("Listening on http://127.0.0.1:39271/mcp") and registers `lunima` in Claude Code (`claude mcp get lunima`); without the CLI the page says so and shows the command. No token by default; with "Require access token" on, requests without it get 401 and the command carries the header. `list_connections` lists the blocked routes, an agent `move_component` is reverted by Ctrl+Z. `(auto: AgentBridge/*Tests; manual: real Claude Code connect on Windows, Linux, macOS)`
+- [ ] Claude Code at install/first start: Windows MSI Custom Setup shows "Connect Claude Code" (checked) and after install `claude mcp get lunima` succeeds (when Claude Code is installed); uninstall removes it. macOS .dmg / Linux portable: first start with the CLI installed shows the "Connect Claude Code to Lunima?" bar; "Not now" hides it until the next version. `(manual)`
+- [ ] Agent repair tools on *Logic Gate Counter 2-bit*: `list_cut_candidates`, `insert_crossing` (+ undo), `move_crossing_along_axis`, `shift_segment`, `suggest_fixes` → `apply_suggestion`, `save_design` round trip. `(auto: AgentBridgeRepairExampleTests, Category=Slow)`
 
 ## 16. Component registry (online)
 

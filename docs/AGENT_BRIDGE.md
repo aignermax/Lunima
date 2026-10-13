@@ -2,35 +2,47 @@
 
 Lunima can host a small [Model Context Protocol](https://modelcontextprotocol.io) server
 inside the running desktop app. An AI agent such as **Claude Code** connects to it and can
-then inspect and minimally edit the design that is currently open — list failed (red)
-connections with their reasons, move a component, re-route, delete a crossing, take a
-screenshot of a region — while you watch the canvas. Every edit goes through Lunima's undo
-history, so **Ctrl+Z** reverts whatever the agent did.
+then inspect and edit the design that is currently open — list failed (red) connections with
+their reasons, move a component, cut wires with crossings, slide crossings, shift waveguide
+segments, re-route, take a screenshot of a region, save — while you watch the canvas. Every
+edit goes through Lunima's undo history, so **Ctrl+Z** reverts whatever the agent did.
 
-## Enable it
+## Connect Claude Code (one click)
 
-1. **Settings → Agent bridge (MCP)** (the bridge is **off by default**).
-2. Turn on **Enable agent bridge**. The status line shows
-   `Listening on http://127.0.0.1:39271/mcp`.
-3. Optional: change the **Port** (1024–65535) and press **Apply** if 39271 is taken. A port
-   that is already in use is reported in the status line.
-
-The setting is remembered; the bridge starts with Lunima until you turn it off.
-
-## Connect Claude Code
-
-Press **Copy** next to *Connect Claude Code* and run the command in a terminal:
+**Settings → Agent bridge (MCP) → Connect Claude Code → Connect.** This turns the bridge on
+and runs, for your user account:
 
 ```bash
-claude mcp add --transport http lunima http://127.0.0.1:39271/mcp --header "Authorization: Bearer <token>"
+claude mcp remove --scope user lunima        # "not found" is ignored; makes re-connecting idempotent
+claude mcp add --scope user --transport http lunima http://127.0.0.1:39271/mcp
 ```
 
-`<token>` is your installation's access token (shown, masked, on the settings page). Then
-start `claude` in any folder and ask, for example: *"Use the lunima tools: which connections
-are blocked and why? Fix the one between the counter gates by moving a component."*
+Start a new `claude` session (or run `/mcp`) and ask, for example: *"Use the lunima tools:
+which connections are blocked and why? Repair them."* If the `claude` CLI is not found, the
+page says so and shows the same command to paste into a terminal.
 
-Any MCP client that speaks **Streamable HTTP** can connect the same way; it must send the
-`Authorization: Bearer <token>` header on every request.
+Other ways in:
+
+- **Windows installer (MSI):** the *Custom Setup* page has an optional **Connect Claude Code
+  (register the Lunima MCP server)** feature, checked by default. After the files are copied it
+  runs `CAP.Desktop.exe --register-claude-code` as the installing user: the bridge is enabled in
+  that user's Lunima preferences and registered with Claude Code if the CLI is installed (it never
+  fails setup if it is not). Uninstall runs `--unregister-claude-code` (best effort); upgrades keep
+  the registration. Silent install without it: `msiexec /i Lunima-Setup.msi ADDLOCAL=MainFeature`.
+- **macOS (.dmg) and Linux (portable)** have no install step. On start, if the Claude Code CLI
+  is installed but `lunima` is not registered yet, Lunima shows a non-modal bar *"Connect Claude
+  Code to Lunima?"* with **Connect Claude Code** / **Not now** ("Not now" hides it until the next
+  version). It never registers without that click.
+- **Manually:** copy the command under *Or run this in a terminal*.
+
+**The bridge must be on while Claude uses it.** A registered but disabled bridge has no
+listening socket, so Claude Code gets an immediate "connection refused" (it never hangs). The
+connect action always turns the bridge on; the setting is remembered across restarts.
+
+Port: change it (1024–65535) and press **Apply** if 39271 is taken, then **Connect** again so
+the registration points at the new port.
+
+Any MCP client that speaks **Streamable HTTP** can connect to `http://127.0.0.1:<port>/mcp`.
 
 ## Tools
 
@@ -49,6 +61,14 @@ The bridge's own tools:
 | `get_routing_timings` | Phase timings of the last routing pass (`LastRoutingPassTimings`) |
 | `screenshot` | PNG of the whole design, or of a µm region (`x`, `y`, `width`, `height`), returned as MCP image content; `width_px` up to 4096 |
 | `load_example` | Open a shipped example (e.g. `Logic Gate Counter 2-bit.lun`) as an untitled copy; without a name it lists the examples. Lunima still asks you about unsaved changes |
+| `save_design` | Save the open design: to its current file, an absolute `path`, or a bare file name into the examples folder (how repaired examples are persisted). Replacing an existing file outside the examples folder needs `overwrite=true` |
+| `get_connection_geometry` | One connection's segments (straights with `straight_index`/`shiftable`, arcs with centre/radius/sweep), pins (position, facing), blocked state, and the components and wires within `radius_um` |
+| `list_cut_candidates` | Where a crossing can be inserted: `wire_intersection` (two wires cross; a blocked wire's placeholder line counts) and `pin_guide` (the Cut tool's pin guide lines), with the wire to cut, the wire that would pass through, and whether a crossing fits |
+| `insert_crossing` | Cut `connection_id` at `x`,`y` with the PDK crossing (the Cut tool's own command; crossing pieces may be cut too); with `through_connection_id` that wire is re-docked through the crossing's free ports. One undo step |
+| `move_crossing_along_axis` | Slide a crossing `delta_um` along its `horizontal` or `vertical` wire (the wire along the axis keeps its route, the other re-routes). Refusals carry the reason. One undo step |
+| `shift_segment` | Shift straight `straight_index` of a routed wire perpendicular to itself by `offset_um` (the in-canvas segment-shift handle). Freezes that wire's route. One undo step |
+| `suggest_fixes` | For one blocked wire: try repair candidates on the live design, undo each, return them ranked (see below) |
+| `apply_suggestion` | Apply suggestion `s1`, `s2`, … of the last `suggest_fixes`. Refused if the design changed since, or if its trial ended with more blocked wires (unless `allow_worse=true`). One undo step (two for `reorder_neighbour`) |
 
 All tools of the in-app **AI assistant** (`get_grid_state`, `place_component`,
 `create_connection`, `run_simulation`, `get_light_values`, `inspect_group`, `copy_component`,
@@ -57,23 +77,74 @@ All tools of the in-app **AI assistant** (`get_grid_state`, `place_component`,
 registry, so a new assistant tool appears here automatically. Note that these assistant
 tools are not all undoable (e.g. `clear_grid`).
 
-Coordinates are micrometres; positions are a component's top-left corner.
+Coordinates are micrometres; positions are a component's top-left corner; angles are degrees
+with 0 = +x and 90 = +y (down).
+
+## Repairing blocked wires
+
+Most red wires in the dense logic examples end at a gate input whose neighbour pin is only
+8 µm away (the two inputs of a 2×2 MMI), often coming from 4 µm-pitch splitter outputs:
+whichever wire was routed first bent around the other pin and sealed it in
+(`failure_reason: contention`). A person fixes that by letting two wires swap order through a
+crossing, by sliding crossings, by shifting a waveguide segment, or by nudging a component.
+The agent gets the same moves:
+
+1. `list_connections` with `blocked_only=true` — the red wires and why.
+2. `get_connection_geometry` on one — its pins, its placeholder line, the wires and components
+   around it; `screenshot` of that region to see it.
+3. `suggest_fixes` with its id. Lunima generates candidates, tries each on the live design —
+   execute → full re-route → measure → undo → put every wire's original route back → re-route —
+   and ranks them by **blocked count**, then **crossings added**, then **geometry change**
+   (each with `improves`, plus a one-line `summary`):
+   - `cut_through`: a crossing where a wire in the way crosses the blocked wire's straight
+     placeholder line (or one of its pin guide lines), with the blocked wire routed straight
+     through it — the "swap order" fix;
+   - `reorder_neighbour`: take out a pin-neighbour wire, let the blocked wire route, then
+     reconnect the neighbour so it routes around (two undo steps) — the manual pin-pair swap;
+   - `move_crossing`: crossings within 80 µm of the blocked wire's pins slid ±10 / ±20 µm along
+     each axis (only moves `MoveCrossingAlongAxisCommand.Validate` accepts);
+   - `shift_segment`: the two shiftable straights of pin-neighbour wires (pins within 12 µm)
+     nearest to the blocked pins, ±10 / ±20 µm;
+   - `nudge_component`: the component (group) at either end moved ±10 / ±20 µm across its pin
+     direction, where it does not overlap anything.
+
+   Each trial costs two to three routing passes (≈ 40–60 s on *Logic Gate Counter 2-bit*), so
+   the call is bounded by `time_budget_s` (default 240, max 1800) and lists what it did not get
+   to (`not_tried`). Every suggestion carries `equivalent` — the direct tool call — so the agent
+   can replay or vary it (e.g. a different offset).
+4. `apply_suggestion` with `s1` (or your own edit with the direct tools); `undo` reverts it.
+5. Repeat for the next blocked wire, then `save_design` with the example's file name (e.g.
+   `"Logic Gate Counter 2-bit.lun"`) to persist the repaired example.
+
+Notes:
+
+- The sandbox runs on the open design (only the real joint routing pass knows whether a wire
+  routes) and clears the redo history. After every trial it checks that the blocked and crossing
+  counts are back where they started; if not, it stops and reports `sandbox_problem`.
+- There is no "route this wire through waypoints" tool: the router has no waypoint API (A* goes
+  pin to pin; the hierarchical pathfinder's portals are internal). Crossings, segment shifts and
+  moves are the supported ways to steer a route.
 
 ## Security model
 
-- **Loopback only.** The server binds a socket to `127.0.0.1`, never to a network
-  interface, so other machines cannot reach it.
-- **Bearer token.** Every request must carry `Authorization: Bearer <token>`. The token is
-  256 random bits generated per installation and stored in the user preferences
-  (`user-preferences.json` in Lunima's app-data folder). Without it the server answers
-  `401`. **Regenerate** on the settings page invalidates every connected agent.
-- **DNS-rebinding guard.** Requests whose `Host` is not a loopback name, or that carry a
-  browser `Origin` other than a loopback origin, are rejected with `403` — a web page in
-  your browser cannot drive Lunima.
-- **Opt-in.** Nothing listens until you enable the bridge.
+- **Loopback only.** The server binds a socket to `127.0.0.1`, never to a network interface,
+  so other machines cannot reach it.
+- **DNS-rebinding / browser guard.** Requests whose `Host` is not a loopback name, or that
+  carry a browser `Origin` other than a loopback origin, are rejected with `403` — a web page
+  in your browser cannot drive Lunima, token or not.
+- **No token by default.** Any program running on this computer *as you* can call the bridge
+  while it is on. A bearer token would not change much against such a program: it is stored in
+  your user preferences (`user-preferences.json` in Lunima's app-data folder), which that same
+  program can read. **Require access token** (Settings) turns it on — 256 random bits per
+  installation, sent as `Authorization: Bearer <token>`; requests without it get `401`; the
+  connect command then includes the header; **Regenerate** invalidates every connected agent.
+  Useful on machines shared with other local users, or as defence in depth.
+- **Opt-in.** Nothing listens until the bridge is enabled (by you, the connect button, or the
+  installer feature you left checked).
 - **Undoable edits.** Design edits run as the same undoable commands the UI uses, on the UI
-  thread. Anyone holding the token can still edit (and, via `load_example`/`clear_grid`,
-  replace) the open design — treat the token like a password.
+  thread. A connected agent can still replace the open design (`load_example`, `clear_grid`)
+  and write `.lun` files with `save_design` (it never replaces a file outside the examples
+  folder without `overwrite=true`).
 
 ## Limits
 
@@ -83,17 +154,24 @@ Coordinates are micrometres; positions are a component's top-left corner.
   report.
 - Tool calls run on the UI thread one after another; long routing passes are awaited off
   the UI thread (the UI stays responsive) and time out after 5 minutes with
-  `routing_complete: false`.
+  `routing_complete: false`. `suggest_fixes` can therefore occupy the bridge for minutes.
 
 ## Implementation notes
 
 `CAP.Avalonia/Services/AgentBridge/` (vertical slice, DI via `AddAgentBridgeFeature`):
 
 - `Transport/` — loopback `TcpListener` HTTP/1.1 server (`McpHttpServer`), request parser,
-  `/mcp` endpoint with the auth / Host / Origin gates.
+  `/mcp` endpoint with the Host / Origin gates and the optional token check.
 - `Protocol/` — JSON-RPC 2.0 + MCP `initialize`, `ping`, `tools/list`, `tools/call`.
 - `Tools/` — one class per tool, the `AgentToolCatalog` (bridge tools + assistant-registry
-  adapters, marshalled to the UI thread), and the `AgentDesignSession`.
+  adapters, marshalled to the UI thread), and the `AgentDesignSession`. `Tools/Repair/` holds the
+  repair tools: `Cut/` (cut spots via the Cut tool's `ManualCrossingCandidateFinder`,
+  `CutAtPoint` + `RouteThroughCrossingCommand`, crossing slides), `Geometry/` (geometry,
+  segment shift), `Suggest/` (candidate generator, sandbox, route snapshot, ranking).
+- `Registration/` — `ClaudeCliLocator` (PATH first, then the native / npm install locations;
+  finds the Windows npm `claude.cmd`), `ClaudeCodeRegistrar` (runs `claude mcp …` through
+  `ProcessLaunchFactory`, 30 s timeout per call), `ClaudeCodeConnector` (enable + register) and
+  the installer switches `--register-claude-code` / `--unregister-claude-code`.
 - `Hosting/` — `AgentBridgeHost` (start/stop per settings) and the UI dispatcher.
 
 The server is hand-written instead of using ASP.NET Core / Kestrel: the Windows MSI is a

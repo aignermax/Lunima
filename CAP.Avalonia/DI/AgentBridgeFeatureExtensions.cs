@@ -3,9 +3,13 @@ using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.AgentBridge.Hosting;
 using CAP.Avalonia.Services.AgentBridge.Protocol;
+using CAP.Avalonia.Services.AgentBridge.Registration;
 using CAP.Avalonia.Services.AgentBridge.Tools;
 using CAP.Avalonia.Services.AgentBridge.Tools.Edit;
 using CAP.Avalonia.Services.AgentBridge.Tools.Inspect;
+using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Cut;
+using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Geometry;
+using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Suggest;
 using CAP.Avalonia.Services.AgentBridge.Tools.Session;
 using CAP.Avalonia.Services.AgentBridge.Transport;
 using CAP.Avalonia.Services.AiTools;
@@ -36,7 +40,9 @@ internal static class AgentBridgeFeatureExtensions
             sp.GetRequiredService<DesignCanvasViewModel>(),
             sp.GetRequiredService<CommandManager>(),
             () => sp.GetService<MainViewModel>()?.FileOperations,
-            sp.GetRequiredService<ExampleDesignsService>()));
+            sp.GetRequiredService<ExampleDesignsService>(),
+            () => sp.GetService<MainViewModel>()?.LeftPanel.AllTemplates.ToList()
+                  ?? (IReadOnlyList<CAP.Avalonia.ViewModels.Library.ComponentTemplate>)Array.Empty<CAP.Avalonia.ViewModels.Library.ComponentTemplate>()));
         services.AddSingleton(sp => new CanvasSnapshotRenderer(() => sp.GetService<MainViewModel>()));
 
         services.AddTransient<IAgentBridgeTool, GetDesignSummaryTool>();
@@ -50,6 +56,14 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, UndoTool>();
         services.AddTransient<IAgentBridgeTool, LoadExampleTool>();
         services.AddTransient<IAgentBridgeTool, ScreenshotTool>();
+        services.AddTransient<IAgentBridgeTool, SaveDesignTool>();
+        services.AddTransient<IAgentBridgeTool, GetConnectionGeometryTool>();
+        services.AddTransient<IAgentBridgeTool, ShiftSegmentTool>();
+        services.AddTransient<IAgentBridgeTool, ListCutCandidatesTool>();
+        services.AddTransient<IAgentBridgeTool, InsertCrossingTool>();
+        services.AddTransient<IAgentBridgeTool, MoveCrossingAlongAxisTool>();
+        services.AddTransient<IAgentBridgeTool, SuggestFixesTool>();
+        services.AddTransient<IAgentBridgeTool, ApplySuggestionTool>();
         services.AddSingleton<AgentToolCatalog>();
 
         services.AddSingleton(sp => new McpJsonRpcDispatcher(
@@ -58,11 +72,15 @@ internal static class AgentBridgeFeatureExtensions
         {
             var preferences = sp.GetRequiredService<UserPreferencesService>();
             return new McpHttpEndpoint(
-                sp.GetRequiredService<McpJsonRpcDispatcher>(), preferences.GetOrCreateAgentBridgeToken);
+                sp.GetRequiredService<McpJsonRpcDispatcher>(), preferences.GetRequiredAgentBridgeToken);
         });
         services.AddSingleton<McpHttpServer>();
         services.AddSingleton<AgentBridgeHost>();
+        services.AddSingleton(sp => new ClaudeCodeRegistrar(sp.GetRequiredService<CAP_Core.Export.ProcessLaunchFactory>()));
+        services.AddSingleton<ClaudeCodeConnector>();
         services.AddTransient<AgentBridgeSettingsViewModel>();
+        services.AddSingleton(sp => new ClaudeCodeConnectPromptViewModel(
+            sp.GetRequiredService<UserPreferencesService>(), sp.GetRequiredService<ClaudeCodeConnector>(), AppVersion()));
 
         return services;
     }

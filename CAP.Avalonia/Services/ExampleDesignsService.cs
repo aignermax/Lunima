@@ -107,7 +107,7 @@ public class ExampleDesignsService
     /// Walks up from the base directory looking for an <c>examples/</c> folder
     /// (covers both dev tree and a publish layout with examples beside the binary).
     /// </summary>
-    private string? FindExamplesDirectory()
+    public string? FindExamplesDirectory()
     {
         var current = new DirectoryInfo(_baseDirectory);
         while (current != null)

@@ -13,7 +13,7 @@ using Xunit;
 namespace UnitTests.AgentBridge;
 
 /// <summary>
-/// Persistence of the bridge settings (opt-in, port, per-install token), the lifecycle host,
+/// Persistence of the bridge settings (opt-in, port, optional per-install token), the lifecycle host,
 /// and the settings view-model's status line and connect command.
 /// </summary>
 public class AgentBridgeSettingsTests : IDisposable
@@ -101,12 +101,41 @@ public class AgentBridgeSettingsTests : IDisposable
     }
 
     [Fact]
-    public void ConnectCommand_UsesLoopbackUrlAndBearerHeader()
+    public void ConnectCommand_WithToken_UsesUserScopeLoopbackUrlAndBearerHeader()
     {
         var command = AgentBridgeHost.ClaudeCodeConnectCommand(39271, "abc");
 
         command.ShouldBe(
-            "claude mcp add --transport http lunima http://127.0.0.1:39271/mcp --header \"Authorization: Bearer abc\"");
+            "claude mcp add --scope user --transport http lunima http://127.0.0.1:39271/mcp --header \"Authorization: Bearer abc\"");
+    }
+
+    [Fact]
+    public void ConnectCommand_WithoutToken_HasNoHeader()
+    {
+        AgentBridgeHost.ClaudeCodeConnectCommand(39271, null)
+            .ShouldBe("claude mcp add --scope user --transport http lunima http://127.0.0.1:39271/mcp");
+    }
+
+    [Fact]
+    public void RequireToken_IsOffByDefault_AndGatesTheRequiredToken()
+    {
+        _preferences.GetAgentBridgeRequireToken().ShouldBeFalse("loopback + Host/Origin guard is the default protection");
+        _preferences.GetRequiredAgentBridgeToken().ShouldBeNull();
+
+        _preferences.SetAgentBridgeRequireToken(true);
+        _preferences.GetRequiredAgentBridgeToken().ShouldBe(_preferences.GetOrCreateAgentBridgeToken());
+    }
+
+    [Fact]
+    public void ViewModel_RequireToken_AddsTheHeaderToTheConnectCommand()
+    {
+        using var vm = new AgentBridgeSettingsViewModel(_preferences, _host);
+        vm.ConnectCommandText.ShouldNotContain(vm.Token);
+
+        vm.RequireToken = true;
+
+        vm.ConnectCommandText.ShouldContain("Authorization: Bearer " + vm.Token);
+        _preferences.GetAgentBridgeRequireToken().ShouldBeTrue("the toggle persists");
     }
 
     [Fact]
@@ -121,7 +150,7 @@ public class AgentBridgeSettingsTests : IDisposable
         await WaitUntil(() => vm.IsListening);
 
         vm.StatusText.ShouldContain(AgentBridgeHost.EndpointUrl(_preferences.GetAgentBridgePort()));
-        vm.ConnectCommandText.ShouldContain(vm.Token);
+        vm.ConnectCommandText.ShouldContain(AgentBridgeHost.EndpointUrl(_preferences.GetAgentBridgePort()));
         _preferences.GetAgentBridgeEnabled().ShouldBeTrue("the toggle persists");
     }
 

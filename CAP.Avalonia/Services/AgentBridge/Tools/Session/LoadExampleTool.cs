@@ -55,6 +55,8 @@ public sealed class LoadExampleTool : IAgentBridgeTool
             return AgentToolResult.Error("The main window is not ready yet.");
         if (!await fileOps.OpenDesignAsCopyAsync(match.FilePath))
             return AgentToolResult.Error("The example was not opened (the user cancelled the unsaved-changes prompt, or loading failed).");
+        _session.LoadedExamplePath = match.FilePath;
+        _session.Suggestions = null;
 
         await fileOps.PostLoadRouting;
         var routed = await RoutingAwaiter.WaitForIdleAsync(_session.Canvas);
