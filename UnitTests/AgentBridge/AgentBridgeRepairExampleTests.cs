@@ -131,8 +131,10 @@ public class AgentBridgeRepairExampleTests
         var blocked = bench.FirstBlockedId();
         var before = bench.BlockedCount();
 
+        // One trial keeps the test well inside the CI runner's 5-minute inactivity limit: the
+        // neighbour-reorder trial alone takes over a minute on a shared runner.
         var body = Body(await new SuggestFixesTool(bench.Session).ExecuteAsync(
-            Args($$"""{"connection_id":"{{blocked}}","time_budget_s":900,"max_trials":3}""")));
+            Args($$"""{"connection_id":"{{blocked}}","time_budget_s":120,"max_trials":1}""")));
 
         body.GetProperty("sandbox_problem").ValueKind.ShouldBe(JsonValueKind.Null, body.ToString());
         bench.BlockedCount().ShouldBe(before, "the sandbox leaves the design as it found it");
