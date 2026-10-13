@@ -93,6 +93,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Tools → Clean Up Crossings removes every router-placed crossing, re-routes the wires and is undoable. `(auto: CleanUpCrossingsCommandTests)`
 - [ ] A wire that cannot be routed with its pins stays red and is not retried on every recalculation. `(auto: UnroutableWireTests)`
 - [ ] Connection style panel changes curve type, width, radius, and freeze state. `(auto: ConnectionRoutingViewModelShapeTests, ConnectionRoutingStyleEffectTests)`
+- [ ] Selecting a waveguide shows its insertion-loss breakdown (propagation, bends with radii, junctions, total) in the Properties panel; a tight bend shows more bend loss than a gentle one; the (?) shows light leaking out of a tight bend. `(auto: ConnectionLossViewModelTests, BendLossBreakdownScreenshotTests)`
 - [ ] Frozen routes persist through save/load. `(auto: Serialization/LockStatePersistenceTests)`
 - [ ] Metal routing (electrical traces) exports with process-defined layers and widths. `(auto: MetalRouting/ElectricalConnectionExportTests)`
 

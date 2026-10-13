@@ -39,7 +39,7 @@ The bridge's own tools:
 | Tool | What it does |
 |---|---|
 | `get_design_summary` | File name, unsaved flag, component / group / connection / blocked / crossing-piece counts, routing state, undo depth |
-| `list_connections` | Every connection: `id`, endpoints as `component.pin`, the top-level start/end component, length (µm), `blocked`, `failure_reason`, `is_crossing_piece`, `locked`. Filters: `blocked_only`, `component` |
+| `list_connections` | Every connection: `id`, endpoints as `component.pin`, the top-level start/end component, length (µm), `blocked`, `failure_reason`, `is_crossing_piece`, `locked`, and `loss` (insertion loss in dB: `total_db`, `propagation_db`, `bends_db`, `junctions_db`, `bend_count`, `junction_count`, `min_bend_radius_um`, `waveguide_family` — see BEND-LOSS-MODEL.md). Filters: `blocked_only`, `component` |
 | `list_components` | Top-level components and groups: `id`, name, type, position, rotation, group, child count, lock state, bounds. Filter: `name_filter` |
 | `move_component` | Move by `dx`/`dy` or to absolute `x`/`y` (µm). Refuses overlapping moves unless `force=true`. Undoable; waits for re-routing and returns the blocked connections |
 | `reroute_connections` | Run the router, wait for it, report blocked state (all, or the given `ids`) |

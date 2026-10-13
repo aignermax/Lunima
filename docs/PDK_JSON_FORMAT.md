@@ -138,6 +138,7 @@ New Design. Declare the block so your PDK participates in that grouping:
 | `layers` | No | Names of the `process.layers` entries this cross-section is drawn on |
 | `description` | No | Human-readable description |
 | `drcSource` | No | Provenance of the DRC values (`minWidthUm`, `minRadiusUm`) — the foundry document/table/script they were taken from |
+| `bendLoss` | No | Radius-dependent bend-loss coefficients of an optical cross-section (`family`, `radiationLossDbPer90`, `radiationReferenceRadiusUm`, `radiationDecayLengthUm`, `calibratedMinRadiusUm`, `junctionLossDb`, `junctionReferenceRadiusUm`, `source`). All optional; when absent the family is inferred from the process' core material. See [BEND-LOSS-MODEL.md](BEND-LOSS-MODEL.md) |
 
 The bundled `cornerstone-sin-pdk.json` shows the DRC fields filled from the public
 CORNERSTONE SiN 300nm documents (MPW-13 Design Guidelines §5.4 Table 4, pre-DRC script),
