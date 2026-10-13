@@ -2022,5 +2022,6 @@
   "Dies.Export.NoDies": "Dieses Design ist ein einzelner Chip – bitte den normalen Nazca-Export verwenden.",
   "Examples.TwoDiesSoiSin.Description": "Zwei Prozesse, eine Verbindung: ein SOI-Die speist über gegenüberliegende Kantenkoppler einen SiN-Die – Spalt und Modenfeld-Fehlanpassung bestimmen den Verlust.",
   "ConnectChipletsTour.NewDieTitle": "Einen eigenen Die anlegen",
-  "ConnectChipletsTour.NewDieBody": "Im Chiplets-Panel „Neuer Die“ drücken, Prozess (z. B. CornerStone SiN) und Größe wählen – der Die erscheint neben den anderen mit eigenem Rahmen und eigenen PDKs. Einen Kantenkoppler nahe der Kante ablegen: er rastet mit der Facette nach außen ein."
+  "ConnectChipletsTour.NewDieBody": "Im Chiplets-Panel „Neuer Die“ drücken, Prozess (z. B. CornerStone SiN) und Größe wählen – der Die erscheint neben den anderen mit eigenem Rahmen und eigenen PDKs. Einen Kantenkoppler nahe der Kante ablegen: er rastet mit der Facette nach außen ein.",
+  "Dies.Context.NewDie": "Neuer Die neben den anderen"
 }

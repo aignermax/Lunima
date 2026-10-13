@@ -142,13 +142,6 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     // ── Delegated read-only properties ────────────────────────────────────
     public bool IsInGroupEditMode => Groups.IsInGroupEditMode;
-
-    /// <summary>
-    /// Records the single-die chip size (the Chip Size setting) and applies it to placement
-    /// and routing while the single-die root scope is active.
-    /// </summary>
-    public void SetRootChipSize(double widthMicrometers, double heightMicrometers)
-        => Dies.SetRootChipSize(widthMicrometers, heightMicrometers);
     public ObservableCollection<ComponentGroup> BreadcrumbPath => Groups.BreadcrumbPath;
     public double PinHighlightDistance
     {
@@ -227,33 +220,6 @@ public partial class DesignCanvasViewModel : ObservableObject
         Routing.InitializeAStarRouting();
     }
 
-    /// <summary>
-    /// Routing grid for a freshly loaded group sub-canvas: a die's outline when the group
-    /// is (inside) a die, the classic default grid for ordinary groups.
-    /// </summary>
-    private void InitializeRoutingForEditScope()
-    {
-        if (Dies?.ActiveDie != null)
-            Dies.ApplyScopeBounds();
-        else
-            Routing.InitializeAStarRouting();
-    }
-
-    /// <summary>
-    /// Re-bounds placement and routing after entering or leaving a die; ordinary group
-    /// editing in a single-die design keeps its previous bounds untouched.
-    /// </summary>
-    private void ApplyDieScopeAfterEditChange()
-    {
-        if (Dies.ActiveDie == null && !Dies.IsAssemblyRoot)
-            return;
-        if (Dies.IsAssemblyRoot)
-            RefreshDieInterfaces();
-        Dies.ApplyScopeBounds();
-        NotifyDiesChanged();
-        _ = RecalculateRoutesAsync();
-    }
-
     // ── Property change handlers ──────────────────────────────────────────
 
     partial void OnMinBendRadiusMicrometersChanged(double value)
@@ -302,11 +268,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     public async void EndDragComponent(ComponentViewModel component)
     {
         Placement.EndDrag();
-        if (component.Component is ComponentGroup { IsDie: true } && Dies.IsAssemblyRoot)
-        {
-            Dies.ApplyScopeBounds();
-            NotifyDiesChanged();
-        }
+        OnDieDragEnded(component);
         await RecalculateRoutesAsync();
         InvalidateSimulation();
     }
@@ -321,8 +283,7 @@ public partial class DesignCanvasViewModel : ObservableObject
         Placement.MoveComponent(component, deltaX, deltaY,
             Groups.IsInGroupEditMode, Groups.CurrentEditGroup,
             Groups.UpdateExternalPinPositions, Routing.RecalculateRoutesAsync);
-        if (component.Component is ComponentGroup { IsDie: true })
-            RefreshFacetLinkPaths();
+        OnDieMoved(component);
     }
 
     /// <summary>

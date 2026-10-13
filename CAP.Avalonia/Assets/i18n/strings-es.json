@@ -2022,5 +2022,6 @@
   "Dies.Export.NoDies": "Este diseño es un solo chip: usa la exportación Nazca normal.",
   "Examples.TwoDiesSoiSin.Description": "Dos procesos, un enlace: un die SOI alimenta un die SiN mediante acopladores de borde enfrentados; la separación y el desajuste de modo fijan la pérdida.",
   "ConnectChipletsTour.NewDieTitle": "Añade tu propio die",
-  "ConnectChipletsTour.NewDieBody": "En el panel Chiplets pulsa «Nuevo die», elige un proceso (p. ej. CornerStone SiN) y un tamaño: el die aparece junto a los demás con su propio marco y PDK. Suelta un acoplador de borde cerca del borde: se ajusta con la faceta hacia fuera."
+  "ConnectChipletsTour.NewDieBody": "En el panel Chiplets pulsa «Nuevo die», elige un proceso (p. ej. CornerStone SiN) y un tamaño: el die aparece junto a los demás con su propio marco y PDK. Suelta un acoplador de borde cerca del borde: se ajusta con la faceta hacia fuera.",
+  "Dies.Context.NewDie": "Nuevo die junto a los demás"
 }

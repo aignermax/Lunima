@@ -12,6 +12,56 @@ public partial class DesignCanvasViewModel
     /// </summary>
     public event Action? DiesChanged;
 
+    /// <summary>
+    /// Records the single-die chip size (the Chip Size setting) and applies it to placement
+    /// and routing while the single-die root scope is active.
+    /// </summary>
+    public void SetRootChipSize(double widthMicrometers, double heightMicrometers)
+        => Dies.SetRootChipSize(widthMicrometers, heightMicrometers);
+
+    /// <summary>
+    /// Routing grid for a freshly loaded group sub-canvas: a die's outline when the group
+    /// is (inside) a die, the classic default grid for ordinary groups.
+    /// </summary>
+    private void InitializeRoutingForEditScope()
+    {
+        if (Dies?.ActiveDie != null)
+            Dies.ApplyScopeBounds();
+        else
+            Routing.InitializeAStarRouting();
+    }
+
+    /// <summary>
+    /// Re-bounds placement and routing after entering or leaving a die; ordinary group
+    /// editing in a single-die design keeps its previous bounds untouched.
+    /// </summary>
+    private void ApplyDieScopeAfterEditChange()
+    {
+        if (Dies.ActiveDie == null && !Dies.IsAssemblyRoot)
+            return;
+        if (Dies.IsAssemblyRoot)
+            RefreshDieInterfaces();
+        Dies.ApplyScopeBounds();
+        NotifyDiesChanged();
+        _ = RecalculateRoutesAsync();
+    }
+
+    /// <summary>After a die was dragged on the assembly: re-bound the carrier and notify listeners.</summary>
+    private void OnDieDragEnded(ComponentViewModel component)
+    {
+        if (component.Component is not ComponentGroup { IsDie: true } || !Dies.IsAssemblyRoot)
+            return;
+        Dies.ApplyScopeBounds();
+        NotifyDiesChanged();
+    }
+
+    /// <summary>Keeps the die-to-die link markers on their facets while a die moves.</summary>
+    private void OnDieMoved(ComponentViewModel component)
+    {
+        if (component.Component is ComponentGroup { IsDie: true })
+            RefreshFacetLinkPaths();
+    }
+
     /// <summary>Notifies <see cref="DiesChanged"/> listeners and repaints the canvas.</summary>
     public void NotifyDiesChanged()
     {

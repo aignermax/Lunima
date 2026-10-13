@@ -58,6 +58,17 @@ public partial class MainViewModel
         };
     }
 
+    /// <summary>
+    /// Canvas context menu "New die": adds a die with the flyout's defaults (another process
+    /// than the chip's, its smallest preset) — process and size stay editable in its properties.
+    /// </summary>
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void NewDieQuick()
+    {
+        NewDie.Prepare();
+        NewDie.CreateCommand.Execute(null);
+    }
+
     /// <summary>Opens <paramref name="die"/> for editing (undoable like a double-click).</summary>
     public void OpenDie(ComponentGroup die)
     {

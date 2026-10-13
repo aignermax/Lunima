@@ -2022,5 +2022,6 @@
   "Dies.Export.NoDies": "この設計は単一チップです。通常の Nazca エクスポートを使用してください。",
   "Examples.TwoDiesSoiSin.Description": "2 つのプロセス、1 つのリンク：SOI ダイが向かい合うエッジカプラを介して SiN ダイへ光を送ります。ギャップとモードサイズ不整合が損失を決めます。",
   "ConnectChipletsTour.NewDieTitle": "自分のダイを追加する",
-  "ConnectChipletsTour.NewDieBody": "Chiplets パネルで「新しいダイ」を押し、プロセス（例：CornerStone SiN）とサイズを選びます。ダイが独自の枠と PDK を持って隣に現れます。端の近くにエッジカプラを置くと、ファセットを外向きにしてスナップします。"
+  "ConnectChipletsTour.NewDieBody": "Chiplets パネルで「新しいダイ」を押し、プロセス（例：CornerStone SiN）とサイズを選びます。ダイが独自の枠と PDK を持って隣に現れます。端の近くにエッジカプラを置くと、ファセットを外向きにしてスナップします。",
+  "Dies.Context.NewDie": "隣に新しいダイ"
 }

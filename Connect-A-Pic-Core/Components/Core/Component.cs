@@ -129,14 +129,8 @@ public partial class Component : ICloneable
     [JsonIgnore]
     public string? TemplateName { get; set; }
 
-    /// <summary>
-    /// Mode-field diameter at the facet of an edge coupler (1/e² intensity diameter, µm),
-    /// from the PDK's optional <c>modeFieldDiameterMicrometers</c> field. Null for parts
-    /// that do not declare one; die-to-die coupling then assumes the default mode size.
-    /// Runtime-only: re-applied from the template on placement and load.
-    /// </summary>
-    [JsonIgnore]
-    public double? ModeFieldDiameterMicrometers { get; set; }
+    /// <summary>Edge couplers: facet mode-field diameter (µm) from the PDK, re-applied from the template; null = default mode.</summary>
+    [JsonIgnore] public double? ModeFieldDiameterMicrometers { get; set; }
 
     /// <summary>
     /// gdsfactory factory name for gdsfactory-backend PDK components (e.g.

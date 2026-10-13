@@ -1048,6 +1048,17 @@
                     <MenuItem Header="{loc:Localize Context.SaveAsPrefab}" Command="{Binding CanvasInteraction.SaveGroupAsCommand}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Bookmark}"/></MenuItem.Icon>
                     </MenuItem>
+                    <Separator IsVisible="{Binding WorkspaceSwitch.IsSystem}"/>
+                    <MenuItem Header="{loc:Localize Dies.Context.NewDie}" Command="{Binding NewDieQuickCommand}"
+                              IsVisible="{Binding WorkspaceSwitch.IsSystem}"
+                              ToolTip.Tip="{loc:Localize Dies.NewDieTip}">
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Plus}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{loc:Localize Dies.Properties.Open}" Command="{Binding DieProperties.OpenDieCommand}"
+                              IsVisible="{Binding DieProperties.IsVisible}"
+                              ToolTip.Tip="{loc:Localize Dies.Properties.OpenTip}">
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.FolderOpen}"/></MenuItem.Icon>
+                    </MenuItem>
                     <Separator/>
                     <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteSelectedCommand}" InputGesture="Delete">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Trash2}"/></MenuItem.Icon>
