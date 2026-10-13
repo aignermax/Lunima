@@ -148,7 +148,7 @@ public partial class MultiProcessManufacturingJourneyTests
             "Step 4: the inter-chiplet link survives the round-trip");
         foreach (var (pinName, (x, y)) in _journey.PinPositionsBeforeSave)
         {
-            var loadedChiplet = _journey.LoadedChipletA.ExternalPins.Any(p => p.Name == pinName)
+            var loadedChiplet = _journey.LoadedChipletA.ExternalPins.Any(p => UnitTests.Helpers.GroupPinLookup.ExposedId(p) == pinName)
                 ? _journey.LoadedChipletA
                 : _journey.LoadedChipletB;
             var (loadedX, loadedY) = MultiProcessChipletJourneyDesign.ExposedPin(loadedChiplet, pinName)

@@ -103,6 +103,13 @@ public partial class HomeViewModel : ObservableObject
     public Func<Task>? WatchComputeTourRequested { get; set; }
 
     /// <summary>
+    /// Callback to start the "Your first gate" guided tour: opens the shipped
+    /// gate-kit example as an untitled copy and activates the tour only when
+    /// that succeeds.
+    /// </summary>
+    public Func<Task>? FirstGateTourRequested { get; set; }
+
+    /// <summary>
     /// Callback to start the "Store a number in light" guided tour (issue #1422):
     /// opens the shipped RAM 2x4 example as an untitled copy and activates the
     /// tour only when that succeeds.
@@ -149,16 +156,19 @@ public partial class HomeViewModel : ObservableObject
         TourEntries.Add(new HomeTourEntry(1, "Icon.GraduationCap",
             "Home.Learn.FirstSteps", "Home.Learn.FirstStepsDescription",
             "Home.LearnTutorialTip", LearnTutorialCommand));
-        TourEntries.Add(new HomeTourEntry(2, "Icon.Clock",
+        TourEntries.Add(new HomeTourEntry(2, "Icon.Binary",
+            "Home.FirstGateTour", "Home.Learn.FirstGateDescription",
+            "Home.FirstGateTourTip", FirstGateTourCommand));
+        TourEntries.Add(new HomeTourEntry(3, "Icon.Clock",
             "Home.WatchComputeTour", "Home.Learn.WatchComputeDescription",
             "Home.WatchComputeTourTip", WatchComputeTourCommand));
-        TourEntries.Add(new HomeTourEntry(3, "Icon.Save",
+        TourEntries.Add(new HomeTourEntry(4, "Icon.Save",
             "Home.StoreNumberTour", "Home.Learn.StoreNumberDescription",
             "Home.StoreNumberTourTip", StoreNumberTourCommand));
-        TourEntries.Add(new HomeTourEntry(4, "Icon.Calculator",
+        TourEntries.Add(new HomeTourEntry(5, "Icon.Calculator",
             "Home.RunProgramTour", "Home.Learn.RunProgramDescription",
             "Home.RunProgramTourTip", RunProgramTourCommand));
-        TourEntries.Add(new HomeTourEntry(5, "Icon.Link",
+        TourEntries.Add(new HomeTourEntry(6, "Icon.Link",
             "Home.ConnectChipletsTour", "Home.Learn.ConnectChipletsDescription",
             "Home.ConnectChipletsTourTip", ConnectChipletsTourCommand));
     }
@@ -316,6 +326,13 @@ public partial class HomeViewModel : ObservableObject
     {
         if (LearnTutorialRequested != null)
             await LearnTutorialRequested();
+    }
+
+    [RelayCommand]
+    private async Task FirstGateTour()
+    {
+        if (FirstGateTourRequested != null)
+            await FirstGateTourRequested();
     }
 
     [RelayCommand]

@@ -118,7 +118,7 @@ public sealed class LogicAcrossChipletLinkJourneyDesign
 
     /// <summary>The group's connectable canvas-side pin behind an exposed gate pin.</summary>
     public static PhysicalPin GatePin(ComponentGroup gate, string pinName) =>
-        gate.ExternalPins.Single(p => p.Name == pinName).InternalPin!;
+        GroupPinLookup.Find(gate, pinName).InternalPin!;
 
     /// <summary>
     /// Loads the shipped NOT-NAND example onto the canvas and re-reads its group as a

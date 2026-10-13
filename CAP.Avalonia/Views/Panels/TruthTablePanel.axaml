@@ -8,8 +8,12 @@
              x:Class="CAP.Avalonia.Views.Panels.TruthTablePanel"
              x:DataType="vm:MainViewModel">
 
-    <StackPanel Spacing="4">
+    <!-- The gate section exists only while exactly one group is selected: the sidebar
+         shows properties of the selection, so an empty hint has no place here. -->
+    <StackPanel Spacing="4" IsVisible="{Binding RightPanel.TruthTable.IsGroupSelected}">
         <Border Classes="divider" Margin="0,12,0,8"/>
+
+        <StackPanel Spacing="4" IsVisible="{Binding !RightPanel.MakeGate.IsActive}">
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="subtitle" Text="{loc:Localize TruthTable.Title}" VerticalAlignment="Center"/>
             <!-- Plain-language help (#1207): short sections + the interference
@@ -23,16 +27,19 @@
             </controls:HelpFlyoutButton>
         </Grid>
 
-        <!-- Hint while anything other than exactly one group is selected -->
-        <Border Classes="empty-state" IsVisible="{Binding RightPanel.TruthTable.IsGroupSelected, Converter={x:Static BoolConverters.Not}}">
-            <StackPanel Spacing="8" HorizontalAlignment="Center">
-                <controls:Icon Data="{StaticResource Icon.Table}" Size="24" Foreground="{DynamicResource Brush.Text.Tertiary}" HorizontalAlignment="Center"/>
-                <TextBlock Classes="secondary" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="320"
-                           Text="{loc:Localize TruthTable.NoGroupSelected}"/>
+        <!-- Entry to the guided steps: roles → simulate → threshold → save as gate. -->
+        <Button x:Name="MakeGateButton" Classes="primary" HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Command="{Binding RightPanel.MakeGate.OpenCommand}"
+                ToolTip.Tip="{loc:Localize MakeGate.OpenTip}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <controls:Icon Data="{StaticResource Icon.Binary}" Size="14"/>
+                <TextBlock Text="{loc:Localize MakeGate.Open}"/>
             </StackPanel>
-        </Border>
+        </Button>
+        <TextBlock Classes="caption" Text="{loc:Localize MakeGate.OpenHint}" TextWrapping="Wrap" Margin="0,0,0,4"/>
 
-        <StackPanel IsVisible="{Binding RightPanel.TruthTable.IsGroupSelected}">
+        <StackPanel>
             <Grid ColumnDefinitions="*,110" Margin="0,5,0,2">
                 <TextBlock Classes="label" Text="{loc:Localize TruthTable.Inputs}"/>
                 <TextBlock Classes="caption" Grid.Column="1" Text="{loc:Localize TruthTable.Signal}"
@@ -118,8 +125,8 @@
             <StackPanel Orientation="Horizontal" Margin="0,8,0,5">
                 <TextBlock Classes="label" Text="{loc:Localize TruthTable.Threshold}" VerticalAlignment="Center" Width="70"/>
                 <NumericUpDown Value="{Binding RightPanel.TruthTable.Threshold}"
-                               Minimum="0.01" Maximum="0.99" Increment="0.05"
-                               FormatString="F2" Width="100"/>
+                               Minimum="0.001" Maximum="0.999" Increment="0.05"
+                               FormatString="F3" Width="110"/>
             </StackPanel>
             <TextBlock Classes="caption" Text="{Binding RightPanel.TruthTable.WavelengthText}" Margin="0,0,0,5"/>
 
@@ -131,7 +138,7 @@
                        TextWrapping="Wrap" Margin="24,1,0,5"/>
 
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,4">
-                <Button Classes="primary" Content="{loc:Localize TruthTable.Extract}"
+                <Button Content="{loc:Localize TruthTable.Extract}"
                         Command="{Binding RightPanel.TruthTable.ExtractCommand}"
                         IsEnabled="{Binding RightPanel.TruthTable.IsProcessing, Converter={x:Static BoolConverters.Not}}"/>
                 <Button Content="{loc:Localize TruthTable.Cancel}"
@@ -206,8 +213,28 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+
+                <!-- Automatic threshold: midway across the largest gap between the
+                     measured powers, with the margin in dB; "Use" re-extracts at it. -->
+                <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0"
+                      IsVisible="{Binding RightPanel.TruthTable.ThresholdSuggestionText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Classes="caption" Text="{Binding RightPanel.TruthTable.ThresholdSuggestionText}"
+                               TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Classes="ghost" Content="{loc:Localize MakeGate.UseSuggested}"
+                            Command="{Binding RightPanel.TruthTable.UseSuggestedThresholdCommand}"
+                            IsVisible="{Binding RightPanel.TruthTable.CanUseSuggestedThreshold}"/>
+                </Grid>
+                <Button Classes="link" Content="{loc:Localize MakeGate.OpenInLogic}" Margin="0,4,0,0"
+                        Command="{Binding RightPanel.TruthTable.OpenInLogicCommand}"
+                        ToolTip.Tip="{loc:Localize MakeGate.OpenInLogicTip}"/>
             </StackPanel>
         </StackPanel>
+        </StackPanel>
+
+        <!-- Guided Make-gate steps replace the plain truth table while open. -->
+        <Panel IsVisible="{Binding RightPanel.MakeGate.IsActive}">
+            <panels:MakeGatePanel DataContext="{Binding RightPanel.MakeGate}"/>
+        </Panel>
     </StackPanel>
 
 </UserControl>

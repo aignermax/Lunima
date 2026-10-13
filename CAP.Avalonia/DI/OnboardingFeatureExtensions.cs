@@ -29,6 +29,11 @@ internal static class OnboardingFeatureExtensions
             sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().DesignValidation,
             sp.GetRequiredService<ViewModels.Panels.BottomPanelViewModel>().Analysis,
             sp.GetRequiredService<Commands.CommandManager>()));
+        // The gate tour observes the canvas plus the Make-gate steps and Logic panel the window shows.
+        services.AddSingleton(sp => new FirstGateTourViewModel(
+            sp.GetRequiredService<ViewModels.Canvas.DesignCanvasViewModel>(),
+            sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().MakeGate,
+            sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().Logic));
         // Same for the RAM tour: it observes the Logic panel the window shows.
         services.AddSingleton(sp => new StoreNumberTourViewModel(
             sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().Logic,

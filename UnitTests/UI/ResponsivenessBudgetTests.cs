@@ -86,6 +86,7 @@ public class ResponsivenessBudgetTests
         "TogglePowerOverlayCommand",
         "RunDesignChecksCommand",
         "ShowHomeCommand",
+        "MakeGateCommand",
     };
 
     /// <summary>

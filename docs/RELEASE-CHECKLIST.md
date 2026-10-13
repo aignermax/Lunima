@@ -23,6 +23,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Start Lunima without a command-line file → Home screen appears with recent projects and example tiles. `(manual)`
 - [ ] Open an example project from the Home screen → design loads and canvas is usable; gate groups sit apart with their pins on their bodies. `(auto: HomeExamplesTests, LogicExamplesLayoutTests)`
 - [ ] Home guided tours: first steps (place → connect → simulate), "Watch it compute" (Counter), and "Run a program on your chip" (4-bit adder → ISA playground → photonic multiply) each start from the Home card and advance only on the real user actions. `(auto: TutorialViewModelTests, WatchComputeTourViewModelTests, RunProgramTourViewModelTests)`
+- [ ] Home "Learn Lunima" → "Your first gate" (second entry, before "Watch it compute") opens the gate kit (four loose, wired NAND parts) and walks 7 steps: group → Make gate… → Simulate → pick NAND (automatic threshold) → Save as gate → Open in Logic + Build; every step advances on the real action. `(auto: FirstGateTourViewModelTests, HomeLearnTourListTests, MakeGateScreenshotTests)`
 - [ ] Golden-design regression gate — every example in `UnitTests/Regression/golden/manifest.json` loads, re-routes, passes DRC-lite, and matches its pinned simulation reference. `(auto: GoldenDesignTests)`
 - [ ] Create a new project → an empty canvas with the chosen process / playground is shown. `(auto: FileOperationsProjectLifecycleTests)`
 - [ ] Reopen the last project on startup → previous file opens automatically if preference is enabled. `(auto: HomeReopenLastProjectTests)`
@@ -46,7 +47,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Select, drag, rotate, and delete selected components. `(auto: RotateComponentCommandTests, DeleteComponentCommandTests)`
 - [ ] Box-select multiple components and move them as a group. `(auto: BoxSelectionSyncTests)`
 - [ ] Undo/redo covers placement, move, rotate, delete, and route edits. `(auto: UndoRedoIntegrationTests)`
-- [ ] Canvas context menu offers Edit, Copy, Paste, Group, Ungroup, Rename, Save as Prefab, Delete. `(auto: CanvasContextMenuComponentSettingsTests)`
+- [ ] Canvas context menu offers Edit, Copy, Paste, Group, Make gate…, Ungroup, Rename, Save as Prefab, Delete; "Make gate…" on loose parts groups them first, then opens the Make-gate steps. `(auto: CanvasContextMenuComponentSettingsTests; manual for Make gate…)`
 - [ ] Grid snap settings (from Settings) affect placement and movement. `(auto: GridSnapSettingsTests)`
 - [ ] Alignment guides appear when dragging a component near another. `(auto: AlignmentGuideViewModelTests)`
 - [ ] Probe mode opens the mode-probe flyout at the clicked location. `(manual)`
@@ -60,6 +61,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] PDK enable/disable toggles filter the visible components. `(auto: PdkManagerViewModelTests)`
 - [ ] Drag a component from the library and drop it onto the canvas → instance is placed. `(manual)`
 - [ ] Load a custom PDK JSON from the Tools flyout → new components appear in the library. `(auto: PdkLoaderTests)`
+- [ ] Tools flyout: "Compute Modes for Waveguide…" and "Check PDKs against Python…" show a tooltip saying what they do and for whom (all five languages). `(manual)`
 - [ ] Create a custom PDK via the left-panel `+` button → PDK file is written and selectable. `(auto: CreateCustomPdkFlowTests)`
 - [ ] Delete a custom PDK and restore it from the trash panel. `(auto: PdkTrashViewModelTests)`
 - [ ] Edit a PDK's process / layers / materials (forks bundled PDKs as custom). `(manual)`
@@ -69,6 +71,10 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 ## 5. Groups, hierarchy & reusable blocks
 
 - [ ] Create a group from selected components with `Ctrl + G`. `(auto: GroupingWorkflowTests)`
+- [ ] A new group's external pins read by direction — IN1, IN2… (west, top to bottom), OUT1… (east), N…/S… (north/south), E… (electrical) — while saved files keep their pin names. `(auto: GroupPinNamerTests)`
+- [ ] The right panel's gate section (truth table) appears only while exactly one group is selected; nothing renders otherwise. `(auto: TruthTablePanelRenderTests)`
+- [ ] "Make gate…" in the gate section: role chips (in/out/bias/–) with suggested roles and short names, Simulate shows power bars, picking NAND/AND/OR/NOR/XOR/NOT moves the threshold midway between the levels with the margin in dB (overlap warning for a wrong function, manual override + "Use suggested"), Save as gate renames the pins (undoable), Save to library adds it under Saved Groups, then "Open in Logic ›" opens the Logic tab; (?) help animates roles and threshold. `(auto: MakeGateViewModelTests, GatePinRoleSuggesterTests, GateThresholdAdvisorTests, MakeGateScreenshotTests)`
+- [ ] Plain truth-table extraction shows the automatic threshold suggestion (largest power step, margin in dB) with "Use" and an "Open in Logic ›" link. `(auto: GateLinkingTests)`
 - [ ] Ungroup a group with `Ctrl + Shift + G`. `(auto: GroupingWorkflowTests)`
 - [ ] Rename a group via context menu and see the change in the Hierarchy panel. `(auto: HierarchyRenameTests)`
 - [ ] Save a group as a prefab → it appears in the Saved Groups list. `(auto: SaveGroupAsPrefabCommandTests)`
@@ -122,6 +128,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Analysis output panel shows designated outputs and persists them. `(auto: AnalysisOutput/AnalysisOutputPanelViewModelTests)`
 - [ ] Empty optical tabs explain themselves: with no light source, Spectrum / Monte Carlo / Transient / Eye show one sentence + "Place a light source" (arms placement of a grating/edge coupler); with a source but no picked output, Transient / Eye offer "Pick on canvas". `(auto: AnalysisReadinessViewModelTests, MainViewModelWorkspaceTests)`
 - [ ] Logic panel lives in the analysis dock's Logic tab: builds the logic network of the loaded design, toggles inputs, steps/runs the clock, and shows timeline + waveform lanes. `(auto: WatchComputeTourViewModelTests, WatchTourCounterExampleTests)`
+- [ ] Logic tab empty state lists the groups that are not gates yet, each with "Make gate…" that selects the group and opens the Make-gate steps. `(auto: GateLinkingTests)`
 
 ## 10. Component-specific tools & properties
 
