@@ -2,6 +2,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP_Core.Components.PinKinds;
 
 namespace CAP.Avalonia.Commands;
@@ -74,7 +75,12 @@ public class CreateConnectionCommand : IUndoableCommand
         {
             // First execution: track connections that will be removed
             _removedConnections = new List<WaveguideConnection>();
-            var crossing = _canvas.ConnectionManager.CrossingInsertion;
+            var crossing = _canvas.ConnectionManager.CrossingService;
+
+            // A replaced piece of a routing-placed crossing chain leaves as its whole wire.
+            if (!ChainCrossingMaintenance.IsTemporaryCrossing(_startPin.ParentComponent)
+                && !ChainCrossingMaintenance.IsTemporaryCrossing(_endPin.ParentComponent))
+                _canvas.DissolveInsertedCrossingChains(TouchesEitherPin);
 
             // Find connections on start pin
             var startConnections = _canvas.Connections
@@ -130,4 +136,8 @@ public class CreateConnectionCommand : IUndoableCommand
             _ = _canvas.RecalculateRoutesAsync();
         }
     }
+
+    private bool TouchesEitherPin(WaveguideConnection connection) =>
+        connection.StartPin == _startPin || connection.EndPin == _startPin
+        || connection.StartPin == _endPin || connection.EndPin == _endPin;
 }

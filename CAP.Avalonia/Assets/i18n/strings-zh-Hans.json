@@ -1592,6 +1592,8 @@
   "Toolbar.UngroupTip": "取消组合 (Ctrl+Shift+G)",
   "Toolbar.UnlockAll": "全部解锁（元件和连接）",
   "Toolbar.UnlockAllTip": "解锁设计中所有已锁定的元件和连接",
+  "Toolbar.CleanUpCrossings": "清理交叉",
+  "Toolbar.CleanUpCrossingsTip": "删除路由器放置的所有交叉，并重新布线经过它们的连线（您手动放置的交叉保留；可撤销）",
   "Toolbar.ZoomInTip": "放大 (鼠标滚轮)",
   "Toolbar.ZoomOutTip": "缩小 (鼠标滚轮)",
   "Toolbar.ZoomToFitTip": "缩放以适应所有元件 (F)",

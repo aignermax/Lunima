@@ -1896,8 +1896,8 @@ public partial class FileOperationsViewModel : ObservableObject
 
     /// <summary>
     /// Rebuilds crossing dissolution records for auto-inserted crossings restored
-    /// from a saved design (#705). No-op when the crossing feature is disabled;
-    /// re-enabling it later triggers the same rebuild via the canvas binder.
+    /// from a saved design (#705). No-op when no crossing service is attached;
+    /// enabling adaptive insertion later triggers the same rebuild via the canvas binder.
     /// </summary>
     private void RebuildCrossingRecords()
     {
@@ -1905,7 +1905,7 @@ public partial class FileOperationsViewModel : ObservableObject
         // adaptive insertion is on, so their pieces are no longer frozen.
         CAP_Core.Routing.CrossingInsertion.ChainCrossingMaintenance.AdoptLegacyChainCrossings(
             _canvas.Components.Select(vm => vm.Component), _canvas.ConnectionManager);
-        var crossing = _canvas.ConnectionManager.CrossingInsertion;
+        var crossing = _canvas.ConnectionManager.CrossingService;
         if (crossing == null)
             return;
 

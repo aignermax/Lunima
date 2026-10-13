@@ -1592,6 +1592,8 @@
   "Toolbar.UngroupTip": "グループ解除 (Ctrl+Shift+G)",
   "Toolbar.UnlockAll": "すべてロック解除（コンポーネント＆接続）",
   "Toolbar.UnlockAllTip": "デザイン内のロックされたすべてのコンポーネントと接続のロックを解除します",
+  "Toolbar.CleanUpCrossings": "交差を整理",
+  "Toolbar.CleanUpCrossingsTip": "ルーターが配置したすべての交差を削除し、通っていた配線を再ルーティングします（手動で配置した交差は残ります。元に戻せます）",
   "Toolbar.ZoomInTip": "拡大 (マウスホイール)",
   "Toolbar.ZoomOutTip": "縮小 (マウスホイール)",
   "Toolbar.ZoomToFitTip": "すべてのコンポーネントに合わせてズーム (F)",

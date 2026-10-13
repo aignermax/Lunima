@@ -55,16 +55,19 @@ public class CrossingInsertionCanvasBinder : System.ComponentModel.INotifyProper
             ComponentAdded = OnCrossingAdded,
             ComponentRemoved = OnCrossingRemoved,
         };
-        // New features default to OFF: the service is not attached until the
-        // user enables crossing insertion (Settings → Routing → Crossings).
+        // Crossings routing placed stay temporary even with insertion off: the service is
+        // attached for maintenance right away, but places crossings only once the user
+        // enables crossing insertion (Settings → Routing → Crossings).
+        canvas.ConnectionManager.CrossingMaintenance = Service;
     }
 
     /// <summary>
     /// Whether adaptive crossing insertion runs after routing (Issue #553). Off by
     /// default. Toggling on attaches the service to the connection manager; toggling
     /// off detaches it, so routing immediately reverts to classic avoid-only behavior
-    /// (no extra post-routing pass). Already-inserted crossings persist until the next
-    /// recalculation. Bound to the Routing settings page.
+    /// (no extra post-routing pass). Crossings routing already placed stay until their
+    /// wires go stale — the maintenance attachment then takes them out either way.
+    /// Bound to the Routing settings page.
     /// </summary>
     public bool IsEnabled
     {
@@ -119,73 +122,42 @@ public class CrossingInsertionCanvasBinder : System.ComponentModel.INotifyProper
     /// </summary>
     private void OnCrossingAdded(Component crossing)
     {
-        var connections = _canvas.ConnectionManager.Connections.ToList();
+        var connections = CrossingCanvasSync.SnapshotConnections(_canvas);
         _dispatch(() =>
         {
-            AddCrossingViewModel(crossing);
-            SyncConnectionViewModels(connections);
+            // A chain put back after a dissolution keeps the template it was shown with.
+            var (templateName, pdkSource) = _removedTemplates.Remove(crossing, out var known)
+                ? known
+                : (_templateName, _templatePdkSource);
+            CrossingCanvasSync.AddCrossing(_canvas, crossing, templateName, pdkSource);
+            CrossingCanvasSync.SyncConnections(_canvas, connections);
         });
     }
 
     /// <summary>Called by the service after a crossing was dissolved.</summary>
     private void OnCrossingRemoved(Component crossing)
     {
-        var connections = _canvas.ConnectionManager.Connections.ToList();
+        var connections = CrossingCanvasSync.SnapshotConnections(_canvas);
         _dispatch(() =>
         {
-            RemoveCrossingViewModel(crossing);
-            SyncConnectionViewModels(connections);
+            if (CrossingCanvasSync.RemoveCrossing(_canvas, crossing) is { } vm)
+            {
+                if (_removedTemplates.Count >= MaxRememberedTemplates)
+                    _removedTemplates.Clear();
+                _removedTemplates[crossing] = (vm.TemplateName, vm.TemplatePdkSource);
+            }
+            CrossingCanvasSync.SyncConnections(_canvas, connections);
         });
     }
 
     /// <summary>
-    /// Adds the crossing's component and pin view-models. The pathfinding-grid
-    /// obstacle was already registered by the service on the routing thread, so
-    /// this only touches the UI collections (no <see cref="DesignCanvasViewModel.AddComponent"/>,
-    /// which would re-register the obstacle concurrently with routing).
+    /// Template metadata of crossings taken out during the current session, so a chain that
+    /// is put back within the same routing pass looks exactly as before.
     /// </summary>
-    private void AddCrossingViewModel(Component crossing)
-    {
-        if (_canvas.Components.Any(vm => vm.Component == crossing)) return;
+    private readonly Dictionary<Component, (string? Name, string? PdkSource)> _removedTemplates = new();
 
-        var vm = new ComponentViewModel(crossing, _templateName, _templatePdkSource);
-        _canvas.Components.Add(vm);
-        foreach (var pin in crossing.PhysicalPins)
-            _canvas.AllPins.Add(new PinViewModel(pin, vm));
-    }
-
-    /// <summary>Removes the crossing's component and pin view-models.</summary>
-    private void RemoveCrossingViewModel(Component crossing)
-    {
-        var vm = _canvas.Components.FirstOrDefault(c => c.Component == crossing);
-        if (vm == null) return;
-
-        var stalePins = _canvas.AllPins
-            .Where(p => p.ParentComponentViewModel == vm)
-            .ToList();
-        foreach (var pin in stalePins)
-            _canvas.AllPins.Remove(pin);
-
-        _canvas.Components.Remove(vm);
-    }
-
-    /// <summary>
-    /// Reconciles the canvas connection view-models with the connection manager:
-    /// split originals disappear, crossing sub-connections (and restored
-    /// survivors after dissolution) appear.
-    /// </summary>
-    private void SyncConnectionViewModels(List<WaveguideConnection> managedConnections)
-    {
-        var stale = _canvas.Connections
-            .Where(vm => !managedConnections.Contains(vm.Connection))
-            .ToList();
-        foreach (var vm in stale)
-            _canvas.Connections.Remove(vm);
-
-        var wrapped = _canvas.Connections.Select(vm => vm.Connection).ToHashSet();
-        foreach (var connection in managedConnections.Where(c => !wrapped.Contains(c)))
-            _canvas.Connections.Add(new WaveguideConnectionViewModel(connection));
-    }
+    /// <summary>Bound on <see cref="_removedTemplates"/>; only the most recent pass needs it.</summary>
+    private const int MaxRememberedTemplates = 512;
 
     /// <summary>Runs the action on the Avalonia UI thread (inline when already on it).</summary>
     private static void DispatchToUiThread(Action action)

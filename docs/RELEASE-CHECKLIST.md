@@ -89,6 +89,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Manual bend handles adjust waveguide shape. `(auto: SegmentShiftCommandTests, BendRadiusCommandTests)`
 - [ ] Bend radius cannot be reduced below the active process minimum. `(auto: BendRadiusCommandTests)`
 - [ ] Crossing-insertion routes around existing components automatically. `(auto: CrossingInsertionCanvasBinderTests, InsertManualCrossingCommandTests)`
+- [ ] Router-placed crossings are temporary: moving a wire end takes its chain out even with adaptive insertion off; user-placed crossings stay. `(auto: TemporaryCrossingTests, AdaptiveCrossingRerouteTests)`
+- [ ] Tools → Clean Up Crossings removes every router-placed crossing, re-routes the wires and is undoable. `(auto: CleanUpCrossingsCommandTests)`
+- [ ] A wire that cannot be routed with its pins stays red and is not retried on every recalculation. `(auto: UnroutableWireTests)`
 - [ ] Connection style panel changes curve type, width, radius, and freeze state. `(auto: ConnectionRoutingViewModelShapeTests, ConnectionRoutingStyleEffectTests)`
 - [ ] Frozen routes persist through save/load. `(auto: Serialization/LockStatePersistenceTests)`
 - [ ] Metal routing (electrical traces) exports with process-defined layers and widths. `(auto: MetalRouting/ElectricalConnectionExportTests)`
