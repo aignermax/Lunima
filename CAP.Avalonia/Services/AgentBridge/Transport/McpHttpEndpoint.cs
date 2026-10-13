@@ -7,8 +7,8 @@ namespace CAP.Avalonia.Services.AgentBridge.Transport;
 
 /// <summary>
 /// The MCP Streamable-HTTP endpoint (<c>POST /mcp</c>) of the agent bridge. Applies the
-/// security gates — loopback Host/Origin (DNS-rebinding guard) and the per-install bearer
-/// token — then hands JSON-RPC messages to the <see cref="McpJsonRpcDispatcher"/>.
+/// security gates — loopback Host/Origin (DNS-rebinding guard) and, when the user turned
+/// it on, the per-install bearer token — then hands JSON-RPC messages to the <see cref="McpJsonRpcDispatcher"/>.
 /// Every request is answered with a single <c>application/json</c> body; the optional
 /// server-to-client SSE stream (<c>GET</c>) is not offered, which the spec allows (405).
 /// </summary>
@@ -20,12 +20,13 @@ public sealed class McpHttpEndpoint
     private const string BearerPrefix = "Bearer ";
 
     private readonly McpJsonRpcDispatcher _dispatcher;
-    private readonly Func<string> _tokenProvider;
+    private readonly Func<string?> _tokenProvider;
 
     /// <summary>Creates the endpoint.</summary>
     /// <param name="dispatcher">Handles the JSON-RPC payloads.</param>
-    /// <param name="tokenProvider">Returns the bearer token every request must present.</param>
-    public McpHttpEndpoint(McpJsonRpcDispatcher dispatcher, Func<string> tokenProvider)
+    /// <param name="tokenProvider">Returns the bearer token every request must present, or null/empty when
+    /// no token is required (the default; loopback binding and the Host/Origin guard still apply).</param>
+    public McpHttpEndpoint(McpJsonRpcDispatcher dispatcher, Func<string?> tokenProvider)
     {
         _dispatcher = dispatcher;
         _tokenProvider = tokenProvider;
@@ -86,12 +87,15 @@ public sealed class McpHttpEndpoint
 
     private bool IsAuthorized(string? authorization)
     {
+        var required = _tokenProvider();
+        if (string.IsNullOrEmpty(required))
+            return true;
         if (authorization == null || !authorization.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase))
             return false;
 
         var presented = Encoding.UTF8.GetBytes(authorization[BearerPrefix.Length..].Trim());
-        var expected = Encoding.UTF8.GetBytes(_tokenProvider());
-        return expected.Length > 0 && CryptographicOperations.FixedTimeEquals(presented, expected);
+        var expected = Encoding.UTF8.GetBytes(required);
+        return CryptographicOperations.FixedTimeEquals(presented, expected);
     }
 
     private static BridgeHttpResponse Unauthorized()

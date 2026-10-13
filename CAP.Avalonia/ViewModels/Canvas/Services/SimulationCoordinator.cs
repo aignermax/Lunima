@@ -29,16 +29,21 @@ public class SimulationCoordinator
     }
 
     /// <summary>
-    /// Called when the circuit topology changes. Clears power flow and requests re-simulation if needed.
+    /// Called when the circuit topology changes. A switched-on simulation stays on and is
+    /// re-run (its overlay keeps the last result until the new one arrives — hiding it
+    /// would switch the simulation off); otherwise the stale result is dropped.
     /// </summary>
     /// <param name="wasShowingOverlay">Whether the power flow overlay was visible.</param>
     public void InvalidateSimulation(bool wasShowingOverlay)
     {
+        if (wasShowingOverlay)
+        {
+            SimulationRequested?.Invoke();
+            return;
+        }
+
         _visualizer.Clear();
         ShowPowerFlowChanged?.Invoke(false, false);
-
-        if (wasShowingOverlay)
-            SimulationRequested?.Invoke();
     }
 
     /// <summary>

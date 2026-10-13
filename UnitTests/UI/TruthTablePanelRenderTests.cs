@@ -135,6 +135,8 @@ public class TruthTablePanelRenderTests
         var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
         var groupVm = canvas.AddComponent(LogicGateFixtureFactory.CreateCombinerGroup());
         var vm = MainViewModelTestHelper.CreateMainViewModel(canvas: canvas);
+        // The gate section belongs to the Logic and System workspaces.
+        vm.WorkspaceSwitch.Current = CAP.Avalonia.ViewModels.Workspaces.Workspace.Logic;
         canvas.Selection.SelectSingle(groupVm);
         vm.RightPanel.TruthTable.ConfigureForSelection(groupVm, canvas);
         vm.RightPanel.MakeGate.ConfigureForSelection(groupVm, canvas);
@@ -151,6 +153,8 @@ public class TruthTablePanelRenderTests
             var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
             var groupVm = canvas.AddComponent(LogicGateFixtureFactory.CreateCombinerGroup());
             var vm = MainViewModelTestHelper.CreateMainViewModel(canvas: canvas);
+            // The gate section belongs to the Logic and System workspaces.
+            vm.WorkspaceSwitch.Current = CAP.Avalonia.ViewModels.Workspaces.Workspace.Logic;
             canvas.Selection.SelectSingle(groupVm);
             vm.RightPanel.TruthTable.ConfigureForSelection(groupVm, canvas);
 
@@ -189,6 +193,8 @@ public class TruthTablePanelRenderTests
             var sumVm = canvas.AddComponent(CreateNotGateWithPersistedRoles("SUM"));
             var invVm = canvas.AddComponent(CreateNotGateWithPersistedRoles("INV"));
             var vm = MainViewModelTestHelper.CreateMainViewModel(canvas: canvas);
+            // The gate section belongs to the Logic and System workspaces.
+            vm.WorkspaceSwitch.Current = CAP.Avalonia.ViewModels.Workspaces.Workspace.Logic;
 
             canvas.Selection.SelectSingle(sumVm);
             vm.RightPanel.TruthTable.ConfigureForSelection(sumVm, canvas);

@@ -57,6 +57,8 @@ public class SimulationService
         var (sourceConfigs, systemMatrix, allFieldResults, wavelengths) = await Task.Run(
             () => ComputeSimulationAsync(componentViewModels, connectionManager, cancellationToken),
             cancellationToken);
+        // A run superseded while computing must not overwrite the newer run's overlay.
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (sourceConfigs.Count == 0)
             return SimulationResult.Empty(

@@ -12,19 +12,31 @@ namespace CAP.Avalonia.ViewModels.Workspaces;
 /// <summary>
 /// The toolbar's workspace switch (Layout / Optics / Logic / System): holds the active
 /// <see cref="Workspace"/>, restricts the analysis dock to the workspace's tabs and exposes
-/// the Run button's label and tooltip. The workspace is stored per design in the .lun file
+/// the Run button's label, tooltip and pressed state. The workspace is stored per design in the .lun file
 /// (<see cref="CaptureForSave"/> / <see cref="RestoreAfterLoad"/>); switching it is a view
 /// change and does not mark the design dirty.
 /// </summary>
 public partial class WorkspaceViewModel : ObservableObject
 {
+    private const string ActiveRunLabelKey = "Workspace.RunActive";
+    private const string ActiveRunTipKey = "Workspace.RunActiveTip";
+
     private readonly AnalysisDockViewModel _dock;
 
     /// <summary>The active workspace.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLayout), nameof(IsOptics), nameof(IsLogic), nameof(IsSystem),
-        nameof(Profile), nameof(RunLabel), nameof(RunTip), nameof(IsOpticalWorkspace))]
+        nameof(Profile), nameof(RunLabel), nameof(RunTip), nameof(IsOpticalWorkspace),
+        nameof(ShowsProbeTool), nameof(ShowsGateTools), nameof(DisplayName), nameof(IsRunActive))]
     private Workspace _current;
+
+    /// <summary>
+    /// Whether the CW simulation and its power overlay are on. Mirrors the canvas overlay
+    /// state; in Optics and System it turns Run into an on/off toggle (<see cref="IsRunActive"/>).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRunActive), nameof(RunLabel), nameof(RunTip))]
+    private bool _isSimulationOn;
 
     /// <summary>Creates the switch over the analysis dock it filters; starts in <see cref="Workspace.Layout"/>.</summary>
     public WorkspaceViewModel(AnalysisDockViewModel dock)
@@ -49,14 +61,35 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>True in the System workspace.</summary>
     public bool IsSystem => Current == Workspace.System;
 
-    /// <summary>True where Run simulates light (Optics, System): shows the power-overlay toggle and the analysis-output picker.</summary>
+    /// <summary>True where Run simulates light (Optics, System): Run toggles the simulation, and the analysis-output picker shows.</summary>
     public bool IsOpticalWorkspace => Current is Workspace.Optics or Workspace.System;
 
-    /// <summary>Run button label naming the action, e.g. "Run checks".</summary>
-    public string RunLabel => LocalizationService.Instance.Translate(Profile.RunLabelKey);
+    /// <summary>
+    /// True where the Probe tool (cross-section mode slice) is offered: Layout and Optics,
+    /// where waveguide geometry and modes matter. Select / Connect / Delete / Cut stay in
+    /// every workspace — manual edits are never locked away.
+    /// </summary>
+    public bool ShowsProbeTool => Current is Workspace.Layout or Workspace.Optics;
 
-    /// <summary>Run button tooltip: what Run does in this workspace, with its key hint.</summary>
-    public string RunTip => LocalizationService.Instance.Translate(Profile.RunTipKey);
+    /// <summary>True where the Truth Table / Make gate section belongs: Logic and System.</summary>
+    public bool ShowsGateTools => Current is Workspace.Logic or Workspace.System;
+
+    /// <summary>Localized name of the active workspace (status-bar chip).</summary>
+    public string DisplayName => LocalizationService.Instance.Translate($"Workspace.{Current}");
+
+    /// <summary>
+    /// True while Run shows its pressed state: the simulation is on in a light-simulating
+    /// workspace, so the next Run (or L / P) turns it off.
+    /// </summary>
+    public bool IsRunActive => IsOpticalWorkspace && IsSimulationOn;
+
+    /// <summary>Run button label naming the action, e.g. "Run checks", or "Simulation on" while active.</summary>
+    public string RunLabel => LocalizationService.Instance.Translate(
+        IsRunActive ? ActiveRunLabelKey : Profile.RunLabelKey);
+
+    /// <summary>Run button tooltip: what Run does in this workspace (or how to turn it off), with its key hint.</summary>
+    public string RunTip => LocalizationService.Instance.Translate(
+        IsRunActive ? ActiveRunTipKey : Profile.RunTipKey);
 
     /// <summary>Switches to <paramref name="workspace"/> (toolbar segments, Ctrl+1..4).</summary>
     [RelayCommand]
@@ -92,5 +125,6 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(RunLabel));
         OnPropertyChanged(nameof(RunTip));
+        OnPropertyChanged(nameof(DisplayName));
     }
 }

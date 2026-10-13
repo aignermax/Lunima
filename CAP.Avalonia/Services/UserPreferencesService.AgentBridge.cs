@@ -4,7 +4,8 @@ namespace CAP.Avalonia.Services;
 
 /// <summary>
 /// Agent-bridge (local MCP server) preference access for <see cref="UserPreferencesService"/>:
-/// the opt-in toggle, the loopback port and the per-install bearer token.
+/// the opt-in toggle, the loopback port, the optional per-install bearer token and the
+/// "Connect Claude Code" prompt state.
 /// </summary>
 public partial class UserPreferencesService
 {
@@ -60,5 +61,32 @@ public partial class UserPreferencesService
         _preferences.AgentBridgeToken = Convert.ToHexString(bytes).ToLowerInvariant();
         Save();
         return _preferences.AgentBridgeToken;
+    }
+
+    /// <summary>Whether requests must carry the bearer token. False by default.</summary>
+    public bool GetAgentBridgeRequireToken() => _preferences.AgentBridgeRequireToken;
+
+    /// <summary>Persists the "require access token" toggle.</summary>
+    public void SetAgentBridgeRequireToken(bool required)
+    {
+        _preferences.AgentBridgeRequireToken = required;
+        Save();
+    }
+
+    /// <summary>
+    /// The token every request must present, or null when the token is not required
+    /// (the default). Used by the endpoint and by the connect command.
+    /// </summary>
+    public string? GetRequiredAgentBridgeToken() =>
+        GetAgentBridgeRequireToken() ? GetOrCreateAgentBridgeToken() : null;
+
+    /// <summary>App version for which the "Connect Claude Code" prompt was dismissed, or null.</summary>
+    public string? GetClaudeCodePromptDismissedVersion() => _preferences.ClaudeCodePromptDismissedVersion;
+
+    /// <summary>Remembers that the user dismissed the "Connect Claude Code" prompt for <paramref name="version"/>.</summary>
+    public void SetClaudeCodePromptDismissedVersion(string? version)
+    {
+        _preferences.ClaudeCodePromptDismissedVersion = version;
+        Save();
     }
 }

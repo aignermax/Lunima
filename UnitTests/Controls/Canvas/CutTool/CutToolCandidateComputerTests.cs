@@ -20,7 +20,7 @@ namespace UnitTests.Controls.Canvas.CutTool;
 public class CutToolCandidateComputerTests
 {
     [Fact]
-    public void CollectEligibleConnections_ExcludesSubsOfInsertedCrossing_EvenWhenAdaptiveServiceIsNull()
+    public void CollectEligibleConnections_IncludesPiecesOfRouterPlacedCrossing()
     {
         var canvas = new DesignCanvasViewModel();
         canvas.ConnectionManager.CrossingInsertion = null; // adaptive feature disabled/not wired
@@ -41,9 +41,8 @@ public class CutToolCandidateComputerTests
 
         var eligible = CutToolCandidateComputer.CollectEligibleConnections(canvas).ToList();
 
-        eligible.ShouldBeEmpty(
-            "a connection docked on an IsInsertedCrossing component must never be cuttable, " +
-            "regardless of whether the adaptive service is running");
+        eligible.ShouldBe(new[] { subA, subB }, ignoreOrder: true,
+            "a piece docked on a crossing is a wire like any other: the user can cut it");
     }
 
     [Fact]

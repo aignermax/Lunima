@@ -1,6 +1,7 @@
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP.Avalonia.ViewModels.Library;
 
 namespace CAP.Avalonia.Services.AgentBridge.Tools;
 
@@ -13,22 +14,26 @@ namespace CAP.Avalonia.Services.AgentBridge.Tools;
 public sealed class AgentDesignSession
 {
     private readonly Func<FileOperationsViewModel?> _fileOperations;
+    private readonly Func<IReadOnlyList<ComponentTemplate>> _templates;
 
     /// <summary>Creates the session.</summary>
     /// <param name="canvas">The design canvas the user sees.</param>
     /// <param name="commands">The undo/redo history the main window's Ctrl+Z uses.</param>
     /// <param name="fileOperations">Resolves the main window's file operations (null before it exists).</param>
     /// <param name="examples">Lists the shipped example designs.</param>
+    /// <param name="templates">The loaded component library (crossing cell for cuts); empty when null.</param>
     public AgentDesignSession(
         DesignCanvasViewModel canvas,
         CommandManager commands,
         Func<FileOperationsViewModel?> fileOperations,
-        ExampleDesignsService examples)
+        ExampleDesignsService examples,
+        Func<IReadOnlyList<ComponentTemplate>>? templates = null)
     {
         Canvas = canvas;
         Commands = commands;
         _fileOperations = fileOperations;
         Examples = examples;
+        _templates = templates ?? (() => Array.Empty<ComponentTemplate>());
     }
 
     /// <summary>The design canvas.</summary>
@@ -39,6 +44,15 @@ public sealed class AgentDesignSession
 
     /// <summary>The shipped example designs.</summary>
     public ExampleDesignsService Examples { get; }
+
+    /// <summary>The loaded component library (PDK templates).</summary>
+    public IReadOnlyList<ComponentTemplate> Templates => _templates();
+
+    /// <summary>Path of the example last opened through <c>load_example</c> (an untitled copy), or null.</summary>
+    public string? LoadedExamplePath { get; set; }
+
+    /// <summary>Ranked repair suggestions from the last <c>suggest_fixes</c> call, or null.</summary>
+    public Repair.Suggest.RepairSuggestionSet? Suggestions { get; set; }
 
     /// <summary>File operations of the main window, or null while it is not built yet.</summary>
     public FileOperationsViewModel? FileOperations => _fileOperations();

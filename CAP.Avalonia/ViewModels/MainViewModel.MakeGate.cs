@@ -49,6 +49,7 @@ public partial class MainViewModel
         var groupVm = Canvas.Components.FirstOrDefault(c => ReferenceEquals(c.Component, group));
         if (groupVm == null)
             return;
+        EnsureGateToolsVisible();
         Canvas.Selection.SelectSingle(groupVm);
         Canvas.SelectedComponent = groupVm;
         RightPanel.TruthTable.ConfigureForSelection(groupVm, Canvas);

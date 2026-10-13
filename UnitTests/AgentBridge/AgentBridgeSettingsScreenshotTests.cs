@@ -8,6 +8,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.AgentBridge.Hosting;
+using CAP.Avalonia.Services.AgentBridge.Registration;
 using CAP.Avalonia.Services.AgentBridge.Transport;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Settings;
@@ -29,8 +30,9 @@ public class AgentBridgeSettingsScreenshotTests
 {
     private const string Manifest = """
         [
-          {"file": "01-agent-bridge-settings-en.png", "caption": "Settings → Agent bridge (MCP), enabled: status line, port, masked token, copyable Claude Code connect command."},
-          {"file": "02-agent-bridge-settings-de.png", "caption": "The same page in German."}
+          {"file": "01-agent-bridge-settings-en.png", "caption": "Settings → Agent bridge (MCP), enabled: status line, one-click Connect Claude Code, port, Require access token (off by default), copyable connect command."},
+          {"file": "02-agent-bridge-settings-de.png", "caption": "The same page in German."},
+          {"file": "03-agent-bridge-connect-cli-missing-en.png", "caption": "Connect pressed without the Claude Code CLI installed: the bridge is on and the page points to the command to paste."}
         ]
         """;
 
@@ -57,6 +59,8 @@ public class AgentBridgeSettingsScreenshotTests
             Capture(preferences, host, Path.Combine(outputDir, "01-agent-bridge-settings-en.png"));
             LocalizationService.Instance.SetLanguage(SupportedLanguage.German.Code);
             Capture(preferences, host, Path.Combine(outputDir, "02-agent-bridge-settings-de.png"));
+            LocalizationService.Instance.SetLanguage(SupportedLanguage.English.Code);
+            Capture(preferences, host, Path.Combine(outputDir, "03-agent-bridge-connect-cli-missing-en.png"), connectWithoutCli: true);
             ScreenshotArtifacts.WriteText(Path.Combine(outputDir, "manifest.json"), Manifest);
         }
         finally
@@ -66,9 +70,15 @@ public class AgentBridgeSettingsScreenshotTests
         }
     }
 
-    private static void Capture(UserPreferencesService preferences, AgentBridgeHost host, string path)
+    private static void Capture(UserPreferencesService preferences, AgentBridgeHost host, string path,
+        bool connectWithoutCli = false)
     {
-        using var vm = new AgentBridgeSettingsViewModel(preferences, host);
+        var noCli = new ClaudeCliLocator(_ => false, () => null, _ => "", isWindows: false, isMacOs: false);
+        var connector = new ClaudeCodeConnector(preferences, host,
+            new ClaudeCodeRegistrar(CAP_Core.Export.ProcessLaunchFactory.CreateDefault(), noCli));
+        using var vm = new AgentBridgeSettingsViewModel(preferences, host, connector);
+        if (connectWithoutCli)
+            vm.ConnectClaudeCodeCommand.ExecuteAsync(null).GetAwaiter().GetResult();
         var page = new AgentBridgeSettingsPage(vm, LocalizationService.Instance);
         var window = new SettingsWindow { DataContext = new SettingsWindowViewModel(new ISettingsPage[] { page }) };
         window.Show();

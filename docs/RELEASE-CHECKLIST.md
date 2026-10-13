@@ -91,10 +91,17 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Crossing-insertion routes around existing components automatically. `(auto: CrossingInsertionCanvasBinderTests, InsertManualCrossingCommandTests)`
 - [ ] Router-placed crossings are temporary: moving a wire end takes its chain out even with adaptive insertion off; user-placed crossings stay. `(auto: TemporaryCrossingTests, AdaptiveCrossingRerouteTests)`
 - [ ] Tools → Clean Up Crossings removes every router-placed crossing, re-routes the wires and is undoable. `(auto: CleanUpCrossingsCommandTests)`
+- [ ] Cut mode also cuts a wire coming out of a crossing (router- or user-placed): the halves keep their geometry and the neighbouring router chain stays; undoable. Segment handles work on such pieces too. `(auto: CrossingPieceEditingTests, CutToolCandidateComputerTests)`
+- [ ] Dragging a crossing in Select mode slides it along one of its two wires (dominant drag direction, dashed guide + ghost); that wire's pieces only stretch/shrink, the other wire re-routes; a moved router crossing becomes user-owned; one undo step. `(auto: UiFlowCrossingAxisDragTests, MoveCrossingAlongAxisCommandTests, CrossingAxisMovePlannerTests)`
+- [ ] Crossing axis drag snaps along the free axis: a port lands exactly on a facing pin's X (horizontal drag) / Y (vertical drag) within 5 µm and the dashed pin guide shows; otherwise the centre follows grid snap (G). `(auto: CrossingAxisSnapperTests, UiFlowCrossingFreeDragTests)`
+- [ ] Shift frees a crossing drag — held at the press or pressed mid-drag: the crossing moves diagonally like any component (full pin/grid snapping), all four wires re-route on release; one undo step. While dragging a crossing the status bar shows "Shift: move freely"; the (?) shortcut flyout lists it. `(auto: UiFlowCrossingFreeDragTests)`
+- [ ] Deleting a crossing (router- or user-placed) keeps the wires through it, merged; undo restores the crossing and its pieces. `(auto: ChainCrossingMaintenanceTests, DeleteCrossingKeepsWiresTests)`
 - [ ] A wire that cannot be routed with its pins stays red and is not retried on every recalculation. `(auto: UnroutableWireTests)`
 - [ ] Connection style panel changes curve type, width, radius, and freeze state. `(auto: ConnectionRoutingViewModelShapeTests, ConnectionRoutingStyleEffectTests)`
 - [ ] Frozen routes persist through save/load. `(auto: Serialization/LockStatePersistenceTests)`
 - [ ] Metal routing (electrical traces) exports with process-defined layers and widths. `(auto: MetalRouting/ElectricalConnectionExportTests)`
+- [ ] Design Checks see inside groups at any depth: open "Logic Gate RAM 2x4", run checks → blocked paths inside cells are listed as "Blocked path in group 'CELLx'…" and Next zooms onto them; the groups holding them show a red dashed outline with a "!" badge and the blocked path draws red without entering the group. `(auto: Analysis/Hierarchy/*, ExampleNestedDesignCheckTests, GroupBrokenPathMarkerTests)`
+- [ ] Unconnected pins are hints, not issues: hidden by default, the "Show unconnected pins" toggle in the Checks tab shows them (count in brackets) after the real problems. `(auto: DesignChecksPanelNestedTests, DesignValidationMenuCommandTests)`
 
 ## 7. Simulation & S-matrix
 
@@ -103,12 +110,16 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Toggle simulation mode (CW / Transient) from the toolbar combo box. `(auto: SimulationModeTests)`
 - [ ] Simulation converges for looped circuits or emits a readable non-convergence message. `(auto: NonConvergentCircuitMessageFormatterTests)`
 - [ ] Passivity warnings surface when components produce unphysical gain. `(auto: LightCalculation/SingleHopPassivityCheckerTests)`
-- [ ] Run never toggles: pressing Run (L) with the power overlay showing re-runs and keeps the overlay; the eye button beside Run (and P) shows/hides it. `(auto: MainViewModelWorkspaceTests)`
-- [ ] Workspace switch (Layout / Optics / Logic / System) next to Run: one click or Ctrl+1–4 switches; Run's label names the action ("Run checks" / "Simulate" / "Run logic" / "Run system"); the CW/Transient choice and the eye button appear only where they apply. `(auto: WorkspaceViewModelTests, UiFlowWorkspaceSwitchTests)`
+- [ ] Run is the simulation on/off toggle in Optics (CW) and System: first press (or L / P) simulates and shows the overlay, Run then looks pressed with "Simulation on" + stop icon and tooltip "Turn simulation off (L, P)"; the next press turns it off. No separate eye button. Optics in Transient starts a transient run on every press; Layout (Run checks) and Logic (Run logic) never toggle. `(auto: MainViewModelWorkspaceTests, WorkspaceViewModelTests)`
+- [ ] Live simulation: with the simulation on, every design change (connect in Connect mode, delete, move, rotate, parameter edit, group/ungroup, undo/redo, crossing edits) re-runs it once routing has finished — a new wire lights up instead of "no signal", the simulation stays on, the canvas stays responsive (debounced, off the UI thread, a stale run is cancelled). Removing the last light source turns it off with "No light sources found". Opening another design / example / recent project keeps it on and re-simulates the new design; File → New turns it off. `(auto: MainViewModelLiveSimulationTests, LiveSimulationSchedulerTests, UiFlowLiveSimulationConnectTests)`
+- [ ] Workspace switch (Layout / Optics / Logic / System) next to Run: one click or Ctrl+1–4 switches; Run's label names the action ("Run checks" / "Simulate" / "Run logic" / "Run system"); the CW/Transient choice appears only in Optics. `(auto: WorkspaceViewModelTests, UiFlowWorkspaceSwitchTests)`
 - [ ] Run per workspace: Layout opens Design Checks with results; Optics simulates (CW overlay or Transient tab); Logic builds the network, then each Run steps the clock; System runs the chiplet checks + whole-system CW and shows the chiplet/link strip (process per chiplet, link loss in dB). `(auto: MainViewModelWorkspaceTests)`
 - [ ] Dock tabs follow the workspace; "⋯ → Show all tabs" in the dock header brings every tab back; a tab opened by a tour/menu is shown even outside its workspace. `(auto: WorkspaceViewModelTests)`
 - [ ] Workspace is saved in the .lun and restored on open; files without one open by content: chiplet links → System, gate groups → Logic, light source → Optics, otherwise Layout (check the Two Chiplets, Logic Gate and MZI examples). `(auto: WorkspaceDefaultsTests, MainViewModelWorkspaceTests)`
-- [ ] (?) beside the workspace switch explains the four workspaces in a few sentences each. `(manual)`
+- [ ] (?) beside the workspace switch explains the four workspaces in a few sentences each, plus which tools move with the workspace. `(manual)`
+- [ ] The active workspace is unmistakable but calm: its hue (Layout steel, Optics cyan, Logic violet, System copper) marks the switch segment, a 2 px line under the toolbar, a faint canvas tint + edge, the status-bar chip and Run; waveguides and power-flow labels stay readable; switching cross-fades (instant with `LUNIMA_REDUCE_MOTION=1`). `(auto: WorkspaceAccentTokenTests, WorkspaceShellRenderTests)`
+- [ ] Left rail follows the workspace: Layout/Optics open the library (Optics adds "Sources & detectors" on top), Logic opens Gates (saved gates to drag in, starter gate examples, "Make gate from selection"), System opens Chiplets (click selects + centers); every rail icon stays reachable in every workspace, and each workspace remembers the last picked section. `(auto: WorkspaceLeftRailTests, WorkspaceContextTests, GatesPanelViewModelTests)`
+- [ ] Truth Table / Make gate shows in the properties panel only in Logic and System (exactly one group selected); "Make gate…" from Layout/Optics switches to Logic. Probe shows only in Layout and Optics; Select / Connect / Delete / Cut stay everywhere. `(auto: WorkspaceContextTests)`
 
 ## 8. Parameter sweep
 
@@ -172,7 +183,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] gdsfactory export generates a YAML netlist and Python module. `(auto: Export/GdsFactoryExport/GdsFactoryExporterTests, Export/Netlist/GdsFactoryYamlNetlistWriterTests)`
 - [ ] PhotonTorch export dialog configures and writes an export script. `(auto: Export/PhotonTorchExporterTests)`
 - [ ] Verilog-A export produces a SPICE-compatible model. `(auto: Export/VerilogAExporterTests, Export/VerilogASimulationTests)`
-- [ ] Netlist panel displays a live-derived YAML netlist. `(auto: Export/Netlist/NetlistViewModelTests)`
+- [ ] Export menu → "Netlist (YAML)" saves the gdsfactory YAML netlist to a .yml file; the status bar confirms. There is no Netlist tab in the analysis dock any more (the Export menu is the single entry point). `(auto: Export/ExportMenuViewModelTests, Export/Netlist/NetlistViewModelTests)`
 - [ ] Export menu → "Netlist (YAML) → Clipboard" copies the netlist without a file dialog; the status bar confirms. `(auto: Export/ExportMenuViewModelTests)`
 - [ ] Export guards warn when the design contains broken routes or missing PDKs. `(auto: Export/GdsExportGuardTests, Export/NazcaExportSkipsBrokenConnectionsTests)`
 - [ ] Foundry environment selection resolves a working Python/Nazca interpreter. `(auto: Export/GdsExportEnvironmentSelectionTests, Export/ProcessLaunchFactoryTests)`
@@ -194,7 +205,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] AI tools registry exposes fit-to-view and other canvas operations. `(auto: AI/FitToViewToolTests, AI/AiToolRegistryTests)`
 - [ ] AI grid service applies tool results to the design model. `(auto: AI/AiGridServiceTests)`
 - [ ] AI settings page configures the API key / endpoint. `(manual)`
-- [ ] Agent bridge (MCP): off by default; Settings → Agent bridge (MCP) → enable shows "Listening on http://127.0.0.1:39271/mcp"; the copied `claude mcp add …` command connects Claude Code, `list_connections` lists the open design's blocked routes, and an agent `move_component` is reverted by Ctrl+Z. Requests without the token get 401. `(auto: AgentBridge/*Tests; manual: real Claude Code connect on Windows, Linux, macOS)`
+- [ ] Agent bridge (MCP): off by default; Settings → Agent bridge (MCP) → **Connect Claude Code → Connect** turns it on ("Listening on http://127.0.0.1:39271/mcp") and registers `lunima` in Claude Code (`claude mcp get lunima`); without the CLI the page says so and shows the command. No token by default; with "Require access token" on, requests without it get 401 and the command carries the header. `list_connections` lists the blocked routes, an agent `move_component` is reverted by Ctrl+Z. `(auto: AgentBridge/*Tests; manual: real Claude Code connect on Windows, Linux, macOS)`
+- [ ] Claude Code at install/first start: Windows MSI Custom Setup shows "Connect Claude Code" (checked) and after install `claude mcp get lunima` succeeds (when Claude Code is installed); uninstall removes it. macOS .dmg / Linux portable: first start with the CLI installed shows the "Connect Claude Code to Lunima?" bar; "Not now" hides it until the next version. `(manual)`
+- [ ] Agent repair tools on *Logic Gate Counter 2-bit*: `list_cut_candidates`, `insert_crossing` (+ undo), `move_crossing_along_axis`, `shift_segment`, `suggest_fixes` → `apply_suggestion`, `save_design` round trip. `(auto: AgentBridgeRepairExampleTests, Category=Slow)`
 
 ## 16. Component registry (online)
 

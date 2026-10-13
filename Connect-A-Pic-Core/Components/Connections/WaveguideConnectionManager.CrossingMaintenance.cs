@@ -34,7 +34,7 @@ public partial class WaveguideConnectionManager
         var service = CrossingService;
         if (service == null) return;
         var before = SnapshotConnections().ToHashSet();
-        service.DissolveStaleChains(this, _router, IsStalePiece);
+        service.DissolveStaleChains(this, _router, piece => IsStalePiece(piece) && !IsQueuedForRerouteInPlace(piece));
         service.DissolveStaleRecords(this, _router);
         _rerouteAfterDissolution = SnapshotConnections().Where(c => !before.Contains(c)).ToHashSet();
     }
@@ -69,6 +69,72 @@ public partial class WaveguideConnectionManager
         var (endX, endY) = piece.EndPin.GetAbsolutePosition();
         return Distance(path.Segments[0].StartPoint.X, path.Segments[0].StartPoint.Y, startX, startY) > EndpointToleranceMicrometers
                || Distance(path.Segments[^1].EndPoint.X, path.Segments[^1].EndPoint.Y, endX, endY) > EndpointToleranceMicrometers;
+    }
+
+    /// <summary>
+    /// Wires a user edit asked to route again where they dock (see <see cref="RerouteInPlace"/>).
+    /// Guarded by its own lock: commands add on the UI thread, the routing pass reads and prunes.
+    /// </summary>
+    private readonly HashSet<WaveguideConnection> _reroutesInPlace = new();
+
+    /// <summary>
+    /// Drops the route of <paramref name="connection"/> so the next pass routes it again
+    /// between its current pins, WITHOUT taking out the routing-placed crossing chain it docks
+    /// onto: the route-less piece would otherwise read as stale and dissolve that chain. Used
+    /// for deliberate user edits (moving a crossing, deleting a user-placed one) whose wires
+    /// still end exactly at the crossings they dock onto.
+    /// </summary>
+    public void RerouteInPlace(WaveguideConnection connection)
+    {
+        lock (_reroutesInPlace)
+            _reroutesInPlace.Add(connection);
+        _router.PathfindingGrid?.RemoveWaveguideObstacle(connection.Id);
+        connection.IsRouteFrozen = false;
+        connection.InvalidateRoute();
+    }
+
+    /// <summary>
+    /// Swaps <paramref name="removed"/> for <paramref name="added"/> in one step — a wire for
+    /// the pieces a cut split it into, or back. When every added wire carries a valid route the
+    /// occupied geometry is unchanged, so blocked wires keep their verdict and the next pass
+    /// re-routes nothing; otherwise the swap counts as a changed wire set.
+    /// </summary>
+    public void SwapConnections(IReadOnlyCollection<WaveguideConnection> removed, IReadOnlyCollection<WaveguideConnection> added)
+    {
+        if (added.Any(c => !c.IsPathValid))
+            NoteWireSetChanged();
+        var grid = _router.PathfindingGrid;
+        lock (_connectionsSync)
+        {
+            foreach (var connection in removed)
+            {
+                grid?.RemoveWaveguideObstacle(connection.Id);
+                Connections.Remove(connection);
+            }
+            foreach (var connection in added.Where(c => !Connections.Contains(c)))
+            {
+                Connections.Add(connection);
+                if (connection.IsPathValid && connection.RoutedPath != null)
+                    grid?.AddWaveguideObstacle(connection.Id, connection.RoutedPath.Segments, WaveguideWidthMicrometers);
+            }
+        }
+    }
+
+    private bool IsQueuedForRerouteInPlace(WaveguideConnection connection)
+    {
+        lock (_reroutesInPlace)
+            return _reroutesInPlace.Contains(connection);
+    }
+
+    /// <summary>
+    /// Forgets queued wires that got a route (or left the design). A wire whose pass was cut
+    /// short keeps its entry, so the next pass still routes it in place.
+    /// </summary>
+    private void PruneReroutesInPlace()
+    {
+        var present = SnapshotConnections().ToHashSet();
+        lock (_reroutesInPlace)
+            _reroutesInPlace.RemoveWhere(c => c.RoutedPath != null || !present.Contains(c));
     }
 
     /// <summary>

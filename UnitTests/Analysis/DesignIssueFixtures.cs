@@ -1,4 +1,5 @@
 using CAP_Core.Analysis;
+using CAP_Core.Analysis.Hierarchy;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
@@ -39,6 +40,7 @@ internal static class DesignIssueFixtures
         DesignIssueType.WaveguideBelowMinWidth => ProduceMinWidthIssue(),
         DesignIssueType.ComponentFootprintOverlap => ProduceFootprintOverlapIssue(),
         DesignIssueType.WaveguideCrossing => ProduceCrossingIssue(),
+        DesignIssueType.WaveguideThroughComponent => ProduceWaveguideThroughComponentIssue(),
         DesignIssueType.ChipletInterfaceNotFacing => ProduceChipletIssue(type),
         DesignIssueType.ChipletInterfaceLateralOffset => ProduceChipletIssue(type),
         DesignIssueType.ChipletInterfaceOffEdge => ProduceChipletIssue(type),
@@ -156,6 +158,16 @@ internal static class DesignIssueFixtures
 
         return new ComponentFootprintOverlapChecker()
             .DetectOverlaps(new[] { first, second })
+            .Single();
+    }
+
+    private static DesignIssue ProduceWaveguideThroughComponentIssue()
+    {
+        var group = CreateGroupWithFrozenPath(0, 50, 300, 50);
+        var blocker = CreateComponent("blocker", 100, 25, 100, 50);
+
+        return new FrozenPathFootprintChecker()
+            .Check(new Component[] { group, blocker })
             .Single();
     }
 

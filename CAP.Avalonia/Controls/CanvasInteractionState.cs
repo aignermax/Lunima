@@ -22,6 +22,9 @@ public class CanvasInteractionState
     public Point DragPreviewPosition { get; set; }
     public bool DragPreviewValid { get; set; }
 
+    /// <summary>The axis-constrained crossing drag in progress, or null.</summary>
+    public Canvas.CrossingDrag.CrossingAxisDragPreview? CrossingAxisDrag { get; set; }
+
     // Group drag state
     public bool IsGroupDragging { get; set; }
     public double GroupDragStartCanvasX { get; set; }

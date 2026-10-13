@@ -30,7 +30,7 @@ public class Issue1183LogicDockScreenshotTests
     private const int DockWindowWidth = 1200;
     private const int DockWindowHeight = 700;
     private const int CaptureAttempts = 3;
-    private const int LogicTabIndex = 8;
+    private const int LogicTabIndex = 7;
 
     /// <summary>The analysis dock hosts the re-homed Logic tab.</summary>
     [AvaloniaFact]

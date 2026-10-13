@@ -1,0 +1,14 @@
+[
+  {
+    "file": "01-checks-nested-blocked-hints-hidden.png",
+    "caption": "Checks tab: the blocked frozen path two groups deep is listed as \u0027Blocked path in group RAM/CELL1\u0027; the unconnected-pin hints are hidden behind the toggle (count in brackets) and not counted as issues."
+  },
+  {
+    "file": "02-checks-hints-shown.png",
+    "caption": "Same run with \u0027Show unconnected pins\u0027 on: the open pins appear after the real problems."
+  },
+  {
+    "file": "03-canvas-group-broken-path-marker.png",
+    "caption": "Canvas from the top level: RAM and CELL1 carry the red dashed outline and \u0027!\u0027 badge because a frozen path inside is blocked; the blocked path itself draws red. CELL0 is clean."
+  }
+]

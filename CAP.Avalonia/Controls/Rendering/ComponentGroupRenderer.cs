@@ -170,13 +170,17 @@ public static class ComponentGroupRenderer
     /// The pen a frozen path draws with when no power-flow overlay is active: a path
     /// tagged with its import source's (layer, datatype) draws in that layer's muted
     /// palette color (same alpha/thickness as the default), everything else draws
-    /// like a routed waveguide (<see cref="CanvasPens.FrozenPath"/>). Internal so unit
+    /// like a routed waveguide (<see cref="CanvasPens.FrozenPath"/>). A blocked fallback
+    /// draws with the red dashed <see cref="CanvasPens.Blocked"/> pen of a blocked top-level
+    /// wire, so a broken route inside a group is as visible as one outside. Internal so unit
     /// tests can assert the selection headlessly (InternalsVisibleTo UnitTests).
     /// </summary>
     internal static IPen SelectFrozenPathPen(FrozenWaveguidePath frozenPath, double zoom = 1.0) =>
-        frozenPath.Layer is int layer && frozenPath.DataType is int dataType
-            ? OutlineLayerPalette.PathPenFor(layer, dataType)
-            : CanvasPens.For(zoom).FrozenPath;
+        frozenPath.Path?.IsBlockedFallback == true
+            ? CanvasPens.For(zoom).Blocked
+            : frozenPath.Layer is int layer && frozenPath.DataType is int dataType
+                ? OutlineLayerPalette.PathPenFor(layer, dataType)
+                : CanvasPens.For(zoom).FrozenPath;
 
     /// <summary>
     /// Calculates the visual midpoint of a frozen path from its first and last segment endpoints.

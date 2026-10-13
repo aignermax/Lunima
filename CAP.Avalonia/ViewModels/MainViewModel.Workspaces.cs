@@ -7,8 +7,8 @@ namespace CAP.Avalonia.ViewModels;
 
 /// <summary>
 /// Workspace half of <see cref="MainViewModel"/>: the toolbar's workspace switch, the
-/// workspace-dependent Run action, the power-overlay toggle beside Run, and the System
-/// workspace's chiplet overview.
+/// workspace-dependent Run action (an on/off toggle of the simulation in Optics and
+/// System), and the System workspace's chiplet overview.
 /// </summary>
 public partial class MainViewModel
 {
@@ -28,6 +28,12 @@ public partial class MainViewModel
             if (workspaces.IsSystem)
                 RefreshSystemOverview();
         };
+        workspaces.IsSimulationOn = Canvas.ShowPowerFlow;
+        Canvas.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(Canvas.ShowPowerFlow))
+                workspaces.IsSimulationOn = Canvas.ShowPowerFlow;
+        };
         workspaces.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(WorkspaceViewModel.Current) && workspaces.IsSystem)
@@ -39,9 +45,10 @@ public partial class MainViewModel
 
     /// <summary>
     /// The Run button and the L key: runs what the active workspace means by "run".
-    /// Layout checks the design; Optics simulates (CW or transient); Logic builds the
-    /// logic network, then steps the clock; System checks the chiplet links and runs
-    /// the CW simulation over the whole multi-chiplet design.
+    /// Layout checks the design; Logic builds the logic network, then steps the clock.
+    /// Optics (CW) and System toggle: the first press simulates and shows the power
+    /// overlay (System checks the chiplet links first), the next press turns the
+    /// simulation off. Optics in Transient mode starts a transient run each press.
     /// </summary>
     [RelayCommand]
     private async Task RunWorkspace()
@@ -52,14 +59,19 @@ public partial class MainViewModel
                 await RunDesignChecks();
                 BottomPanel.Analysis.OpenChecks();
                 break;
-            case Workspace.Optics:
+            case Workspace.Optics when SimulationMode == Analysis.SimulationMode.Transient:
                 await RunSimulation();
+                break;
+            case Workspace.Optics:
+                if (!TryTurnSimulationOff())
+                    await RunSimulation();
                 break;
             case Workspace.Logic:
                 await RunLogicStep();
                 break;
             case Workspace.System:
-                await RunSystem();
+                if (!TryTurnSimulationOff())
+                    await RunSystem();
                 break;
         }
     }
@@ -93,30 +105,30 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// The eye button beside Run and the P key: shows or hides the CW power-flow overlay.
-    /// Showing it without a result yet runs the CW simulation first.
+    /// The P key: the CW simulation on/off toggle in every workspace — the same toggle Run
+    /// (L) is in Optics and System. Turns a running simulation off, otherwise runs the CW
+    /// simulation and shows its power overlay.
     /// </summary>
     [RelayCommand]
     private async Task TogglePowerOverlay()
     {
-        if (Canvas.ShowPowerFlow)
-        {
-            Canvas.ShowPowerFlow = false;
-            Canvas.PowerFlowVisualizer.IsEnabled = false;
-            StatusText = LocalizationService.Instance.Translate("Overlay.PowerFlowOff");
+        if (TryTurnSimulationOff())
             return;
-        }
+        await ExecuteSimulation();
+    }
 
-        if (Canvas.PowerFlowVisualizer.CurrentResult == null)
-        {
-            await ExecuteSimulation();
-        }
-        else
-        {
-            Canvas.ShowPowerFlow = true;
-            Canvas.PowerFlowVisualizer.IsEnabled = true;
-            StatusText = LocalizationService.Instance.Translate("Overlay.PowerFlowOn");
-        }
+    /// <summary>
+    /// Turns the CW simulation off (hides the power overlay, stops auto-resimulation) when
+    /// it is on. Returns false — and changes nothing — when it was off.
+    /// </summary>
+    private bool TryTurnSimulationOff()
+    {
+        if (!Canvas.ShowPowerFlow)
+            return false;
+        Canvas.ShowPowerFlow = false;
+        Canvas.PowerFlowVisualizer.IsEnabled = false;
+        StatusText = LocalizationService.Instance.Translate("Status.SimulationOverlayOff");
+        return true;
     }
 
     /// <summary>
@@ -140,7 +152,8 @@ public partial class MainViewModel
     private bool IsPlacementAllowed(Library.ComponentTemplate template) =>
         CanvasInteraction.PlacementContext.CheckPlacementAt(template.PdkSource, null).IsAllowed;
 
-    /// <summary>Recomputes the System workspace's chiplet and link overview.</summary>
+    /// <summary>Recomputes the System workspace's chiplet and link overview (also the Chiplets pane's refresh button).</summary>
+    [RelayCommand]
     public void RefreshSystemOverview()
     {
         var context = CanvasInteraction.PlacementContext;

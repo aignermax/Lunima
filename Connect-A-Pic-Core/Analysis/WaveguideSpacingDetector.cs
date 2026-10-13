@@ -1,7 +1,9 @@
 using System.Globalization;
+using CAP_Core.Analysis.Hierarchy;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Routing;
+using Component = CAP_Core.Components.Core.Component;
 
 namespace CAP_Core.Analysis;
 
@@ -109,27 +111,25 @@ public class WaveguideSpacingDetector
             }
         }
 
-        foreach (var group in groups)
+        foreach (var hierarchical in DesignHierarchy.From(groups.Cast<Component>()).FrozenPaths)
         {
-            foreach (var frozen in group.InternalPaths)
+            var frozen = hierarchical.Frozen;
+            if (frozen.Path?.Segments is not { Count: > 0 } frozenSegments)
+                continue;
+
+            var label = $"Group '{hierarchical.GroupPath}' frozen path";
+            double halfWidth = frozen.WidthMicrometers / 2.0;
+
+            for (int i = 0; i < frozenSegments.Count; i++)
             {
-                if (frozen.Path?.Segments is not { Count: > 0 } frozenSegments)
-                    continue;
-
-                var label = $"Group '{group.Identifier}' frozen path";
-                double halfWidth = frozen.WidthMicrometers / 2.0;
-
-                for (int i = 0; i < frozenSegments.Count; i++)
-                {
-                    segments.Add(new SegmentInfo(
-                        frozen.PathId,
-                        label,
-                        null,
-                        frozenSegments[i],
-                        i,
-                        halfWidth,
-                        minWaveguideSpacingMicrometers));
-                }
+                segments.Add(new SegmentInfo(
+                    frozen.PathId,
+                    label,
+                    null,
+                    frozenSegments[i],
+                    i,
+                    halfWidth,
+                    minWaveguideSpacingMicrometers));
             }
         }
 

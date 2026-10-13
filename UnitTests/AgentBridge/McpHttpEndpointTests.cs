@@ -53,6 +53,27 @@ public class McpHttpEndpointTests
     }
 
     [Fact]
+    public async Task TokenNotRequired_RequestWithoutAuthorization_Is200()
+    {
+        var open = new McpHttpEndpoint(AgentBridgeTestStack.Dispatcher(), () => null);
+        var request = new BridgeHttpRequest("POST", "/mcp", AgentBridgeTestStack.Headers(("Host", "127.0.0.1:39271")),
+            Encoding.UTF8.GetBytes(Initialize), keepAlive: true);
+
+        (await open.HandleAsync(request, CancellationToken.None)).StatusCode.ShouldBe(200);
+    }
+
+    [Fact]
+    public async Task TokenNotRequired_ForeignOrigin_IsStill403()
+    {
+        var open = new McpHttpEndpoint(AgentBridgeTestStack.Dispatcher(), () => null);
+        var request = new BridgeHttpRequest("POST", "/mcp",
+            AgentBridgeTestStack.Headers(("Host", "127.0.0.1:39271"), ("Origin", "https://evil.example")),
+            Encoding.UTF8.GetBytes(Initialize), keepAlive: true);
+
+        (await open.HandleAsync(request, CancellationToken.None)).StatusCode.ShouldBe(403);
+    }
+
+    [Fact]
     public async Task WrongToken_Is401()
     {
         var response = await Send(Initialize, token: "not-the-token");

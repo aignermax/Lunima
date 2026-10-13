@@ -12,6 +12,24 @@ namespace UnitTests.Helpers;
 public class PinAlignmentHelperTests
 {
     [Fact]
+    public void FindAllAlignments_WithOffset_AlignsTheShiftedPins_WithoutMovingTheComponent()
+    {
+        var helper = new PinAlignmentHelper();
+        var dragging = UnitTests.Routing.CrossingInsertion.CrossingTestCircuit.CreateTerminal("dragging", 100, 50, pinAngleDegrees: 0);
+        var facing = UnitTests.Routing.CrossingInsertion.CrossingTestCircuit.CreateTerminal("facing", 200, 53, pinAngleDegrees: 180);
+        double gapY = facing.PhysicalPin.GetAbsolutePosition().y - dragging.PhysicalPin.GetAbsolutePosition().y;
+        double startX = dragging.Component.PhysicalX;
+
+        var (unshifted, _) = helper.FindAllAlignments(dragging.Component, new[] { facing.Component });
+        var (shifted, _) = helper.FindAllAlignments(dragging.Component, new[] { facing.Component }, 0, gapY);
+
+        unshifted.ShouldBeEmpty();
+        shifted.Count.ShouldBe(1);
+        shifted[0].YCoordinate.ShouldBe(facing.PhysicalPin.GetAbsolutePosition().y, 1e-9);
+        dragging.Component.PhysicalX.ShouldBe(startX, "the offset is hypothetical");
+    }
+
+    [Fact]
     public void FindHorizontalAlignments_WithAlignedPins_ReturnsAlignment()
     {
         // Arrange
