@@ -563,19 +563,23 @@ public partial class MainViewModel : ObservableObject
         // library-based PDK-source resolver (groups/pasted copies carry no source of their
         // own, so children are resolved against the loaded library) can never diverge.
         var placementContext = new PlacementPolicyContext(
-            getActiveProcess: () => FileOperations.ActiveProcess,
+            // Inside a die its process and enabled PDKs decide; elsewhere the design's process.
+            getActiveProcess: () => Canvas.Dies.ActiveDie?.ProcessBinding ?? FileOperations.ActiveProcess,
             getProcessAgnosticPdkNames: () => LeftPanel.GetProcessAgnosticPdkNames(),
             resolveComponentPdkSource: component =>
                 ViewModels.Library.ComponentPdkSourceResolver.Resolve(component, LeftPanel.AllTemplates),
             resolveLiveMemberPdkNames: () =>
-                FileOperations.ActiveProcess is { } activeProcess
-                    ? LeftPanel.ResolveLiveMemberPdkNames(activeProcess)
-                    : null,
+                Canvas.Dies.ActiveDie is { ProcessBinding: { } dieProcess } activeDie
+                    ? LeftPanel.DieScopePdkNames(dieProcess, activeDie.Die?.EnabledPdkNames)
+                    : FileOperations.ActiveProcess is { } activeProcess
+                        ? LeftPanel.ResolveLiveMemberPdkNames(activeProcess)
+                        : null,
             // Per-chiplet scoping (issue #935): the live catalog lets the policy derive a
             // group's chiplet process binding from its children.
             getProcessCatalog: () => ProcessCatalog.BuildGroups(LeftPanel.GetLoadedPdkProcessEntries()));
 
         CanvasInteraction.PlacementContext = placementContext;
+        InitializeDies();
         _canvas.Clipboard.PdkSourceResolver = placementContext.ResolveComponentPdkSource;
 
         if (aiGridService is Services.AiGridService aiGrid)
@@ -1503,12 +1507,15 @@ public partial class MainViewModel : ObservableObject
                 minWaveguideWidthRules = memberProcess.GetMinWaveguideWidthRules();
             }
 
+            bool usesDieBounds = Canvas.Dies.IsAssemblyRoot || Canvas.Dies.ActiveDie != null;
             await RightPanel.DesignValidation.RunValidationAsync(
                 connections,
                 groups,
                 allComponents,
-                ChipSize.CurrentWidthMicrometers,
-                ChipSize.CurrentHeightMicrometers,
+                // A die assembly (and the inside of one of its dies) is bounded per die by the
+                // die checks; the single-chip bounds check only applies to single-die designs.
+                usesDieBounds ? 0 : ChipSize.CurrentWidthMicrometers,
+                usesDieBounds ? 0 : ChipSize.CurrentHeightMicrometers,
                 pdkSourceByComponent,
                 LeftPanel.GetProcessAgnosticPdkNames(),
                 compatiblePdkNames,
@@ -1688,6 +1695,12 @@ public class DesignGroupData
     /// persistence existed — so legacy .lun files stay clean of unused blocks.
     /// </summary>
     public CAP_Core.Components.Core.TruthTablePinAssignment? TruthTablePinAssignment { get; set; }
+
+    /// <summary>
+    /// Die definition of a top-level group that is a die of a multi-die assembly
+    /// (outline, edge zone, enabled PDKs). Null for ordinary groups and single-die designs.
+    /// </summary>
+    public Dies.DieData? Die { get; set; }
 }
 
 /// <summary>
@@ -1879,6 +1892,9 @@ public class ConnectionData
 
     /// <summary>True when the routed path is frozen (manual bend edits); null = false.</summary>
     public bool? IsRouteFrozen { get; set; }
+
+    /// <summary>Refractive index of a die-to-die link's facet gap; null = air.</summary>
+    public double? FacetGapMediumIndex { get; set; }
 
     /// <summary>Manual per-bend radius overrides (bend index → radius µm); null = none.</summary>
     public Dictionary<int, double>? BendRadiusOverrides { get; set; }

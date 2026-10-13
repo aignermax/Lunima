@@ -469,6 +469,9 @@ public partial class FileOperationsViewModel : ObservableObject
                         WidthMicrometers = c.Connection.WidthMicrometers,
                         BendRadiusMicrometers = c.Connection.BendRadiusMicrometers,
                         IsRouteFrozen = c.Connection.IsRouteFrozen ? true : null,
+                        FacetGapMediumIndex = c.Connection.FacetGapMediumIndex > WaveguideConnection.AirRefractiveIndex
+                            ? c.Connection.FacetGapMediumIndex
+                            : null,
                         BendRadiusOverrides = c.Connection.BendRadiusOverrides.Count > 0
                             ? new Dictionary<int, double>(c.Connection.BendRadiusOverrides)
                             : null,
@@ -525,8 +528,8 @@ public partial class FileOperationsViewModel : ObservableObject
                 if (swept.Count > 0)
                     designData.SMatrices = swept;
             }
-            designData.ChipWidthMicrometers  = _canvas.ChipMaxX;
-            designData.ChipHeightMicrometers = _canvas.ChipMaxY;
+            designData.ChipWidthMicrometers  = _canvas.Dies.RootChipWidthMicrometers;
+            designData.ChipHeightMicrometers = _canvas.Dies.RootChipHeightMicrometers;
             designData.ActiveProcess = ActiveProcessResolver.ToData(ActiveProcess);
             // Persist the designated analysis-output coupler (#754) by its Identifier —
             // the runtime Component.Id is regenerated on every load.
@@ -746,7 +749,8 @@ public partial class FileOperationsViewModel : ObservableObject
             // Truth Table pin roles persist on every group: a gate nested inside a
             // cell instance must keep its assignment or hierarchical designs lose
             // their gates on save.
-            TruthTablePinAssignment = group.TruthTablePinAssignment
+            TruthTablePinAssignment = group.TruthTablePinAssignment,
+            Die = group.ParentGroup == null ? ViewModels.Dies.DieData.From(group.Die) : null
         });
     }
 
@@ -1223,8 +1227,7 @@ public partial class FileOperationsViewModel : ObservableObject
                     }
                     else
                     {
-                        _canvas.InitializeAStarRouting(
-                            0, 0,
+                        _canvas.SetRootChipSize(
                             designData.ChipWidthMicrometers!.Value,
                             designData.ChipHeightMicrometers!.Value);
                     }
@@ -1253,6 +1256,8 @@ public partial class FileOperationsViewModel : ObservableObject
                         _canvas.CanvasFrozenPaths.Add(new CanvasFrozenPathViewModel(frozenPath));
                     }
                 }
+
+                RestoreDieScopeAfterLoad();
 
                 // Restore the coherent interference mode (#1333) before post-load
                 // routing recalculates transmissions; missing field (old files) = off.
@@ -1730,10 +1735,38 @@ public partial class FileOperationsViewModel : ObservableObject
                 groupVm.Y = groupData.CanvasY;
                 group.PhysicalX = groupData.CanvasX;
                 group.PhysicalY = groupData.CanvasY;
+                if (groupData.Die != null)
+                {
+                    CAP_Core.Components.Dies.DieOrigin.Assign(group, groupData.Die.ToDefinition()
+                        ?? CAP_Core.Components.Dies.LegacyDieMigration.DefinitionFromContent(group));
+                    groupVm.X = group.PhysicalX;
+                    groupVm.Y = group.PhysicalY;
+                    groupVm.NotifyDimensionsChanged();
+                }
             }
         }
 
         return orderedGroups.Count - _failedGroupsDuringLoad.Count;
+    }
+
+    /// <summary>
+    /// Upgrades legacy multi-chiplet files to dies (linked or multi-process chiplet groups
+    /// become dies sized to their content) and bounds placement and routing by the die
+    /// assembly when the design has dies. Single-die designs are left untouched.
+    /// </summary>
+    private void RestoreDieScopeAfterLoad()
+    {
+        var topLevel = _canvas.Components.Select(c => c.Component).ToList();
+        var migrated = CAP_Core.Components.Dies.LegacyDieMigration.Migrate(
+            topLevel, _canvas.ConnectionManager.Connections);
+        foreach (var vm in _canvas.Components.Where(c => migrated.Contains(c.Component)))
+        {
+            vm.X = vm.Component.PhysicalX;
+            vm.Y = vm.Component.PhysicalY;
+            vm.NotifyDimensionsChanged();
+        }
+        if (_canvas.Dies.IsAssemblyRoot)
+            _canvas.Dies.ApplyScopeBounds();
     }
 
     /// <summary>
@@ -2154,6 +2187,8 @@ public partial class FileOperationsViewModel : ObservableObject
             connection.BendRadiusMicrometers = connData.BendRadiusMicrometers.Value;
         if (keepFrozenGeometry && connData.IsRouteFrozen == true)
             connection.IsRouteFrozen = true;
+        if (connData.FacetGapMediumIndex.HasValue)
+            connection.FacetGapMediumIndex = connData.FacetGapMediumIndex.Value;
         if (keepFrozenGeometry && connData.BendRadiusOverrides != null)
         {
             foreach (var (bendIndex, radius) in connData.BendRadiusOverrides)

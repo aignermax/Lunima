@@ -115,6 +115,32 @@ public sealed class PlacementPolicyContext
     }
 
     /// <summary>
+    /// Checks a part dropped onto a die of a multi-die assembly: the die's process decides
+    /// membership, and the die's enabled PDK subset (when it has one) narrows it further.
+    /// Built-in and process-agnostic parts are always allowed.
+    /// </summary>
+    public (bool IsAllowed, string? BlockReason) CheckPlacementOnDie(string? componentPdkName, ComponentGroup die)
+    {
+        ArgumentNullException.ThrowIfNull(die);
+        if (SingleProcessPolicy.IsExempt(componentPdkName, ProcessAgnosticPdkNames))
+            return (true, null);
+
+        if (die.Die?.EnabledPdkNames is { Count: > 0 } enabled
+            && !enabled.Contains(componentPdkName!, StringComparer.OrdinalIgnoreCase))
+        {
+            return (false,
+                $"'{componentPdkName}' is not enabled on die '{die.GroupName}'. Enable it in the die's PDKs " +
+                "(select the die → Properties) or place the part on another die.");
+        }
+
+        var process = ResolveChipletProcess(die);
+        return process == null
+            ? (true, null)
+            : SingleProcessPolicy.CheckPlacement(process, componentPdkName, ProcessAgnosticPdkNames,
+                chipletName: die.GroupName);
+    }
+
+    /// <summary>
     /// Checks a group's placement at the drop target (issue #935). Onto a bound chiplet the
     /// chiplet's process is the scope. At canvas level a group that fails the design-wide
     /// check is still placeable as its own chiplet when all its children belong to exactly

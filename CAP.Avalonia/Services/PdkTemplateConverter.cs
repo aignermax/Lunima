@@ -75,6 +75,7 @@ public static class PdkTemplateConverter
             OutlinePolygons = pdkComp.OutlinePolygons,
             SourceDraft = pdkComp,
             WaveguideDispersion = (pdkComp.MaterialDispersion ?? pdkMaterialDispersion).ToDispersionModel(),
+            ModeFieldDiameterMicrometers = pdkComp.ModeFieldDiameterMicrometers,
         };
 
         if (pdkComp.SMatrix?.WavelengthData is { Count: > 0 } wlData)

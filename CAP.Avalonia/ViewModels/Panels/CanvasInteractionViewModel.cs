@@ -449,6 +449,12 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         if (template == null) return;
 
+        if (_canvas.Dies.IsAssemblyRoot)
+        {
+            PlaceComponentTemplateOnDie(template, x, y);
+            return;
+        }
+
         // Per-chiplet scope (issue #935): dropping onto a process-bound chiplet resolves
         // against that chiplet's process; everywhere else the canvas-level process applies.
         var (isAllowed, blockReason) = PlacementContext.CheckPlacementAt(
@@ -468,9 +474,55 @@ public partial class CanvasInteractionViewModel : ObservableObject
             UpdateStatus?.Invoke("No space available on chip for this component");
             return;
         }
+        SnapToActiveDieEdge(cmd.PlacedComponent);
 
         _commandManager.ExecuteCommand(cmd);
         UpdateStatus?.Invoke($"Placed {template.Name} at ({x:F0}, {y:F0})µm");
+    }
+
+    /// <summary>
+    /// Placement while looking at a die assembly: a part always lands on a die (it belongs
+    /// to that die's process); dropping between dies places nothing and says why.
+    /// </summary>
+    private void PlaceComponentTemplateOnDie(ComponentTemplate template, double x, double y)
+    {
+        var die = CAP_Core.Components.Dies.DieAssembly.DieAt(_canvas.Components.Select(c => c.Component), x, y);
+        if (die == null)
+        {
+            UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Dies.Status.DropInsideDie"));
+            return;
+        }
+
+        var (isAllowed, blockReason) = PlacementContext.CheckPlacementOnDie(template.PdkSource, die);
+        if (!isAllowed)
+        {
+            UpdateStatus?.Invoke(blockReason ?? "Process mismatch — cannot place component.");
+            return;
+        }
+
+        var cmd = Commands.Dies.PlaceComponentInDieCommand.TryCreate(_canvas, die, template, x, y);
+        if (cmd == null)
+        {
+            UpdateStatus?.Invoke($"No free space on {die.GroupName} for {template.Name}");
+            return;
+        }
+        _commandManager.ExecuteCommand(cmd);
+        UpdateStatus?.Invoke($"Placed {template.Name} on {die.GroupName}");
+    }
+
+    /// <summary>
+    /// Inside a die, an edge coupler dropped within the edge zone lands on the die edge with
+    /// its facet facing out — before it is placed, so placement and snap are one undo step.
+    /// </summary>
+    private void SnapToActiveDieEdge(CAP_Core.Components.Core.Component? component)
+    {
+        if (component == null || _canvas.Dies.ActiveDie is not { Die: { } die } activeDie
+            || !CAP_Core.Components.Dies.EdgeCouplerFacet.IsEdgeCoupler(component))
+            return;
+        var snap = CAP_Core.Components.Dies.DieEdgeSnapper.Plan(
+            component, CAP_Core.Components.Dies.DieAssembly.OutlineOf(activeDie), die.EdgeZoneMicrometers);
+        if (snap != null)
+            CAP_Core.Components.Dies.DieEdgeSnapper.Apply(component, snap);
     }
 
     private void PlaceGroupTemplateAt(double x, double y) =>
@@ -479,6 +531,12 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private void PlaceGivenGroupTemplateAt(GroupTemplate? groupTemplate, double x, double y)
     {
         if (groupTemplate == null || _libraryViewModel == null) return;
+
+        if (_canvas.Dies.IsAssemblyRoot)
+        {
+            UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Dies.Status.OpenDieForGroups"));
+            return;
+        }
 
         // Debug: Check if TemplateGroup is loaded
         if (groupTemplate.TemplateGroup == null)

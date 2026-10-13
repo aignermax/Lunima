@@ -914,6 +914,7 @@
                         <StackPanel Margin="16,4,16,16">
                             <!-- Whole-design tools live on their own surfaces (analysis dock,
                                  AI Assistant window); this sidebar shows the selection only. -->
+                            <panels:DiePropertiesPanel/>
                             <panels:SelectedComponentPropertiesPanel/>
                             <panels:ConnectionRoutingPanel/>
                             <panels:LengthMatchingPanel/>

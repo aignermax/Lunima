@@ -1,20 +1,31 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using Avalonia.Media;
+using CAP.Avalonia.Controls.Rendering;
 using CAP.Avalonia.Services.Localization;
 using CAP_Core.Analysis;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.Dies;
 using CAP_Core.Components.Process;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace CAP.Avalonia.ViewModels.Workspaces;
 
-/// <summary>One chiplet (top-level group) of a multi-chiplet design and its process.</summary>
+/// <summary>One chiplet (a die, or a top-level group of a single-die design) and its process.</summary>
 /// <param name="Name">The chiplet's group name.</param>
 /// <param name="ProcessName">The fabrication process it is bound to, or a "no process" label.</param>
 /// <param name="Group">The chiplet's top-level group, used to select and show it; null in hand-built rows.</param>
-public sealed record ChipletSummaryRow(string Name, string ProcessName, ComponentGroup? Group = null);
+/// <param name="ProcessBrush">The die's process color (frame color on the canvas); null for plain groups.</param>
+/// <param name="DetailText">Outline size and enabled PDK count of a die ("2.00 × 2.00 mm · 2 PDKs"); empty otherwise.</param>
+public sealed record ChipletSummaryRow(
+    string Name, string ProcessName, ComponentGroup? Group = null,
+    IBrush? ProcessBrush = null, string DetailText = "")
+{
+    /// <summary>True when the row is a die of an assembly (shows the color chip and details).</summary>
+    public bool IsDie => Group?.IsDie == true;
+}
 
 /// <summary>One cross-chiplet edge-coupler link and its simulated coupling loss.</summary>
 /// <param name="Label">"Chiplet A ↔ Chiplet B".</param>
@@ -42,6 +53,10 @@ public partial class SystemOverviewViewModel : ObservableObject
     /// <summary>True when the design has at least one chiplet (top-level group).</summary>
     [ObservableProperty]
     private bool _hasChiplets;
+
+    /// <summary>True when the design is a multi-die assembly (rows are dies).</summary>
+    [ObservableProperty]
+    private bool _isAssembly;
 
     /// <summary>True when the design has at least one cross-chiplet link.</summary>
     [ObservableProperty]
@@ -74,12 +89,18 @@ public partial class SystemOverviewViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(resolveProcess);
 
         Chiplets.Clear();
-        foreach (var group in topLevelComponents.OfType<ComponentGroup>())
+        var groups = topLevelComponents.OfType<ComponentGroup>().ToList();
+        bool isAssembly = groups.Any(g => g.IsDie);
+        foreach (var group in groups.Where(g => !isAssembly || g.IsDie))
         {
-            var process = resolveProcess(group)?.DisplayName
+            var binding = resolveProcess(group);
+            var process = binding?.DisplayName
                           ?? LocalizationService.Instance.Translate("Workspace.System.NoProcess");
-            Chiplets.Add(new ChipletSummaryRow(group.GroupName, process, group));
+            Chiplets.Add(group.IsDie
+                ? new ChipletSummaryRow(group.GroupName, process, group, DieProcessColors.BrushFor(binding), DetailOf(group, binding))
+                : new ChipletSummaryRow(group.GroupName, process, group));
         }
+        IsAssembly = isAssembly;
 
         Links.Clear();
         foreach (var link in connections.Where(c => c.IsCrossChipletFacetLink))
@@ -87,6 +108,16 @@ public partial class SystemOverviewViewModel : ObservableObject
 
         HasChiplets = Chiplets.Count > 0;
         HasLinks = Links.Count > 0;
+    }
+
+    /// <summary>"2.00 × 2.00 mm · 2 PDKs" for a die.</summary>
+    private static string DetailOf(ComponentGroup die, ActiveProcessSelection? binding)
+    {
+        var outline = DieAssembly.OutlineOf(die);
+        var size = DieFrameRenderer.FormatSize(outline.Width, outline.Height, CultureInfo.CurrentCulture);
+        int pdkCount = die.Die!.EnabledPdkNames?.Count ?? binding?.MemberPdkNames.Count ?? 0;
+        return string.Format(CultureInfo.CurrentCulture,
+            LocalizationService.Instance.Translate("Workspace.System.DieDetail"), size, pdkCount);
     }
 
     private static ChipletLinkRow ToRow(WaveguideConnection link, double wavelengthNm)
