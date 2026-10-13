@@ -356,6 +356,23 @@ namespace CAP_Core.Components.Connections
         /// </summary>
         public bool IsBlockedFallback => RoutedPath?.IsBlockedFallback ?? false;
 
+        /// <summary>Refractive index of air, the default medium of a die-to-die facet gap.</summary>
+        public const double AirRefractiveIndex = 1.0;
+
+        private double _facetGapMediumIndex = AirRefractiveIndex;
+
+        /// <summary>
+        /// Refractive index of the medium filling the facet gap of a die-to-die link (air by
+        /// default; index-matching adhesive or underfill shortens the beam divergence). Only
+        /// meaningful for <see cref="IsCrossChipletFacetLink"/> connections; values below 1
+        /// are clamped to air.
+        /// </summary>
+        public double FacetGapMediumIndex
+        {
+            get => _facetGapMediumIndex;
+            set => _facetGapMediumIndex = double.IsFinite(value) ? Math.Max(AirRefractiveIndex, value) : AirRefractiveIndex;
+        }
+
         /// <summary>
         /// True when this connection is a cross-chiplet facet link: both endpoints are
         /// edge-coupler facet pins on DIFFERENT top-level chiplet groups. Such a link couples

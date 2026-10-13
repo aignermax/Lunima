@@ -408,11 +408,7 @@ public sealed partial class GdsPlacementExecutor
         var newWidth = Math.Min(Math.Max(neededWidth, _canvas.ChipMaxX), maxUm);
         var newHeight = Math.Min(Math.Max(neededHeight, _canvas.ChipMaxY), maxUm);
 
-        _canvas.ChipMinX = 0;
-        _canvas.ChipMinY = 0;
-        _canvas.ChipMaxX = newWidth;
-        _canvas.ChipMaxY = newHeight;
-        _canvas.InitializeAStarRouting(0, 0, newWidth, newHeight);
+        _canvas.SetRootChipSize(newWidth, newHeight);
 
         report.ChipEnlargedToWidthUm = newWidth;
         report.ChipEnlargedToHeightUm = newHeight;

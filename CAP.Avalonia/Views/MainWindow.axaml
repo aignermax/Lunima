@@ -385,7 +385,7 @@
                         Classes="chip processChip" MinWidth="170" Margin="4,0"
                         Classes.playground="{Binding IsPlayground}"
                         Classes.none="{Binding FileOperations.ActiveProcess, Converter={x:Static ObjectConverters.IsNull}}"
-                        ToolTip.Tip="{loc:Localize StatusBar.ActiveProcessTip}">
+                        ToolTip.Tip="{Binding ActiveProcessTip}">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <Ellipse Classes="processDot" Width="6" Height="6" VerticalAlignment="Center"/>
                         <TextBlock Classes="statusText" Text="{Binding ActiveProcessLabel}"
@@ -914,13 +914,16 @@
                         <StackPanel Margin="16,4,16,16">
                             <!-- Whole-design tools live on their own surfaces (analysis dock,
                                  AI Assistant window); this sidebar shows the selection only. -->
-                            <panels:SelectedComponentPropertiesPanel/>
-                            <panels:ConnectionRoutingPanel/>
-                            <panels:ConnectionLossPanel/>
-                            <panels:LengthMatchingPanel/>
+                            <panels:DiePropertiesPanel/>
+                            <!-- A die's own section replaces the generic group readouts. -->
+                            <panels:SelectedComponentPropertiesPanel IsVisible="{Binding !DieProperties.IsVisible}"/>
+                            <!-- A die-to-die link is free-space coupling: no routing style, no length. -->
+                            <panels:ConnectionRoutingPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
+                            <panels:ConnectionLossPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
+                            <panels:LengthMatchingPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
                             <panels:GdsLayerVisibilityPanel/>
                             <panels:RerouteImportedPanel/>
-                            <panels:TruthTablePanel/>
+                            <panels:TruthTablePanel IsVisible="{Binding !DieProperties.IsVisible}"/>
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>
@@ -1045,6 +1048,17 @@
                     </MenuItem>
                     <MenuItem Header="{loc:Localize Context.SaveAsPrefab}" Command="{Binding CanvasInteraction.SaveGroupAsCommand}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Bookmark}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <Separator IsVisible="{Binding WorkspaceSwitch.IsSystem}"/>
+                    <MenuItem Header="{loc:Localize Dies.Context.NewDie}" Command="{Binding NewDieQuickCommand}"
+                              IsVisible="{Binding WorkspaceSwitch.IsSystem}"
+                              ToolTip.Tip="{loc:Localize Dies.NewDieTip}">
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Plus}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{loc:Localize Dies.Properties.Open}" Command="{Binding DieProperties.OpenDieCommand}"
+                              IsVisible="{Binding DieProperties.IsVisible}"
+                              ToolTip.Tip="{loc:Localize Dies.Properties.OpenTip}">
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.FolderOpen}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
                     <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteSelectedCommand}" InputGesture="Delete">

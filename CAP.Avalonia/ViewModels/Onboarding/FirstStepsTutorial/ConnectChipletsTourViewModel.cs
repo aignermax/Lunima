@@ -44,6 +44,7 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
     private readonly ConnectChipletsReceiverTracker _receiverTracker;
 
     private bool _sawChipletIssue;
+    private int _diesAtStart;
 
     /// <summary>True while the tour overlay is shown and the engine is observing canvas and Design Checks.</summary>
     [ObservableProperty]
@@ -61,9 +62,9 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
 
     /// <summary>
     /// Builds the tour steps against the given canvas and Design Checks panel:
-    /// meet the two chiplets, run the simulation, move the receiver chiplet off
-    /// its facet, watch Design Checks flag the gap, click "Align chiplet",
-    /// closing words. Steps anchor in the main window only — the canvas, the
+    /// meet the two dies, run the simulation, move the receiver die off its facet,
+    /// watch Design Checks flag the gap, snap it back (or click "Align chiplet"),
+    /// add a die of your own with New die, closing words. Steps anchor in the main window only — the canvas, the
     /// toolbar Run button and the Design Checks tab of the analysis dock.
     /// </summary>
     public ConnectChipletsTourViewModel(
@@ -83,6 +84,7 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
             new("ConnectChipletsTour.Step3Title", "ConnectChipletsTour.Step3Body", ReceiverMoved, "DesignCanvasControl"),
             new("ConnectChipletsTour.Step4Title", "ConnectChipletsTour.Step4Body", HasChipletIssue, "DesignChecksRunButton"),
             new("ConnectChipletsTour.Step5Title", "ConnectChipletsTour.Step5Body", () => _sawChipletIssue && !HasChipletIssue(), "AlignChipletButton"),
+            new("ConnectChipletsTour.NewDieTitle", "ConnectChipletsTour.NewDieBody", () => _canvas.Dies.RootDies.Count > _diesAtStart),
             new("ConnectChipletsTour.Step6Title", "ConnectChipletsTour.Step6Body", () => false),
         };
     }
@@ -118,8 +120,10 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
         CurrentStepIndex = 0;
         IsCompleted = false;
         _sawChipletIssue = false;
+        _diesAtStart = _canvas.Dies.RootDies.Count;
         IsActive = true;
         _canvas.PropertyChanged += OnCanvasPropertyChanged;
+        _canvas.DiesChanged += OnDiesChanged;
         _validation.PropertyChanged += OnValidationPropertyChanged;
         _receiverTracker.ReceiverPositionChanged += OnReceiverPositionChanged;
         _receiverTracker.ResetBaseline();
@@ -187,6 +191,8 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
 
     private void OnReceiverPositionChanged(object? sender, EventArgs e) => EvaluateCurrentStep();
 
+    private void OnDiesChanged() => EvaluateCurrentStep();
+
     /// <summary>
     /// Advances past every already-satisfied step, so a canvas state that
     /// already fulfils a condition when the tour starts cannot stall it.
@@ -217,6 +223,7 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
     private void Detach()
     {
         _canvas.PropertyChanged -= OnCanvasPropertyChanged;
+        _canvas.DiesChanged -= OnDiesChanged;
         _validation.PropertyChanged -= OnValidationPropertyChanged;
         _receiverTracker.ReceiverPositionChanged -= OnReceiverPositionChanged;
     }

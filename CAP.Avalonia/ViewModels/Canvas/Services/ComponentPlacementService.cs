@@ -230,6 +230,9 @@ public class ComponentPlacementService
     private bool CanMoveGroupTo(ComponentGroup group, double x, double y,
         ComponentViewModel? excludeComponent = null)
     {
+        if (group.IsDie)
+            return CanMoveDieTo(group, x, y);
+
         if (x < ChipMinX || y < ChipMinY ||
             x + group.WidthMicrometers > ChipMaxX ||
             y + group.HeightMicrometers > ChipMaxY)
@@ -245,6 +248,25 @@ public class ComponentPlacementService
             IsDragging ? _preDragOverlapPartners : null);
     }
 
+    /// <summary>
+    /// A die may go anywhere on the carrier as long as its outline does not overlap another
+    /// die: dies are separate pieces of material, their parts can never collide otherwise.
+    /// </summary>
+    private bool CanMoveDieTo(ComponentGroup die, double x, double y)
+    {
+        var candidate = CAP_Core.Components.Dies.DieAssembly.OutlineOf(die)
+            .Translated(x - die.PhysicalX, y - die.PhysicalY);
+        if (candidate.X < ChipMinX || candidate.Y < ChipMinY ||
+            candidate.Right > ChipMaxX || candidate.Bottom > ChipMaxY)
+            return false;
+        var others = _components
+            .Select(c => c.Component)
+            .OfType<ComponentGroup>()
+            .Where(g => g.IsDie && g != die)
+            .Select(CAP_Core.Components.Dies.DieAssembly.OutlineOf);
+        return !CAP_Core.Components.Dies.DieAssembly.OverlapsAny(candidate, others);
+    }
+
     private bool MoveComponentGroup(
         ComponentViewModel component,
         ComponentGroup group,
@@ -258,7 +280,12 @@ public class ComponentPlacementService
         double newX = component.X + deltaX;
         double newY = component.Y + deltaY;
 
-        if (!IsDragging && !IsExecutingCommand)
+        if (!IsDragging && !IsExecutingCommand && group.IsDie)
+        {
+            if (!CanMoveDieTo(group, group.PhysicalX + deltaX, group.PhysicalY + deltaY))
+                return false;
+        }
+        else if (!IsDragging && !IsExecutingCommand)
         {
             var groupBounds = CalculateGroupBounds(group);
             double testX = groupBounds.X + deltaX;
@@ -296,6 +323,11 @@ public class ComponentPlacementService
 
     private static (double X, double Y, double Width, double Height) CalculateGroupBounds(ComponentGroup group)
     {
+        if (group.IsDie)
+        {
+            var outline = CAP_Core.Components.Dies.DieAssembly.OutlineOf(group);
+            return (outline.X, outline.Y, outline.Width, outline.Height);
+        }
         if (group.ChildComponents.Count == 0)
             return (group.PhysicalX, group.PhysicalY, group.WidthMicrometers, group.HeightMicrometers);
 

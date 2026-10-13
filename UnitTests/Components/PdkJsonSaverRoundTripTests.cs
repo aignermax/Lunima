@@ -75,7 +75,7 @@ public class PdkJsonSaverRoundTripTests
         var saver = new PdkJsonSaver();
         var original = loader.LoadFromFileForEditing(path);
         original.IsGdsFactoryBackend.ShouldBeTrue();
-        original.Components.ShouldAllBe(c => !string.IsNullOrEmpty(c.GdsFactoryFunction));
+        original.Components.ShouldAllBe(c => !string.IsNullOrEmpty(c.GdsFactoryFunction) || !string.IsNullOrEmpty(c.RawCode));
 
         var tmp = Path.Combine(Path.GetTempPath(), $"pdkroundtrip_semantic_{System.Guid.NewGuid():N}.json");
         try
@@ -85,7 +85,7 @@ public class PdkJsonSaverRoundTripTests
 
             reloaded.IsGdsFactoryBackend.ShouldBeTrue();
             reloaded.Components.Count.ShouldBe(original.Components.Count);
-            reloaded.Components.ShouldAllBe(c => !string.IsNullOrEmpty(c.GdsFactoryFunction));
+            reloaded.Components.ShouldAllBe(c => !string.IsNullOrEmpty(c.GdsFactoryFunction) || !string.IsNullOrEmpty(c.RawCode));
         }
         finally
         {

@@ -1,5 +1,6 @@
 using CAP_Core.Analysis.Hierarchy;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.Dies;
 using CAP_Core.Components.Process;
 using Component = CAP_Core.Components.Core.Component;
 
@@ -59,6 +60,16 @@ public class ComponentPdkCompatibilityChecker
         {
             pdkSourceByComponent.TryGetValue(component, out var pdkSource);
             if (SingleProcessPolicy.IsExempt(pdkSource, processAgnosticPdkNames)) continue;
+
+            // A part on a die answers to that die's process and PDKs, never to the
+            // design-level process (which only governs single-die designs).
+            if (DieAssembly.DieOf(component) is { } die && !ReferenceEquals(die, component))
+            {
+                if (DieMismatch(component, die, pdkSource!) is { } dieIssue)
+                    issues.Add(dieIssue);
+                continue;
+            }
+            if (component is ComponentGroup { IsDie: true }) continue;
             if (enabled.Contains(pdkSource!)) continue;
 
             double centerX = component.PhysicalX + component.WidthMicrometers / 2;
@@ -80,5 +91,31 @@ public class ComponentPdkCompatibilityChecker
         }
 
         return issues;
+    }
+
+    /// <summary>
+    /// The finding for a part whose PDK is not allowed on its die (outside the die's process
+    /// or its enabled PDK subset), or null when it fits. Parts of a die without a process
+    /// have nothing to mismatch.
+    /// </summary>
+    private static DesignIssue? DieMismatch(Component component, ComponentGroup die, string pdkSource)
+    {
+        if (die.ProcessBinding is not { IsPlayground: false } process)
+            return null;
+        IReadOnlyCollection<string> allowed = die.Die?.EnabledPdkNames is { Count: > 0 } subset
+            ? subset
+            : process.MemberPdkNames;
+        if (allowed.Contains(pdkSource, StringComparer.OrdinalIgnoreCase))
+            return null;
+
+        string name = DesignHierarchy.QualifyName(component, component.HumanReadableName ?? component.Identifier);
+        return new DesignIssue(
+            DesignIssueType.PdkProcessMismatch,
+            connection: null,
+            x: component.PhysicalX + component.WidthMicrometers / 2,
+            y: component.PhysicalY + component.HeightMicrometers / 2,
+            description: $"'{name}' belongs to '{pdkSource}', which is not enabled on die '{die.GroupName}' ({process.DisplayName}).",
+            localizationKey: "DesignChecks.PdkDieProcessMismatch",
+            localizationArgs: new object[] { name, pdkSource, die.GroupName, process.DisplayName });
     }
 }

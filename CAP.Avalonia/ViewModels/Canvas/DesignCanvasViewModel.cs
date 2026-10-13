@@ -41,6 +41,9 @@ public partial class DesignCanvasViewModel : ObservableObject
     public SimulationCoordinator Simulation { get; }
     public PinHighlightService PinHighlight { get; }
 
+    /// <summary>Placement/routing bounds per scope: single chip, one die, or the die assembly.</summary>
+    public DieScopeService Dies { get; }
+
     // ── UI services (pre-existing) ────────────────────────────────────────
     public SelectionManager Selection { get; } = new();
 
@@ -174,8 +177,9 @@ public partial class DesignCanvasViewModel : ObservableObject
             Components, Connections, AllPins, ConnectionManager, router,
             (comp, tpl, pdk) => AddComponent(comp, tpl, pdk),
             BeginCommandExecution, EndCommandExecution,
-            () => Routing.InitializeAStarRouting(),
+            InitializeRoutingForEditScope,
             () => Routing.RecalculateRoutesAsync());
+        Dies = new DieScopeService(Components, Groups, Placement, Routing);
 
         // Wire service events to observable property updates
         Routing.StateChanged += () =>
@@ -194,6 +198,7 @@ public partial class DesignCanvasViewModel : ObservableObject
         {
             CurrentEditGroup = Groups.CurrentEditGroup;
             OnPropertyChanged(nameof(IsInGroupEditMode));
+            ApplyDieScopeAfterEditChange();
         };
         PinHighlight.HighlightChanged += () => OnPropertyChanged(nameof(HighlightedPin));
         // Gate-group map (issue #1398): membership moves with top-level add/remove
@@ -263,6 +268,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     public async void EndDragComponent(ComponentViewModel component)
     {
         Placement.EndDrag();
+        OnDieDragEnded(component);
         await RecalculateRoutesAsync();
         InvalidateSimulation();
     }
@@ -273,9 +279,12 @@ public partial class DesignCanvasViewModel : ObservableObject
         => Placement.CanMoveComponentTo(component, x, y);
 
     public void MoveComponent(ComponentViewModel component, double deltaX, double deltaY)
-        => Placement.MoveComponent(component, deltaX, deltaY,
+    {
+        Placement.MoveComponent(component, deltaX, deltaY,
             Groups.IsInGroupEditMode, Groups.CurrentEditGroup,
             Groups.UpdateExternalPinPositions, Routing.RecalculateRoutesAsync);
+        OnDieMoved(component);
+    }
 
     /// <summary>
     /// Shifts the routed geometry of connections internal to <paramref name="selection"/> by

@@ -19,6 +19,8 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
     private readonly Action _invalidate;
     private readonly Func<double> _getZoom;
     private readonly Action<Cursor> _setCursor;
+    private bool _snapSuppressed;
+    private readonly DieLinkDragSnap _dieSnap = new();
 
     /// <summary>Initializes a new instance of <see cref="ComponentDragGestureRecognizer"/>.</summary>
     public ComponentDragGestureRecognizer(CanvasInteractionState state, Action invalidate, Func<double> getZoom, Action<Cursor> setCursor)
@@ -127,6 +129,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
 
         _state.DragStartX = target.X;
         _state.DragStartY = target.Y;
+        if (canvas.Selection.SelectedComponents.Count <= 1) _dieSnap.Begin(canvas, target);
         _state.GroupDragStartPositions.Clear();
         foreach (var c in canvas.Selection.SelectedComponents) _state.GroupDragStartPositions[c] = (c.X, c.Y);
         _invalidate();
@@ -212,6 +215,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
     public void OnPointerMoved(PointerEventArgs e, Point delta, Point canvasPoint, DesignCanvasViewModel canvas, MainViewModel? mainVm)
     {
         if (_state.DraggingComponent == null) return;
+        _snapSuppressed = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
         double dx = delta.X / _getZoom(), dy = delta.Y / _getZoom();
         bool isGroup = canvas.Selection.SelectedComponents.Count > 1;
         if (isGroup)
@@ -221,7 +225,9 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
             // components so they follow the pointer instead of snapping back only on drop.
             canvas.TranslateInternalConnectionRoutes(canvas.Selection.SelectedComponents, dx, dy);
         }
-        else canvas.MoveComponent(_state.DraggingComponent!, dx, dy);
+        else if (!_dieSnap.TryMove(canvas, _state.DraggingComponent!, dx, dy, _snapSuppressed))
+            canvas.MoveComponent(_state.DraggingComponent!, dx, dy);
+        _state.DieLinkPreview = _dieSnap.Current;
         if (canvas.AlignmentGuide.IsEnabled) canvas.AlignmentGuide.UpdateAlignments(_state.DraggingComponent!, canvas.Components);
         UpdateDragPreview(canvas, isGroup);
         _invalidate();
@@ -240,6 +246,12 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
             ? canvas.Selection.CanMoveGroup(canvas, sdx, sdy)
             : canvas.CanMoveComponentTo(_state.DraggingComponent, px, py);
         _state.ShowDragPreview = canvas.GridSnap.IsEnabled || !_state.DragPreviewValid;
+        if (!isGroup && !_snapSuppressed && EdgeCouplerDragSnap.PreviewPosition(canvas, _state.DraggingComponent) is { } edge)
+        {
+            _state.DragPreviewPosition = new Point(edge.X, edge.Y);
+            _state.DragPreviewValid = true;
+            _state.ShowDragPreview = true;
+        }
     }
 
     /// <inheritdoc/>
@@ -255,14 +267,22 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
         _state.ShowDragPreview = false;
         canvas.AlignmentGuide.ClearAlignments();
         canvas.AlignmentGuide.ResetSnapState();
+        var dropped = _state.DraggingComponent;
         if (isGroup) { mainVm?.EndGroupMove(canvas.Selection.SelectedComponents); foreach (var c in canvas.Selection.SelectedComponents) c.IsSelected = true; }
         else mainVm?.EndMoveComponent();
+        if (ok && !isGroup && !e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+            EdgeCouplerDragSnap.SnapAfterDrop(canvas, mainVm, dropped);
+        _dieSnap.End(canvas, mainVm, ok && !isGroup);
+        _state.DieLinkPreview = null;
         _invalidate();
     }
 
     private (double x, double y) ComputeFinalPosition(DesignCanvasViewModel canvas)
     {
         double fx = _state.DraggingComponent!.X, fy = _state.DraggingComponent.Y;
+        // A die locked onto its neighbour stays exactly there — grid or guide snapping would
+        // pull its facets off the link axis.
+        if (_dieSnap.IsSnapped) return (fx, fy);
         if (canvas.AlignmentGuide?.IsEnabled == true && canvas.AlignmentGuide.SnapEnabled)
         {
             var (sdx, sdy) = canvas.AlignmentGuide.CalculateSnapOnRelease(_state.DraggingComponent, canvas.Components);
@@ -322,6 +342,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
     {
         _state.DraggingComponent = null;
         _state.ShowDragPreview = false;
+        _state.DieLinkPreview = null;
         _state.GroupDragStartPositions.Clear();
         _invalidate();
     }

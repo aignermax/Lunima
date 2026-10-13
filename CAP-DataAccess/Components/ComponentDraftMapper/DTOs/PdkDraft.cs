@@ -100,6 +100,13 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         [JsonPropertyName("pins")]
         public List<PhysicalPinDraft> Pins { get; set; } = new();
 
+        /// <summary>
+        /// Optional mode-field diameter (µm) at the facet of an edge coupler, used for the
+        /// die-to-die coupling loss including spot-size mismatch. Omitted = default mode size.
+        /// </summary>
+        [JsonPropertyName("modeFieldDiameterMicrometers")]
+        public double? ModeFieldDiameterMicrometers { get; set; }
+
         [JsonPropertyName("sMatrix")]
         public PdkSMatrixDraft? SMatrix { get; set; }
 

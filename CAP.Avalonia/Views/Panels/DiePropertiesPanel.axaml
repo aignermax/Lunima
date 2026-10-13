@@ -1,0 +1,109 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:dies="using:CAP.Avalonia.ViewModels.Dies"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.DiePropertiesPanel"
+             x:DataType="vm:MainViewModel">
+
+    <!-- Properties of the selected (or open) die: it acts on the selection, so it belongs in
+         the Properties panel. Name, size, process, the PDKs this die may use, edge zone. -->
+    <StackPanel>
+    <!-- Selected die-to-die link: gap (moves the far die), gap medium, offset and loss. -->
+    <StackPanel Spacing="6" IsVisible="{Binding DieLinkProperties.IsVisible}" Margin="0,0,0,16">
+        <TextBlock Classes="label" Text="{loc:Localize Dies.Link.Title}"/>
+        <TextBlock Classes="subtitle" Text="{Binding DieLinkProperties.Label}" TextTrimming="CharacterEllipsis"/>
+        <Grid ColumnDefinitions="*,110" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,4,0,0">
+            <TextBlock Classes="label" VerticalAlignment="Center" Text="{loc:Localize Dies.Link.Gap}"
+                       ToolTip.Tip="{loc:Localize Dies.Link.GapTip}"/>
+            <NumericUpDown x:Name="LinkGapBox" Grid.Column="1" Value="{Binding DieLinkProperties.GapMicrometers}"
+                           Minimum="0" Maximum="1000" Increment="0.5" FormatString="0.0## µm" ShowButtonSpinner="False"/>
+            <TextBlock Grid.Row="1" Classes="label" VerticalAlignment="Center" Margin="0,6,0,0"
+                       Text="{loc:Localize Dies.Link.Medium}" ToolTip.Tip="{loc:Localize Dies.Link.MediumTip}"/>
+            <NumericUpDown x:Name="LinkMediumBox" Grid.Row="1" Grid.Column="1" Margin="0,6,0,0"
+                           Value="{Binding DieLinkProperties.MediumIndex}"
+                           Minimum="1" Maximum="4" Increment="0.05" FormatString="0.00##" ShowButtonSpinner="False"/>
+            <TextBlock Grid.Row="2" Classes="label" Margin="0,6,0,0" Text="{loc:Localize Dies.Link.Offset}"/>
+            <TextBlock Grid.Row="2" Grid.Column="1" Classes="mono" Margin="0,6,0,0" Text="{Binding DieLinkProperties.LateralOffsetText}"/>
+            <TextBlock Grid.Row="3" Classes="label" Margin="0,6,0,0" Text="{loc:Localize Dies.Link.Loss}"/>
+            <TextBlock Grid.Row="3" Grid.Column="1" Classes="mono" Margin="0,6,0,0" Text="{Binding DieLinkProperties.LossText}"/>
+        </Grid>
+    </StackPanel>
+
+    <StackPanel Spacing="6" IsVisible="{Binding DieProperties.IsVisible}" Margin="0,0,0,16">
+        <Grid ColumnDefinitions="Auto,*">
+            <Border Width="12" Height="12" CornerRadius="3" Margin="0,0,8,0" VerticalAlignment="Center"
+                    Background="{Binding DieProperties.ProcessBrush}"/>
+            <TextBlock Grid.Column="1" Classes="label" Text="{loc:Localize Dies.Properties.Title}"/>
+        </Grid>
+
+        <TextBox x:Name="DieNameBox" Text="{Binding DieProperties.Name, UpdateSourceTrigger=LostFocus}"
+                 ToolTip.Tip="{loc:Localize Dies.Properties.NameTip}"/>
+
+        <TextBlock Classes="label" Margin="0,6,0,0" Text="{loc:Localize Dies.Properties.Process}"/>
+        <ComboBox x:Name="DieProcessBox" HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding DieProperties.ProcessOptions}"
+                  SelectedItem="{Binding DieProperties.SelectedProcess}">
+            <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="dies:DieProcessOption">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border Width="10" Height="10" CornerRadius="2" Background="{Binding Brush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Name}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <TextBlock Classes="label" Margin="0,6,0,0" Text="{loc:Localize Dies.Properties.SizeMm}"/>
+        <ComboBox x:Name="DieSizeBox" HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding DieProperties.SizeOptions}"
+                  SelectedItem="{Binding DieProperties.SelectedSize}"/>
+        <Grid ColumnDefinitions="*,Auto,*">
+            <NumericUpDown Value="{Binding DieProperties.WidthMillimeters}" Minimum="0.05" Maximum="100"
+                           Increment="0.1" FormatString="0.###" ShowButtonSpinner="False"
+                           ToolTip.Tip="{loc:Localize Dies.Properties.WidthTip}"/>
+            <TextBlock Grid.Column="1" Text=" × " VerticalAlignment="Center"/>
+            <NumericUpDown Grid.Column="2" Value="{Binding DieProperties.HeightMillimeters}" Minimum="0.05" Maximum="100"
+                           Increment="0.1" FormatString="0.###" ShowButtonSpinner="False"
+                           ToolTip.Tip="{loc:Localize Dies.Properties.HeightTip}"/>
+        </Grid>
+
+        <Grid ColumnDefinitions="*,96" Margin="0,6,0,0">
+            <TextBlock Classes="label" VerticalAlignment="Center" Text="{loc:Localize Dies.Properties.EdgeZone}"
+                       ToolTip.Tip="{loc:Localize Dies.Properties.EdgeZoneTip}"/>
+            <NumericUpDown Grid.Column="1" Value="{Binding DieProperties.EdgeZoneMicrometers}" Minimum="0" Maximum="1000"
+                           Increment="5" FormatString="0 µm" ShowButtonSpinner="False"/>
+        </Grid>
+
+        <TextBlock Classes="label" Margin="0,6,0,0" Text="{loc:Localize Dies.Properties.Pdks}"/>
+        <TextBlock Classes="caption" Text="{Binding DieProperties.PdkSummary}"/>
+        <ItemsControl x:Name="DiePdkList" ItemsSource="{Binding DieProperties.Pdks}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="dies:DiePdkOption">
+                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsEnabled}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Classes="caption" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Warning}"
+                   Text="{Binding DieProperties.StatusText}"
+                   IsVisible="{Binding DieProperties.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+            <Button Command="{Binding DieProperties.OpenDieCommand}" ToolTip.Tip="{loc:Localize Dies.Properties.OpenTip}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:Icon Data="{StaticResource Icon.FolderOpen}"/>
+                    <TextBlock Text="{loc:Localize Dies.Properties.Open}"/>
+                </StackPanel>
+            </Button>
+            <Button Command="{Binding DieProperties.DeleteDieCommand}" ToolTip.Tip="{loc:Localize Dies.Properties.DeleteTip}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                    <TextBlock Text="{loc:Localize Dies.Properties.Delete}"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </StackPanel>
+    </StackPanel>
+</UserControl>

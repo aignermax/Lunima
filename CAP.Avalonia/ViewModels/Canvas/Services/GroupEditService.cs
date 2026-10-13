@@ -207,6 +207,11 @@ public class GroupEditService
     /// </summary>
     public (double X, double Y, double Width, double Height) CalculateGroupBounds(ComponentGroup group)
     {
+        if (group.IsDie)
+        {
+            var outline = CAP_Core.Components.Dies.DieAssembly.OutlineOf(group);
+            return (outline.X, outline.Y, outline.Width, outline.Height);
+        }
         if (group.ChildComponents.Count == 0)
             return (group.PhysicalX, group.PhysicalY, group.WidthMicrometers, group.HeightMicrometers);
 
@@ -370,7 +375,8 @@ public class GroupEditService
             return;
 
         groupViewModel.NotifyDimensionsChanged();
-        if (editedGroup.ChildComponents.Count > 0)
+        // A die's origin is fixed by its outline, never by where its content happens to sit.
+        if (editedGroup.ChildComponents.Count > 0 && !editedGroup.IsDie)
         {
             groupViewModel.X = editedGroup.ChildComponents.Min(c => c.PhysicalX);
             groupViewModel.Y = editedGroup.ChildComponents.Min(c => c.PhysicalY);

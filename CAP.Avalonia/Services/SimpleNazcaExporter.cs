@@ -20,7 +20,7 @@ namespace CAP.Avalonia.Services;
 /// Simple Nazca exporter for the physical coordinate system.
 /// Exports components and waveguide connections to Python/Nazca code.
 /// </summary>
-public class SimpleNazcaExporter
+public partial class SimpleNazcaExporter
 {
     /// <summary>
     /// GDS (layer, datatype) pair for pin/port labels (TEXT elements), emitted as a
@@ -113,6 +113,11 @@ public class SimpleNazcaExporter
         List<string>? exportWarnings = null,
         string? designName = null)
     {
+        // A die assembly exports one cell per die under an assembly top cell; single-die
+        // designs continue below unchanged.
+        if (canvas.Dies.IsAssemblyRoot)
+            return ExportAssembly(canvas, onlyDie: null, metalSpec, skippedConnections, library, exportWarnings);
+
         var sb = new StringBuilder();
         var metal = metalSpec ?? MetalRoutingSpec.Default;
         var interconnectSettings = SettingsSource?.Invoke() ?? new InterconnectSettings();
@@ -490,9 +495,10 @@ public class SimpleNazcaExporter
     private static Dictionary<Component, string> AppendComponents(
         StringBuilder sb, DesignCanvasViewModel canvas, bool emitVerification = false,
         Func<Component, bool>? include = null, string topCellName = "ConnectAPIC_Design",
-        RawCodeExportPlan? rawCodePlan = null, PinLabelWrapperPlan? wrapperPlan = null)
+        RawCodeExportPlan? rawCodePlan = null, PinLabelWrapperPlan? wrapperPlan = null,
+        string functionName = "create_design")
     {
-        sb.AppendLine("def create_design():");
+        sb.AppendLine($"def {functionName}():");
         sb.AppendLine($"    with nd.Cell(name='{topCellName}') as design:");
         sb.AppendLine();
         sb.AppendLine("        # Components");

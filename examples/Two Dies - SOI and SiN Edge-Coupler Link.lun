@@ -1,0 +1,339 @@
+{
+  "FormatVersion": "2.0",
+  "Components": [],
+  "Connections": [
+    {
+      "StartComponentIndex": 1,
+      "StartPinName": "SiN Edge Coupler_4_o1",
+      "EndComponentIndex": 0,
+      "EndPinName": "OUT1",
+      "StartComponentId": "group_6d1be68f87b44d158392c8b483e29f69",
+      "EndComponentId": "group_0b620306648c42548b3bc27b7fe788a0",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 1002,
+          "StartY": 290,
+          "EndX": 1002,
+          "EndY": 290,
+          "StartAngleDegrees": 180,
+          "EndAngleDegrees": 180
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    }
+  ],
+  "Groups": [
+    {
+      "GroupDto": {
+        "GroupName": "SOI die",
+        "Description": "Group of 3 components",
+        "Identifier": "group_0b620306648c42548b3bc27b7fe788a0",
+        "IdGuid": "bcfd392e-231e-4131-8813-93886d073002",
+        "ChildComponentGuids": [
+          "799f1fab-5944-4e2a-ae12-2a112ea35c9a",
+          "b451bbca-9e3a-4a74-ad94-48e88adef85a",
+          "40b171b6-fc61-4e59-bcf3-ca8e3588dc46"
+        ],
+        "GridX": 0,
+        "GridY": 0,
+        "PhysicalX": 0,
+        "PhysicalY": 0,
+        "Rotation90CounterClock": 0,
+        "ChildComponentIds": [
+          "Grating Coupler_1",
+          "Straight Waveguide 100\u00B5m_2",
+          "Edge Coupler_3"
+        ],
+        "InternalPaths": [
+          {
+            "PathId": "e9d5ac97-0079-4d01-9675-d4bc753b41f6",
+            "StartComponentId": "Grating Coupler_1",
+            "StartComponentGuid": "799f1fab-5944-4e2a-ae12-2a112ea35c9a",
+            "StartPinName": "waveguide",
+            "EndComponentId": "Straight Waveguide 100\u00B5m_2",
+            "EndComponentGuid": "b451bbca-9e3a-4a74-ad94-48e88adef85a",
+            "EndPinName": "a0",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 160,
+                "StartY": 290,
+                "EndX": 450,
+                "EndY": 290,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": false,
+            "PropagationLossDbPerCm": 0.5,
+            "BendLossDbPer90Deg": 0.05,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "17228517-1190-46b4-b8e9-7b4a9b41d771",
+            "StartComponentId": "Straight Waveguide 100\u00B5m_2",
+            "StartComponentGuid": "b451bbca-9e3a-4a74-ad94-48e88adef85a",
+            "StartPinName": "b0",
+            "EndComponentId": "Edge Coupler_3",
+            "EndComponentGuid": "40b171b6-fc61-4e59-bcf3-ca8e3588dc46",
+            "EndPinName": "waveguide",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 550,
+                "StartY": 290,
+                "EndX": 900,
+                "EndY": 290,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": false,
+            "PropagationLossDbPerCm": 0.5,
+            "BendLossDbPer90Deg": 0.05,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          }
+        ],
+        "ExternalPins": [
+          {
+            "PinId": "3e3a0e15-4712-4067-8f69-d5ab28221058",
+            "Name": "IN1",
+            "InternalComponentId": "Grating Coupler_1",
+            "InternalComponentGuid": "799f1fab-5944-4e2a-ae12-2a112ea35c9a",
+            "InternalPinName": "fiber",
+            "RelativeX": 60,
+            "RelativeY": 290,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "03bb9678-4ac7-4a63-8cb2-81e803490c4b",
+            "Name": "OUT1",
+            "InternalComponentId": "Edge Coupler_3",
+            "InternalComponentGuid": "40b171b6-fc61-4e59-bcf3-ca8e3588dc46",
+            "InternalPinName": "fiber",
+            "RelativeX": 1000,
+            "RelativeY": 290,
+            "AngleDegrees": 0
+          }
+        ]
+      },
+      "ChildComponents": [
+        {
+          "Identifier": "Grating Coupler_1",
+          "ComponentGuid": "799f1fab-5944-4e2a-ae12-2a112ea35c9a",
+          "TemplateName": "Grating Coupler",
+          "PdkSource": "Demo PDK",
+          "X": 60,
+          "Y": 280.5,
+          "Rotation": 0,
+          "HumanReadableName": "Grating Coupler"
+        },
+        {
+          "Identifier": "Straight Waveguide 100\u00B5m_2",
+          "ComponentGuid": "b451bbca-9e3a-4a74-ad94-48e88adef85a",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 450,
+          "Y": 285,
+          "Rotation": 0,
+          "SliderValue": 0.087,
+          "SliderValues": {
+            "0": 0.087
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        },
+        {
+          "Identifier": "Edge Coupler_3",
+          "ComponentGuid": "40b171b6-fc61-4e59-bcf3-ca8e3588dc46",
+          "TemplateName": "Edge Coupler",
+          "PdkSource": "Demo PDK",
+          "X": 900,
+          "Y": 280.5,
+          "Rotation": 2,
+          "HumanReadableName": "Edge Coupler"
+        }
+      ],
+      "CanvasX": 0,
+      "CanvasY": 0,
+      "ProcessBinding": {
+        "DisplayName": "Demo SOI 220nm",
+        "IsPlayground": false,
+        "CoreMaterial": "Si",
+        "CoreThicknessNm": 220,
+        "Cladding": "SiO2",
+        "DesignWavelengthNm": 1550,
+        "ProcessName": "Demo SOI 220nm",
+        "MemberPdkNames": [
+          "Demo PDK",
+          "SiEPIC EBeam PDK"
+        ]
+      },
+      "Die": {
+        "WidthMicrometers": 1000,
+        "HeightMicrometers": 600,
+        "OutlineOffsetXMicrometers": 0,
+        "OutlineOffsetYMicrometers": 0,
+        "EdgeZoneMicrometers": 50
+      }
+    },
+    {
+      "GroupDto": {
+        "GroupName": "SiN die",
+        "Description": "Group of 0 components",
+        "Identifier": "group_6d1be68f87b44d158392c8b483e29f69",
+        "IdGuid": "322e3c84-8694-4965-9825-5a8b051da6d7",
+        "ChildComponentGuids": [
+          "56447717-8669-4f94-b4ad-2f40a4bc6710",
+          "b4a05bbc-ba98-48e5-8ff0-0a4eefc26ed2"
+        ],
+        "GridX": 0,
+        "GridY": 0,
+        "PhysicalX": 1002,
+        "PhysicalY": -40,
+        "Rotation90CounterClock": 0,
+        "ChildComponentIds": [
+          "SiN Edge Coupler_4",
+          "Grating Coupler Elliptical_5"
+        ],
+        "InternalPaths": [
+          {
+            "PathId": "a70ec950-ef18-4279-9fbb-5f45ad2c2056",
+            "StartComponentId": "SiN Edge Coupler_4",
+            "StartComponentGuid": "56447717-8669-4f94-b4ad-2f40a4bc6710",
+            "StartPinName": "o2",
+            "EndComponentId": "Grating Coupler Elliptical_5",
+            "EndComponentGuid": "b4a05bbc-ba98-48e5-8ff0-0a4eefc26ed2",
+            "EndPinName": "o1",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 1202,
+                "StartY": 290,
+                "EndX": 1621.085,
+                "EndY": 290,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": false,
+            "PropagationLossDbPerCm": 0.5,
+            "BendLossDbPer90Deg": 0.05,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          }
+        ],
+        "ExternalPins": [
+          {
+            "PinId": "4918adcf-7e22-4a76-99ef-b77f3291614c",
+            "Name": "SiN Edge Coupler_4_o1",
+            "InternalComponentId": "SiN Edge Coupler_4",
+            "InternalComponentGuid": "56447717-8669-4f94-b4ad-2f40a4bc6710",
+            "InternalPinName": "o1",
+            "RelativeX": 0,
+            "RelativeY": 330,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "9c0bb7f8-1936-48a6-90b2-0d6afa795709",
+            "Name": "Grating Coupler Elliptical_5_o2",
+            "InternalComponentId": "Grating Coupler Elliptical_5",
+            "InternalComponentGuid": "b4a05bbc-ba98-48e5-8ff0-0a4eefc26ed2",
+            "InternalPinName": "o2",
+            "RelativeX": 638.1030000000001,
+            "RelativeY": 330,
+            "AngleDegrees": 0
+          }
+        ]
+      },
+      "ChildComponents": [
+        {
+          "Identifier": "SiN Edge Coupler_4",
+          "ComponentGuid": "56447717-8669-4f94-b4ad-2f40a4bc6710",
+          "TemplateName": "SiN Edge Coupler",
+          "PdkSource": "CornerStone SiN 300nm",
+          "X": 1002,
+          "Y": 285,
+          "Rotation": 0,
+          "HumanReadableName": "SiN Edge Coupler"
+        },
+        {
+          "Identifier": "Grating Coupler Elliptical_5",
+          "ComponentGuid": "b4a05bbc-ba98-48e5-8ff0-0a4eefc26ed2",
+          "TemplateName": "Grating Coupler Elliptical",
+          "PdkSource": "CornerStone SiN 300nm",
+          "X": 1621.085,
+          "Y": 267.903,
+          "Rotation": 0,
+          "HumanReadableName": "Grating Coupler Elliptical"
+        }
+      ],
+      "CanvasX": 1002,
+      "CanvasY": -40,
+      "ProcessBinding": {
+        "DisplayName": "CornerStone SiN 300nm",
+        "IsPlayground": false,
+        "CoreMaterial": "Si3N4",
+        "CoreThicknessNm": 300,
+        "Cladding": "SiO2",
+        "DesignWavelengthNm": 1550,
+        "ProcessName": "CornerStone SiN 300nm",
+        "MemberPdkNames": [
+          "CornerStone SiN 300nm"
+        ]
+      },
+      "Die": {
+        "WidthMicrometers": 1000,
+        "HeightMicrometers": 600,
+        "OutlineOffsetXMicrometers": 0,
+        "OutlineOffsetYMicrometers": 0,
+        "EdgeZoneMicrometers": 50
+      }
+    }
+  ],
+  "Metadata": {
+    "PdkVersions": {},
+    "Authorship": {
+      "Created": "2026-10-13",
+      "Modified": "2026-10-13T14:22:06.3525722Z"
+    }
+  },
+  "ChipWidthMicrometers": 1000,
+  "ChipHeightMicrometers": 600,
+  "ActiveProcess": {
+    "DisplayName": "Demo SOI 220nm",
+    "IsPlayground": false,
+    "CoreMaterial": "Si",
+    "CoreThicknessNm": 220,
+    "Cladding": "SiO2",
+    "DesignWavelengthNm": 1550,
+    "ProcessName": "Demo SOI 220nm",
+    "MemberPdkNames": [
+      "Demo PDK",
+      "SiEPIC EBeam PDK"
+    ]
+  },
+  "Workspace": "System"
+}

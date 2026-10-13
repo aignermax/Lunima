@@ -137,6 +137,7 @@ public static class ComponentTemplates
 
         component.HumanReadableName = template.Name;
         component.TemplateName = template.Name;
+        component.ModeFieldDiameterMicrometers = template.ModeFieldDiameterMicrometers;
         component.WaveguideDispersion = template.WaveguideDispersion;
         component.WaveguideBendLoss = template.WaveguideBendLoss;
         component.ParameterDefinitions = template.ParameterDefinitions;
@@ -220,6 +221,9 @@ public partial class ComponentTemplate : ObservableObject
     /// so routed connections lose light according to the actual platform. Null without a process.
     /// </summary>
     public CAP_Core.LightCalculation.BendLoss.BendLossModel? WaveguideBendLoss { get; set; }
+
+    /// <summary>Mode-field diameter at an edge coupler's facet (µm) from the PDK; null when not declared.</summary>
+    public double? ModeFieldDiameterMicrometers { get; set; }
 
     public double NazcaOriginOffsetX { get; set; } = 0;
     public double NazcaOriginOffsetY { get; set; } = 0;
