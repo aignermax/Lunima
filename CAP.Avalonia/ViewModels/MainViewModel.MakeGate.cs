@@ -56,9 +56,10 @@ public partial class MainViewModel
         RightPanel.MakeGate.OpenCommand.Execute(null);
     }
 
-    /// <summary>Refreshes the Logic tab's gate list and opens the dock on it.</summary>
+    /// <summary>Switches to the Logic workspace, refreshes the Logic tab's gate list and opens the dock on it.</summary>
     private void OpenLogicTab()
     {
+        WorkspaceSwitch.Current = ViewModels.Workspaces.Workspace.Logic;
         RightPanel.Logic.RefreshGateCandidates();
         BottomPanel.Analysis.OpenLogic();
     }
