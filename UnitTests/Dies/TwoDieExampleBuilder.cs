@@ -53,7 +53,7 @@ internal static class TwoDieExampleBuilder
         sinDie.GroupName = "SiN die";
 
         var sinOutline = DieAssembly.OutlineOf(sinDie);
-        var place = PlaceComponentInDieCommand.TryCreate(canvas, sinDie, Template(vm, SinPdk, "Edge Coupler"),
+        var place = PlaceComponentInDieCommand.TryCreate(canvas, sinDie, Template(vm, SinPdk, "SiN Edge Coupler"),
             sinOutline.X + 110, sinOutline.Y + RowY + 40)!;
         vm.CommandManager.ExecuteCommand(place);
         var sinGc = PlaceComponentInDieCommand.TryCreate(canvas, sinDie, Template(vm, SinPdk, "Grating Coupler Elliptical"),

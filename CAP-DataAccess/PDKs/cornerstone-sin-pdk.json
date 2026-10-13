@@ -1597,7 +1597,7 @@
       ]
     },
     {
-      "name": "Edge Coupler",
+      "name": "SiN Edge Coupler",
       "category": "I/O",
       "nazcaFunction": "cs_sin300_edge_coupler",
       "widthMicrometers": 200.0,

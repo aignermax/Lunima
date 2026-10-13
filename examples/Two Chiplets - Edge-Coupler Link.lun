@@ -32,11 +32,11 @@
         "GroupName": "Transmitter Chiplet",
         "Description": "Group of 3 components",
         "Identifier": "group_42d0f807c1cb4aa687fdac68949ae7bd",
-        "IdGuid": "10a6ba2d-c9b0-4199-ad83-a588b517cb12",
+        "IdGuid": "e4e15b17-6dd5-48be-a0c2-74379b2f5aad",
         "ChildComponentGuids": [
-          "42c1bcb1-7574-424c-887a-ee1bb4629c28",
-          "35a07e1f-ff82-4088-91db-86e96a0154a8",
-          "a5350859-a577-412d-8f05-637bb90f9338"
+          "ab33938c-9218-414b-bba5-390bd7085444",
+          "adb7ff67-c33a-45b0-9fda-095dd98e9223",
+          "a1307b08-67af-4efe-9270-cf5cbf8e08f0"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -52,10 +52,10 @@
           {
             "PathId": "99616514-1b3d-4dbf-ae2d-c037914e9b4a",
             "StartComponentId": "a_gc",
-            "StartComponentGuid": "42c1bcb1-7574-424c-887a-ee1bb4629c28",
+            "StartComponentGuid": "ab33938c-9218-414b-bba5-390bd7085444",
             "StartPinName": "waveguide",
             "EndComponentId": "a_wg",
-            "EndComponentGuid": "35a07e1f-ff82-4088-91db-86e96a0154a8",
+            "EndComponentGuid": "adb7ff67-c33a-45b0-9fda-095dd98e9223",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -83,10 +83,10 @@
           {
             "PathId": "52e26483-4a91-4541-adf1-8d83f67c65b7",
             "StartComponentId": "a_wg",
-            "StartComponentGuid": "35a07e1f-ff82-4088-91db-86e96a0154a8",
+            "StartComponentGuid": "adb7ff67-c33a-45b0-9fda-095dd98e9223",
             "StartPinName": "b0",
             "EndComponentId": "a_ec",
-            "EndComponentGuid": "a5350859-a577-412d-8f05-637bb90f9338",
+            "EndComponentGuid": "a1307b08-67af-4efe-9270-cf5cbf8e08f0",
             "EndPinName": "waveguide",
             "Segments": [
               {
@@ -117,7 +117,7 @@
             "PinId": "b9162f02-78a7-4502-90ab-ec21f97b60fd",
             "Name": "a_gc_fiber",
             "InternalComponentId": "a_gc",
-            "InternalComponentGuid": "42c1bcb1-7574-424c-887a-ee1bb4629c28",
+            "InternalComponentGuid": "ab33938c-9218-414b-bba5-390bd7085444",
             "InternalPinName": "fiber",
             "RelativeX": 25,
             "RelativeY": 34.5,
@@ -127,7 +127,7 @@
             "PinId": "9575cb3b-a7dc-4ac7-97d0-f313668ab806",
             "Name": "a_ec_fiber",
             "InternalComponentId": "a_ec",
-            "InternalComponentGuid": "a5350859-a577-412d-8f05-637bb90f9338",
+            "InternalComponentGuid": "a1307b08-67af-4efe-9270-cf5cbf8e08f0",
             "InternalPinName": "fiber",
             "RelativeX": 335,
             "RelativeY": 34.5,
@@ -138,7 +138,7 @@
       "ChildComponents": [
         {
           "Identifier": "a_gc",
-          "ComponentGuid": "42c1bcb1-7574-424c-887a-ee1bb4629c28",
+          "ComponentGuid": "ab33938c-9218-414b-bba5-390bd7085444",
           "TemplateName": "Grating Coupler",
           "PdkSource": "Demo PDK",
           "X": 0,
@@ -148,7 +148,7 @@
         },
         {
           "Identifier": "a_wg",
-          "ComponentGuid": "35a07e1f-ff82-4088-91db-86e96a0154a8",
+          "ComponentGuid": "adb7ff67-c33a-45b0-9fda-095dd98e9223",
           "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 105,
@@ -162,7 +162,7 @@
         },
         {
           "Identifier": "a_ec",
-          "ComponentGuid": "a5350859-a577-412d-8f05-637bb90f9338",
+          "ComponentGuid": "a1307b08-67af-4efe-9270-cf5cbf8e08f0",
           "TemplateName": "Edge Coupler",
           "PdkSource": "Demo PDK",
           "X": 210,
@@ -199,10 +199,10 @@
         "GroupName": "Receiver Chiplet",
         "Description": "Group of 2 components",
         "Identifier": "group_833611f7017949e5a630d9bf1394b09a",
-        "IdGuid": "859ff6cc-e2ec-4e33-ad6d-872d6955d196",
+        "IdGuid": "67379920-37d2-4300-89f4-dd689e48bcc8",
         "ChildComponentGuids": [
-          "97eed9bb-dbf0-437e-80f9-b2262ba2e01d",
-          "69f3ed91-8b0c-4f54-a351-6368cb836b6f"
+          "4583c60e-6bab-4a71-bfe7-b2a850d37e39",
+          "91d6471f-ff4f-4a83-9ec5-bedf6328eb32"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -217,10 +217,10 @@
           {
             "PathId": "356a7bdd-307a-440e-bee4-943cac3e871b",
             "StartComponentId": "b_ec",
-            "StartComponentGuid": "97eed9bb-dbf0-437e-80f9-b2262ba2e01d",
+            "StartComponentGuid": "4583c60e-6bab-4a71-bfe7-b2a850d37e39",
             "StartPinName": "waveguide",
             "EndComponentId": "b_wg",
-            "EndComponentGuid": "69f3ed91-8b0c-4f54-a351-6368cb836b6f",
+            "EndComponentGuid": "91d6471f-ff4f-4a83-9ec5-bedf6328eb32",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -251,7 +251,7 @@
             "PinId": "6a849882-d135-477b-995e-f6768024c473",
             "Name": "b_ec_fiber",
             "InternalComponentId": "b_ec",
-            "InternalComponentGuid": "97eed9bb-dbf0-437e-80f9-b2262ba2e01d",
+            "InternalComponentGuid": "4583c60e-6bab-4a71-bfe7-b2a850d37e39",
             "InternalPinName": "fiber",
             "RelativeX": 0,
             "RelativeY": 34.5,
@@ -261,7 +261,7 @@
             "PinId": "ca849eba-7ed0-4084-9ab8-9a251cb28523",
             "Name": "b_wg_b0",
             "InternalComponentId": "b_wg",
-            "InternalComponentGuid": "69f3ed91-8b0c-4f54-a351-6368cb836b6f",
+            "InternalComponentGuid": "91d6471f-ff4f-4a83-9ec5-bedf6328eb32",
             "InternalPinName": "b0",
             "RelativeX": 205,
             "RelativeY": 34.5,
@@ -272,7 +272,7 @@
       "ChildComponents": [
         {
           "Identifier": "b_ec",
-          "ComponentGuid": "97eed9bb-dbf0-437e-80f9-b2262ba2e01d",
+          "ComponentGuid": "4583c60e-6bab-4a71-bfe7-b2a850d37e39",
           "TemplateName": "Edge Coupler",
           "PdkSource": "Demo PDK",
           "X": 310,
@@ -282,7 +282,7 @@
         },
         {
           "Identifier": "b_wg",
-          "ComponentGuid": "69f3ed91-8b0c-4f54-a351-6368cb836b6f",
+          "ComponentGuid": "91d6471f-ff4f-4a83-9ec5-bedf6328eb32",
           "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 415,
@@ -323,7 +323,7 @@
     "PdkVersions": {},
     "Authorship": {
       "Created": "2026-09-30",
-      "Modified": "2026-10-13T14:03:51.9709729Z"
+      "Modified": "2026-10-13T14:22:06.4353428Z"
     }
   },
   "ChipWidthMicrometers": 5000,

@@ -4,11 +4,11 @@
   "Connections": [
     {
       "StartComponentIndex": 1,
-      "StartPinName": "Edge Coupler_4_o1",
+      "StartPinName": "SiN Edge Coupler_4_o1",
       "EndComponentIndex": 0,
       "EndPinName": "OUT1",
-      "StartComponentId": "group_a7d2da0d0def418baf1945919323c76c",
-      "EndComponentId": "group_8d377f19b8d1426b9d4f2faa5e86f963",
+      "StartComponentId": "group_6d1be68f87b44d158392c8b483e29f69",
+      "EndComponentId": "group_0b620306648c42548b3bc27b7fe788a0",
       "CachedSegments": [
         {
           "Type": "Straight",
@@ -30,12 +30,12 @@
       "GroupDto": {
         "GroupName": "SOI die",
         "Description": "Group of 3 components",
-        "Identifier": "group_8d377f19b8d1426b9d4f2faa5e86f963",
-        "IdGuid": "27a236a5-fd0e-46e2-b9b4-a686b8305a4b",
+        "Identifier": "group_0b620306648c42548b3bc27b7fe788a0",
+        "IdGuid": "bcfd392e-231e-4131-8813-93886d073002",
         "ChildComponentGuids": [
-          "1e980a73-06b3-4a20-ba1e-271b450e14cc",
-          "ca559aa8-d9dd-46d6-a0b3-044b5c3df16b",
-          "b1fe25d3-be49-4cc7-af91-a559f66fb2fd"
+          "799f1fab-5944-4e2a-ae12-2a112ea35c9a",
+          "b451bbca-9e3a-4a74-ad94-48e88adef85a",
+          "40b171b6-fc61-4e59-bcf3-ca8e3588dc46"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -49,12 +49,12 @@
         ],
         "InternalPaths": [
           {
-            "PathId": "f00cbecb-047a-47bf-8a20-74404c0e5cde",
+            "PathId": "e9d5ac97-0079-4d01-9675-d4bc753b41f6",
             "StartComponentId": "Grating Coupler_1",
-            "StartComponentGuid": "1e980a73-06b3-4a20-ba1e-271b450e14cc",
+            "StartComponentGuid": "799f1fab-5944-4e2a-ae12-2a112ea35c9a",
             "StartPinName": "waveguide",
             "EndComponentId": "Straight Waveguide 100\u00B5m_2",
-            "EndComponentGuid": "ca559aa8-d9dd-46d6-a0b3-044b5c3df16b",
+            "EndComponentGuid": "b451bbca-9e3a-4a74-ad94-48e88adef85a",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -80,12 +80,12 @@
             "StraightShiftOffsets": {}
           },
           {
-            "PathId": "d5684a84-ef2c-4957-bfb3-23532ffdd127",
+            "PathId": "17228517-1190-46b4-b8e9-7b4a9b41d771",
             "StartComponentId": "Straight Waveguide 100\u00B5m_2",
-            "StartComponentGuid": "ca559aa8-d9dd-46d6-a0b3-044b5c3df16b",
+            "StartComponentGuid": "b451bbca-9e3a-4a74-ad94-48e88adef85a",
             "StartPinName": "b0",
             "EndComponentId": "Edge Coupler_3",
-            "EndComponentGuid": "b1fe25d3-be49-4cc7-af91-a559f66fb2fd",
+            "EndComponentGuid": "40b171b6-fc61-4e59-bcf3-ca8e3588dc46",
             "EndPinName": "waveguide",
             "Segments": [
               {
@@ -113,20 +113,20 @@
         ],
         "ExternalPins": [
           {
-            "PinId": "a25b8126-8a66-4015-9643-01cd401c3210",
+            "PinId": "3e3a0e15-4712-4067-8f69-d5ab28221058",
             "Name": "IN1",
             "InternalComponentId": "Grating Coupler_1",
-            "InternalComponentGuid": "1e980a73-06b3-4a20-ba1e-271b450e14cc",
+            "InternalComponentGuid": "799f1fab-5944-4e2a-ae12-2a112ea35c9a",
             "InternalPinName": "fiber",
             "RelativeX": 60,
             "RelativeY": 290,
             "AngleDegrees": 180
           },
           {
-            "PinId": "6dc68b1d-5280-4b13-8269-a1cb29c2d3a4",
+            "PinId": "03bb9678-4ac7-4a63-8cb2-81e803490c4b",
             "Name": "OUT1",
             "InternalComponentId": "Edge Coupler_3",
-            "InternalComponentGuid": "b1fe25d3-be49-4cc7-af91-a559f66fb2fd",
+            "InternalComponentGuid": "40b171b6-fc61-4e59-bcf3-ca8e3588dc46",
             "InternalPinName": "fiber",
             "RelativeX": 1000,
             "RelativeY": 290,
@@ -137,7 +137,7 @@
       "ChildComponents": [
         {
           "Identifier": "Grating Coupler_1",
-          "ComponentGuid": "1e980a73-06b3-4a20-ba1e-271b450e14cc",
+          "ComponentGuid": "799f1fab-5944-4e2a-ae12-2a112ea35c9a",
           "TemplateName": "Grating Coupler",
           "PdkSource": "Demo PDK",
           "X": 60,
@@ -147,7 +147,7 @@
         },
         {
           "Identifier": "Straight Waveguide 100\u00B5m_2",
-          "ComponentGuid": "ca559aa8-d9dd-46d6-a0b3-044b5c3df16b",
+          "ComponentGuid": "b451bbca-9e3a-4a74-ad94-48e88adef85a",
           "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 450,
@@ -161,7 +161,7 @@
         },
         {
           "Identifier": "Edge Coupler_3",
-          "ComponentGuid": "b1fe25d3-be49-4cc7-af91-a559f66fb2fd",
+          "ComponentGuid": "40b171b6-fc61-4e59-bcf3-ca8e3588dc46",
           "TemplateName": "Edge Coupler",
           "PdkSource": "Demo PDK",
           "X": 900,
@@ -197,11 +197,11 @@
       "GroupDto": {
         "GroupName": "SiN die",
         "Description": "Group of 0 components",
-        "Identifier": "group_a7d2da0d0def418baf1945919323c76c",
-        "IdGuid": "52ff00eb-25a8-45c6-b479-d36ea15c8e5a",
+        "Identifier": "group_6d1be68f87b44d158392c8b483e29f69",
+        "IdGuid": "322e3c84-8694-4965-9825-5a8b051da6d7",
         "ChildComponentGuids": [
-          "46f5d931-4ed9-4ea4-95a3-3aebdce6acd8",
-          "c50cf256-a1f9-4434-aef9-a864f18892a6"
+          "56447717-8669-4f94-b4ad-2f40a4bc6710",
+          "b4a05bbc-ba98-48e5-8ff0-0a4eefc26ed2"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -209,17 +209,17 @@
         "PhysicalY": -40,
         "Rotation90CounterClock": 0,
         "ChildComponentIds": [
-          "Edge Coupler_4",
+          "SiN Edge Coupler_4",
           "Grating Coupler Elliptical_5"
         ],
         "InternalPaths": [
           {
-            "PathId": "18a83b5e-b623-4e29-bed4-c0a8f68269d4",
-            "StartComponentId": "Edge Coupler_4",
-            "StartComponentGuid": "46f5d931-4ed9-4ea4-95a3-3aebdce6acd8",
+            "PathId": "a70ec950-ef18-4279-9fbb-5f45ad2c2056",
+            "StartComponentId": "SiN Edge Coupler_4",
+            "StartComponentGuid": "56447717-8669-4f94-b4ad-2f40a4bc6710",
             "StartPinName": "o2",
             "EndComponentId": "Grating Coupler Elliptical_5",
-            "EndComponentGuid": "c50cf256-a1f9-4434-aef9-a864f18892a6",
+            "EndComponentGuid": "b4a05bbc-ba98-48e5-8ff0-0a4eefc26ed2",
             "EndPinName": "o1",
             "Segments": [
               {
@@ -247,20 +247,20 @@
         ],
         "ExternalPins": [
           {
-            "PinId": "edd1679d-a943-4d9f-9688-751e980a6237",
-            "Name": "Edge Coupler_4_o1",
-            "InternalComponentId": "Edge Coupler_4",
-            "InternalComponentGuid": "46f5d931-4ed9-4ea4-95a3-3aebdce6acd8",
+            "PinId": "4918adcf-7e22-4a76-99ef-b77f3291614c",
+            "Name": "SiN Edge Coupler_4_o1",
+            "InternalComponentId": "SiN Edge Coupler_4",
+            "InternalComponentGuid": "56447717-8669-4f94-b4ad-2f40a4bc6710",
             "InternalPinName": "o1",
             "RelativeX": 0,
             "RelativeY": 330,
             "AngleDegrees": 180
           },
           {
-            "PinId": "e09a19d6-2af5-4beb-b52f-5f0dd53e0278",
+            "PinId": "9c0bb7f8-1936-48a6-90b2-0d6afa795709",
             "Name": "Grating Coupler Elliptical_5_o2",
             "InternalComponentId": "Grating Coupler Elliptical_5",
-            "InternalComponentGuid": "c50cf256-a1f9-4434-aef9-a864f18892a6",
+            "InternalComponentGuid": "b4a05bbc-ba98-48e5-8ff0-0a4eefc26ed2",
             "InternalPinName": "o2",
             "RelativeX": 638.1030000000001,
             "RelativeY": 330,
@@ -270,18 +270,18 @@
       },
       "ChildComponents": [
         {
-          "Identifier": "Edge Coupler_4",
-          "ComponentGuid": "46f5d931-4ed9-4ea4-95a3-3aebdce6acd8",
-          "TemplateName": "Edge Coupler",
+          "Identifier": "SiN Edge Coupler_4",
+          "ComponentGuid": "56447717-8669-4f94-b4ad-2f40a4bc6710",
+          "TemplateName": "SiN Edge Coupler",
           "PdkSource": "CornerStone SiN 300nm",
           "X": 1002,
           "Y": 285,
           "Rotation": 0,
-          "HumanReadableName": "Edge Coupler"
+          "HumanReadableName": "SiN Edge Coupler"
         },
         {
           "Identifier": "Grating Coupler Elliptical_5",
-          "ComponentGuid": "c50cf256-a1f9-4434-aef9-a864f18892a6",
+          "ComponentGuid": "b4a05bbc-ba98-48e5-8ff0-0a4eefc26ed2",
           "TemplateName": "Grating Coupler Elliptical",
           "PdkSource": "CornerStone SiN 300nm",
           "X": 1621.085,
@@ -317,7 +317,7 @@
     "PdkVersions": {},
     "Authorship": {
       "Created": "2026-10-13",
-      "Modified": "2026-10-13T14:03:51.8859958Z"
+      "Modified": "2026-10-13T14:22:06.3525722Z"
     }
   },
   "ChipWidthMicrometers": 1000,
