@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Avalonia.Controls;
 using CAP.Avalonia.ViewModels.Settings;
+using CAP.Avalonia.ViewModels.Settings.AgentBridge;
 
 namespace CAP.Avalonia.Views;
 
@@ -15,6 +16,25 @@ public partial class SettingsWindow : Window
     public SettingsWindow()
     {
         InitializeComponent();
+        DataContextChanged += (_, _) => WireClipboard();
+    }
+
+    /// <summary>
+    /// Gives pages that copy text (agent bridge connect command) access to the clipboard,
+    /// which only the top-level window can reach.
+    /// </summary>
+    private void WireClipboard()
+    {
+        if (DataContext is not SettingsWindowViewModel vm)
+            return;
+        foreach (var agentBridge in vm.Pages.Select(p => p.ViewModel).OfType<AgentBridgeSettingsViewModel>())
+        {
+            agentBridge.CopyToClipboard = async text =>
+            {
+                if (Clipboard != null)
+                    await Clipboard.SetTextAsync(text);
+            };
+        }
     }
 
     /// <summary>

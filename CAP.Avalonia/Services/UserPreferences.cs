@@ -129,4 +129,19 @@ public class UserPreferences
     /// On by default — the smooth direct route is what a photonics designer expects.
     /// </summary>
     public bool PreferDirectStyledRoutes { get; set; } = true;
+
+    /// <summary>
+    /// Whether the local MCP agent bridge server runs. Off by default — it lets a local
+    /// AI agent inspect and edit the open design, so the user has to opt in.
+    /// </summary>
+    public bool AgentBridgeEnabled { get; set; }
+
+    /// <summary>Loopback TCP port of the agent bridge. 0 means "use the default port".</summary>
+    public int AgentBridgePort { get; set; }
+
+    /// <summary>
+    /// Per-install bearer token the agent bridge requires on every request. Empty until
+    /// first read, when a random token is generated and persisted.
+    /// </summary>
+    public string AgentBridgeToken { get; set; } = "";
 }
