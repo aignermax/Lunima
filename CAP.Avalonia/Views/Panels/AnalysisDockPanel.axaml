@@ -10,7 +10,7 @@
              x:DataType="vm:MainViewModel">
 
     <!-- Analysis dock (collapsible, above the Error Console): the whole-design analyses,
-         sweeps, checks, netlist and logic tabs. -->
+         sweeps, checks and logic tabs. -->
     <Border Classes="dockFrame">
         <StackPanel>
             <!-- Resize grip on the top edge: drag to change the dock height. -->
@@ -317,12 +317,6 @@
                                  IsVisible="{Binding BottomPanel.Analysis.Tabs.Checks}">
                             <ScrollViewer Classes="tabPage">
                                 <panels:DesignChecksPanel/>
-                            </ScrollViewer>
-                        </TabItem>
-                        <TabItem Header="{loc:Localize AnalysisDock.TabNetlist}"
-                                 IsVisible="{Binding BottomPanel.Analysis.Tabs.Netlist}">
-                            <ScrollViewer Classes="tabPage">
-                                <panels:NetlistPanel/>
                             </ScrollViewer>
                         </TabItem>
                         <!-- Logic: whole-design build, toggle, step/run clock, timeline. -->

@@ -49,7 +49,7 @@ public class AnalysisDockViewModelTests
         var vm = Make();
         vm.OpenLogic();
         vm.IsVisible.ShouldBeTrue();
-        vm.SelectedTabIndex.ShouldBe(8, "the Logic tab is appended after Netlist in AnalysisDockPanel.axaml");
+        vm.SelectedTabIndex.ShouldBe(7, "the Logic tab is the last tab in AnalysisDockPanel.axaml");
     }
 
     [Fact]

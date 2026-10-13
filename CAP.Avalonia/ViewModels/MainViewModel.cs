@@ -525,8 +525,8 @@ public partial class MainViewModel : ObservableObject
             new SaxExportFormat(FileOperations.ExportSaxCommand),
             PhotonTorchExportFormat,
             VerilogAExportFormat,
-            // Circuit-topology netlist (gdsfactory YAML, #687) — same save flow as the panel.
-            new NetlistExportFormat(RightPanel.Netlist.SaveYamlCommand),
+            // Circuit-topology netlist (gdsfactory YAML): the only place it is exported from.
+            new NetlistExportFormat(new AsyncRelayCommand(SaveNetlistAsync)),
             new NetlistClipboardExportFormat(new AsyncRelayCommand(CopyNetlistToClipboardAsync)),
         });
 
@@ -800,6 +800,13 @@ public partial class MainViewModel : ObservableObject
     {
         StatusText = text;
         BottomPanel.SetStatus(text);
+    }
+
+    /// <summary>Saves the netlist from the Export menu and reports the outcome in the status bar.</summary>
+    private async Task SaveNetlistAsync()
+    {
+        await RightPanel.Netlist.SaveYamlCommand.ExecuteAsync(null);
+        UpdateStatusText(RightPanel.Netlist.StatusText);
     }
 
     /// <summary>Copies the netlist from the Export menu and reports the outcome in the status bar.</summary>

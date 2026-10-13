@@ -28,9 +28,6 @@ public enum AnalysisDockTab
     /// <summary>DRC-lite design checks.</summary>
     Checks = 6,
 
-    /// <summary>Circuit netlist.</summary>
-    Netlist = 7,
-
     /// <summary>Logic network: build, toggle, clock.</summary>
-    Logic = 8,
+    Logic = 7,
 }

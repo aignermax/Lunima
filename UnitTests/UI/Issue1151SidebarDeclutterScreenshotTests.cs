@@ -15,8 +15,8 @@ namespace UnitTests.UI;
 
 /// <summary>
 /// Sidebar de-clutter regression + visual documentation: the right sidebar hosts
-/// selection properties only, while Sweep / Design Checks / Netlist live as
-/// analysis-dock tabs and the AI Assistant in its own tool window. The structural
+/// selection properties only, while Sweep / Design Checks live as
+/// analysis-dock tabs (the netlist is exported from the Export menu) and the AI Assistant in its own tool window. The structural
 /// facts are asserted unconditionally; PNGs + manifest.json land in
 /// <c>artifacts/ui-screenshots/issue-1151/</c> when UI_SHOT_DIR is set.
 /// </summary>
@@ -29,11 +29,10 @@ public class Issue1151SidebarDeclutterScreenshotTests
     private const int CaptureAttempts = 3;
     private const int SweepTabIndex = 5;
     private const int ChecksTabIndex = 6;
-    private const int NetlistTabIndex = 7;
 
-    /// <summary>The analysis dock hosts the re-homed Sweep, Checks and Netlist tabs.</summary>
+    /// <summary>The analysis dock hosts the re-homed Sweep and Checks tabs.</summary>
     [AvaloniaFact]
-    public void AnalysisDock_HostsSweepChecksAndNetlistTabs()
+    public void AnalysisDock_HostsSweepAndChecksTabs()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
         vm.BottomPanel.Analysis.IsVisible = true;
@@ -44,7 +43,6 @@ public class Issue1151SidebarDeclutterScreenshotTests
         {
             AssertVisibleTab<ParameterSweepPanel>(dock, vm, SweepTabIndex);
             AssertVisibleTab<DesignChecksPanel>(dock, vm, ChecksTabIndex);
-            AssertVisibleTab<NetlistPanel>(dock, vm, NetlistTabIndex);
         }
         finally
         {
@@ -66,7 +64,6 @@ public class Issue1151SidebarDeclutterScreenshotTests
             rightPanel.ShouldNotBeNull();
             rightPanel.GetVisualDescendants().OfType<AiAssistantPanel>().ShouldBeEmpty();
             rightPanel.GetVisualDescendants().OfType<DesignChecksPanel>().ShouldBeEmpty();
-            rightPanel.GetVisualDescendants().OfType<NetlistPanel>().ShouldBeEmpty();
             rightPanel.GetVisualDescendants().OfType<ParameterSweepPanel>().ShouldBeEmpty();
             rightPanel.GetVisualDescendants().OfType<SelectedComponentPropertiesPanel>().ShouldHaveSingleItem();
         }
@@ -120,10 +117,6 @@ public class Issue1151SidebarDeclutterScreenshotTests
             vm.BottomPanel.Analysis.SelectedTabIndex = ChecksTabIndex;
             Dispatcher.UIThread.RunJobs();
             CaptureWithRetry(dockWindow, Path.Combine(outputDir, "03-dock-checks-tab.png"));
-
-            vm.BottomPanel.Analysis.SelectedTabIndex = NetlistTabIndex;
-            Dispatcher.UIThread.RunJobs();
-            CaptureWithRetry(dockWindow, Path.Combine(outputDir, "04-dock-netlist-tab.png"));
         }
         finally
         {
@@ -131,13 +124,13 @@ public class Issue1151SidebarDeclutterScreenshotTests
             Dispatcher.UIThread.RunJobs();
         }
 
-        // 5: the AI Design Assistant in its own tool window.
+        // 4: the AI Design Assistant in its own tool window.
         var aiWindow = new AiAssistantWindow { DataContext = vm };
         aiWindow.Show();
         Dispatcher.UIThread.RunJobs();
         try
         {
-            CaptureWithRetry(aiWindow, Path.Combine(outputDir, "05-ai-assistant-window.png"));
+            CaptureWithRetry(aiWindow, Path.Combine(outputDir, "04-ai-assistant-window.png"));
         }
         finally
         {
@@ -146,7 +139,7 @@ public class Issue1151SidebarDeclutterScreenshotTests
         }
 
         WriteManifest(outputDir);
-        Directory.GetFiles(outputDir, "*.png").Length.ShouldBe(5);
+        Directory.GetFiles(outputDir, "*.png").Length.ShouldBe(4);
     }
 
     private static void AssertVisibleTab<TPanel>(AnalysisDockPanel dock,
@@ -166,8 +159,7 @@ public class Issue1151SidebarDeclutterScreenshotTests
           {"file": "01-main-window.png", "caption": "Main window after the de-clutter: the right sidebar shows only selection properties (empty-state hint when nothing is selected)."},
           {"file": "02-dock-sweep-tab.png", "caption": "Parameter Sweep re-homed as an analysis-dock tab, with a hint to select a slider component when none is selected."},
           {"file": "03-dock-checks-tab.png", "caption": "Design Checks re-homed as an analysis-dock tab — run checks and step through issues like an IDE problems panel."},
-          {"file": "04-dock-netlist-tab.png", "caption": "Netlist (gdsfactory YAML) re-homed as an analysis-dock tab with generate/save/copy actions."},
-          {"file": "05-ai-assistant-window.png", "caption": "AI Design Assistant in its own non-modal tool window, opened from the new 🤖 toolbar button."}
+          {"file": "04-ai-assistant-window.png", "caption": "AI Design Assistant in its own non-modal tool window, opened from the new 🤖 toolbar button."}
         ]
         """;
         ScreenshotArtifacts.WriteText(Path.Combine(outputDir, "manifest.json"), manifest);

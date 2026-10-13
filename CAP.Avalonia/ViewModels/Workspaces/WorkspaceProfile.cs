@@ -18,7 +18,7 @@ public sealed record WorkspaceProfile(
 {
     private static readonly WorkspaceProfile LayoutProfile = new(
         Workspace.Layout,
-        [AnalysisDockTab.Checks, AnalysisDockTab.Netlist],
+        [AnalysisDockTab.Checks],
         "Workspace.RunLayout", "Workspace.RunLayoutTip");
 
     private static readonly WorkspaceProfile OpticsProfile = new(
@@ -36,7 +36,7 @@ public sealed record WorkspaceProfile(
 
     private static readonly WorkspaceProfile SystemProfile = new(
         Workspace.System,
-        [AnalysisDockTab.Checks, AnalysisDockTab.Logic, AnalysisDockTab.Spectrum, AnalysisDockTab.Netlist],
+        [AnalysisDockTab.Checks, AnalysisDockTab.Logic, AnalysisDockTab.Spectrum],
         "Workspace.RunSystem", "Workspace.RunSystemTip");
 
     /// <summary>The profile of <paramref name="workspace"/>.</summary>
