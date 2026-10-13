@@ -428,6 +428,7 @@ public partial class Component : ICloneable
         clonedComponent.HumanReadableName = HumanReadableName;
         clonedComponent.TemplateName = TemplateName;
         clonedComponent.WaveguideDispersion = WaveguideDispersion;
+        clonedComponent.WaveguideBendLoss = WaveguideBendLoss;
         clonedComponent.ParameterDefinitions = ParameterDefinitions;
 
         // The constructor sweeps every slider to its range midpoint to prime the

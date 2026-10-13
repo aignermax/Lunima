@@ -109,7 +109,8 @@ public static class CrossingRecordRebuilder
             WidthMicrometers = entrySub.WidthMicrometers,
             BendRadiusMicrometers = entrySub.BendRadiusMicrometers,
             PropagationLossDbPerCm = entrySub.PropagationLossDbPerCm,
-            BendLossDbPer90Deg = entrySub.BendLossDbPer90Deg,
+            ExcessBendLossDbPer90Deg = entrySub.ExcessBendLossDbPer90Deg,
+            BendLoss = entrySub.BendLoss,
             DispersionModel = entrySub.DispersionModel,
         };
     }

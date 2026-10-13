@@ -138,6 +138,7 @@ public static class ComponentTemplates
         component.HumanReadableName = template.Name;
         component.TemplateName = template.Name;
         component.WaveguideDispersion = template.WaveguideDispersion;
+        component.WaveguideBendLoss = template.WaveguideBendLoss;
         component.ParameterDefinitions = template.ParameterDefinitions;
         component.OutlinePolygons = template.OutlinePolygons;
 
@@ -212,6 +213,13 @@ public partial class ComponentTemplate : ObservableObject
     /// inherit the PDK's n_eff(λ)/n_g(λ). Null when the PDK declares no dispersion.
     /// </summary>
     public CAP_Core.LightCalculation.MaterialDispersion.IDispersionModel? WaveguideDispersion { get; set; }
+
+    /// <summary>
+    /// Radius-dependent bend-loss model of this template's PDK process (its first optical
+    /// cross-section), stamped onto every placed instance as <see cref="Component.WaveguideBendLoss"/>
+    /// so routed connections lose light according to the actual platform. Null without a process.
+    /// </summary>
+    public CAP_Core.LightCalculation.BendLoss.BendLossModel? WaveguideBendLoss { get; set; }
 
     public double NazcaOriginOffsetX { get; set; } = 0;
     public double NazcaOriginOffsetY { get; set; } = 0;

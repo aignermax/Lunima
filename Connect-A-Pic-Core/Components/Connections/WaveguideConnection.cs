@@ -1,4 +1,5 @@
 using System.Numerics;
+using CAP_Core.LightCalculation.BendLoss;
 using CAP_Core.LightCalculation.MaterialDispersion;
 using CAP_Core.Routing;
 using CAP_Core.Routing.InterconnectRouting;
@@ -103,11 +104,6 @@ namespace CAP_Core.Components.Connections
         public IDispersionModel? DispersionModel { get; set; }
 
         /// <summary>
-        /// Loss per 90-degree bend in dB. Typical values: 0.01-0.1 dB per bend.
-        /// </summary>
-        public double BendLossDbPer90Deg { get; set; } = 0.05;
-
-        /// <summary>
         /// GDS layer of the route polygons this connection was derived from during a
         /// GDS import (paired with <see cref="SourceGdsDataType"/>), when ALL source
         /// polygons share one layer — the layer the connection's geometry returns to
@@ -154,17 +150,6 @@ namespace CAP_Core.Components.Connections
         public double PathLengthMicrometers => RoutedPath?.TotalLengthMicrometers ?? 0;
 
         /// <summary>
-        /// Gets the transmission coefficient calculated from current geometry and loss parameters.
-        /// Call RecalculateTransmission() after component positions change.
-        /// </summary>
-        public Complex TransmissionCoefficient { get; private set; } = Complex.One;
-
-        /// <summary>
-        /// Total loss in dB for this connection.
-        /// </summary>
-        public double TotalLossDb { get; private set; }
-
-        /// <summary>
         /// Recalculates the transmission coefficient based on current pin positions and loss parameters.
         /// Should be called whenever connected components are moved.
         /// </summary>
@@ -181,8 +166,7 @@ namespace CAP_Core.Components.Connections
             if (StartPin == null || EndPin == null)
             {
                 RoutedPath = null;
-                TransmissionCoefficient = Complex.One;
-                TotalLossDb = 0;
+                ApplyLossBreakdown(ConnectionLossBreakdown.Empty);
                 return;
             }
 
@@ -300,29 +284,6 @@ namespace CAP_Core.Components.Connections
         {
             RoutedPath = path;
             UpdateLossFromPath();
-        }
-
-        /// <summary>
-        /// Recalculates <see cref="TotalLossDb"/> and <see cref="TransmissionCoefficient"/>
-        /// from the current <see cref="RoutedPath"/> geometry.
-        /// </summary>
-        /// <param name="wavelengthNm">Wavelength in nm used when a <see cref="DispersionModel"/> is set.</param>
-        public void UpdateLossFromPath(double wavelengthNm = 1550.0)
-        {
-            // Calculate total loss from actual path. Smooth polyline styles (SBend/Cobra)
-            // contain no BendSegments, so BendCount is 0 for them: their bend loss is
-            // APPROXIMATED as pure propagation loss over the sampled curve length — a
-            // conservative simplification for adiabatic curves without a single radius.
-            double lossDbPerCm = DispersionModel?.LossDbPerCmAt(wavelengthNm) ?? PropagationLossDbPerCm;
-            double propagationLoss = (PathLengthMicrometers / 10000.0) * lossDbPerCm; // µm to cm
-            double bendLoss = BendCount * BendLossDbPer90Deg;
-            TotalLossDb = propagationLoss + bendLoss;
-
-            // Convert dB loss to linear amplitude coefficient
-            // Loss in dB = -20 * log10(|amplitude|)
-            // |amplitude| = 10^(-loss_dB / 20)
-            double amplitudeCoefficient = Math.Pow(10, -TotalLossDb / 20.0);
-            TransmissionCoefficient = new Complex(amplitudeCoefficient, 0);
         }
 
         /// <summary>

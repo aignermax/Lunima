@@ -253,7 +253,7 @@ public static class ComponentGroupSerializer
             WidthMicrometers = frozenPath.WidthMicrometers,
             IsRouteFrozen = frozenPath.IsRouteFrozen,
             PropagationLossDbPerCm = frozenPath.PropagationLossDbPerCm,
-            BendLossDbPer90Deg = frozenPath.BendLossDbPer90Deg,
+            ExcessBendLossDbPer90Deg = frozenPath.ExcessBendLossDbPer90Deg > 0 ? frozenPath.ExcessBendLossDbPer90Deg : null,
             BendRadiusOverrides = new Dictionary<int, double>(frozenPath.BendRadiusOverrides),
             StraightShiftOffsets = new Dictionary<int, double>(frozenPath.StraightShiftOffsets),
             AsDrawnPolygons = AsDrawnPolygonDto.FromGeometry(frozenPath.AsDrawnGeometry),
@@ -365,8 +365,8 @@ public static class ComponentGroupSerializer
         frozenPath.IsRouteFrozen = dto.IsRouteFrozen;
         if (dto.PropagationLossDbPerCm is double loss)
             frozenPath.PropagationLossDbPerCm = loss;
-        if (dto.BendLossDbPer90Deg is double bendLoss)
-            frozenPath.BendLossDbPer90Deg = bendLoss;
+        if (dto.ExcessBendLossDbPer90Deg is double excessBendLoss)
+            frozenPath.ExcessBendLossDbPer90Deg = excessBendLoss;
         if (dto.BendRadiusOverrides != null)
         {
             foreach (var (bendIndex, radius) in dto.BendRadiusOverrides)

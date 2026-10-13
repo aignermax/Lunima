@@ -3,6 +3,7 @@ using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.FormulaReading;
 using CAP_Core.LightCalculation;
+using CAP_Core.LightCalculation.BendLoss;
 using CAP_Core.Routing;
 using CAP_Core.Tiles;
 using Shouldly;
@@ -43,7 +44,7 @@ public class WaveguideConnectionTests
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = 2.0,
-            BendLossDbPer90Deg = 0.05
+            BendLoss = BendLossPresets.Generic
         };
 
         // Act
@@ -126,7 +127,7 @@ public class WaveguideConnectionTests
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = 2.0,
-            BendLossDbPer90Deg = 0.1 // 0.1 dB per 90-degree bend
+            BendLoss = BendLossPresets.Generic // radius-dependent bend + junction loss
         };
 
         // Act

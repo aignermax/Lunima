@@ -117,7 +117,8 @@ public class CrossingPlacement
             WidthMicrometers = original.WidthMicrometers,
             BendRadiusMicrometers = original.BendRadiusMicrometers,
             PropagationLossDbPerCm = original.PropagationLossDbPerCm,
-            BendLossDbPer90Deg = original.BendLossDbPer90Deg,
+            ExcessBendLossDbPer90Deg = original.ExcessBendLossDbPer90Deg,
+            BendLoss = original.BendLoss,
             DispersionModel = original.DispersionModel,
         };
     }
