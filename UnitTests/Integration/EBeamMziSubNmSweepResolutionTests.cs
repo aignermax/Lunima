@@ -13,13 +13,14 @@ namespace UnitTests.Integration;
 /// to 16 points and samples the notch with a single wavelength.
 ///
 /// Note on the issue's "≥ 10 dB deeper null" expectation: in this exact band the
-/// MZI's only fringe null sits at 1548.98 nm — 23 pm away from the integer
+/// MZI's only fringe null sits at 1548.96 nm — ~40 pm away from the integer
 /// 1549 nm sample (ΔL = 44 µm happens to anchor the null comb near integer
-/// wavelengths). The integer grid therefore gets lucky here (measured: −42.7 dB
-/// vs −43.2 dB); what it cannot do is resolve the notch SHAPE — it carries one
-/// point within 10 dB of the floor, the sub-nm grid carries six. A null landing
-/// mid-integer (any ring resonance, or an MZI with a different ΔL) is invisible
-/// to the integer grid by the same mechanism.
+/// wavelengths). The integer grid therefore gets fairly close here (measured:
+/// −48.1 dB vs −51.7 dB with the radius-dependent bend loss, whose near-lossless
+/// SOI bends balance the arms and deepen the null); what it cannot do is resolve
+/// the notch SHAPE — it carries one point within 20 dB of the floor, the sub-nm
+/// grid carries six. A null landing mid-integer (any ring resonance, or an MZI
+/// with a different ΔL) is invisible to the integer grid by the same mechanism.
 /// </summary>
 public class EBeamMziSubNmSweepResolutionTests
 {
@@ -29,7 +30,7 @@ public class EBeamMziSubNmSweepResolutionTests
     private const int SweepEndNm = 1560;
     private const int SubNmStepCount = 300;
     private const int IntegerGridStepCount = 16; // 1 nm spacing — the old rounded grid
-    private const double NotchWindowDb = 10.0;
+    private const double NotchWindowDb = 20.0;
     private const int MinSubNmNotchSamples = 5;
     private const int MaxIntegerGridNotchSamples = 1;
     private const double FsrTolerance = 0.05;
@@ -60,7 +61,7 @@ public class EBeamMziSubNmSweepResolutionTests
         subNmNullDb.ShouldBeLessThanOrEqualTo(integerNullDb,
             "the finer grid never resolves a null worse than the coarse one");
 
-        // The notch shape: how many samples land within 10 dB of the null floor.
+        // The notch shape: how many samples land within 20 dB of the null floor.
         int subNmNotchSamples = subNm.Power.Count(p => ToDb(p) < subNmNullDb + NotchWindowDb);
         int integerNotchSamples = integerGrid.Power.Count(p => ToDb(p) < subNmNullDb + NotchWindowDb);
         subNmNotchSamples.ShouldBeGreaterThanOrEqualTo(MinSubNmNotchSamples,

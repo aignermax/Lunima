@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:sys="using:System"
+             x:Class="CAP.Avalonia.Views.Panels.ConnectionLossPanel"
+             x:DataType="vm:MainViewModel">
+
+    <!-- Insertion loss of the selected optical connection: where the light goes —
+         propagation over the length, radiation in each bend (radius dependent), mode
+         mismatch at curvature junctions. Read-only; refreshes with every re-route. -->
+    <StackPanel IsVisible="{Binding BottomPanel.ConnectionLoss.HasConnection}">
+        <Border Classes="divider" Margin="0,12,0,8"/>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="subtitle" Text="{loc:Localize Routing.Loss.Title}" Margin="0,0,0,5" VerticalAlignment="Center"/>
+            <controls:HelpFlyoutButton Grid.Column="1"
+                                       Title="{loc:Localize Routing.Loss.Help.Title}"
+                                       VerticalAlignment="Center">
+                <controls:HelpFlyoutButton.HelpContent>
+                    <StackPanel Spacing="8" MaxWidth="400">
+                        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
+                                   Text="{loc:Localize Routing.Loss.Help.Intro}"/>
+
+                        <TextBlock Classes="strong" Text="{loc:Localize Routing.Loss.Help.LeakTitle}"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                   Text="{loc:Localize Routing.Loss.Help.LeakBody}"/>
+                        <ha:BendLeakAnimation Width="336" Height="120" IsHitTestVisible="False"/>
+
+                        <TextBlock Classes="strong" Text="{loc:Localize Routing.Loss.Help.JunctionTitle}" Margin="0,4,0,0"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                   Text="{loc:Localize Routing.Loss.Help.JunctionBody}"/>
+
+                        <TextBlock Classes="strong" Text="{loc:Localize Routing.Loss.Help.RouterTitle}" Margin="0,4,0,0"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                   Text="{loc:Localize Routing.Loss.Help.RouterBody}"/>
+                    </StackPanel>
+                </controls:HelpFlyoutButton.HelpContent>
+            </controls:HelpFlyoutButton>
+        </Grid>
+
+        <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,0,0,4">
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="caption" Text="{loc:Localize Routing.Loss.Propagation}" Margin="0,0,12,3"/>
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding BottomPanel.ConnectionLoss.PropagationText}" Margin="0,0,12,3"/>
+            <TextBlock Grid.Row="0" Grid.Column="2" Classes="caption secondary" Text="{Binding BottomPanel.ConnectionLoss.PropagationDetailText}" TextWrapping="Wrap"/>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Classes="caption" Text="{loc:Localize Routing.Loss.Bends}" Margin="0,0,12,3"/>
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding BottomPanel.ConnectionLoss.BendsText}" Margin="0,0,12,3"/>
+            <TextBlock Grid.Row="1" Grid.Column="2" Classes="caption secondary" Text="{Binding BottomPanel.ConnectionLoss.BendsDetailText}" TextWrapping="Wrap"/>
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Classes="caption" Text="{loc:Localize Routing.Loss.Junctions}" Margin="0,0,12,3"/>
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding BottomPanel.ConnectionLoss.JunctionsText}" Margin="0,0,12,3"/>
+            <TextBlock Grid.Row="2" Grid.Column="2" Classes="caption secondary" Text="{Binding BottomPanel.ConnectionLoss.JunctionsDetailText}" TextWrapping="Wrap"/>
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Classes="strong" Text="{loc:Localize Routing.Loss.Total}" Margin="0,2,12,0"/>
+            <TextBlock Grid.Row="3" Grid.Column="1" Classes="strong" Text="{Binding BottomPanel.ConnectionLoss.TotalText}" Margin="0,2,12,0"/>
+        </Grid>
+
+        <!-- Per-bend rows: radius, sweep and that bend's loss. -->
+        <ItemsControl ItemsSource="{Binding BottomPanel.ConnectionLoss.BendRows}" Margin="0,2,0,4">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="sys:String">
+                    <TextBlock Classes="caption secondary" Text="{Binding}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Classes="caption secondary" Text="{Binding BottomPanel.ConnectionLoss.ModelText}" TextWrapping="Wrap"/>
+        <TextBlock Text="{loc:Localize Routing.Loss.BelowMinimumWarning}"
+                   Foreground="{DynamicResource Brush.Warning}" TextWrapping="Wrap" Margin="0,4,0,0"
+                   IsVisible="{Binding BottomPanel.ConnectionLoss.IsBelowProcessMinimum}"/>
+    </StackPanel>
+</UserControl>

@@ -186,6 +186,15 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         [JsonPropertyName("drcSource")]
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
         public string? DrcSource { get; set; }
+
+        /// <summary>
+        /// Optional radius-dependent bend-loss coefficients of this optical cross-section.
+        /// Null (the default) derives them from the process materials. Nullable so PDKs written
+        /// before this field existed round-trip byte-identically.
+        /// </summary>
+        [JsonPropertyName("bendLoss")]
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public ProcessBendLossDraft? BendLoss { get; set; }
     }
 
     /// <summary>

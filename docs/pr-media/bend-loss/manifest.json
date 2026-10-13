@@ -1,0 +1,18 @@
+[
+  {
+    "file": "bend-loss-1-properties-breakdown.png",
+    "caption": "Properties panel, insertion loss of the selected connection: propagation, bends (radius dependent) and junctions itemized, one row per bend."
+  },
+  {
+    "file": "bend-loss-2-help-approach.png",
+    "caption": "Insertion-loss help: two pulses enter a tight and a gentle 90\u00B0 bend; light leaks out of the tight one (red) and the readouts are the real model losses. (approaching)"
+  },
+  {
+    "file": "bend-loss-3-help-leak.png",
+    "caption": "Insertion-loss help: two pulses enter a tight and a gentle 90\u00B0 bend; light leaks out of the tight one (red) and the readouts are the real model losses. (light leaks out of the tight bend)"
+  },
+  {
+    "file": "bend-loss-4-help-arrived.png",
+    "caption": "Insertion-loss help: two pulses enter a tight and a gentle 90\u00B0 bend; light leaks out of the tight one (red) and the readouts are the real model losses. (the tight-bend pulse arrives dimmer)"
+  }
+]

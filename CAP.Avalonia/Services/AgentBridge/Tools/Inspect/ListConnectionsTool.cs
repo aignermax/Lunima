@@ -20,7 +20,9 @@ public sealed class ListConnectionsTool : IAgentBridgeTool
     public string Description =>
         "List waveguide connections: id, endpoints as component.pin (leaf component) plus the top-level " +
         "start/end component to act on, length in µm, blocked flag (red route), failure_reason and whether " +
-        "it is a piece of a waveguide crossing. Set blocked_only=true to list only failed routes.";
+        "it is a piece of a waveguide crossing, plus its insertion loss breakdown in dB (propagation, bends — " +
+        "radius dependent, tighter bends leak more light —, junctions, total; bend count and tightest radius). " +
+        "Set blocked_only=true to list only failed routes.";
 
     /// <inheritdoc/>
     public object InputSchema => new

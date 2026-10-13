@@ -98,6 +98,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Deleting a crossing (router- or user-placed) keeps the wires through it, merged; undo restores the crossing and its pieces. `(auto: ChainCrossingMaintenanceTests, DeleteCrossingKeepsWiresTests)`
 - [ ] A wire that cannot be routed with its pins stays red and is not retried on every recalculation. `(auto: UnroutableWireTests)`
 - [ ] Connection style panel changes curve type, width, radius, and freeze state. `(auto: ConnectionRoutingViewModelShapeTests, ConnectionRoutingStyleEffectTests)`
+- [ ] Selecting a waveguide shows its insertion-loss breakdown (propagation, bends with radii, junctions, total) in the Properties panel; a tight bend shows more bend loss than a gentle one; the (?) shows light leaking out of a tight bend. `(auto: ConnectionLossViewModelTests, BendLossBreakdownScreenshotTests)`
 - [ ] Frozen routes persist through save/load. `(auto: Serialization/LockStatePersistenceTests)`
 - [ ] Metal routing (electrical traces) exports with process-defined layers and widths. `(auto: MetalRouting/ElectricalConnectionExportTests)`
 - [ ] Design Checks see inside groups at any depth: open "Logic Gate RAM 2x4", run checks → blocked paths inside cells are listed as "Blocked path in group 'CELLx'…" and Next zooms onto them; the groups holding them show a red dashed outline with a "!" badge and the blocked path draws red without entering the group. `(auto: Analysis/Hierarchy/*, ExampleNestedDesignCheckTests, GroupBrokenPathMarkerTests)`

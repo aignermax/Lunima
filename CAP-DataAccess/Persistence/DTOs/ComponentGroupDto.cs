@@ -211,10 +211,18 @@ public class FrozenPathDto
     public double? PropagationLossDbPerCm { get; set; }
 
     /// <summary>
-    /// Bend loss of the original connection in dB per 90-degree bend.
-    /// Null in old design files — loads with the model default.
+    /// Legacy constant bend loss (dB per 90° bend, always 0.05) written by files before the
+    /// radius-dependent bend-loss model. Read but deliberately ignored: the bend loss now
+    /// follows from the actual radii, and honoring the old constant would double-count it.
+    /// Never written by current versions.
     /// </summary>
     public double? BendLossDbPer90Deg { get; set; }
+
+    /// <summary>
+    /// Flat extra bend loss (dB per 90°) on top of the radius model. Null in old files and
+    /// when zero — loads as 0.
+    /// </summary>
+    public double? ExcessBendLossDbPer90Deg { get; set; }
 
     /// <summary>
     /// Manual per-bend radius overrides keyed by bend index.

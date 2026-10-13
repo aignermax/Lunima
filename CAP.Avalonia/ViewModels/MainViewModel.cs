@@ -721,6 +721,9 @@ public partial class MainViewModel : ObservableObject
                 // ... and into the length-matching panel.
                 BottomPanel.LengthMatching.SelectedConnection =
                     CanvasInteraction.SelectedWaveguideConnection;
+                // ... and into the insertion-loss breakdown.
+                BottomPanel.ConnectionLoss.SelectedConnection =
+                    CanvasInteraction.SelectedWaveguideConnection;
             }
         };
 

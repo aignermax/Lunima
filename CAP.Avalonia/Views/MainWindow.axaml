@@ -916,6 +916,7 @@
                                  AI Assistant window); this sidebar shows the selection only. -->
                             <panels:SelectedComponentPropertiesPanel/>
                             <panels:ConnectionRoutingPanel/>
+                            <panels:ConnectionLossPanel/>
                             <panels:LengthMatchingPanel/>
                             <panels:GdsLayerVisibilityPanel/>
                             <panels:RerouteImportedPanel/>
