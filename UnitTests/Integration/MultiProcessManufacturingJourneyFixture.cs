@@ -178,13 +178,17 @@ public class MultiProcessManufacturingJourneyFixture : IAsyncLifetime
             ExportedGdsPath = gdsPath;
     }
 
-    /// <summary>Snapshot of both chiplets' exposed-pin absolute positions, keyed by pin name.</summary>
+    /// <summary>
+    /// Snapshot of both chiplets' exposed-pin absolute positions, keyed by the exposed
+    /// component pin (<c>&lt;componentId&gt;_&lt;pinName&gt;</c>) — Ctrl+G names pins by
+    /// direction, so both chiplets carry an IN1.
+    /// </summary>
     private static IReadOnlyDictionary<string, (double X, double Y)> CapturePinPositions(
         params ComponentGroup[] chiplets) =>
         chiplets
             .SelectMany(chiplet => chiplet.ExternalPins)
             .ToDictionary(
-                pin => pin.Name,
+                UnitTests.Helpers.GroupPinLookup.ExposedId,
                 pin =>
                 {
                     var (x, y) = pin.InternalPin!.GetAbsolutePosition();

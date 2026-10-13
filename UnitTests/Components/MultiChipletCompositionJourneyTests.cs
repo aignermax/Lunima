@@ -18,6 +18,7 @@ using CAP_Core.Tiles;
 using Moq;
 using Shouldly;
 using Xunit;
+using UnitTests.Helpers;
 
 namespace UnitTests.Components;
 
@@ -64,10 +65,12 @@ public class MultiChipletCompositionJourneyTests : IDisposable
     private const double CouplerWidth = 250;
     private const double WaveguideLength = 100;
 
+    // Ctrl+G names the free ports by direction (GroupPinNamer); ExposedPin still
+    // addresses them by the component pin they expose.
     private static readonly string[] ChipletAPinNames =
-        { "arm1_b0", "arm2_b0", "split_in1", "split_in2" };
+        { "IN1", "IN2", "OUT1", "OUT2" };
     private static readonly string[] ChipletBPinNames =
-        { "combine_in1", "combine_in2", "combine_out1", "det_b0" };
+        { "IN1", "IN2", "OUT1", "OUT2" };
 
     private readonly ComponentTemplate _couplerTemplate;
     private readonly ComponentTemplate _waveguideTemplate;
@@ -343,7 +346,7 @@ public class MultiChipletCompositionJourneyTests : IDisposable
 
     /// <summary>The connectable canvas-side pin behind a group's exposed pin.</summary>
     private static PhysicalPin ExposedPin(ComponentGroup group, string pinName) =>
-        group.ExternalPins.Single(p => p.Name == pinName).InternalPin!;
+        GroupPinLookup.Find(group, pinName).InternalPin!;
 
     /// <summary>Groups the given components (Ctrl+G equivalent) and returns the group.</summary>
     private static ComponentGroup Group(DesignCanvasViewModel canvas, string name, params Component[] children)

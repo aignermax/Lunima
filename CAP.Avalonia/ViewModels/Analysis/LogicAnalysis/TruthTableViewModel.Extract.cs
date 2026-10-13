@@ -36,6 +36,7 @@ public partial class TruthTableViewModel
             var table = await _extractor.ExtractAsync(
                 _group, inputs, outputs, biases, Threshold, ResolveWavelengthNm(), _extractCts.Token);
             ShowTable(table);
+            SuggestThreshold(table);
             // Persist the winning assignment on the group (issue #981) so the next
             // save → load round trip prefills the panel — a cancelled or failed
             // extraction must not overwrite the last good one. Signal names (#1025,

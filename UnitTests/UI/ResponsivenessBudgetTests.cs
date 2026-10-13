@@ -84,6 +84,7 @@ public class ResponsivenessBudgetTests
         "RunSimulationCommand",
         "RunDesignChecksCommand",
         "ShowHomeCommand",
+        "MakeGateCommand",
     };
 
     /// <summary>

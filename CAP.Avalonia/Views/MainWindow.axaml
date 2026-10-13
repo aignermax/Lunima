@@ -246,13 +246,15 @@
                                                 <TextBlock Text="{loc:Localize Toolbar.PdkOffsetEditor}"/>
                                             </StackPanel>
                                         </Button>
-                                        <Button Classes="menuItem" Click="OpenModeSolverDialog_Click">
+                                        <Button Classes="menuItem" Click="OpenModeSolverDialog_Click"
+                                                ToolTip.Tip="{loc:Localize Toolbar.ComputeModesTip}">
                                             <StackPanel Orientation="Horizontal">
                                                 <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Waves}"/>
                                                 <TextBlock Text="{loc:Localize Toolbar.ComputeModes}"/>
                                             </StackPanel>
                                         </Button>
-                                        <Button Classes="menuItem" Click="OpenPdkResolutionCheckDialog_Click">
+                                        <Button Classes="menuItem" Click="OpenPdkResolutionCheckDialog_Click"
+                                                ToolTip.Tip="{loc:Localize Toolbar.CheckPdksTip}">
                                             <StackPanel Orientation="Horizontal">
                                                 <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Search}"/>
                                                 <TextBlock Text="{loc:Localize Toolbar.CheckPdks}"/>
@@ -898,6 +900,10 @@
                     <MenuItem Header="{loc:Localize Context.CreateGroup}" Command="{Binding CreateGroupCommand}" InputGesture="Ctrl+G">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Group}"/></MenuItem.Icon>
                     </MenuItem>
+                    <MenuItem Header="{loc:Localize Context.MakeGate}" Command="{Binding MakeGateCommand}"
+                              ToolTip.Tip="{loc:Localize Context.MakeGateTip}">
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Binary}"/></MenuItem.Icon>
+                    </MenuItem>
                     <MenuItem Header="{loc:Localize Context.Ungroup}" Command="{Binding UngroupCommand}" InputGesture="Ctrl+Shift+G">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Ungroup}"/></MenuItem.Icon>
                     </MenuItem>
@@ -932,6 +938,13 @@
                                 TargetName="{Binding Tutorial.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
             <panels:FirstStepsTutorialPanel DataContext="{Binding Tutorial}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+
+    <tour:TourAnchorOverlay IsVisible="{Binding FirstGateTour.IsActive, FallbackValue=False}"
+                                TargetName="{Binding FirstGateTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:FirstGateTourPanel DataContext="{Binding FirstGateTour}"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 

@@ -101,6 +101,7 @@ public partial class TruthTableViewModel : ObservableObject
         Rows.Clear();
         StatusText = "";
         BiasSummaryText = "";
+        ClearThresholdSuggestion();
         _revertingPinCheck = true;
         try
         {
