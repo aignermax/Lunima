@@ -93,6 +93,10 @@ public partial class WaveguideConnectionManager
         {
             for (int j = i + 1; j < routed.Count; j++)
             {
+                // A blocked placeholder line already explains the crossing; stamping its
+                // partner too would only spread the failure to a wire that is fine.
+                if (routed[i].IsBlockedFallback || routed[j].IsBlockedFallback)
+                    continue;
                 if (!PathIntersectionDetector.Crosses(routed[i].RoutedPath!, routed[j].RoutedPath!))
                     continue;
                 var target = PickReroutableSide(routed[i], routed[j]);
@@ -117,7 +121,7 @@ public partial class WaveguideConnectionManager
         WaveguideConnection first, WaveguideConnection second)
     {
         static bool IsReroutable(WaveguideConnection c) =>
-            c.Type == WaveguideType.Auto && !c.IsRouteFrozen;
+            c.Type == WaveguideType.Auto && !c.IsRouteFrozen && !IsSettledPiece(c);
 
         if (IsReroutable(second)) return second;
         if (IsReroutable(first)) return first;

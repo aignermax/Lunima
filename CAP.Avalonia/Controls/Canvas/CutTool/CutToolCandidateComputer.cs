@@ -132,7 +132,7 @@ public sealed class CutToolCandidateComputer
     /// </summary>
     internal static IEnumerable<WaveguideConnection> CollectEligibleConnections(DesignCanvasViewModel canvas)
     {
-        var crossing = canvas.ConnectionManager.CrossingInsertion;
+        var crossing = canvas.ConnectionManager.CrossingService;
         return canvas.Connections
             .Select(vm => vm.Connection)
             .Where(c => crossing == null || crossing.ResolveToOriginal(c) == c)

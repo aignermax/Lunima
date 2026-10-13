@@ -274,6 +274,14 @@
                                             </StackPanel>
                                         </Button>
                                         <Separator Classes="menu"/>
+                                        <Button x:Name="CleanUpCrossingsToolButton" Classes="menuItem"
+                                                Command="{Binding Canvas.CleanUpCrossingsCommand}"
+                                                ToolTip.Tip="{loc:Localize Toolbar.CleanUpCrossingsTip}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Eraser}"/>
+                                                <TextBlock Text="{loc:Localize Toolbar.CleanUpCrossings}"/>
+                                            </StackPanel>
+                                        </Button>
                                         <Button Classes="menuItem"
                                                 Command="{Binding BottomPanel.ElementLock.UnlockAllCommand}"
                                                 ToolTip.Tip="{loc:Localize Toolbar.UnlockAllTip}">

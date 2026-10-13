@@ -35,7 +35,7 @@ public partial class WaveguideConnectionManager
     /// Phase 2 of the full re-route: incremental routing failed for some connections, so
     /// every connection is re-routed under different orderings and the best result is kept.
     /// </summary>
-    private void RouteWithOrderingCascade(
+    private void RunOrderingCascade(
         WaveguideRouter router,
         Action? progressCallback,
         CancellationToken cancellationToken)
@@ -51,8 +51,10 @@ public partial class WaveguideConnectionManager
             return;
 
         // Snapshots: this runs on the routing thread while UI commands may mutate the list.
-        var result = TryRouteInOrder(SnapshotConnections(), router, progressCallback, cancellationToken);
+        var participants = CascadeParticipants();
+        var result = TryRouteInOrder(participants, router, progressCallback, cancellationToken);
         LastOrderingAttemptCount++;
+        RecordCascadeFailures(result.failedConnections);
         if (cancellationToken.IsCancellationRequested) return;
         if (result.allValid) return;
 
@@ -62,17 +64,18 @@ public partial class WaveguideConnectionManager
         if (AllFailuresEndpointBlocked(result.failedConnections))
             return;
 
-        var bestOrder = SnapshotConnections();
+        var bestOrder = participants.ToList();
         int bestFailedCount = result.failedCount;
         var bestPaths = SnapshotAttemptPaths(bestOrder);
         int nonImprovingAttempts = 0;
 
-        var orderings = GenerateOrderings(SnapshotConnections(), MaxRoutingAttempts - 1);
+        var orderings = GenerateOrderings(participants, MaxRoutingAttempts - 1);
         foreach (var ordering in orderings)
         {
             if (cancellationToken.IsCancellationRequested) return;
             result = TryRouteInOrder(ordering, router, progressCallback, cancellationToken);
             LastOrderingAttemptCount++;
+            RecordCascadeFailures(result.failedConnections);
             if (cancellationToken.IsCancellationRequested) return;
 
             if (result.allValid)

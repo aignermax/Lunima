@@ -31,6 +31,12 @@ public class CrossingRecordRegistry
     /// </summary>
     public void Reset() => _records.Clear();
 
+    /// <summary>
+    /// Drops the record of a crossing that was taken out structurally (its pieces merged
+    /// with their geometry instead of restoring the originals). No-op without a record.
+    /// </summary>
+    public void Forget(Component crossing) => _records.RemoveAll(r => r.CrossingComponent == crossing);
+
     /// <summary>True when the connection is a sub-connection of any active crossing.</summary>
     public bool IsSubConnection(WaveguideConnection connection) =>
         _records.Any(r => r.ContainsSubConnection(connection));

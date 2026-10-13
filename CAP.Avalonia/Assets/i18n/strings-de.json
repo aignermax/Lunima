@@ -1576,6 +1576,8 @@
   "Toolbar.UngroupTip": "Gruppierung aufheben (Strg+Umschalt+G)",
   "Toolbar.UnlockAll": "Alles entsperren (Komponenten & Verbindungen)",
   "Toolbar.UnlockAllTip": "Alle gesperrten Komponenten und Verbindungen im Design entsperren",
+  "Toolbar.CleanUpCrossings": "Kreuzungen aufräumen",
+  "Toolbar.CleanUpCrossingsTip": "Alle vom Router gesetzten Kreuzungen entfernen und die Leitungen neu verlegen (selbst gesetzte Kreuzungen bleiben; rückgängig machbar)",
   "Toolbar.ZoomInTip": "Vergrößern (Mausrad)",
   "Toolbar.ZoomOutTip": "Verkleinern (Mausrad)",
   "Toolbar.ZoomToFitTip": "Zoom auf alle Komponenten einpassen (F)",

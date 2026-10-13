@@ -41,7 +41,7 @@ public partial class WaveguideConnectionManager
         Action? progressCallback,
         CancellationToken cancellationToken)
     {
-        var snapshot = SnapshotConnections();
+        var snapshot = CascadeParticipants();
         var orderings = GenerateOrderings(snapshot, MaxRoutingAttempts - 1);
         if (orderings.Count == 0)
             return false;
@@ -68,6 +68,8 @@ public partial class WaveguideConnectionManager
         if (cancellationToken.IsCancellationRequested)
             return true;
 
+        foreach (var outcome in outcomes)
+            RecordCascadeFailures(outcome!.FailedProxies);
         ReplayParallelCascade(outcomes!, router);
         return true;
     }
@@ -86,9 +88,9 @@ public partial class WaveguideConnectionManager
     {
         var router = sourceRouter.CreateIsolatedRoutingClone();
         var grid = router.PathfindingGrid!;
+        RegisterCascadeKeptObstacles(grid);
         var proxies = ordering.Select(CloneForIsolatedRouting).ToList();
 
-        int failedCount = 0;
         var failedProxies = new List<WaveguideConnection>();
         var routedSoFar = new List<WaveguideConnection>();
         foreach (var proxy in proxies)
@@ -105,19 +107,17 @@ public partial class WaveguideConnectionManager
                 grid.AddWaveguideObstacle(proxy.Id, proxy.RoutedPath.Segments, ObstacleWidthFor(proxy));
                 if (proxy.IsBlockedFallback || CrossesAnyRoutedSibling(proxy, routedSoFar))
                 {
-                    failedCount++;
                     failedProxies.Add(proxy);
                 }
                 routedSoFar.Add(proxy);
             }
             else
             {
-                failedCount++;
                 failedProxies.Add(proxy);
             }
         }
 
-        return new ParallelCascadeAttempt(ordering, proxies, failedCount,
+        return new ParallelCascadeAttempt(ordering, proxies, failedProxies,
             AllFailuresEndpointBlocked(failedProxies));
     }
 
@@ -259,18 +259,20 @@ public partial class WaveguideConnectionManager
         public ParallelCascadeAttempt(
             List<WaveguideConnection> order,
             List<WaveguideConnection> proxies,
-            int failedCount,
+            List<WaveguideConnection> failedProxies,
             bool allEndpointBlocked)
         {
             Order = order;
             Proxies = proxies;
-            FailedCount = failedCount;
-            AllValid = failedCount == 0;
+            FailedProxies = failedProxies;
+            FailedCount = failedProxies.Count;
+            AllValid = FailedCount == 0;
             AllEndpointBlocked = allEndpointBlocked;
         }
 
         public List<WaveguideConnection> Order { get; }
         public List<WaveguideConnection> Proxies { get; }
+        public List<WaveguideConnection> FailedProxies { get; }
         public int FailedCount { get; }
         public bool AllValid { get; }
         public bool AllEndpointBlocked { get; }

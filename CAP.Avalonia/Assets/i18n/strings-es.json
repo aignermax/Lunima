@@ -1576,6 +1576,8 @@
   "Toolbar.UngroupTip": "Desagrupar (Ctrl+Mayús+G)",
   "Toolbar.UnlockAll": "Desbloquear todo (componentes y conexiones)",
   "Toolbar.UnlockAllTip": "Desbloquear todos los componentes y conexiones bloqueados del diseño",
+  "Toolbar.CleanUpCrossings": "Limpiar cruces",
+  "Toolbar.CleanUpCrossingsTip": "Eliminar todos los cruces colocados por el enrutador y volver a enrutar sus guías (los cruces colocados por usted se mantienen; se puede deshacer)",
   "Toolbar.ZoomInTip": "Acercar (rueda del ratón)",
   "Toolbar.ZoomOutTip": "Alejar (rueda del ratón)",
   "Toolbar.ZoomToFitTip": "Ajustar zoom a todos los componentes (F)",

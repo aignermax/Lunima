@@ -303,7 +303,7 @@ public partial class WaveguideConnectionManager
         && !IsCrossingParticipant(connection);
 
     private bool IsCrossingParticipant(WaveguideConnection connection) =>
-        CrossingInsertion?.IsSubConnection(connection) == true;
+        CrossingService?.IsSubConnection(connection) == true;
 
     /// <summary>
     /// The up-to-<see cref="MaxContentionRipUpSiblings"/> re-routable siblings the blocked
