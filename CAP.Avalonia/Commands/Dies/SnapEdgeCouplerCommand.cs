@@ -31,12 +31,12 @@ public sealed class SnapEdgeCouplerCommand : IUndoableCommand
 
     /// <summary>
     /// Plans a snap for <paramref name="coupler"/> onto the edge of the die the user works
-    /// in, or null when it is no edge coupler, no die is active, the coupler is outside the
+    /// on (or the die worked in), or null when it is no edge coupler, it is on no die, the coupler is outside the
     /// edge zone, or it already sits on the edge facing out.
     /// </summary>
     public static SnapEdgeCouplerCommand? TryCreate(DesignCanvasViewModel canvas, ComponentViewModel coupler)
     {
-        if (canvas.Dies.ActiveDie is not { Die: { } die } activeDie
+        if ((DieAssembly.DieOf(coupler.Component) ?? canvas.Dies.ActiveDie) is not { Die: { } die } activeDie
             || !EdgeCouplerFacet.IsEdgeCoupler(coupler.Component)
             || coupler.Component.IsLocked)
             return null;
@@ -80,6 +80,11 @@ public sealed class SnapEdgeCouplerCommand : IUndoableCommand
         _coupler.Y = _coupler.Component.PhysicalY;
         _coupler.NotifyDimensionsChanged();
         _canvas.Router.UpdateComponentObstacle(_coupler.Component);
+        if (_canvas.Surface.DieOf(_coupler) is { } die)
+        {
+            _canvas.RealignDiePins(die);
+            _canvas.RefreshDieInterfaces();
+        }
         _ = _canvas.RecalculateRoutesAsync();
         _canvas.RepaintRequested?.Invoke();
     }

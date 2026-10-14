@@ -239,6 +239,10 @@ public class SelectionManager
     /// <returns>True if the group can be moved by the given delta.</returns>
     public bool CanMoveGroup(DesignCanvasViewModel canvas, double deltaX, double deltaY)
     {
+        // Parts on dies move on their die, clear of the parts that stay put.
+        if (canvas.Surface.CanMoveTogether(SelectedComponents, deltaX, deltaY) is bool onDies)
+            return onDies;
+
         foreach (var comp in SelectedComponents)
         {
             double newX = comp.X + deltaX;

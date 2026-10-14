@@ -104,7 +104,14 @@ public class DieProcessScopeTests
         vm.ActiveProcessLabel.ShouldContain("SiN die");
         vm.ActiveProcessLabel.ShouldContain(TwoDieExampleBuilder.SinPdk);
 
-        vm.OpenDie(sin);
-        vm.CanvasScopeProcess!.MemberPdkNames.ShouldContain(TwoDieExampleBuilder.SinPdk);
+        // A die is a work surface: selecting a part on it scopes the library to that die.
+        var part = vm.Canvas.Surface.ViewModelFor(sin.ChildComponents[0]);
+        vm.Canvas.SelectedComponent = part;
+        vm.ScopeDie.ShouldBe(sin);
+        vm.ActiveProcessLabel.ShouldContain(TwoDieExampleBuilder.SinPdk);
+
+        vm.ZoomToDie(sin);
+        vm.Canvas.IsInGroupEditMode.ShouldBeFalse("double-click / zoom frames a die, it never enters it");
+        vm.ScopeDie.ShouldBe(sin);
     }
 }

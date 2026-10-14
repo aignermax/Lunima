@@ -97,8 +97,12 @@ public class ExampleDesignFilesTests
             canvas.Components.Count.ShouldBe(
                 declaredComponents + declaredGroups,
                 $"Example '{name}' must resolve every declared component template");
-            canvas.Connections.Count.ShouldBe(
-                declaredConnections,
+            // Wires may move between the canvas and their owning group on load (a die's wires
+            // come onto the assembly, misplaced root wires go into their group) — none is lost.
+            int loadedGroupPaths = CAP_Core.Analysis.Hierarchy.DesignHierarchy
+                .From(canvas.Components.Select(c => c.Component)).FrozenPaths.Count;
+            (canvas.Connections.Count + loadedGroupPaths).ShouldBe(
+                declaredConnections + declaredInternalPaths,
                 $"Example '{name}' must keep every declared connection");
         }
     }

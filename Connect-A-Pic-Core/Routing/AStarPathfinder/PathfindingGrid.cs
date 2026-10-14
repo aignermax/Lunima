@@ -625,6 +625,7 @@ public partial class PathfindingGrid
         {
             AddComponentObstacle(component);
         }
+        BlockCellsOutsideAllowedRegions();
     }
 
     /// <summary>

@@ -175,6 +175,11 @@ public class CreateGroupCommand : IUndoableCommand
             }
         }
 
+        // A die is a work surface: the wires between its parts stay live on the assembly
+        // canvas (editable in place) instead of being frozen into the die.
+        if (Die != null)
+            _internalConnections.Clear();
+
         // 3. Create ComponentGroup (with the requested final name when given —
         // the group is selected below, so the name must be correct by then)
         _createdGroup = new ComponentGroup(_requestedGroupName ?? $"Group_{DateTime.Now:HHmmss}")
@@ -222,6 +227,12 @@ public class CreateGroupCommand : IUndoableCommand
             occupiedPins.Add(conn.StartPin);
             occupiedPins.Add(conn.EndPin);
         }
+
+        // A child group offers its boundary pins as its own pins only once they are
+        // materialized (the S-matrix does it lazily) — without them a group of groups
+        // would expose nothing and K1 ↔ K2 could not be wired from outside the new group.
+        foreach (var childGroup in _components.OfType<ComponentGroup>().Where(g => g.PhysicalPins.Count == 0))
+            childGroup.SyncPhysicalPinsFromExternalPins();
 
         // Expose all unoccupied pins as external pins, named by where they point
         // (IN1/IN2… west, OUT1… east, see GroupPinNamer) so a gate's interface reads

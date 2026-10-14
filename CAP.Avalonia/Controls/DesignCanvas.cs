@@ -216,6 +216,7 @@ public class DesignCanvas : Control
             _cutToolOverlayRenderer.Render(context, rc);
             _crossingAxisDragRenderer.Render(context, rc);
             DieLinkGuideRenderer.Render(context, rc.InteractionState.DieLinkPreview, Zoom);
+        WireRefusalHintRenderer.Render(context, rc.InteractionState.WireRefusalHint, Zoom, DateTime.UtcNow);
             // Handles draw last so they sit on top of the routed path and components; segment
             // midpoint handles go under the bend handles, matching the gesture priority (#791).
             _segmentShiftHandleRenderer.Render(context, rc);

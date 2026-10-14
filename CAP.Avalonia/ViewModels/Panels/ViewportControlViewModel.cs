@@ -103,4 +103,20 @@ public partial class ViewportControlViewModel : ObservableObject
         // would go stale with the next zoom step.
         UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Status.ZoomedToFit"));
     }
+
+    /// <summary>
+    /// Fits the rectangle (µm) into the current viewport with the usual 10% padding — e.g. a
+    /// die on the assembly. Does nothing for an empty rectangle.
+    /// </summary>
+    public void ZoomToRect(double x, double y, double width, double height)
+    {
+        if (width <= 0 || height <= 0) return;
+        var (vpWidth, vpHeight) = GetViewportSize?.Invoke() ?? (900, 800);
+        var padded = BoundingBoxCalculator.WithPadding(
+            new BoundingBox(x, y, x + width, y + height), BoundingBoxCalculator.DefaultPaddingFraction);
+        var (zoom, panX, panY) = BoundingBoxCalculator.CalculateZoomToFit(padded, vpWidth, vpHeight);
+        ZoomLevel = zoom;
+        _canvas.PanX = panX;
+        _canvas.PanY = panY;
+    }
 }

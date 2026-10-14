@@ -43,7 +43,11 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
     public void Render(DrawingContext context, CanvasRenderContext rc)
     {
         var vm = rc.ViewModel;
-        var allGroups = WaveguideFilteringHelper.CollectAllGroups(vm.Components.Select(c => c.Component));
+        // A die's wires live on the assembly canvas (a die is a work surface), so they are
+        // drawn like any wire; only ordinary groups hide stale duplicates of their frozen paths.
+        var allGroups = WaveguideFilteringHelper.CollectAllGroups(vm.Components.Select(c => c.Component))
+            .Where(g => !g.IsDie).ToList();
+        bool dimDieWires = vm.Surface.IsContentLocked && vm.Surface.IsActive;
         var cullRect = RenderCulling.InflateForCulling(
             RenderCulling.ComputeViewportWorld(vm.PanX, vm.PanY, rc.Bounds, rc.Zoom), rc.Zoom);
 
@@ -61,7 +65,9 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             }
 
             IssuedConnectionCount++;
-            DrawWaveguideConnection(context, conn, vm, ReferenceEquals(conn, hovered), rc, segments, _blockedMarkers);
+            using (dimDieWires && ViewModels.Canvas.DieSurface.DieWireStyle.IsOnOneDie(conn.Connection)
+                       ? context.PushOpacity(ComponentRenderer.LockedDieContentOpacity) : (IDisposable?)null)
+                DrawWaveguideConnection(context, conn, vm, ReferenceEquals(conn, hovered), rc, segments, _blockedMarkers);
         }
 
         if (vm.ShowPowerFlow && rc.InteractionState.HoveredConnection != null)

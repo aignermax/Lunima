@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Canvas.DieSurface;
+using CAP_Core.Components.Connections.Ownership;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Dies;
@@ -88,6 +90,10 @@ public partial class SimpleNazcaExporter
             topCellName: $"{cellName}_content", rawCodePlan: rawCodePlan, wrapperPlan: wrapperPlan,
             functionName: $"create_die_{index}_content");
         AppendGroupFrozenPaths(sb, die, metal.ToTraceStyle(), componentNames, skippedConnections, interconnectPlan);
+        // A die is a work surface: its wires live on the assembly canvas but belong to the die.
+        foreach (var wire in DieWires(canvas, die))
+            AppendFrozenPath(sb, GroupWireHoming.Freeze(wire, die), metal.ToTraceStyle(), componentNames,
+                skippedConnections, interconnectPlan);
         sb.AppendLine("    return design");
         sb.AppendLine();
 
@@ -102,6 +108,12 @@ public partial class SimpleNazcaExporter
         sb.AppendLine("    return die");
         sb.AppendLine();
     }
+
+    /// <summary>The live wires on <paramref name="die"/> (both ends on it) — exported inside its cell.</summary>
+    private static IEnumerable<CAP_Core.Components.Connections.WaveguideConnection> DieWires(
+        DesignCanvasViewModel canvas, ComponentGroup die) =>
+        canvas.Connections.Select(c => c.Connection)
+            .Where(c => DieWireStyle.IsOnOneDie(c) && ReferenceEquals(ConnectionOwnership.DieOf(c.StartPin), die));
 
     private static void AppendAssemblyTopCell(
         StringBuilder sb, DesignCanvasViewModel canvas, IReadOnlyList<ComponentGroup> dies, List<string>? skippedConnections)
@@ -122,6 +134,8 @@ public partial class SimpleNazcaExporter
                 sb.AppendLine("        # Cross-chiplet facet link (free-space edge coupling) - no waveguide exported");
                 continue;
             }
+            if (DieWireStyle.IsOnOneDie(connection))
+                continue;
             skippedConnections?.Add(
                 $"{connection.StartPin.ParentComponent.Identifier}.{connection.StartPin.Name} → " +
                 $"{connection.EndPin.ParentComponent.Identifier}.{connection.EndPin.Name} (waveguide between dies)");

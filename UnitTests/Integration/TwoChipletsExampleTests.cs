@@ -83,7 +83,7 @@ public class TwoChipletsExampleTests
 
         // ── Aligned facets: Design Validation stays clean.
         var panel = RunValidation(canvas, templates, demoPdk);
-        var link = canvas.ConnectionManager.Connections.Single();
+        var link = canvas.ConnectionManager.Connections.Single(c => c.IsCrossChipletFacetLink);
         panel.Issues.Count(i => i.Type is DesignIssueType.WaveguideBelowMinWidth
                 or DesignIssueType.WaveguideSpacingViolation
                 or DesignIssueType.BendRadiusBelowProcessMinimum
@@ -98,8 +98,7 @@ public class TwoChipletsExampleTests
             * ChipletEdgeCouplerJourneyDesign.EdgeCoupling
             * ChipletEdgeCouplerJourneyDesign.EdgeCoupling
             * ChipletEdgeCouplerJourneyDesign.WaveguideThrough
-            * chipletA.InternalPaths.Aggregate(1.0, (acc, p) => acc * p.TransmissionCoefficient.Magnitude)
-            * chipletB.InternalPaths.Aggregate(1.0, (acc, p) => acc * p.TransmissionCoefficient.Magnitude)
+            * DieWires(canvas).Aggregate(1.0, (acc, w) => acc * w.TransmissionCoefficient.Magnitude)
             * link.TransmissionCoefficient.Magnitude;
 
         var fields = await SimulateAsync(canvas, InjectLight("source",
@@ -110,6 +109,10 @@ public class TwoChipletsExampleTests
             "the loaded example must reproduce the #1214 journey's exact S-matrix × propagation-loss product");
         output.ShouldBeGreaterThan(0, "light actually crosses the chiplet boundary");
     }
+
+    /// <summary>The wires on the dies — live on the assembly canvas, a die is a work surface.</summary>
+    private static IEnumerable<CAP_Core.Components.Connections.WaveguideConnection> DieWires(DesignCanvasViewModel canvas) =>
+        canvas.ConnectionManager.Connections.Where(CAP.Avalonia.ViewModels.Canvas.DieSurface.DieWireStyle.IsOnOneDie);
 
     private static (ExternalInput Input, Guid PinIdInFlow) InjectLight(string name, PhysicalPin pin) =>
         (new ExternalInput(name, new LaserType(LightColor.Red), 0, new Complex(1.0, 0), true),

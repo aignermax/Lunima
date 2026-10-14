@@ -46,6 +46,8 @@ public class SimulationService
         // Snapshot the observable collections on the caller's (UI) thread so the worker
         // below never reads an ObservableCollection off-thread (issue #1150).
         var componentViewModels = canvas.Components.ToList();
+        // Parts on dies carry their own laser settings (they are edited in place on the assembly).
+        var partViewModels = canvas.Surface.IsActive ? canvas.Surface.Items : Array.Empty<ComponentViewModel>();
         var connectionManager = canvas.ConnectionManager;
         var connections = connectionManager.Connections.ToList();
         var componentCount = canvas.Components.Count;
@@ -55,7 +57,7 @@ public class SimulationService
         // propagation all run off the UI thread — on a loaded logic-gate design the
         // synchronous prefix of this block alone exceeds the 100 ms budget.
         var (sourceConfigs, systemMatrix, allFieldResults, wavelengths) = await Task.Run(
-            () => ComputeSimulationAsync(componentViewModels, connectionManager, cancellationToken),
+            () => ComputeSimulationAsync(componentViewModels, connectionManager, cancellationToken, partViewModels),
             cancellationToken);
         // A run superseded while computing must not overwrite the newer run's overlay.
         cancellationToken.ThrowIfCancellationRequested();
@@ -93,7 +95,8 @@ public class SimulationService
             Dictionary<Guid, Complex> AllFieldResults, List<int> Wavelengths)> ComputeSimulationAsync(
         IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
         WaveguideConnectionManager connectionManager,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyList<ViewModels.Canvas.ComponentViewModel>? partViewModels = null)
     {
         var tileManager = new ComponentListTileManager();
         foreach (var compVm in componentViewModels)
@@ -108,7 +111,7 @@ public class SimulationService
 
         var portManager = new PhysicalExternalPortManager();
         var wiredPins = CollectWiredPins(componentViewModels, connectionManager.Connections);
-        var sourceConfigs = ConfigureLightSources(componentViewModels, portManager, wiredPins);
+        var sourceConfigs = ConfigureLightSources(componentViewModels, portManager, wiredPins, partViewModels);
 
         if (sourceConfigs.Count == 0)
             return (sourceConfigs, null, new Dictionary<Guid, Complex>(), new List<int>());
@@ -226,14 +229,15 @@ public class SimulationService
     internal static List<SourceConfigInfo> ConfigureLightSources(
         IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
         PhysicalExternalPortManager portManager,
-        ISet<PhysicalPin> wiredPins)
+        ISet<PhysicalPin> wiredPins,
+        IReadOnlyList<ViewModels.Canvas.ComponentViewModel>? partViewModels = null)
     {
         var configs = new List<SourceConfigInfo>();
 
-        // Per-instance LaserConfig only exists on top-level ViewModels; components
-        // inside groups fall back to the default (ideal red) source.
+        // Per-instance LaserConfig exists on top-level ViewModels and on the parts of a die
+        // (edited in place); components inside other groups fall back to the default source.
         var laserConfigs = new Dictionary<Component, LaserConfig>();
-        foreach (var compVm in componentViewModels)
+        foreach (var compVm in componentViewModels.Concat(partViewModels ?? Array.Empty<ViewModels.Canvas.ComponentViewModel>()))
         {
             if (compVm.LaserConfig != null)
                 laserConfigs[compVm.Component] = compVm.LaserConfig;

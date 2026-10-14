@@ -1,5 +1,6 @@
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Connections;
+using CAP_Core.Components.Connections.Ownership;
 using CAP_Core.Components.Core;
 using CAP_Core.LightCalculation.BendLoss;
 using CAP_Core.Routing;
@@ -19,7 +20,7 @@ public sealed record ComponentInfo(
 public sealed record ConnectionInfo(
     string Id, string Start, string End, string StartComponent, string EndComponent,
     double LengthUm, bool Blocked, string? FailureReason, bool IsCrossingPiece, bool Locked,
-    LossInfo Loss);
+    LossInfo Loss, string? Owner = null, bool StoredInGroup = false);
 
 /// <summary>
 /// Itemized insertion loss of a connection (dB) — lets an agent see which wires lose light in
@@ -83,8 +84,37 @@ public static class DesignDescriber
             blocked ? DescribeFailure(connection.FailureReason) : null,
             isCrossingPiece,
             connection.IsLocked,
-            DescribeLoss(connection.LossBreakdown));
+            DescribeLoss(connection.LossBreakdown),
+            OwnerName(ConnectionOwnership.OwnerOf(connection)));
     }
+
+    /// <summary>
+    /// Describes a wire stored inside a group (frozen geometry, edited inside that group):
+    /// <paramref name="owner"/> is the group holding it.
+    /// </summary>
+    public static ConnectionInfo Describe(FrozenWaveguidePath path, ComponentGroup owner)
+    {
+        var start = path.StartPin!;
+        var end = path.EndPin!;
+        return new ConnectionInfo(
+            path.PathId.ToString(),
+            Endpoint(start),
+            Endpoint(end),
+            TopLevelOf(start.ParentComponent).Identifier,
+            TopLevelOf(end.ParentComponent).Identifier,
+            Round(path.Path?.Segments.Sum(s => s.LengthMicrometers) ?? 0),
+            false,
+            null,
+            false,
+            false,
+            DescribeLoss(path.LossBreakdown),
+            OwnerName(owner),
+            StoredInGroup: true);
+    }
+
+    /// <summary>The owning group's name path ("M" or "Die 1/M"), or null for the design root.</summary>
+    private static string? OwnerName(ComponentGroup? owner) =>
+        owner == null ? null : CAP_Core.Analysis.Hierarchy.DesignHierarchy.PathOf(owner);
 
     /// <summary>Rounds a connection's loss breakdown for the agent (6 decimals: bend losses are often µdB).</summary>
     public static LossInfo DescribeLoss(ConnectionLossBreakdown loss) => new(

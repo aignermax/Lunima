@@ -1,6 +1,7 @@
 using Avalonia;
 using CAP.Avalonia.Controls.Rendering;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Canvas.DieSurface;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Routing;
@@ -88,9 +89,10 @@ public class DesignCanvasHitTesting
     {
         if (vm == null) return null;
 
-        for (int i = vm.Components.Count - 1; i >= 0; i--)
+        var items = vm.InteractiveComponents;
+        for (int i = items.Count - 1; i >= 0; i--)
         {
-            var comp = vm.Components[i];
+            var comp = items[i];
             if (LaserIndicatorRenderer.IsIconVisible(comp, vm.IsSimulationModeActive)
                 && LaserIndicatorRenderer.CalculateIconBounds(comp).Contains(canvasPoint))
                 return comp;
@@ -119,6 +121,10 @@ public class DesignCanvasHitTesting
         {
             return HitTestGroupChildren(canvasPoint, vm.CurrentEditGroup, vm);
         }
+
+        // A die is a work surface: its parts are hit directly (unless System locks them).
+        if (vm.Surface.HitTest(canvasPoint.X, canvasPoint.Y) is { } part)
+            return part;
 
         // Normal mode: test all top-level components. Background geometry (die frames,
         // logos) is never picked up here: its box spans what lies on top of it, and a
@@ -258,9 +264,12 @@ public class DesignCanvasHitTesting
         }
         else
         {
-            // Normal mode: test all top-level component pins
+            // Normal mode: test all top-level component pins. Locked die content (System
+            // workspace) offers no pins: there the die is the unit of work.
             foreach (var comp in vm.Components)
             {
+                if (vm.Surface.IsContentLocked && comp.Component is ComponentGroup { IsDie: true })
+                    continue;
                 foreach (var pin in comp.Component.PhysicalPins)
                 {
                     var (pinX, pinY) = pin.GetAbsolutePosition();
@@ -349,6 +358,8 @@ public class DesignCanvasHitTesting
         double closestDistance = ConnectionToleranceFor(vm);
         foreach (var conn in vm.Connections)
         {
+            if (vm.Surface.IsContentLocked && DieWireStyle.IsOnOneDie(conn.Connection))
+                continue;
             double distance = DistanceToConnectionPath(conn, canvasPoint.X, canvasPoint.Y);
             if (distance <= closestDistance)
             {

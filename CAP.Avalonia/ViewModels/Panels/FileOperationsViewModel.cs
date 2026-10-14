@@ -1765,6 +1765,8 @@ public partial class FileOperationsViewModel : ObservableObject
             vm.Y = vm.Component.PhysicalY;
             vm.NotifyDimensionsChanged();
         }
+        // Every wire sits with the group that owns it; a die's wires live on the assembly.
+        _canvas.ApplyWireOwnership();
         if (!_canvas.Dies.IsAssemblyRoot)
             return;
         _canvas.Dies.ApplyScopeBounds();

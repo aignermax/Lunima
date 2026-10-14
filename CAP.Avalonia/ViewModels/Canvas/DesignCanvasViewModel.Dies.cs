@@ -12,6 +12,9 @@ public partial class DesignCanvasViewModel
     /// </summary>
     public event Action? DiesChanged;
 
+    /// <summary>Position of the item a drag started on (to tell a click from a move).</summary>
+    private (double X, double Y) _dragStart;
+
     /// <summary>
     /// Records the single-die chip size (the Chip Size setting) and applies it to placement
     /// and routing while the single-die root scope is active.
@@ -46,13 +49,21 @@ public partial class DesignCanvasViewModel
         _ = RecalculateRoutesAsync();
     }
 
-    /// <summary>After a die was dragged on the assembly: re-bound the carrier and notify listeners.</summary>
-    private void OnDieDragEnded(ComponentViewModel component)
+    /// <summary>
+    /// After a die was dragged on the assembly: re-bound the carrier and notify listeners.
+    /// Returns true when the die moved rigidly (its wires went along, nothing needs routing).
+    /// </summary>
+    private bool OnDieDragEnded(ComponentViewModel component)
     {
-        if (component.Component is not ComponentGroup { IsDie: true } || !Dies.IsAssemblyRoot)
-            return;
+        if (component.Component is not ComponentGroup { IsDie: true } die || !Dies.IsAssemblyRoot)
+            return false;
+        // A click on a die (press + release without moving it) re-bounds nothing: rebuilding
+        // the routing grid over the carrier is expensive and would stall the click.
+        if (Math.Abs(component.X - _dragStart.X) < 1e-9 && Math.Abs(component.Y - _dragStart.Y) < 1e-9)
+            return true;
         Dies.ApplyScopeBounds();
         NotifyDiesChanged();
+        return !DieMoveNeedsRouting(die);
     }
 
     /// <summary>Keeps the die-to-die link markers on their facets while a die moves.</summary>

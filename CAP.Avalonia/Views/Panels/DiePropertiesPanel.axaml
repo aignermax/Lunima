@@ -91,10 +91,10 @@
                    IsVisible="{Binding DieProperties.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-            <Button Command="{Binding DieProperties.OpenDieCommand}" ToolTip.Tip="{loc:Localize Dies.Properties.OpenTip}">
+            <Button Command="{Binding DieProperties.ZoomToDieCommand}" ToolTip.Tip="{loc:Localize Dies.Properties.ZoomToDieTip}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                    <controls:Icon Data="{StaticResource Icon.FolderOpen}"/>
-                    <TextBlock Text="{loc:Localize Dies.Properties.Open}"/>
+                    <controls:Icon Data="{StaticResource Icon.ZoomIn}"/>
+                    <TextBlock Text="{loc:Localize Dies.Properties.ZoomToDie}"/>
                 </StackPanel>
             </Button>
             <Button Command="{Binding DieProperties.DeleteDieCommand}" ToolTip.Tip="{loc:Localize Dies.Properties.DeleteTip}">

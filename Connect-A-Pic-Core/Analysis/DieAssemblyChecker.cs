@@ -1,4 +1,6 @@
 using System.Globalization;
+using CAP_Core.Components.Connections;
+using CAP_Core.Components.Connections.Ownership;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Dies;
 
@@ -18,8 +20,12 @@ public class DieAssemblyChecker
 
     private const double OutlineToleranceMicrometers = 1e-6;
 
-    /// <summary>Checks the assembly formed by <paramref name="topLevelComponents"/>.</summary>
-    public List<DesignIssue> Check(IEnumerable<Component> topLevelComponents)
+    /// <summary>
+    /// Checks the assembly formed by <paramref name="topLevelComponents"/>; with
+    /// <paramref name="connections"/>, also flags every waveguide that crosses a die edge.
+    /// </summary>
+    public List<DesignIssue> Check(
+        IEnumerable<Component> topLevelComponents, IEnumerable<WaveguideConnection>? connections = null)
     {
         ArgumentNullException.ThrowIfNull(topLevelComponents);
         var topLevel = topLevelComponents.ToList();
@@ -33,7 +39,34 @@ public class DieAssemblyChecker
             issues.Add(OffDie(loose, null));
         foreach (var die in dies)
             CheckDieContent(die, issues);
+        if (connections != null)
+            CheckCrossDieWaveguides(connections, issues);
         return issues;
+    }
+
+    /// <summary>
+    /// A waveguide between two dies (or between a die and the bare carrier) cannot be made:
+    /// dies connect only through facing edge couplers, which form a facet link, never a wire.
+    /// </summary>
+    private static void CheckCrossDieWaveguides(IEnumerable<WaveguideConnection> connections, List<DesignIssue> issues)
+    {
+        foreach (var connection in connections)
+        {
+            if (connection.IsCrossChipletFacetLink)
+                continue;
+            var startDie = ConnectionOwnership.DieOf(connection.StartPin);
+            var endDie = ConnectionOwnership.DieOf(connection.EndPin);
+            if (ReferenceEquals(startDie, endDie))
+                continue;
+            var (x1, y1) = connection.StartPin.GetAbsolutePosition();
+            var (x2, y2) = connection.EndPin.GetAbsolutePosition();
+            string from = startDie?.GroupName ?? "-", to = endDie?.GroupName ?? "-";
+            issues.Add(new DesignIssue(
+                DesignIssueType.CrossDieWaveguide, connection, (x1 + x2) / 2, (y1 + y2) / 2,
+                $"Waveguide from '{from}' to '{to}' crosses a die edge — dies connect only through edge couplers",
+                localizationKey: "DesignChecks.CrossDieWaveguide",
+                localizationArgs: new object[] { from, to }));
+        }
     }
 
     private static void CheckOverlaps(IReadOnlyList<ComponentGroup> dies, List<DesignIssue> issues)

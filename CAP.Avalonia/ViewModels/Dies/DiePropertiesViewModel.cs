@@ -65,8 +65,8 @@ public partial class DiePropertiesViewModel : ObservableObject
     public string PdkSummary => string.Format(LocalizationService.Instance.Translate("Dies.Properties.PdkSummary"),
         Pdks.Count(p => p.IsEnabled), Pdks.Count);
 
-    /// <summary>Opens the die (shows only its content) when requested from the panel.</summary>
-    public Action<ComponentGroup>? OpenDieRequested { get; set; }
+    /// <summary>Frames the die on the canvas when requested from the panel.</summary>
+    public Action<ComponentGroup>? ZoomToDieRequested { get; set; }
 
     /// <summary>Shows <paramref name="die"/> (or hides the section for null).</summary>
     public void Show(ComponentGroup? die)
@@ -205,12 +205,12 @@ public partial class DiePropertiesViewModel : ObservableObject
         Reload();
     }
 
-    /// <summary>Opens the die so only its content is shown and editable.</summary>
+    /// <summary>Zooms the canvas onto the die (its parts are edited in place, never by entering it).</summary>
     [RelayCommand]
-    private void OpenDie()
+    private void ZoomToDie()
     {
         if (Die != null)
-            OpenDieRequested?.Invoke(Die);
+            ZoomToDieRequested?.Invoke(Die);
     }
 
     /// <summary>Deletes the die with all its content (undoable).</summary>

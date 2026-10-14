@@ -215,7 +215,7 @@ public class DesignValidator
         var componentList = components as IReadOnlyCollection<Component> ?? components.ToList();
         var issues = Validate(connectionList, groups, componentList, externalPortPins);
         issues.AddRange(_chipletInterfaceChecker.Check(connectionList, wavelengthNm));
-        issues.AddRange(_dieAssemblyChecker.Check(componentList));
+        issues.AddRange(_dieAssemblyChecker.Check(componentList, connectionList));
 
         issues.AddRange(_frozenPathMinWidthChecker.Check(
             groups, minWaveguideWidthRules, connectionDrcRuleProvider));

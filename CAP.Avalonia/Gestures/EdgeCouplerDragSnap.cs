@@ -19,7 +19,7 @@ public static class EdgeCouplerDragSnap
     /// </summary>
     public static (double X, double Y)? PreviewPosition(DesignCanvasViewModel canvas, ComponentViewModel? dragged)
     {
-        if (dragged == null || canvas.Dies.ActiveDie is not { Die: { } die } activeDie
+        if (dragged == null || (DieAssembly.DieOf(dragged.Component) ?? canvas.Dies.ActiveDie) is not { Die: { } die } activeDie
             || !EdgeCouplerFacet.IsEdgeCoupler(dragged.Component))
             return null;
         var snap = DieEdgeSnapper.Plan(dragged.Component, DieAssembly.OutlineOf(activeDie), die.EdgeZoneMicrometers);

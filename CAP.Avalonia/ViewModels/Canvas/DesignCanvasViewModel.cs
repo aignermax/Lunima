@@ -180,6 +180,7 @@ public partial class DesignCanvasViewModel : ObservableObject
             InitializeRoutingForEditScope,
             () => Routing.RecalculateRoutesAsync());
         Dies = new DieScopeService(Components, Groups, Placement, Routing);
+        InitializeDieSurface();
 
         // Wire service events to observable property updates
         Routing.StateChanged += () =>
@@ -261,28 +262,31 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     // ── Drag / command execution ──────────────────────────────────────────
 
-    public void BeginDragComponent(ComponentViewModel component) => Placement.BeginDrag(component.Component);
+    public void BeginDragComponent(ComponentViewModel component) { _dragStart = (component.X, component.Y); Placement.BeginDrag(component.Component); }
     public void BeginCommandExecution() => Placement.IsExecutingCommand = true;
     public void EndCommandExecution() => Placement.IsExecutingCommand = false;
 
     public async void EndDragComponent(ComponentViewModel component)
     {
         Placement.EndDrag();
-        OnDieDragEnded(component);
-        await RecalculateRoutesAsync();
+        // A die moves rigidly: its wires were translated with it, nothing needs routing.
+        if (!OnDieDragEnded(component))
+            await RecalculateRoutesAsync();
         InvalidateSimulation();
     }
 
     // ── Movement / placement delegation ───────────────────────────────────
 
     public bool CanMoveComponentTo(ComponentViewModel component, double x, double y)
-        => Placement.CanMoveComponentTo(component, x, y);
+        => CanMoveSurfaceItemTo(component, x, y) ?? Placement.CanMoveComponentTo(component, x, y);
 
     public void MoveComponent(ComponentViewModel component, double deltaX, double deltaY)
     {
-        Placement.MoveComponent(component, deltaX, deltaY,
+        bool rigid = component.Component is ComponentGroup { IsDie: true } die && (Placement.IsDragging || !DieMoveNeedsRouting(die));
+        bool moved = Placement.MoveComponent(component, deltaX, deltaY,
             Groups.IsInGroupEditMode, Groups.CurrentEditGroup,
-            Groups.UpdateExternalPinPositions, Routing.RecalculateRoutesAsync);
+            Groups.UpdateExternalPinPositions, rigid ? null : Routing.RecalculateRoutesAsync);
+        AfterMove(component, moved, deltaX, deltaY);
         OnDieMoved(component);
     }
 
@@ -303,7 +307,8 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     // ── Group editing delegation ──────────────────────────────────────────
 
-    public void EnterGroupEditMode(ComponentGroup group) => Groups.EnterGroupEditMode(group);
+    /// <summary>Enters <paramref name="group"/>; a die is a work surface and is never entered.</summary>
+    public void EnterGroupEditMode(ComponentGroup group) { if (group?.IsDie != true) Groups.EnterGroupEditMode(group!); }
     public void ExitGroupEditMode() => Groups.ExitGroupEditMode();
     [RelayCommand] public void ExitToRoot() => Groups.ExitToRoot();
     [RelayCommand] public void NavigateToBreadcrumbLevel(ComponentGroup? group)

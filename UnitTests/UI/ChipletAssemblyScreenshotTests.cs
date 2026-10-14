@@ -69,13 +69,13 @@ public class ChipletAssemblyScreenshotTests
             Capture(window, Path.Combine(outputDir, "12-link-properties.png"));
 
             vm.CanvasInteraction.SelectedWaveguideConnection = null;
-            vm.OpenDie(sin);
+            vm.ZoomToDie(sin);
             Dispatcher.UIThread.RunJobs();
-            vm.Canvas.Dies.ActiveDie.ShouldBe(sin);
-            ShowcaseCircuit.SetView(window, vm, (linkRegion.X - 100, linkRegion.Y - 100, linkRegion.Width + 200, linkRegion.Height + 200));
+            vm.Canvas.IsInGroupEditMode.ShouldBeFalse("a die is framed, never entered");
+            vm.ScopeDie.ShouldBe(sin);
             vm.LeftRail.ShowLibraryCommand.Execute(null);
             Dispatcher.UIThread.RunJobs();
-            Capture(window, Path.Combine(outputDir, "13-inside-sin-die.png"));
+            Capture(window, Path.Combine(outputDir, "13-zoom-to-sin-die.png"));
         }
         finally
         {

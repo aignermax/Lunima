@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using CAP_Core.Components.Core;
 
@@ -49,20 +50,39 @@ public static class DiePlacement
     private static (double X, double Y) Clamp(DieOutline outline, double width, double height, double x, double y) =>
         (Math.Clamp(x, outline.X, outline.Right - width), Math.Clamp(y, outline.Y, outline.Bottom - height));
 
-    private static bool IsFree(ComponentGroup die, DieOutline outline, double width, double height, double x, double y)
+    /// <summary>
+    /// True when a <paramref name="width"/> × <paramref name="height"/> footprint at
+    /// (<paramref name="x"/>, <paramref name="y"/>) lies inside <paramref name="die"/>'s outline and
+    /// keeps <see cref="MinGapMicrometers"/> from every part of the die not in <paramref name="exclude"/>.
+    /// </summary>
+    public static bool IsFree(ComponentGroup die, double x, double y, double width, double height,
+        IReadOnlySet<Component>? exclude = null)
     {
-        if (!outline.ContainsRect(x, y, width, height))
+        ArgumentNullException.ThrowIfNull(die);
+        return IsFree(die, DieAssembly.OutlineOf(die), width, height, x, y, exclude);
+    }
+
+    /// <summary>The footprint of a die part: a group's content box, a part's own rectangle.</summary>
+    public static (double X, double Y, double Width, double Height) FootprintOf(Component component) =>
+        component is ComponentGroup g
+            ? (g.PhysicalX + g.MinChildOffsetX, g.PhysicalY + g.MinChildOffsetY, g.WidthMicrometers, g.HeightMicrometers)
+            : (component.PhysicalX, component.PhysicalY, component.WidthMicrometers, component.HeightMicrometers);
+
+    private static bool IsFree(ComponentGroup die, DieOutline outline, double width, double height, double x, double y,
+        IReadOnlySet<Component>? exclude = null)
+    {
+        if (!outline.ContainsRect(x, y, width, height, OutlineToleranceMicrometers))
             return false;
         return !die.ChildComponents
-            .Where(c => c.IsRoutingObstacle)
+            .Where(c => c.IsRoutingObstacle && exclude?.Contains(c) != true)
             .Any(c => Overlaps(c, x, y, width, height));
     }
 
+    private const double OutlineToleranceMicrometers = 1e-6;
+
     private static bool Overlaps(Component other, double x, double y, double width, double height)
     {
-        var (ox, oy, ow, oh) = other is ComponentGroup g
-            ? (g.PhysicalX + g.MinChildOffsetX, g.PhysicalY + g.MinChildOffsetY, g.WidthMicrometers, g.HeightMicrometers)
-            : (other.PhysicalX, other.PhysicalY, other.WidthMicrometers, other.HeightMicrometers);
+        var (ox, oy, ow, oh) = FootprintOf(other);
         return x - MinGapMicrometers < ox + ow && x + width + MinGapMicrometers > ox
             && y - MinGapMicrometers < oy + oh && y + height + MinGapMicrometers > oy;
     }

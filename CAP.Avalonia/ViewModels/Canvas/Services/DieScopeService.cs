@@ -52,11 +52,14 @@ public sealed class DieScopeService
     public double RootChipHeightMicrometers => _placementHoldsRootChip ? _placement.ChipMaxY : _rootChipHeight;
 
     /// <summary>
-    /// The die the user works inside: the outermost die on the group-edit breadcrumb, or
-    /// null at the root and inside ordinary groups of a single-die design.
+    /// The die the user works inside: the die around the group being edited (a group on a
+    /// die is entered straight from the assembly), or null at the root and inside ordinary
+    /// groups of a single-die design.
     /// </summary>
     public ComponentGroup? ActiveDie =>
-        _groups.IsInGroupEditMode ? _groups.BreadcrumbPath.FirstOrDefault(g => g.IsDie) : null;
+        _groups.IsInGroupEditMode
+            ? _groups.BreadcrumbPath.FirstOrDefault(g => g.IsDie) ?? DieAssembly.DieOf(_groups.CurrentEditGroup)
+            : null;
 
     /// <summary>True at the root of a multi-die assembly (dies shown side by side).</summary>
     public bool IsAssemblyRoot =>
@@ -113,6 +116,10 @@ public sealed class DieScopeService
         _placement.ChipMinY = bounds.Y;
         _placement.ChipMaxX = bounds.Right;
         _placement.ChipMaxY = bounds.Bottom;
+        // At the assembly root a waveguide may only run on a die, never across the carrier.
+        _routing.SetAllowedRoutingRegions(IsAssemblyRoot
+            ? RootDies.Select(DieAssembly.OutlineOf).Select(o => (o.X, o.Y, o.Width, o.Height)).ToList()
+            : null);
         if (reinitializeRouting)
             _routing.InitializeAStarRouting(bounds.X, bounds.Y, bounds.Right, bounds.Bottom);
     }

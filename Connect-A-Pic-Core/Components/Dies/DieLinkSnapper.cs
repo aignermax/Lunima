@@ -97,6 +97,22 @@ public static class DieLinkSnapper
     }
 
     /// <summary>
+    /// The move of <paramref name="movingFacet"/>'s die that puts it on
+    /// <paramref name="fixedFacet"/>'s axis at <paramref name="gapMicrometers"/>, whatever the
+    /// current distance — used when a wire is drawn between two facing facets.
+    /// </summary>
+    public static (double DeltaX, double DeltaY) AlignmentFor(
+        PhysicalPin movingFacet, PhysicalPin fixedFacet, double gapMicrometers = DefaultGapMicrometers)
+    {
+        ArgumentNullException.ThrowIfNull(movingFacet);
+        ArgumentNullException.ThrowIfNull(fixedFacet);
+        double radians = movingFacet.GetAbsoluteAngle() * Math.PI / 180.0;
+        var (ax, ay) = movingFacet.GetAbsolutePosition();
+        var (bx, by) = fixedFacet.GetAbsolutePosition();
+        return (bx - gapMicrometers * Math.Cos(radians) - ax, by - gapMicrometers * Math.Sin(radians) - ay);
+    }
+
+    /// <summary>
     /// Extra move that puts facet <paramref name="a"/> (shifted by the drag delta) on
     /// facet <paramref name="b"/>'s axis at the link gap, or null when the two do not face
     /// each other (antiparallel and <paramref name="b"/> in front of <paramref name="a"/>).

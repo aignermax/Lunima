@@ -17,7 +17,7 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// body-only (see <see cref="RenderCulling"/>) so huge imported designs stay
 /// responsive. Implements <see cref="ICanvasRenderer"/> for world-space rendering.
 /// </summary>
-public sealed class ComponentRenderer : ICanvasRenderer
+public sealed partial class ComponentRenderer : ICanvasRenderer
 {
     private readonly PinRenderer _pinRenderer = new();
     private readonly ComponentOutlineRenderer _outlineRenderer = new();
@@ -42,7 +42,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
         var cullRect = RenderCulling.InflateForCulling(viewport, rc.Zoom);
         Guid? hoveredComponentId = rc.InteractionState.HoveredComponent?.Component.Id;
         var visibleNameIds = _nameLabels.GetVisibleLabelIds(
-            rc.ViewModel.Components, hoveredComponentId, viewport, rc.Zoom);
+            rc.ViewModel.InteractiveComponents, hoveredComponentId, viewport, rc.Zoom);
 
         foreach (var comp in rc.ViewModel.Components)
             DrawComponent(context, comp, rc, visibleNameIds, cullRect);
@@ -141,6 +141,11 @@ public sealed class ComponentRenderer : ICanvasRenderer
         var vm = rc.ViewModel;
         bool isHovered = rc.InteractionState.HoveredGroup == group;
         bool isCurrentEditGroup = vm.CurrentEditGroup == group;
+        if (group.IsDie && !isCurrentEditGroup && vm.Surface.IsActive)
+        {
+            DrawDieSurface(context, group, isSelected, isHovered, rc, visibleNameIds, cullRect);
+            return;
+        }
 
         var bounds = ComponentGroupRenderer.CalculateGroupBounds(group);
         if (group.OutlinePolygons is { Count: > 0 } backgroundPolygons && cullRect.Intersects(bounds))
