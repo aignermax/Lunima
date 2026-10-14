@@ -1968,8 +1968,7 @@
   "Toolbar.ComputeModesTip": "Calcula los modos guiados de una sección de guía de onda (índice efectivo, perfil del modo), para revisar anchos y pilas de capas antes del layout.",
   "TruthTable.NoThresholdGap": "No hay hueco entre las potencias de salida: ningún umbral separa 0 de 1.",
   "LeftRail.Gates": "Puertas",
-  "LeftRail.Gates.ShowLibrary": "Mostrar todos los componentes ›",
-  "LeftRail.Gates.ShowLibraryTip": "Abre la biblioteca completa de componentes",
+  "LeftRail.Gates.ShowLibraryTip": "Cambia a Diseño y abre la biblioteca completa de componentes",
   "LeftRail.Gates.MakeGate": "Crear puerta a partir de la selección",
   "LeftRail.Gates.MakeGateTip": "Agrupa las piezas seleccionadas si hace falta y abre los pasos para crear la puerta: roles de pines, simular, umbral, guardar.",
   "LeftRail.Gates.Saved": "Puertas guardadas",
@@ -1978,7 +1977,14 @@
   "LeftRail.Gates.ExamplesHint": "Ejemplos de puertas incluidos; cada uno se abre como copia sin título.",
   "LeftRail.Chiplets.RefreshTip": "Actualizar la lista de chiplets",
   "LeftRail.Chiplets.SelectTip": "Selecciona este chiplet y centra el lienzo en él",
-  "LeftRail.Sources": "Fuentes y detectores",
-  "LeftRail.SourcesTip": "Donde la luz entra y sale del circuito: acopladores de fibra, láseres, detectores y terminadores",
-  "Workspace.HelpTools": "Todas las herramientas funcionan en todos los espacios de trabajo y conservan su atajo. Óptica atenúa la geometría para que se lea la luz y mueve Cortar a Más herramientas; Lógica y Sistema dejan allí la sonda. Cada espacio recuerda sus superposiciones (icono de capas)."
+  "Workspace.HelpTools": "Cada espacio de trabajo coloca su propio tipo de pieza: Diseño todo, Óptica instrumentos, Lógica puertas, Sistema ninguna; un aviso cambia a Diseño con un clic. La edición conserva sus atajos en todas partes; Óptica mueve Cortar a Más herramientas, Lógica y Sistema dejan allí la Sonda. Las capas (icono de capas) se recuerdan por espacio de trabajo.",
+  "Workspace.ToolSet.InstrumentsTitle": "Instrumentos",
+  "Workspace.ToolSet.InstrumentsHint": "Fuentes, detectores y analizadores: lo que coloca Óptica.",
+  "Workspace.ToolSet.PlaceInLayout": "Colocar piezas del circuito en Diseño ›",
+  "Workspace.ToolSet.PlaceInLayoutTip": "Cambia al espacio de trabajo Diseño (Ctrl+1) con la biblioteca completa de componentes",
+  "Workspace.ToolSet.PlacementRefused": "{0} se coloca en Diseño, no en {1}: cambia a Diseño (Ctrl+1) para colocar piezas del circuito.",
+  "Context.ShowInLayout": "Mostrar en Diseño",
+  "Context.ShowInLayoutTip": "Cambia a Diseño, centrado en este elemento",
+  "Context.EditGate": "Editar puerta…",
+  "Context.EditGateTip": "Abre los pasos de la puerta: roles de pines, simular, umbral, guardar."
 }

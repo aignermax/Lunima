@@ -88,6 +88,8 @@ public class ResponsivenessBudgetTests
         "ShowHomeCommand",
         "MakeGateCommand",
         "RefreshSystemOverviewCommand",
+        "SwitchToLayoutCommand",
+        "ShowInLayoutCommand",
     };
 
     /// <summary>

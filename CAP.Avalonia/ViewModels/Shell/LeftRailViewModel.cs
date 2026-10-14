@@ -8,9 +8,10 @@ namespace CAP.Avalonia.ViewModels.Shell;
 /// <summary>
 /// State of the main window's left icon rail: which section fills the one full-height pane
 /// next to it (VS Code / Figma style). The rail is contextual: each workspace opens on its
-/// own section (<see cref="WorkspaceRailLayout"/>) and orders the icons for it, and the rail
-/// remembers the section the user last picked in each workspace. Every section stays one
-/// click away in every workspace.
+/// own section (<see cref="WorkspaceRailLayout"/>), shows only the sections of its tool set in
+/// its order, and the rail remembers the section the user last picked in each workspace.
+/// Asking for a section the workspace leaves out raises <see cref="SectionUnavailable"/> so the
+/// host can switch to Layout (which shows every section) instead of silently refusing.
 /// </summary>
 public partial class LeftRailViewModel : ObservableObject
 {
@@ -50,6 +51,27 @@ public partial class LeftRailViewModel : ObservableObject
     /// <summary>True while the Chiplets panel is shown.</summary>
     public bool IsChipletsActive => ActiveSection == LeftRailSection.Chiplets;
 
+    /// <summary>
+    /// Raised when a section the active workspace does not show is requested (a "show all
+    /// components" link, a tour step). The handler switches to a workspace that shows it.
+    /// </summary>
+    public event Action<LeftRailSection>? SectionUnavailable;
+
+    /// <summary>True when the active workspace's rail shows the library icon.</summary>
+    public bool IsLibraryAvailable => IsAvailable(LeftRailSection.Library);
+
+    /// <summary>True when the rail shows the hierarchy icon.</summary>
+    public bool IsHierarchyAvailable => IsAvailable(LeftRailSection.Hierarchy);
+
+    /// <summary>True when the rail shows the PDKs icon.</summary>
+    public bool IsPdksAvailable => IsAvailable(LeftRailSection.Pdks);
+
+    /// <summary>True when the rail shows the Gates icon.</summary>
+    public bool IsGatesAvailable => IsAvailable(LeftRailSection.Gates);
+
+    /// <summary>True when the rail shows the Chiplets icon.</summary>
+    public bool IsChipletsAvailable => IsAvailable(LeftRailSection.Chiplets);
+
     /// <summary>Rail position (grid row) of the library icon in the active workspace.</summary>
     public int LibraryOrder => OrderOf(LeftRailSection.Library);
 
@@ -67,23 +89,23 @@ public partial class LeftRailViewModel : ObservableObject
 
     /// <summary>Shows the component library.</summary>
     [RelayCommand]
-    private void ShowLibrary() => ActiveSection = LeftRailSection.Library;
+    private void ShowLibrary() => Show(LeftRailSection.Library);
 
     /// <summary>Shows the design hierarchy.</summary>
     [RelayCommand]
-    private void ShowHierarchy() => ActiveSection = LeftRailSection.Hierarchy;
+    private void ShowHierarchy() => Show(LeftRailSection.Hierarchy);
 
     /// <summary>Shows PDK management.</summary>
     [RelayCommand]
-    private void ShowPdks() => ActiveSection = LeftRailSection.Pdks;
+    private void ShowPdks() => Show(LeftRailSection.Pdks);
 
     /// <summary>Shows the Gates panel.</summary>
     [RelayCommand]
-    private void ShowGates() => ActiveSection = LeftRailSection.Gates;
+    private void ShowGates() => Show(LeftRailSection.Gates);
 
     /// <summary>Shows the Chiplets panel.</summary>
     [RelayCommand]
-    private void ShowChiplets() => ActiveSection = LeftRailSection.Chiplets;
+    private void ShowChiplets() => Show(LeftRailSection.Chiplets);
 
     /// <summary>
     /// Re-arranges the rail for <paramref name="workspace"/>: icon order per
@@ -101,6 +123,26 @@ public partial class LeftRailViewModel : ObservableObject
         OnPropertyChanged(nameof(PdksOrder));
         OnPropertyChanged(nameof(GatesOrder));
         OnPropertyChanged(nameof(ChipletsOrder));
+        OnPropertyChanged(nameof(IsLibraryAvailable));
+        OnPropertyChanged(nameof(IsHierarchyAvailable));
+        OnPropertyChanged(nameof(IsPdksAvailable));
+        OnPropertyChanged(nameof(IsGatesAvailable));
+        OnPropertyChanged(nameof(IsChipletsAvailable));
+    }
+
+    /// <summary>True when the active workspace's rail shows <paramref name="section"/>.</summary>
+    public bool IsAvailable(LeftRailSection section) => WorkspaceRailLayout.Shows(_workspace, section);
+
+    /// <summary>
+    /// Shows <paramref name="section"/>; when the workspace leaves it out, first asks the host
+    /// (<see cref="SectionUnavailable"/>) to switch to a workspace that shows it.
+    /// </summary>
+    public void Show(LeftRailSection section)
+    {
+        if (!IsAvailable(section))
+            SectionUnavailable?.Invoke(section);
+        if (IsAvailable(section))
+            ActiveSection = section;
     }
 
     partial void OnActiveSectionChanged(LeftRailSection value) => _remembered[_workspace] = value;
@@ -114,7 +156,7 @@ public partial class LeftRailViewModel : ObservableObject
     {
         if (controlName is null || !SectionByControlName.TryGetValue(controlName, out var section))
             return;
-        ActiveSection = section;
+        Show(section);
     }
 
     private int OrderOf(LeftRailSection section)

@@ -128,26 +128,27 @@ public class WorkspaceContextTests
 
         vm.WorkspaceSwitch.Current = Workspace.Logic;
         vm.LeftRail.ActiveSection.ShouldBe(LeftRailSection.Gates);
-        vm.LeftRail.ShowLibraryCommand.Execute(null);
+        vm.LeftRail.ShowHierarchyCommand.Execute(null);
 
         vm.WorkspaceSwitch.Current = Workspace.System;
         vm.LeftRail.ActiveSection.ShouldBe(LeftRailSection.Chiplets);
 
         vm.WorkspaceSwitch.Current = Workspace.Logic;
-        vm.LeftRail.ActiveSection.ShouldBe(LeftRailSection.Library, "the user's choice in Logic is kept");
+        vm.LeftRail.ActiveSection.ShouldBe(LeftRailSection.Hierarchy, "the user's choice in Logic is kept");
     }
 
     [Fact]
-    public void SourcesQuickSection_IsVisibleOnlyInOptics()
+    public void InstrumentLibrary_IsShownOnlyInOptics()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
-        vm.LeftPanel.FilteredTemplates.Add(new CAP.Avalonia.ViewModels.Library.ComponentTemplate { Name = "Grating Coupler TE 1550" });
 
         vm.WorkspaceSwitch.Current = Workspace.Optics;
-        vm.IsSourcesQuickSectionVisible.ShouldBeTrue();
+        vm.IsInstrumentLibrary.ShouldBeTrue();
+        vm.IsFullLibrary.ShouldBeFalse();
 
         vm.WorkspaceSwitch.Current = Workspace.Layout;
-        vm.IsSourcesQuickSectionVisible.ShouldBeFalse();
+        vm.IsInstrumentLibrary.ShouldBeFalse();
+        vm.IsFullLibrary.ShouldBeTrue();
     }
 
     [Fact]

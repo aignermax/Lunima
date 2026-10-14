@@ -1968,8 +1968,7 @@
   "Toolbar.ComputeModesTip": "導波路断面の導波モード（実効屈折率、モードプロファイル）を計算します。レイアウト前に幅や層構成を確認するためのものです。",
   "TruthTable.NoThresholdGap": "出力パワーの間に隙間がなく、0 と 1 を分けるしきい値がありません。",
   "LeftRail.Gates": "ゲート",
-  "LeftRail.Gates.ShowLibrary": "すべてのコンポーネントを表示 ›",
-  "LeftRail.Gates.ShowLibraryTip": "コンポーネントライブラリ全体を開きます",
+  "LeftRail.Gates.ShowLibraryTip": "レイアウトに切り替えてコンポーネントライブラリ全体を開きます",
   "LeftRail.Gates.MakeGate": "選択範囲からゲートを作成",
   "LeftRail.Gates.MakeGateTip": "必要に応じて選択部品をグループ化し、ゲート作成の手順(ピンの役割・シミュレーション・しきい値・保存)を開きます。",
   "LeftRail.Gates.Saved": "保存済みゲート",
@@ -1978,7 +1977,14 @@
   "LeftRail.Gates.ExamplesHint": "同梱のゲート例です。それぞれ無題のコピーとして開きます。",
   "LeftRail.Chiplets.RefreshTip": "チップレット一覧を更新",
   "LeftRail.Chiplets.SelectTip": "このチップレットを選択し、キャンバスの中央に表示します",
-  "LeftRail.Sources": "光源と検出器",
-  "LeftRail.SourcesTip": "光が回路に出入りする部品:ファイバーカプラ、レーザー、検出器、終端器",
-  "Workspace.HelpTools": "すべてのツールはどのワークスペースでも使え、ショートカットもそのままです。光学ではジオメトリを暗くして光を見やすくし、カットを「その他のツール」に移します。ロジックとシステムではプローブがそこにあり、オーバーレイ (レイヤー アイコン) はワークスペースごとに記憶されます。"
+  "Workspace.HelpTools": "各ワークスペースは独自の種類の部品を配置します：レイアウトはすべて、光学は計測器、ロジックはゲート、システムはなし — ヒントからワンクリックでレイアウトに切り替えられます。編集のショートカットはどこでも使え、光学ではカットが「その他のツール」に、ロジックとシステムではプローブがそこに入ります。オーバーレイ（レイヤーアイコン）はワークスペースごとに記憶されます。",
+  "Workspace.ToolSet.InstrumentsTitle": "計測器",
+  "Workspace.ToolSet.InstrumentsHint": "光源・検出器・アナライザー — 光学で配置できる部品です。",
+  "Workspace.ToolSet.PlaceInLayout": "回路部品はレイアウトで配置 ›",
+  "Workspace.ToolSet.PlaceInLayoutTip": "コンポーネントライブラリ全体があるレイアウト ワークスペース (Ctrl+1) に切り替えます",
+  "Workspace.ToolSet.PlacementRefused": "{0} は {1} ではなくレイアウトで配置します — 回路部品を配置するにはレイアウト (Ctrl+1) に切り替えてください。",
+  "Context.ShowInLayout": "レイアウトで表示",
+  "Context.ShowInLayoutTip": "この要素を中心にレイアウトへ切り替えます",
+  "Context.EditGate": "ゲートを編集…",
+  "Context.EditGateTip": "このゲートの作成手順を開きます：ピンの役割、シミュレーション、しきい値、保存。"
 }

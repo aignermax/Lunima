@@ -1968,8 +1968,7 @@
   "Toolbar.ComputeModesTip": "Berechnet die geführten Moden eines Wellenleiter-Querschnitts (effektiver Index, Modenprofil) — zum Prüfen von Breiten und Schichtstapeln vor dem Layout.",
   "TruthTable.NoThresholdGap": "Keine Lücke zwischen den Ausgangsleistungen — keine Schwelle trennt 0 von 1.",
   "LeftRail.Gates": "Gatter",
-  "LeftRail.Gates.ShowLibrary": "Alle Bauteile anzeigen ›",
-  "LeftRail.Gates.ShowLibraryTip": "Öffnet die vollständige Bauteilbibliothek",
+  "LeftRail.Gates.ShowLibraryTip": "Wechselt ins Layout und öffnet die vollständige Bauteilbibliothek",
   "LeftRail.Gates.MakeGate": "Gatter aus Auswahl erstellen",
   "LeftRail.Gates.MakeGateTip": "Gruppiert die ausgewählten Teile bei Bedarf und öffnet dann die Gatter-Schritte: Pin-Rollen, simulieren, Schwelle, speichern.",
   "LeftRail.Gates.Saved": "Gespeicherte Gatter",
@@ -1978,7 +1977,14 @@
   "LeftRail.Gates.ExamplesHint": "Mitgelieferte Gatter-Beispiele; jedes öffnet als unbenannte Kopie.",
   "LeftRail.Chiplets.RefreshTip": "Chiplet-Liste aktualisieren",
   "LeftRail.Chiplets.SelectTip": "Dieses Chiplet auswählen und die Ansicht darauf zentrieren",
-  "LeftRail.Sources": "Quellen & Detektoren",
-  "LeftRail.SourcesTip": "Wo Licht in die Schaltung ein- und austritt: Faserkoppler, Laser, Detektoren und Abschlüsse",
-  "Workspace.HelpTools": "Jedes Werkzeug funktioniert in jedem Arbeitsbereich und behält sein Tastenkürzel. Optik blendet die Geometrie ab, damit das Licht lesbar wird, und legt Schneiden unter Weitere Werkzeuge; Logik und System legen die Sonde dorthin. Overlays (Ebenen-Symbol) merkt sich jeder Arbeitsbereich."
+  "Workspace.HelpTools": "Jeder Arbeitsbereich platziert seine eigene Art von Teilen: Layout alles, Optik Instrumente, Logik Gatter, System keine — ein Hinweis wechselt mit einem Klick ins Layout. Bearbeiten behält überall seine Kürzel; Optik legt Schneiden unter Weitere Werkzeuge, Logik und System dort die Sonde. Overlays (Ebenen-Symbol) werden je Arbeitsbereich gemerkt.",
+  "Workspace.ToolSet.InstrumentsTitle": "Instrumente",
+  "Workspace.ToolSet.InstrumentsHint": "Quellen, Detektoren und Analysatoren — das platziert Optik.",
+  "Workspace.ToolSet.PlaceInLayout": "Schaltungsteile im Layout platzieren ›",
+  "Workspace.ToolSet.PlaceInLayoutTip": "Wechselt in den Arbeitsbereich Layout (Strg+1) mit der vollständigen Bauteilbibliothek",
+  "Workspace.ToolSet.PlacementRefused": "{0} wird im Layout platziert, nicht in {1} — für Schaltungsteile ins Layout wechseln (Strg+1).",
+  "Context.ShowInLayout": "Im Layout zeigen",
+  "Context.ShowInLayoutTip": "Wechselt ins Layout, zentriert auf dieses Element",
+  "Context.EditGate": "Gatter bearbeiten…",
+  "Context.EditGateTip": "Öffnet die Gatter-Schritte für dieses Gatter: Pin-Rollen, Simulation, Schwelle, Speichern."
 }

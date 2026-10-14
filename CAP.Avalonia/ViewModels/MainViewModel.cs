@@ -415,6 +415,7 @@ public partial class MainViewModel : ObservableObject
         WorkspaceSwitch = InitializeWorkspaces();
         InitializeWorkspaceContext();
         InitializeWorkspacePresentation();
+        InitializeWorkspaceToolSets();
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;

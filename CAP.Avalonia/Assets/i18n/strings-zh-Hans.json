@@ -1968,8 +1968,7 @@
   "Toolbar.ComputeModesTip": "求解波导截面的导模（有效折射率、模场分布），用于在版图前检查宽度和层叠结构。",
   "TruthTable.NoThresholdGap": "输出功率之间没有间隔——没有阈值能区分 0 和 1。",
   "LeftRail.Gates": "逻辑门",
-  "LeftRail.Gates.ShowLibrary": "显示全部元件 ›",
-  "LeftRail.Gates.ShowLibraryTip": "打开完整的元件库",
+  "LeftRail.Gates.ShowLibraryTip": "切换到版图并打开完整的元件库",
   "LeftRail.Gates.MakeGate": "从所选内容创建逻辑门",
   "LeftRail.Gates.MakeGateTip": "必要时先将所选部件编组，然后打开创建逻辑门的步骤：引脚角色、仿真、阈值、保存。",
   "LeftRail.Gates.Saved": "已保存的逻辑门",
@@ -1978,7 +1977,14 @@
   "LeftRail.Gates.ExamplesHint": "随附的逻辑门示例；每个都以未命名副本打开。",
   "LeftRail.Chiplets.RefreshTip": "刷新芯粒列表",
   "LeftRail.Chiplets.SelectTip": "选中此芯粒并将画布居中到它",
-  "LeftRail.Sources": "光源与探测器",
-  "LeftRail.SourcesTip": "光进出电路的位置：光纤耦合器、激光器、探测器和终端",
-  "Workspace.HelpTools": "每个工具在每个工作区都可用并保留其快捷键。光学工作区会淡化几何以突出光路，并把剪切移到“更多工具”；逻辑和系统工作区把探针放在那里。叠加层 (图层图标) 按工作区记忆。"
+  "Workspace.HelpTools": "每个工作区放置自己类型的部件：版图放置全部，光学放置仪器，逻辑放置逻辑门，系统不放置 — 提示可一键切换到版图。编辑快捷键在所有工作区中保留；光学将切割移到“更多工具”，逻辑和系统将探针放在那里。叠加层（图层图标）按工作区记忆。",
+  "Workspace.ToolSet.InstrumentsTitle": "仪器",
+  "Workspace.ToolSet.InstrumentsHint": "光源、探测器和分析仪 — 光学工作区可放置的部件。",
+  "Workspace.ToolSet.PlaceInLayout": "在版图中放置电路元件 ›",
+  "Workspace.ToolSet.PlaceInLayoutTip": "切换到带完整元件库的版图工作区 (Ctrl+1)",
+  "Workspace.ToolSet.PlacementRefused": "{0} 应在版图中放置，而不是在{1}中 — 切换到版图 (Ctrl+1) 以放置电路元件。",
+  "Context.ShowInLayout": "在版图中显示",
+  "Context.ShowInLayoutTip": "切换到版图并以此元素为中心",
+  "Context.EditGate": "编辑逻辑门…",
+  "Context.EditGateTip": "打开此逻辑门的创建步骤：引脚角色、仿真、阈值、保存。"
 }
