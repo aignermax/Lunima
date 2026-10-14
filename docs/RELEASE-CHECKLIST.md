@@ -143,6 +143,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Empty optical tabs explain themselves: with no light source, Spectrum / Monte Carlo / Transient / Eye show one sentence + "Place a light source" (arms placement of a grating/edge coupler); with a source but no picked output, Transient / Eye offer "Pick on canvas". `(auto: AnalysisReadinessViewModelTests, MainViewModelWorkspaceTests)`
 - [ ] Logic panel lives in the analysis dock's Logic tab: builds the logic network of the loaded design, toggles inputs, steps/runs the clock, and shows timeline + waveform lanes. `(auto: WatchComputeTourViewModelTests, WatchTourCounterExampleTests)`
 - [ ] Logic tab empty state lists the groups that are not gates yet, each with "Make gate…" that selects the group and opens the Make-gate steps. `(auto: GateLinkingTests)`
+- [ ] Logic tab is laid out for the wide dock: one toolbar row (Build · Step clock / Run / cadence / Reset · Play / Prev / Next / Back to live · status · critical path (?)) above side-by-side columns (inputs | outputs + registers | timeline | waveforms | fan-out warnings), each column scrolling on its own; at a 900 px dock the toolbar wraps and the columns still fit, narrower docks scroll the columns sideways instead of clipping. `(auto: LogicTabHorizontalLayoutScreenshotTests)`
 
 ## 10. Component-specific tools & properties
 

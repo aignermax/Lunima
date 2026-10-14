@@ -1,0 +1,119 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:logic="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis"
+             xmlns:bus="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.BusView"
+             x:Class="CAP.Avalonia.Views.Panels.LogicTab.LogicOutputsColumn"
+             x:DataType="vm:MainViewModel">
+
+    <!-- Gate outputs (one live 0/1 indicator per gate output) and, below them, the
+         held register state — the clock actions live in the tab toolbar. -->
+    <Grid RowDefinitions="Auto,*">
+        <Grid ColumnDefinitions="*,Auto" Classes="logicColumnHeader">
+            <TextBlock Classes="label" Text="{loc:Localize LogicPanel.Outputs}" VerticalAlignment="Center"/>
+            <!-- What is a cell instance? (#1411): shown only when the network has cell groups. -->
+            <controls:HelpFlyoutButton x:Name="LogicCellInstanceHelpButton" Grid.Column="1"
+                                       Title="{loc:Localize LogicPanelCellHelp.Title}"
+                                       VerticalAlignment="Center" Margin="4,0,0,0"
+                                       IsVisible="{Binding RightPanel.Logic.HasCellGroups}">
+                <controls:HelpFlyoutButton.HelpContent>
+                    <panels:LogicCellInstanceHelpFlyout/>
+                </controls:HelpFlyoutButton.HelpContent>
+            </controls:HelpFlyoutButton>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" Classes="logicColumnScroll" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <ItemsControl x:Name="LogicOutputRows" ItemsSource="{Binding RightPanel.Logic.OutputRows}">
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate x:DataType="logic:LogicNetworkOutputViewModel">
+                            <StackPanel Orientation="Horizontal" Margin="0,1">
+                                <TextBlock Classes="secondary" Text="{Binding PinName}" Width="110" VerticalAlignment="Center"/>
+                                <TextBlock Classes="mono" Text="{Binding BitText}" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                           Foreground="{DynamicResource Brush.Success}" IsVisible="{Binding IsOne}"/>
+                                <TextBlock Classes="mono" Text="{Binding BitText}" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                           Foreground="{DynamicResource Brush.Text.Tertiary}" IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
+                                <TextBlock Classes="caption" Text="{Binding DelayText}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </DataTemplate>
+                        <DataTemplate x:DataType="bus:LogicSignalBusOutputViewModel">
+                            <StackPanel Margin="0,1">
+                                <TextBlock Classes="mono" Text="{Binding HeaderText}" FontSize="{DynamicResource FontSize.Caption}"
+                                           FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}"/>
+                                <ItemsControl ItemsSource="{Binding Members}" Margin="14,0,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="logic:LogicNetworkOutputViewModel">
+                                            <StackPanel Orientation="Horizontal" Margin="0,1">
+                                                <TextBlock Classes="secondary" Text="{Binding PinName}" Width="96" VerticalAlignment="Center"/>
+                                                <TextBlock Classes="mono" Text="{Binding BitText}" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                                           Foreground="{DynamicResource Brush.Success}" IsVisible="{Binding IsOne}"/>
+                                                <TextBlock Classes="mono" Text="{Binding BitText}" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                                           Foreground="{DynamicResource Brush.Text.Tertiary}" IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
+                                                <TextBlock Classes="caption" Text="{Binding DelayText}"
+                                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                        <!-- Cell collapse (#1399): the outputs of one cell instance fold under a
+                             header; expanding shows the rows with the cell prefix stripped. -->
+                        <DataTemplate x:DataType="bus:LogicCellGroupViewModel">
+                            <StackPanel Margin="0,1">
+                                <Button Classes="ghost" Command="{Binding ToggleExpandedCommand}"
+                                        Background="Transparent"
+                                        HorizontalContentAlignment="Left" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Classes="mono" Text="{Binding ChevronText}" FontSize="{DynamicResource FontSize.Caption}"
+                                                   Foreground="{DynamicResource Brush.Text.Primary}" Width="14" VerticalAlignment="Center"/>
+                                        <TextBlock Classes="mono" Text="{Binding HeaderText}" FontSize="{DynamicResource FontSize.Caption}"
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <ItemsControl ItemsSource="{Binding Members}" Margin="14,0,0,0"
+                                              IsVisible="{Binding IsExpanded}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="logic:LogicNetworkOutputViewModel">
+                                            <StackPanel Orientation="Horizontal" Margin="0,1">
+                                                <TextBlock Classes="secondary" Text="{Binding DisplayName}" Width="96" VerticalAlignment="Center"/>
+                                                <TextBlock Classes="mono" Text="{Binding BitText}" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                                           Foreground="{DynamicResource Brush.Success}" IsVisible="{Binding IsOne}"/>
+                                                <TextBlock Classes="mono" Text="{Binding BitText}" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                                           Foreground="{DynamicResource Brush.Text.Tertiary}" IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
+                                                <TextBlock Classes="caption" Text="{Binding DelayText}"
+                                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
+
+                <!-- Register state (#1099): the held bits stay readable even when the
+                     canvas badges are off-screen. -->
+                <TextBlock Classes="label" Text="{loc:Localize LogicPanel.Registers}" Margin="0,8,0,2"
+                           IsVisible="{Binding RightPanel.Logic.HasRegisters}"/>
+                <ItemsControl ItemsSource="{Binding RightPanel.Logic.RegisterStates}"
+                              IsVisible="{Binding RightPanel.Logic.HasRegisters}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="logic:LogicRegisterStateViewModel">
+                            <StackPanel Orientation="Horizontal" Margin="0,1">
+                                <TextBlock Classes="secondary" Text="{Binding GateName}"
+                                           Width="110" VerticalAlignment="Center"/>
+                                <TextBlock Classes="mono" Text="{Binding BitsText}" FontSize="{DynamicResource FontSize.Body}"
+                                           FontWeight="Bold" Foreground="{DynamicResource Brush.Warning}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
