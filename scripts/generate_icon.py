@@ -2,16 +2,22 @@
 """
 Generate the Lunima application icon (LunimaIcon.ico and LunimaIcon.icns).
 
-Produces a professional photonic/waveguide-themed icon with multiple sizes
-suitable for Windows applications (ICO), MSI installers, and macOS (ICNS).
+The icon is the letter "L" drawn as a single glowing waveguide: a straight run,
+one rounded bend, and a bright light spot where the light leaves the guide. It sits
+on the app's dark surface and uses the Optics (cyan) and Logic (violet) workspace
+accents. Small sizes (<= 32 px) use a simplified, bolder drawing so the L stays
+legible in a taskbar or a file list.
+
+The same geometry is written as SVG for the website and README with --brand-dir.
 
 Usage:
-    python3 scripts/generate_icon.py [--output Installer/LunimaIcon.ico] [--icns Installer/LunimaIcon.icns]
+    python3 scripts/generate_icon.py [--output Installer/LunimaIcon.ico]
+                                     [--icns Installer/LunimaIcon.icns]
+                                     [--brand-dir docs/media/brand]
 """
 
 import argparse
 import math
-import os
 import platform
 import subprocess
 import tempfile
@@ -21,221 +27,219 @@ from PIL import Image, ImageDraw, ImageFilter
 
 
 # ---------------------------------------------------------------------------
-# Color palette
+# Geometry (1024 x 1024 design grid)
 # ---------------------------------------------------------------------------
-BG_COLOR       = (12, 18, 42)        # Deep navy blue – photonic darkness
-WAVEGUIDE_DARK = (20, 120, 200)      # Deep cyan-blue waveguide body
-WAVEGUIDE_MID  = (40, 180, 255)      # Mid cyan waveguide highlight
-WAVEGUIDE_GLOW = (120, 220, 255)     # Bright glow on waveguide core
-LIGHT_DOT_CORE = (255, 255, 220)     # Near-white for light spots
-LIGHT_DOT_HALO = (180, 240, 255, 80) # Translucent halo around light spots
-ACCENT_GOLD    = (255, 200, 60)      # Gold accent for energy
+GRID = 1024
+TILE_INSET, TILE_RADIUS = 64, 200             # rounded-square background
+SMALL_TILE_INSET, SMALL_TILE_RADIUS = 24, 220 # small sizes fill more of the cell
+L_TOP = (360, 220)                            # start of the vertical run
+BEND_RADIUS = 180
+L_END = (800, 740)                            # light spot at the end of the run
+STROKE, SMALL_STROKE = 88, 132
+HIGHLIGHT_STROKE = 18
+SPOT_RADIUS, SMALL_SPOT_RADIUS = 70, 92
+GLOW_BLUR = 22
+SMALL_SIZE_LIMIT = 32
+
+# ---------------------------------------------------------------------------
+# Colours (match CAP.Avalonia/Styles/Tokens.axaml + workspace accents)
+# ---------------------------------------------------------------------------
+TILE_TOP, TILE_BOTTOM = (27, 34, 51), (13, 17, 26)
+TILE_EDGE = (255, 255, 255, 20)
+LOGIC_VIOLET = (176, 146, 247)
+OPTICS_CYAN = (56, 198, 212)
+SPOT = (232, 251, 255)
+HIGHLIGHT = (255, 255, 255, 140)
 
 
-def _lerp(a: float, b: float, t: float) -> float:
-    return a + (b - a) * t
-
-
-def _draw_rounded_rect(
-    draw: ImageDraw.ImageDraw,
-    x0: float, y0: float, x1: float, y1: float,
-    radius: float,
-    fill: tuple,
-) -> None:
-    """Draw a rounded rectangle."""
-    draw.rounded_rectangle([x0, y0, x1, y1], radius=radius, fill=fill)
-
-
-def _bezier_points(p0, p1, p2, p3, steps: int = 60):
-    """Return (steps+1) points along a cubic Bézier curve."""
-    pts = []
-    for i in range(steps + 1):
-        t = i / steps
-        mt = 1 - t
-        x = mt**3 * p0[0] + 3*mt**2*t * p1[0] + 3*mt*t**2 * p2[0] + t**3 * p3[0]
-        y = mt**3 * p0[1] + 3*mt**2*t * p1[1] + 3*mt*t**2 * p2[1] + t**3 * p3[1]
-        pts.append((x, y))
+def _l_points(steps: int = 90) -> list[tuple[float, float]]:
+    """Centre line of the L: down, a quarter-circle bend, then right."""
+    x0, y0 = L_TOP
+    bend_y = L_END[1] - BEND_RADIUS
+    cx, cy = x0 + BEND_RADIUS, bend_y
+    pts = [(x0, y0), (x0, bend_y)]
+    for i in range(1, steps):
+        a = math.pi - (math.pi / 2) * i / steps
+        pts.append((cx + BEND_RADIUS * math.cos(a), cy + BEND_RADIUS * math.sin(a)))
+    pts += [(cx, L_END[1]), L_END]
     return pts
 
 
-def _draw_thick_polyline(draw: ImageDraw.ImageDraw, pts, width: int, color: tuple) -> None:
-    """Draw a thick poly-line by painting circles at each sample point."""
-    r = width / 2
-    for x, y in pts:
-        draw.ellipse([x - r, y - r, x + r, y + r], fill=color)
+def _scaled(pts, s: float):
+    return [(x * s, y * s) for x, y in pts]
 
 
-def _glow_layer(size: int, pts, width: int, color: tuple) -> Image.Image:
-    """Render a single glow pass and return an RGBA image."""
-    layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(layer)
-    _draw_thick_polyline(draw, pts, width, color)
-    return layer.filter(ImageFilter.GaussianBlur(radius=width * 0.8))
+def _dense(pts, step: float):
+    """Resample a polyline so consecutive points are at most *step* apart."""
+    out = [pts[0]]
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        n = max(1, math.ceil(math.hypot(x1 - x0, y1 - y0) / step))
+        out += [(x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n) for i in range(1, n + 1)]
+    return out
 
 
-def render_icon(size: int) -> Image.Image:
-    """Render the Lunima icon at *size* × *size* pixels."""
-    s = size
-    img = Image.new("RGBA", (s, s), BG_COLOR + (255,))
-    draw = ImageDraw.Draw(img)
+def _stroke_mask(size: int, width: float) -> Image.Image:
+    """Alpha mask of the L waveguide: discs stamped along the centre line give a
+    perfectly round bend and round caps (PIL's wide-line joints facet on curves)."""
+    s = size / GRID
+    mask = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(mask)
+    r = max(0.5, width * s / 2)
+    for x, y in _dense(_scaled(_l_points(), s), step=max(0.5, r / 8)):
+        draw.ellipse((x - r, y - r, x + r, y + r), fill=255)
+    return mask
 
-    # -----------------------------------------------------------------------
-    # Background: subtle radial gradient via concentric ellipses
-    # -----------------------------------------------------------------------
-    cx, cy = s / 2, s / 2
-    max_r = s * 0.52
-    steps = 20
-    for i in range(steps, 0, -1):
-        t = i / steps
-        r = max_r * t
-        alpha = int(40 * (1 - t))
-        color = (20, 60, 120, alpha)
-        draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=color)
 
-    # -----------------------------------------------------------------------
-    # Waveguide paths (two S-curves representing photonic waveguides)
-    # -----------------------------------------------------------------------
-    margin = s * 0.10
-    mid    = s * 0.50
-    q1     = s * 0.25
-    q3     = s * 0.75
-    ctrl_off = s * 0.28
+def _vertical_gradient(size: int, top, bottom, y_from: float = 0.0, y_to: float | None = None) -> Image.Image:
+    """Gradient from *top* at y_from to *bottom* at y_to (clamped outside)."""
+    y_to = size - 1 if y_to is None else y_to
+    column = Image.new("RGBA", (1, size))
+    for y in range(size):
+        t = min(1.0, max(0.0, (y - y_from) / max(1.0, y_to - y_from)))
+        column.putpixel((0, y), tuple(round(a + (b - a) * t) for a, b in zip(top, bottom)) + (255,))
+    return column.resize((size, size))
 
-    # Top waveguide: enters left-center, curves through top, exits right
-    wg1_p0 = (margin,       mid - s * 0.12)
-    wg1_p1 = (margin + ctrl_off, mid - s * 0.12)
-    wg1_p2 = (s - margin - ctrl_off, q1 - s * 0.05)
-    wg1_p3 = (s - margin,   q1 - s * 0.05)
 
-    # Bottom waveguide: symmetric
-    wg2_p0 = (margin,       mid + s * 0.12)
-    wg2_p1 = (margin + ctrl_off, mid + s * 0.12)
-    wg2_p2 = (s - margin - ctrl_off, q3 + s * 0.05)
-    wg2_p3 = (s - margin,   q3 + s * 0.05)
-
-    pts1 = _bezier_points(wg1_p0, wg1_p1, wg1_p2, wg1_p3)
-    pts2 = _bezier_points(wg2_p0, wg2_p1, wg2_p2, wg2_p3)
-
-    base_w = max(2, int(s * 0.065))
-    glow_w = max(4, int(s * 0.130))
-    core_w = max(1, int(s * 0.030))
-
-    for pts in (pts1, pts2):
-        # Outer glow (blurred)
-        glow = _glow_layer(s, pts, glow_w, WAVEGUIDE_DARK + (160,))
-        img = Image.alpha_composite(img, glow)
-
-        # Mid body
-        draw_mid = ImageDraw.Draw(img)
-        _draw_thick_polyline(draw_mid, pts, base_w, WAVEGUIDE_MID)
-
-        # Bright core
-        draw_core = ImageDraw.Draw(img)
-        _draw_thick_polyline(draw_core, pts, core_w, WAVEGUIDE_GLOW)
-
-    # -----------------------------------------------------------------------
-    # Light spots: glowing dots at entry and exit points
-    # -----------------------------------------------------------------------
-    spot_pts = [wg1_p0, wg1_p3, wg2_p0, wg2_p3]
-    spot_r   = max(3, int(s * 0.060))
-    halo_r   = max(5, int(s * 0.120))
-
-    for px, py in spot_pts:
-        # Halo (blurred soft glow)
-        halo_layer = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-        halo_draw  = ImageDraw.Draw(halo_layer)
-        halo_draw.ellipse(
-            [px - halo_r, py - halo_r, px + halo_r, py + halo_r],
-            fill=LIGHT_DOT_HALO,
-        )
-        halo_blurred = halo_layer.filter(ImageFilter.GaussianBlur(radius=halo_r * 0.7))
-        img = Image.alpha_composite(img, halo_blurred)
-
-        # Bright core dot
-        dot_draw = ImageDraw.Draw(img)
-        dot_draw.ellipse(
-            [px - spot_r, py - spot_r, px + spot_r, py + spot_r],
-            fill=LIGHT_DOT_CORE,
-        )
-
-    # -----------------------------------------------------------------------
-    # Gold coupling region: small arcs in the center suggesting evanescent
-    # coupling between the two waveguides
-    # -----------------------------------------------------------------------
-    if s >= 32:
-        arc_cx, arc_cy = cx, mid
-        ar = max(3, int(s * 0.055))
-        arc_color = ACCENT_GOLD
-        arc_draw  = ImageDraw.Draw(img)
-        for offset in (-ar * 1.4, 0, ar * 1.4):
-            x0 = arc_cx + offset - ar
-            y0 = arc_cy - ar
-            x1 = arc_cx + offset + ar
-            y1 = arc_cy + ar
-            arc_draw.arc([x0, y0, x1, y1], start=220, end=320, fill=arc_color,
-                         width=max(1, int(s * 0.018)))
-
-    # -----------------------------------------------------------------------
-    # Rounded-rect border (subtle frame)
-    # -----------------------------------------------------------------------
-    border_draw = ImageDraw.Draw(img)
-    bw = max(1, int(s * 0.020))
-    border_draw.rounded_rectangle(
-        [bw, bw, s - bw - 1, s - bw - 1],
-        radius=max(4, int(s * 0.12)),
-        outline=WAVEGUIDE_MID + (120,),
-        width=bw,
-    )
-
+def _tile(size: int, small: bool) -> Image.Image:
+    inset = (SMALL_TILE_INSET if small else TILE_INSET) * size / GRID
+    radius = (SMALL_TILE_RADIUS if small else TILE_RADIUS) * size / GRID
+    box = (inset, inset, size - inset, size - inset)
+    mask = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(box, radius=radius, fill=255)
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    img.paste(_vertical_gradient(size, TILE_TOP, TILE_BOTTOM), mask=mask)
+    if not small:
+        ImageDraw.Draw(img).rounded_rectangle(box, radius=radius, outline=TILE_EDGE, width=max(1, size // 170))
     return img
 
 
-def build_ico(output_path: Path) -> None:
-    """Build a multi-resolution ICO file and write it to *output_path*.
+def _light(size: int) -> Image.Image:
+    """Violet-to-cyan light along the guide: violet at the top, cyan at the exit."""
+    s = size / GRID
+    return _vertical_gradient(size, LOGIC_VIOLET, OPTICS_CYAN, L_TOP[1] * s, L_END[1] * s)
 
-    Pillow's ICO encoder expects a single source image and downscales it to the
-    requested sizes list.  We render at the largest size for maximum quality.
-    """
-    sizes = [16, 24, 32, 48, 64, 128, 256]
-    source = render_icon(256).convert("RGBA")
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    source.save(
-        output_path,
-        format="ICO",
-        sizes=[(sz, sz) for sz in sizes],
+def _spot(img: Image.Image, radius: float) -> None:
+    s = img.size[0] / GRID
+    x, y = L_END[0] * s, L_END[1] * s
+    r = radius * s
+    ImageDraw.Draw(img).ellipse((x - r, y - r, x + r, y + r), fill=SPOT + (255,))
+
+
+def _render_full(size: int) -> Image.Image:
+    img = _tile(size, small=False)
+    light = _light(size)
+    glow = _stroke_mask(size, STROKE + 8).filter(ImageFilter.GaussianBlur(GLOW_BLUR * size / GRID))
+    img.paste(light, mask=glow.point(lambda a: a * 0.8))
+    img.paste(light, mask=_stroke_mask(size, STROKE))
+    core = Image.new("RGBA", (size, size), HIGHLIGHT)
+    img.alpha_composite(Image.composite(core, Image.new("RGBA", (size, size)), _stroke_mask(size, HIGHLIGHT_STROKE)))
+    halo = Image.new("L", (size, size), 0)
+    s = size / GRID
+    r = SPOT_RADIUS * 1.8 * s
+    ImageDraw.Draw(halo).ellipse((L_END[0] * s - r, L_END[1] * s - r, L_END[0] * s + r, L_END[1] * s + r), fill=110)
+    img.paste(Image.new("RGBA", (size, size), SPOT + (255,)), mask=halo.filter(ImageFilter.GaussianBlur(40 * s)))
+    _spot(img, SPOT_RADIUS)
+    return img
+
+
+def _render_small(size: int) -> Image.Image:
+    img = _tile(size, small=True)
+    img.paste(_light(size), mask=_stroke_mask(size, SMALL_STROKE))
+    _spot(img, SMALL_SPOT_RADIUS)
+    return img
+
+
+def render_icon(size: int) -> Image.Image:
+    """Render the icon at *size* px, supersampled 4x for clean edges."""
+    draw_size = max(size * 4, 256)
+    big = _render_small(draw_size) if size <= SMALL_SIZE_LIMIT else _render_full(draw_size)
+    return big.resize((size, size), Image.LANCZOS)
+
+
+# ---------------------------------------------------------------------------
+# SVG (website / README)
+# ---------------------------------------------------------------------------
+def _l_path_data() -> str:
+    x0, y0 = L_TOP
+    bend_y = L_END[1] - BEND_RADIUS
+    return (f"M{x0} {y0} V{bend_y} A{BEND_RADIUS} {BEND_RADIUS} 0 0 0 "
+            f"{x0 + BEND_RADIUS} {L_END[1]} H{L_END[0]}")
+
+
+def _svg_defs() -> str:
+    return (
+        '<defs><linearGradient id="lum-light" gradientUnits="userSpaceOnUse" '
+        f'x1="0" y1="{L_TOP[1]}" x2="0" y2="{L_END[1]}">'
+        '<stop offset="0" stop-color="#B092F7"/><stop offset="1" stop-color="#38C6D4"/></linearGradient>'
+        '<filter id="lum-glow" x="-30%" y="-30%" width="160%" height="160%">'
+        f'<feGaussianBlur stdDeviation="{GLOW_BLUR}"/></filter></defs>'
     )
+
+
+def _svg_mark_body() -> str:
+    d = _l_path_data()
+    return (
+        f'<path d="{d}" stroke="url(#lum-light)" stroke-width="{STROKE + 8}" fill="none" '
+        'stroke-linecap="round" filter="url(#lum-glow)" opacity="0.8"/>'
+        f'<path d="{d}" stroke="url(#lum-light)" stroke-width="{STROKE}" fill="none" stroke-linecap="round"/>'
+        f'<path d="{d}" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="{HIGHLIGHT_STROKE}" '
+        'fill="none" stroke-linecap="round"/>'
+        f'<circle cx="{L_END[0]}" cy="{L_END[1]}" r="{SPOT_RADIUS}" fill="#E8FBFF"/>'
+    )
+
+
+def build_svgs(brand_dir: Path) -> None:
+    """Write lunima-icon.svg (with tile) and lunima-mark.svg (the L alone, transparent)."""
+    brand_dir.mkdir(parents=True, exist_ok=True)
+    tile = (
+        '<defs><linearGradient id="lum-tile" x1="0" y1="0" x2="0" y2="1">'
+        '<stop offset="0" stop-color="#1B2233"/><stop offset="1" stop-color="#0D111A"/></linearGradient></defs>'
+        f'<rect x="{TILE_INSET}" y="{TILE_INSET}" width="{GRID - 2 * TILE_INSET}" height="{GRID - 2 * TILE_INSET}" '
+        f'rx="{TILE_RADIUS}" fill="url(#lum-tile)" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="6"/>'
+    )
+    head = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {GRID} {GRID}" width="{GRID}" height="{GRID}">'
+    (brand_dir / "lunima-icon.svg").write_text(head + tile + _svg_defs() + _svg_mark_body() + "</svg>\n", encoding="utf-8")
+    # The mark is cropped to the L's bounds plus glow room so it can sit inline next to text.
+    pad = STROKE
+    x, y = L_TOP[0] - pad, L_TOP[1] - pad
+    w, h = L_END[0] + SPOT_RADIUS + pad - x, L_END[1] + SPOT_RADIUS + pad - y
+    mark_head = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{x} {y} {w} {h}" width="{w}" height="{h}">'
+    (brand_dir / "lunima-mark.svg").write_text(mark_head + _svg_defs() + _svg_mark_body() + "</svg>\n", encoding="utf-8")
+    print(f"[generate_icon] Written: {brand_dir}/lunima-icon.svg, lunima-mark.svg")
+
+
+# ---------------------------------------------------------------------------
+# ICO / ICNS / PNG
+# ---------------------------------------------------------------------------
+def build_ico(output_path: Path) -> None:
+    """Build a multi-resolution ICO with every size rendered individually (small sizes simplified)."""
+    sizes = [16, 24, 32, 48, 64, 128, 256]
+    images = [render_icon(sz) for sz in sizes]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    images[-1].save(output_path, format="ICO", sizes=[(sz, sz) for sz in sizes], append_images=images[:-1])
     print(f"[generate_icon] Written: {output_path}  ({len(sizes)} sizes: {sizes})")
 
 
+def build_png(output_path: Path, size: int) -> None:
+    """Write a single PNG (window icon resource)."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    render_icon(size).save(output_path, format="PNG")
+    print(f"[generate_icon] Written: {output_path}  ({size}px)")
+
+
 def build_icns(output_path: Path) -> None:
-    """Build a macOS ICNS file and write it to *output_path*.
-
-    On macOS, renders standard iconset sizes, creates a .iconset directory,
-    and uses 'iconutil -c icns' to generate the ICNS file.
-
-    On other platforms, uses Pillow's ICNS encoder as a fallback.
-    """
-    # Standard macOS iconset sizes (in points, but we render at 1x pixel density)
+    """Build a macOS ICNS file: iconutil on macOS, Pillow's encoder elsewhere."""
     iconset_sizes = [16, 32, 64, 128, 256, 512, 1024]
-    source = render_icon(1024)
-
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Try iconutil on macOS
     if platform.system() == "Darwin":
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
                 iconset_dir = Path(tmpdir) / "LunimaIcon.iconset"
                 iconset_dir.mkdir(parents=True, exist_ok=True)
-
-                # Render each size and save as .png in the iconset directory
                 for size in iconset_sizes:
-                    icon = render_icon(size).convert("RGBA")
-                    icon_path = iconset_dir / f"icon_{size}x{size}.png"
-                    icon.save(icon_path, format="PNG")
-
-                # Convert iconset to ICNS using iconutil
+                    render_icon(size).save(iconset_dir / f"icon_{size}x{size}.png", format="PNG")
                 subprocess.run(
                     ["iconutil", "-c", "icns", "-o", str(output_path), str(iconset_dir)],
                     check=True,
@@ -246,9 +250,8 @@ def build_icns(output_path: Path) -> None:
         except (FileNotFoundError, subprocess.CalledProcessError) as e:
             print(f"[generate_icon] Warning: iconutil failed, falling back to Pillow: {e}")
 
-    # Fallback: use Pillow's ICNS encoder
     try:
-        source.save(output_path, format="ICNS")
+        render_icon(1024).save(output_path, format="ICNS")
         print(f"[generate_icon] Written: {output_path}  (Pillow ICNS fallback, {len(iconset_sizes)} sizes: {iconset_sizes})")
     except Exception as e:
         print(f"[generate_icon] Error: Unable to generate ICNS file: {e}")
@@ -256,31 +259,22 @@ def build_icns(output_path: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate the Lunima application icons (ICO and ICNS)")
-    parser.add_argument(
-        "--output",
-        default="Installer/LunimaIcon.ico",
-        help="Output path for the .ico file (default: Installer/LunimaIcon.ico)",
-    )
-    parser.add_argument(
-        "--icns",
-        default=None,
-        help="Output path for the .icns file (default: Installer/LunimaIcon.icns, omit to skip)",
-    )
+    parser = argparse.ArgumentParser(description="Generate the Lunima application icons (ICO, ICNS, SVG)")
+    parser.add_argument("--output", default="Installer/LunimaIcon.ico",
+                        help="Output path for the .ico file (default: Installer/LunimaIcon.ico)")
+    parser.add_argument("--icns", default=None,
+                        help="Output path for the .icns file (default: Installer/LunimaIcon.icns)")
+    parser.add_argument("--png", default=None, help="Optional 256 px PNG output path (window icon)")
+    parser.add_argument("--brand-dir", default=None, help="Optional directory for the SVG icon and mark")
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent.parent
-
-    # Generate ICO file
-    output_path = (repo_root / args.output).resolve()
-    build_ico(output_path)
-
-    # Generate ICNS file if requested
-    icns_path = args.icns
-    if icns_path is None:
-        icns_path = "Installer/LunimaIcon.icns"
-    icns_output_path = (repo_root / icns_path).resolve()
-    build_icns(icns_output_path)
+    build_ico((repo_root / args.output).resolve())
+    build_icns((repo_root / (args.icns or "Installer/LunimaIcon.icns")).resolve())
+    if args.png:
+        build_png((repo_root / args.png).resolve(), 256)
+    if args.brand_dir:
+        build_svgs((repo_root / args.brand_dir).resolve())
 
 
 if __name__ == "__main__":
