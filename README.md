@@ -39,8 +39,17 @@ Select a few photonic parts and press **Make gate**: Lunima groups them, simulat
 
 ![In the Logic workspace the gate kit is box-selected, Make gate groups it, and the simulated truth table with its automatic threshold reads NAND in every row](docs/media/v0.17/make-gate.gif)
 
-<!--CHIPLETS-->
-<!--AGENT-->
+## Chiplets
+
+Put two dies side by side and butt-couple them through edge couplers. Pull one out of alignment and the live simulation shows the link losing light; Design Checks flag the offset and **Align chiplet** snaps it back. Each die shows its own process.
+
+![Two chiplets butt-coupled through edge couplers in the System workspace: dragging the receiver die off the transmitter's edge coupler raises the link loss to 16.7 dB, Design Checks report the lateral offset, and Align chiplet snaps it back](docs/media/v0.17/chiplets.gif)
+
+## Let Claude repair the design (MCP)
+
+Lunima speaks MCP: an agent such as Claude can inspect and edit the open design through the agent bridge. Here it finds the blocked trace, tries fixes in a sandbox and moves the pad clear — every terminal line is a real tool call and its real result.
+
+![Claude repairs the design through Lunima's MCP agent bridge: list_connections finds the blocked metal trace, suggest_fixes tries nudges in a sandbox, move_component moves the probe pad clear and all 12 connections route](docs/media/v0.17/agent-bridge.gif)
 
 ---
 

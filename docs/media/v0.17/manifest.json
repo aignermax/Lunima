@@ -25,6 +25,16 @@
     "caption": "The shipped 'Build your first gate' kit in the Logic workspace: the parts are box-selected, Make gate groups them and opens the gate steps, and the real simulation of all four input combinations with the suggested threshold reads NAND in every row. Re-render alone with --filter FullyQualifiedName~ShowcaseMakeGateGif."
   },
   {
+    "file": "chiplets.gif",
+    "test": "ShowcaseChipletsGifTests",
+    "caption": "The shipped 'Two Chiplets - Edge-Coupler Link' example in the System workspace with the simulation on: the receiver die is dragged off in four undoable group moves (link loss 0.00 dB -> 16.71 dB, receiver output 77 % -> 49 %, every frame a live re-run), Design Checks report the 2 um lateral offset and Align chiplet snaps it back. Edge-coupler snapping while dragging (chiplet-assembly PR #1520) is not in this release."
+  },
+  {
+    "file": "agent-bridge.gif",
+    "test": "ShowcaseAgentBridgeGifTests",
+    "caption": "The MCP agent bridge driven in-process through its real tool classes on the staged chip: after a staged pad drag breaks a metal trace, list_connections {blocked_only} reports the blocked trace, suggest_fixes reports that none of its sandboxed nudges frees it, and move_component moves the pad clear (0 of 12 blocked). Every result line is derived from the tool's JSON reply; the order of calls is scripted by the test."
+  },
+  {
     "file": "eye-analysis.png",
     "test": "ShowcaseAnalysisScreenshotTests.CaptureTransientAndEyeAnalysis",
     "caption": "Eye/BER analysis in the Optics dock: a PRBS-7-modulated transient folded into an eye-persistence heat map at 25 Gbps, with bit rate, PRBS pattern and decision-threshold controls plus CSV export."

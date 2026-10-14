@@ -461,8 +461,62 @@
     </div>
   </section>
 
-<!--CHIPLETS-->
-<!--AGENT-->
+  <!-- ================= CHIPLETS ================= -->
+  <section class="wrap feature" id="chiplets">
+    <div class="feat-text">
+      <p class="eyebrow">If one die isn't enough</p>
+      <h2>Chiplets, linked by light</h2>
+      <p>
+        Put two dies side by side and butt-couple them through edge couplers. Knock one
+        out of alignment and the live simulation shows the link losing light — Design
+        Checks name the offset, one click snaps it back.
+      </p>
+      <ul>
+        <li><strong>Dies with their own process</strong> — the System workspace lists every chiplet with its process.</li>
+        <li><strong>Link loss you can see</strong> — every edge-coupler link carries its loss in dB.</li>
+        <li><strong>Align chiplet</strong> — a lateral offset is a design-check finding with a one-click fix.</li>
+        <li><strong>Logic across dies</strong> — gate networks follow the light through edge-coupler links.</li>
+      </ul>
+    </div>
+    <div class="feat-media">
+      <figure class="frame">
+        <div class="frame-bar">
+          <span><span class="ok">System</span>&nbsp; Transmitter ↔ Receiver chiplet</span>
+          <span class="hud">0.00 dB → 16.71 dB → 0.00 dB</span>
+        </div>
+        <img src="media/v0.17/chiplets.gif" width="1280" height="675" loading="lazy" decoding="async"
+             alt="Two chiplets butt-coupled through edge couplers in the System workspace: dragging the receiver die off the transmitter's edge coupler raises the link loss to 16.7 dB and dims the output, Design Checks report the lateral offset, and Align chiplet snaps the die back.">
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= AGENT BRIDGE ================= -->
+  <section class="wrap feature flip" id="agent">
+    <div class="feat-text">
+      <p class="eyebrow">If you work with an AI agent</p>
+      <h2>Claude can repair your design</h2>
+      <p>
+        Lunima's agent bridge speaks MCP. An agent such as Claude inspects the open
+        design, tries fixes in a sandbox and applies the one that works — through the
+        same undoable commands you use.
+      </p>
+      <ul>
+        <li><strong>Inspect</strong> — design summary, components, connections, routing timings, screenshots.</li>
+        <li><strong>Edit</strong> — move and delete components, reroute, undo.</li>
+        <li><strong>Repair</strong> — cut candidates, crossing slides, segment shifts, sandboxed fix suggestions.</li>
+      </ul>
+    </div>
+    <div class="feat-media">
+      <figure class="frame">
+        <div class="frame-bar">
+          <span><span class="ok">MCP</span>&nbsp; list_connections → suggest_fixes → move_component</span>
+          <span class="hud">0 of 12 blocked</span>
+        </div>
+        <img src="media/v0.17/agent-bridge.gif" width="952" height="628" loading="lazy" decoding="async"
+             alt="A terminal-style overlay lists the real MCP tool calls an agent makes on the canvas: list_connections finds the blocked metal trace of a moved probe pad, suggest_fixes tries nudges in a sandbox, move_component moves the pad clear and all 12 connections route.">
+      </figure>
+    </div>
+  </section>
 
   <!-- ================= YOUR PDK ================= -->
   <section class="wrap feature side flip" id="pdk">
