@@ -68,6 +68,21 @@
     <Setter Property="Background" Value="{DynamicResource Brush.Workspace.KeyHint}"/>
   </Style>
 
+  <!-- "L — <action>" hint under Run: a small chip in the workspace hue, never interactive -->
+  <Style Selector="Border.runHint">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Raised}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.M}"/>
+    <Setter Property="Padding" Value="10,4"/>
+    <Setter Property="IsHitTestVisible" Value="False"/>
+  </Style>
+  <Style Selector="Border.runHint > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Caption}"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+  </Style>
+
   <!-- Cross-fade on switch (skipped under reduced motion) -->
   <Style Selector=":is(Panel).wsRoot:not(.reduceMotion) Border.wsAccentLine,
                    :is(Panel).wsRoot:not(.reduceMotion) Border.wsCanvasTint,

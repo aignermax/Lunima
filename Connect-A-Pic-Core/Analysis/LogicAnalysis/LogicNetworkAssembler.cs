@@ -109,7 +109,7 @@ public sealed class LogicNetworkAssembler
     /// keep distinct gate identities (both contain a gate of the same name) without
     /// mutating any <c>GroupName</c>; a top-level gate keeps its plain group name.
     /// </summary>
-    private static void CollectGates(
+    internal static void CollectGates(
         IEnumerable<Component> components,
         string? ancestorPath,
         ICollection<(ComponentGroup Group, string GateId)> gates,

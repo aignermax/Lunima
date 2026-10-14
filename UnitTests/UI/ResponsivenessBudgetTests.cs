@@ -84,6 +84,7 @@ public class ResponsivenessBudgetTests
         "RedoCommand",
         "RunSimulationCommand",
         "RunWorkspaceCommand",
+        "RunWorkspaceFromShortcutCommand",
         "TogglePowerOverlayCommand",
         "RunDesignChecksCommand",
         "ShowHomeCommand",

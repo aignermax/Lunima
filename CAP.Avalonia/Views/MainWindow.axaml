@@ -203,6 +203,34 @@
                                 </Border>
                             </StackPanel>
                         </Button>
+                        <!-- Brief "L — <action>" hint under Run the first few times L is pressed. -->
+                        <Popup x:Name="RunShortcutHintPopup"
+                               PlacementTarget="{Binding #RunSimulationButton}"
+                               Placement="Bottom" VerticalOffset="6"
+                               IsLightDismissEnabled="False"
+                               IsOpen="{Binding RunHint.IsVisible}">
+                            <Border Classes="runHint">
+                                <TextBlock Text="{Binding RunHint.Text}"/>
+                            </Border>
+                        </Popup>
+                        <!-- Logic sub-choice: gate-level view or physical design (V). -->
+                        <Border x:Name="GateViewSwitchBar" Classes="segmented" Margin="4,0,0,0"
+                                IsVisible="{Binding GateView.IsAvailable}"
+                                ToolTip.Tip="{Binding GateView.ToggleTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <Button x:Name="GateViewGatesButton" Classes="toolbar segment"
+                                        Content="{loc:Localize GateView.Gates}"
+                                        Classes.active="{Binding GateView.IsShown}"
+                                        Command="{Binding GateView.ShowGatesCommand}"/>
+                                <Button x:Name="GateViewPhysicalButton" Classes="toolbar segment"
+                                        Content="{loc:Localize GateView.Physical}"
+                                        Classes.active="{Binding GateView.IsPhysicalShown}"
+                                        Command="{Binding GateView.ShowPhysicalCommand}"/>
+                                <Border Classes="keyHint" VerticalAlignment="Center" Margin="2,0,4,0">
+                                    <TextBlock Text="V"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
                         <ComboBox Classes="toolbar" Width="104" Margin="4,0,0,0"
                                   SelectedIndex="{Binding SimulationModeIndex}"
                                   IsVisible="{Binding WorkspaceSwitch.IsOptics}"

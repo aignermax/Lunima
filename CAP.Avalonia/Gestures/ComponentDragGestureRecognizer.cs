@@ -37,7 +37,8 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
         if (mainVm?.CanvasInteraction.CurrentMode != InteractionMode.Select) return false;
         if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed) return false;
 
-        var laserComp = DesignCanvasHitTesting.HitTestLaserIcon(canvasPoint, canvas);
+        var gateView = mainVm.GateView.IsShown;
+        var laserComp = gateView ? null : DesignCanvasHitTesting.HitTestLaserIcon(canvasPoint, canvas);
         if (laserComp?.LaserConfig != null)
         {
             // Single-click direct manipulation (#690): toggle this coupler's laser.
@@ -50,7 +51,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
             return true;
         }
 
-        var lockGroup = DesignCanvasHitTesting.HitTestGroupLockIcon(canvasPoint, canvas);
+        var lockGroup = gateView ? null : DesignCanvasHitTesting.HitTestGroupLockIcon(canvasPoint, canvas);
         if (lockGroup != null)
         {
             var cmd = new ToggleGroupLockCommand(lockGroup);
@@ -60,7 +61,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
             return true;
         }
 
-        var labelGroup = DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, canvas);
+        var labelGroup = gateView ? null : DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, canvas);
         var hit = labelGroup != null
             ? canvas.Components.FirstOrDefault(c => c.Component == labelGroup)
             : DesignCanvasHitTesting.HitTestComponent(canvasPoint, canvas);
@@ -73,6 +74,14 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
         // first click (selecting a die re-scopes the library) cannot break the double-click.
         bool sameAsLastClick = _state.LastClickedComponent == _state.DraggingComponent;
         bool isDoubleClick = IsDoubleClick(_state.DraggingComponent, e.Timestamp) | (e.ClickCount >= 2 && sameAsLastClick);
+        if (isDoubleClick && mainVm.GateView.IsShown)
+        {
+            // Gate view: a double-click opens the gate's physical layout, not its internals.
+            mainVm.GateView.ShowInLayoutCommand.Execute(_state.DraggingComponent);
+            _state.DraggingComponent = null;
+            _invalidate();
+            return true;
+        }
         if (isDoubleClick && _state.DraggingComponent.Component is ComponentGroup { IsDie: true } die)
         {
             // A die is a work surface, never entered: double-click frames it instead.
