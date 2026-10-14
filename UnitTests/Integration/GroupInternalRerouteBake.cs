@@ -111,7 +111,11 @@ internal static class GroupInternalRerouteBake
         ComponentGroup group, double bendRadiusMicrometers, double waveguideWidthMicrometers, (double Width, double Height) chip)
     {
         var children = group.ChildComponents.ToList();
-        var router = new WaveguideRouter { MinBendRadiusMicrometers = bendRadiusMicrometers };
+        var router = new WaveguideRouter
+        {
+            MinBendRadiusMicrometers = bendRadiusMicrometers,
+            UsePinBreakouts = Environment.GetEnvironmentVariable("CAP_BAKE_NO_BREAKOUT") != "1",
+        };
         router.InitializePathfindingGrid(
             Math.Max(0, children.Min(c => c.PhysicalX) - GridMarginMicrometers),
             Math.Max(0, children.Min(c => c.PhysicalY) - GridMarginMicrometers),

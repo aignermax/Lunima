@@ -12,7 +12,8 @@ namespace CAP.Avalonia.Services.AgentBridge.Tools.Repair.Suggest;
 /// Deterministic repair ideas for one blocked wire, in the order a person would try them:
 /// cut a wire in the way and route the blocked wire straight through the crossing (swaps the
 /// order of two wires, e.g. at an MMI's 8 µm input pair); slide a nearby crossing along one
-/// of its wires; shift a straight of a neighbouring wire; nudge the component at either end.
+/// of its wires; shift a straight of a neighbouring wire; nudge the component at either end
+/// across or along its pin axis.
 /// The categories are interleaved so a short time budget still samples each of them.
 /// </summary>
 public sealed partial class RepairCandidateGenerator
@@ -35,10 +36,10 @@ public sealed partial class RepairCandidateGenerator
         _blocked = blocked;
     }
 
-    /// <summary>All candidates, interleaved by category (cut, neighbour reorder, crossing slide, shift, nudge).</summary>
+    /// <summary>All candidates, interleaved by category (cut, neighbour reorder, crossing slide, shift, nudge across and along the pin axis).</summary>
     public IReadOnlyList<RepairCandidate> Generate()
     {
-        var categories = new[] { CutThrough(), NeighbourReorders(), CrossingSlides(), SegmentShifts(), Nudges() }
+        var categories = new[] { CutThrough(), NeighbourReorders(), CrossingSlides(), SegmentShifts(), Nudges(), AxisNudges() }
             .Select(c => c.Take(PerCategory).ToList())
             .ToList();
         var result = new List<RepairCandidate>();
