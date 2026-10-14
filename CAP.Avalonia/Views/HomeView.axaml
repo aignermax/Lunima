@@ -110,7 +110,7 @@
                     </Button>
                 </StackPanel>
                 <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Classes="display" Text="Lunima"/>
+                    <controls:LunimaWordmark Height="34" HorizontalAlignment="Left" Margin="-6,0,0,0"/>
                     <TextBlock Classes="secondary" Text="{loc:Localize Home.Subtitle}"/>
                 </StackPanel>
             </DockPanel>
