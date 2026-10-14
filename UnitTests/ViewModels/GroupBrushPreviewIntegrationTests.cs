@@ -221,8 +221,9 @@ public class GroupBrushPreviewIntegrationTests : IDisposable
             for (int j = 0; j < 50; j++)
             {
                 var filler = CreateTestGroup($"Filler_{i}_{j}", 1);
-                filler.PhysicalX = i * 100;
-                filler.PhysicalY = j * 100;
+                // Move the whole group (children included): placement checks a group's parts,
+                // not its bounding box.
+                filler.MoveGroup(i * 100, j * 100);
                 _canvas.AddComponent(filler);
             }
         }

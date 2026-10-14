@@ -13,7 +13,7 @@ internal sealed class CollisionPrimitive
         bool isWaveguide,
         double ax, double ay, double bx, double by,
         double halfWidth,
-        IReadOnlyList<Component> owners)
+        Component? owner)
     {
         IsWaveguide = isWaveguide;
         Ax = ax;
@@ -21,7 +21,7 @@ internal sealed class CollisionPrimitive
         Bx = bx;
         By = by;
         HalfWidth = halfWidth;
-        Owners = owners;
+        Owner = owner;
         MinX = Math.Min(ax, bx);
         MinY = Math.Min(ay, by);
         MaxX = Math.Max(ax, bx);
@@ -59,11 +59,11 @@ internal sealed class CollisionPrimitive
     public double MaxY { get; }
 
     /// <summary>
-    /// The components this piece belongs to, used as keys for grandfathered contact
-    /// pairs: the leaf itself for a footprint, the waveguide's terminal components (or
-    /// its owning group when it has no pins) for a waveguide piece.
+    /// The component this piece belongs to, the key for grandfathered contact pairs: the
+    /// leaf itself for a footprint, the group whose frozen waveguides these are for a
+    /// waveguide piece; null for a free-standing preview box.
     /// </summary>
-    public IReadOnlyList<Component> Owners { get; }
+    public Component? Owner { get; }
 
     /// <summary>Stamp used by the spatial index to report each primitive once per query.</summary>
     internal int QueryStamp { get; set; }
@@ -74,16 +74,16 @@ internal sealed class CollisionPrimitive
         double x = leaf.PhysicalX + deltaX;
         double y = leaf.PhysicalY + deltaY;
         return new CollisionPrimitive(
-            false, x, y, x + leaf.WidthMicrometers, y + leaf.HeightMicrometers, 0, new[] { leaf });
+            false, x, y, x + leaf.WidthMicrometers, y + leaf.HeightMicrometers, 0, leaf);
     }
 
     /// <summary>Creates a footprint rectangle for a free-standing box (e.g. a placement preview).</summary>
     public static CollisionPrimitive Footprint(
-        double x, double y, double width, double height, IReadOnlyList<Component> owners) =>
-        new(false, x, y, x + width, y + height, 0, owners);
+        double x, double y, double width, double height, Component? owner) =>
+        new(false, x, y, x + width, y + height, 0, owner);
 
     /// <summary>Creates a waveguide centerline piece.</summary>
     public static CollisionPrimitive Waveguide(
-        double ax, double ay, double bx, double by, double halfWidth, IReadOnlyList<Component> owners) =>
-        new(true, ax, ay, bx, by, halfWidth, owners);
+        double ax, double ay, double bx, double by, double halfWidth, Component owner) =>
+        new(true, ax, ay, bx, by, halfWidth, owner);
 }

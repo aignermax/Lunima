@@ -80,7 +80,7 @@ public class UiFlowGroupInterleaveDragTests
         return (bRight.PhysicalX - 100, bRight.PhysicalY - 240);
     }
 
-    private static void DragGroup(UiFlowTestHost host, ComponentGroup group, double dx, double dy)
+    internal static void DragGroup(UiFlowTestHost host, ComponentGroup group, double dx, double dy)
     {
         var vm = host.Vm;
         var win = host.Window;

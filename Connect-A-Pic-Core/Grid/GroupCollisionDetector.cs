@@ -28,8 +28,9 @@ public class GroupCollisionDetector
     /// <param name="preDragOverlapPartners">
     /// Optional grandfather map for re-dropping a dragged group onto deliberately stacked
     /// placements (e.g. an exact GDS import), as produced by <see cref="FindContacts"/> when
-    /// the drag began: keyed by a moved leaf (or a moved waveguide's terminal component),
-    /// the components it already touched. Those pairs never reject; anything else does.
+    /// the drag began: keyed by a moved leaf (or the group owning moved frozen waveguides),
+    /// the leaves (or waveguide-owning groups) it already touched. Those pairs never
+    /// reject; anything else does.
     /// </param>
     /// <returns>True if placement is valid (no collisions), false otherwise.</returns>
     public bool CanPlaceGroup(
@@ -46,8 +47,7 @@ public class GroupCollisionDetector
         var moved = new List<CollisionPrimitive>();
         CollisionShapeBuilder.Append(group, newX - group.PhysicalX, newY - group.PhysicalY, moved);
         var skip = SkipSet(group, excludeFromCollision);
-        return new PlacementCollisionQuery(moved, preDragOverlapPartners)
-            .FindContacts(allComponents, skip, stopAtFirst: true).Count == 0;
+        return !new PlacementCollisionQuery(moved, preDragOverlapPartners).HasCollision(allComponents, skip);
     }
 
     /// <summary>
@@ -71,17 +71,16 @@ public class GroupCollisionDetector
     {
         ArgumentNullException.ThrowIfNull(obstacles);
 
-        var owners = movedComponent is null ? Array.Empty<Component>() : new[] { movedComponent };
-        var moved = new List<CollisionPrimitive> { CollisionPrimitive.Footprint(x, y, width, height, owners) };
+        var moved = new List<CollisionPrimitive> { CollisionPrimitive.Footprint(x, y, width, height, movedComponent) };
         var skip = movedComponent is null ? new HashSet<Component>() : new HashSet<Component> { movedComponent };
-        return new PlacementCollisionQuery(moved, preDragOverlapPartners)
-            .FindContacts(obstacles, skip, stopAtFirst: true).Count == 0;
+        return !new PlacementCollisionQuery(moved, preDragOverlapPartners).HasCollision(obstacles, skip);
     }
 
     /// <summary>
     /// Every contact <paramref name="moved"/> (a plain component or a group) currently has
-    /// with the other components under the placement rules — keyed by the moved leaf (or a
-    /// moved waveguide's terminal component), valued with the touched components. Captured
+    /// with the other components under the placement rules — keyed by the moved leaf (or the
+    /// group owning moved frozen waveguides), valued with the touched leaves (or the groups
+    /// owning the touched waveguides). Captured
     /// when a drag begins and passed back as the grandfather map so pre-existing contacts
     /// (deliberately stacked imports, butt-coupled facets) do not block a re-drop.
     /// </summary>
@@ -101,7 +100,7 @@ public class GroupCollisionDetector
         CollisionShapeBuilder.Append(moved, 0, 0, primitives);
         var skip = SkipSet(moved, excludeFromCollision);
         return new PlacementCollisionQuery(primitives, null)
-            .FindContacts(allComponents, skip, stopAtFirst: false);
+            .FindContacts(allComponents, skip);
     }
 
     private static HashSet<Component> SkipSet(Component moved, HashSet<Component>? excludeFromCollision)

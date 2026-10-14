@@ -46,43 +46,53 @@ internal sealed class PlacementCollisionQuery
     /// <summary>Largest distance at which any rule can still report a collision, before waveguide widths.</summary>
     private static double BaseReach => Math.Max(MinComponentGapMicrometers, MinWaveguideSpacingMicrometers);
 
-    /// <summary>
-    /// Every contact between the moved geometry and the obstacles, keyed by moved owner,
-    /// or — with <paramref name="stopAtFirst"/> — just whether there is one (empty map = none).
-    /// </summary>
+    /// <summary>True when any moved primitive violates a clearance rule against an obstacle.</summary>
     /// <param name="obstacleRoots">Top-level obstacles (plain components or groups).</param>
     /// <param name="skip">Components (and their descendants) that never act as obstacles.</param>
-    /// <param name="stopAtFirst">Return as soon as one contact is found.</param>
+    public bool HasCollision(IEnumerable<Component> obstacleRoots, IReadOnlySet<Component> skip) =>
+        Scan(obstacleRoots, skip, (_, _) => true);
+
+    /// <summary>Every contact between the moved geometry and the obstacles, keyed by moved owner.</summary>
+    /// <param name="obstacleRoots">Top-level obstacles (plain components or groups).</param>
+    /// <param name="skip">Components (and their descendants) that never act as obstacles.</param>
     public Dictionary<Component, HashSet<Component>> FindContacts(
-        IEnumerable<Component> obstacleRoots, IReadOnlySet<Component> skip, bool stopAtFirst)
+        IEnumerable<Component> obstacleRoots, IReadOnlySet<Component> skip)
     {
         var contacts = new Dictionary<Component, HashSet<Component>>();
-        if (_moved.Count == 0)
-            return contacts;
+        Scan(obstacleRoots, skip, (moved, obstacle) =>
+        {
+            Record(contacts, moved, obstacle);
+            return false;
+        });
+        return contacts;
+    }
 
+    /// <summary>
+    /// Reports each non-grandfathered colliding (moved, obstacle) pair to
+    /// <paramref name="onContact"/>; stops and returns true as soon as it returns true.
+    /// </summary>
+    private bool Scan(
+        IEnumerable<Component> obstacleRoots, IReadOnlySet<Component> skip,
+        Func<CollisionPrimitive, CollisionPrimitive, bool> onContact)
+    {
+        if (_moved.Count == 0)
+            return false;
         var obstacles = CollectNearbyObstacles(obstacleRoots, skip);
         if (obstacles.Count == 0)
-            return contacts;
+            return false;
 
-        double obstacleMaxHalfWidth = obstacles.Max(o => o.HalfWidth);
-        double reach = BaseReach + _movedMaxHalfWidth + obstacleMaxHalfWidth;
+        double reach = BaseReach + _movedMaxHalfWidth + obstacles.Max(o => o.HalfWidth);
         var index = new CollisionSpatialIndex(obstacles);
         foreach (var moved in _moved)
         {
             bool stop = index.AnyNear(
                 moved.MinX - moved.HalfWidth, moved.MinY - moved.HalfWidth,
                 moved.MaxX + moved.HalfWidth, moved.MaxY + moved.HalfWidth, reach,
-                obstacle =>
-                {
-                    if (IsGrandfathered(moved, obstacle) || !Collides(moved, obstacle))
-                        return false;
-                    Record(contacts, moved, obstacle);
-                    return stopAtFirst;
-                });
+                obstacle => !IsGrandfathered(moved, obstacle) && Collides(moved, obstacle) && onContact(moved, obstacle));
             if (stop)
-                break;
+                return true;
         }
-        return contacts;
+        return false;
     }
 
     /// <summary>True when the two primitives violate the placement clearance rules.</summary>
@@ -104,56 +114,45 @@ internal sealed class PlacementCollisionQuery
             wave.Ax, wave.Ay, wave.Bx, wave.By, box.MinX, box.MinY, box.MaxX, box.MaxY) < clearance;
     }
 
+    /// <summary>
+    /// Expands only the obstacle geometry near the moved geometry: the window is the moved
+    /// extent grown by the largest rule distance (obstacle waveguide bounds already carry
+    /// their half-width), plus a little slack against floating-point touches.
+    /// </summary>
     private List<CollisionPrimitive> CollectNearbyObstacles(IEnumerable<Component> roots, IReadOnlySet<Component> skip)
     {
-        // Obstacle waveguide widths are unknown before expansion, so the coarse reject keeps a
-        // generous margin; the exact rules run afterwards.
-        double margin = BaseReach + _movedMaxHalfWidth + CoarseWaveguideMarginMicrometers;
+        double margin = BaseReach + WindowSlackMicrometers;
+        var window = new CollisionWindow(
+            _movedBounds.MinX - margin, _movedBounds.MinY - margin,
+            _movedBounds.MaxX + margin, _movedBounds.MaxY + margin);
         var obstacles = new List<CollisionPrimitive>();
         foreach (var root in roots)
-        {
-            if (skip.Contains(root))
-                continue;
-            var (minX, minY, maxX, maxY) = CollisionShapeBuilder.Bounds(root);
-            if (minX > _movedBounds.MaxX + margin || maxX < _movedBounds.MinX - margin
-                || minY > _movedBounds.MaxY + margin || maxY < _movedBounds.MinY - margin)
-                continue;
-            CollisionShapeBuilder.Append(root, 0, 0, obstacles, skip);
-        }
+            CollisionShapeBuilder.Append(root, 0, 0, obstacles, skip, window);
         return obstacles;
     }
 
-    /// <summary>Margin added to the coarse per-component reject (bounds already include waveguide half-widths).</summary>
-    private const double CoarseWaveguideMarginMicrometers = 1.0;
+    /// <summary>Slack (µm) on the obstacle window so touching geometry is never pruned.</summary>
+    private const double WindowSlackMicrometers = 1.0;
 
     private bool IsGrandfathered(CollisionPrimitive moved, CollisionPrimitive obstacle)
     {
-        if (_partners is null)
-            return false;
-        foreach (var owner in moved.Owners)
-        {
-            if (!_partners.TryGetValue(owner, out var partners))
-                continue;
-            foreach (var other in obstacle.Owners)
-            {
-                if (partners.Contains(other))
-                    return true;
-            }
-        }
-        return false;
+        return _partners is not null
+            && moved.Owner is not null
+            && obstacle.Owner is not null
+            && _partners.TryGetValue(moved.Owner, out var partners)
+            && partners.Contains(obstacle.Owner);
     }
 
     private static void Record(
         Dictionary<Component, HashSet<Component>> contacts, CollisionPrimitive moved, CollisionPrimitive obstacle)
     {
-        foreach (var owner in moved.Owners)
+        if (moved.Owner is null || obstacle.Owner is null)
+            return;
+        if (!contacts.TryGetValue(moved.Owner, out var set))
         {
-            if (!contacts.TryGetValue(owner, out var set))
-            {
-                set = new HashSet<Component>();
-                contacts[owner] = set;
-            }
-            set.UnionWith(obstacle.Owners);
+            set = new HashSet<Component>();
+            contacts[moved.Owner] = set;
         }
+        set.Add(obstacle.Owner);
     }
 }
