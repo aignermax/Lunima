@@ -57,6 +57,8 @@ public class UiFlowGateViewTests
 
         var point = SymbolCenterOnScreen(host, "NAND4");
         UiInput.ClickAt(host.Window, point);
+        // The double-click window is wall-clock time; a loaded CI runner must not split the pair.
+        UiInput.Descendants<DesignCanvas>(host.Window).First().InteractionState.LastClickTime = DateTime.UtcNow;
         UiInput.ClickAt(host.Window, point);
 
         vm.WorkspaceSwitch.Current.ShouldBe(Workspace.Layout);
