@@ -1056,10 +1056,10 @@
                               ToolTip.Tip="{loc:Localize Dies.NewDieTip}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Plus}"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="{loc:Localize Dies.Properties.Open}" Command="{Binding DieProperties.OpenDieCommand}"
+                    <MenuItem Header="{loc:Localize Dies.Properties.ZoomToDie}" Command="{Binding DieProperties.ZoomToDieCommand}"
                               IsVisible="{Binding DieProperties.IsVisible}"
-                              ToolTip.Tip="{loc:Localize Dies.Properties.OpenTip}">
-                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.FolderOpen}"/></MenuItem.Icon>
+                              ToolTip.Tip="{loc:Localize Dies.Properties.ZoomToDieTip}">
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.ZoomIn}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
                     <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteSelectedCommand}" InputGesture="Delete">

@@ -65,8 +65,8 @@ public class TwoChipletsGapExportJourneyTests
 
         var chipletA = Chiplet(canvas, ChipletEdgeCouplerJourneyDesign.ChipletAName);
         var chipletB = Chiplet(canvas, ChipletEdgeCouplerJourneyDesign.ChipletBName);
-        var link = canvas.ConnectionManager.Connections.ShouldHaveSingleItem(
-            "the example's only connection is the cross-chiplet facet link");
+        var link = canvas.ConnectionManager.Connections.Where(c => c.IsCrossChipletFacetLink).ShouldHaveSingleItem(
+            "the example's only die-to-die connection is the cross-chiplet facet link");
         double aligned = await SimulateOutputAmplitudeAsync(canvas, chipletA, chipletB);
         aligned.ShouldBeGreaterThan(0, "the aligned link transmits light across the chiplet boundary");
 

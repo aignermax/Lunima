@@ -138,6 +138,23 @@ public partial class WaveguideRouter
     /// </summary>
     public Action? OnComplexRouteStarted { get; set; }
 
+    private IReadOnlyList<(double X, double Y, double Width, double Height)>? _allowedRoutingRegions;
+
+    /// <summary>
+    /// Rectangles (µm) waveguides may run in — the dies of an assembly — or null for the whole
+    /// grid. Kept across grid re-initializations and applied to the current grid at once.
+    /// </summary>
+    public IReadOnlyList<(double X, double Y, double Width, double Height)>? AllowedRoutingRegions
+    {
+        get => _allowedRoutingRegions;
+        set
+        {
+            _allowedRoutingRegions = value;
+            if (PathfindingGrid != null)
+                PathfindingGrid.AllowedRegions = value;
+        }
+    }
+
     /// <summary>
     /// Initializes the pathfinding grid for A* routing.
     /// </summary>
@@ -146,7 +163,10 @@ public partial class WaveguideRouter
                                            double? cellSize = null)
     {
         double size = cellSize ?? AStarCellSize;
-        PathfindingGrid = new PathfindingGrid(minX, minY, maxX, maxY, size, ObstaclePaddingMicrometers);
+        PathfindingGrid = new PathfindingGrid(minX, minY, maxX, maxY, size, ObstaclePaddingMicrometers)
+        {
+            AllowedRegions = _allowedRoutingRegions,
+        };
         PathfindingGrid.RebuildFromComponents(components);
 
         CostCalculator.CellSizeMicrometers = size;

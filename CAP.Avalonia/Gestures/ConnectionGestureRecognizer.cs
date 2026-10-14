@@ -47,6 +47,7 @@ public class ConnectionGestureRecognizer : IGestureRecognizer
                   ?? canvas.HighlightedPin?.Pin;
         if (pin != null)
         {
+            _state.WireRefusalHint = null;
             _state.ConnectionDragStartPin = pin;
             _state.ConnectionDragCurrentPoint = canvasPoint;
             mainVm.StatusText = $"Drag to another pin to connect from {pin.Name}...";
@@ -148,10 +149,14 @@ public class ConnectionGestureRecognizer : IGestureRecognizer
                 return;
             }
 
-            var cmd = new CreateConnectionCommand(canvas, _state.ConnectionDragStartPin, targetPin);
-            mainVm?.CommandManager.ExecuteCommand(cmd);
-            if (mainVm != null)
-                mainVm.StatusText = $"Connected {_state.ConnectionDragStartPin.Name} to {targetPin.Name}";
+            // Across a die edge only facing edge couplers connect — as a die-to-die link.
+            if (!DieWireGesture.TryConnectAcrossDies(canvas, mainVm, _state, startPin, targetPin))
+            {
+                var cmd = new CreateConnectionCommand(canvas, _state.ConnectionDragStartPin, targetPin);
+                mainVm?.CommandManager.ExecuteCommand(cmd);
+                if (mainVm != null)
+                    mainVm.StatusText = $"Connected {_state.ConnectionDragStartPin.Name} to {targetPin.Name}";
+            }
         }
         else
         {

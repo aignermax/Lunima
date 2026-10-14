@@ -91,9 +91,13 @@ public class DiePersistenceTests
         canvas.Dies.IsAssemblyRoot.ShouldBeTrue();
         canvas.Dies.RootDies.Count.ShouldBe(2);
         new CAP_Core.Analysis.DieAssemblyChecker()
-            .Check(canvas.Components.Select(c => c.Component))
+            .Check(canvas.Components.Select(c => c.Component), canvas.Connections.Select(c => c.Connection))
             .ShouldBeEmpty("the upgraded example is a clean assembly");
-        canvas.Connections.Single().Connection.IsCrossChipletFacetLink.ShouldBeTrue();
+        canvas.Connections.Count(c => c.Connection.IsCrossChipletFacetLink).ShouldBe(1);
+        canvas.Connections.Where(c => !c.Connection.IsCrossChipletFacetLink)
+            .ShouldAllBe(c => CAP.Avalonia.ViewModels.Canvas.DieSurface.DieWireStyle.IsOnOneDie(c.Connection),
+                "every other wire lives on its die, editable in place");
+        canvas.Dies.RootDies.ShouldAllBe(d => d.InternalPaths.All(p => p.StartPin == null));
     }
 
     private static readonly List<ComponentTemplate> DemoTemplates = new[]

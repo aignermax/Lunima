@@ -32,9 +32,10 @@ public class DieCommandTests
         var chipDie = command.ConvertedChipDie!;
         DieAssembly.OutlineOf(chipDie).ShouldBe(new DieOutline(0, 0, ChipSize, ChipSize));
         chipDie.ChildComponents.Count.ShouldBe(2);
-        chipDie.InternalPaths.Count.ShouldBe(1, "the wire between the two parts moves into the die");
+        chipDie.InternalPaths.ShouldBeEmpty("a die is a work surface: its wires stay live on the assembly");
         DieAssembly.OutlineOf(command.CreatedDie!).X.ShouldBe(ChipSize + DieAssembly.DefaultDieSpacingMicrometers);
-        canvas.Connections.ShouldBeEmpty();
+        var wire = canvas.Connections.ShouldHaveSingleItem().Connection;
+        CAP_Core.Components.Connections.Ownership.ConnectionOwnership.OwnerOf(wire).ShouldBe(chipDie);
     }
 
     [Fact]
@@ -94,19 +95,38 @@ public class DieCommandTests
     }
 
     [Fact]
-    public void EnteringADie_BoundsPlacementByItsOutline_LeavingRestoresTheCarrier()
+    public void ADie_IsNeverEntered_PlacementAtTheRootIsBoundedByTheDieOutlines()
     {
         var canvas = SingleDieCanvasWithTwoParts();
         new CommandManager().ExecuteCommand(NewDie(canvas, out var command));
         var die = command.CreatedDie!;
-        double carrierMaxX = canvas.ChipMaxX;
 
         canvas.EnterGroupEditMode(die);
 
-        canvas.Dies.ActiveDie.ShouldBe(die);
+        canvas.IsInGroupEditMode.ShouldBeFalse("a die is a work surface, edited in place");
         var outline = DieAssembly.OutlineOf(die);
+        canvas.CanPlaceComponent(outline.X + 100, outline.Y + 100, 50, 20).ShouldBeTrue("on the die: valid, no red preview");
+        canvas.CanPlaceComponent(outline.X - 300, outline.Y + 10, 50, 20).ShouldBeFalse("on the bare carrier: invalid");
+        canvas.CanPlaceComponent(outline.X - 10, outline.Y + 10, 50, 20).ShouldBeFalse("sticking out of the die: invalid");
+    }
+
+    [Fact]
+    public void EnteringAGroupOnADie_BoundsWorkByTheDieOutline_LeavingRestoresTheCarrier()
+    {
+        var canvas = SingleDieCanvasWithTwoParts();
+        var manager = new CommandManager();
+        manager.ExecuteCommand(NewDie(canvas, out var command));
+        var chipDie = command.ConvertedChipDie!;
+        double carrierMaxX = canvas.ChipMaxX;
+        var parts = chipDie.ChildComponents.Select(canvas.Surface.ViewModelFor).ToList();
+        manager.ExecuteCommand(new DieSurfaceCommand(canvas, () => new CreateGroupCommand(canvas, parts), parts, chipDie, "Group"));
+        var group = chipDie.ChildComponents.OfType<ComponentGroup>().Single();
+
+        canvas.EnterGroupEditMode(group);
+
+        canvas.Dies.ActiveDie.ShouldBe(chipDie);
+        var outline = DieAssembly.OutlineOf(chipDie);
         (canvas.ChipMinX, canvas.ChipMaxX).ShouldBe((outline.X, outline.Right));
-        canvas.CanPlaceComponent(outline.X - 10, outline.Y + 10, 50, 20).ShouldBeFalse();
 
         canvas.ExitToRoot();
 
@@ -147,8 +167,9 @@ public class DieCommandTests
         new CommandManager().ExecuteCommand(NewDie(canvas, out var newDie));
         var die = newDie.CreatedDie!;
         var outline = DieAssembly.OutlineOf(die);
-        canvas.EnterGroupEditMode(die);
-        var coupler = canvas.AddComponent(EdgeCoupler("ec", outline.Right - 130, outline.Y + 200));
+        var part = EdgeCoupler("ec", outline.Right - 130, outline.Y + 200);
+        die.AddChild(part);
+        var coupler = canvas.Surface.ViewModelFor(part);
 
         var snap = SnapEdgeCouplerCommand.TryCreate(canvas, coupler)!;
         snap.Execute();

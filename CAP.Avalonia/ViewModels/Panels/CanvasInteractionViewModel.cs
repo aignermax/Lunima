@@ -433,6 +433,17 @@ public partial class CanvasInteractionViewModel : ObservableObject
                 // Cross-domain connection (optical ↔ electrical) is physically meaningless — reject.
                 UpdateStatus?.Invoke(PinKindHelper.DescribeIncompatibility(_connectionStartPin, pin));
             }
+            else if (CAP_Core.Components.Dies.DieWiringPolicy.Evaluate(_connectionStartPin, pin).Verdict
+                     != CAP_Core.Components.Dies.DieWiringVerdict.Waveguide)
+            {
+                // Across a die edge only facing edge couplers connect — as a die-to-die link.
+                var wire = Commands.Dies.FacetWireCommandFactory.Create(_canvas, _connectionStartPin, pin);
+                if (wire.Command != null)
+                    _commandManager.ExecuteCommand(wire.Command);
+                else
+                    UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate(
+                        wire.RefusalKey ?? "Dies.Wiring.CouplersOnly"));
+            }
             else
             {
                 var cmd = new CreateConnectionCommand(_canvas, _connectionStartPin, pin);
@@ -536,9 +547,13 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         if (groupTemplate == null || _libraryViewModel == null) return;
 
-        if (_canvas.Dies.IsAssemblyRoot)
+        // On a die assembly a saved group lands on the die under the pointer, in place.
+        var targetDie = _canvas.Dies.IsAssemblyRoot
+            ? CAP_Core.Components.Dies.DieAssembly.DieAt(_canvas.Components.Select(c => c.Component), x, y)
+            : null;
+        if (_canvas.Dies.IsAssemblyRoot && targetDie == null)
         {
-            UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Dies.Status.OpenDieForGroups"));
+            UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Dies.Status.DropInsideDie"));
             return;
         }
 
@@ -586,13 +601,16 @@ public partial class CanvasInteractionViewModel : ObservableObject
             return;
         }
 
-        // Pin the chiplet process binding resolved by the policy check onto the instance.
-        if (derivedBinding != null)
+        // Pin the chiplet process binding resolved by the policy check onto the instance
+        // (on a die the die's process is the scope, the group needs no binding of its own).
+        if (derivedBinding != null && targetDie == null)
         {
             cmd.GroupToPlace.ProcessBinding = derivedBinding;
         }
 
-        _commandManager.ExecuteCommand(cmd);
+        _commandManager.ExecuteCommand(targetDie == null
+            ? cmd
+            : new Commands.Dies.DieSurfaceCommand(_canvas, () => cmd, Array.Empty<ComponentViewModel>(), targetDie, cmd.Description));
         UpdateStatus?.Invoke($"Placed group '{groupTemplate.Name}' at ({x:F0}, {y:F0})µm");
     }
 
@@ -665,9 +683,16 @@ public partial class CanvasInteractionViewModel : ObservableObject
     /// (<see cref="BackgroundComponentAt"/>).
     /// </summary>
     private ComponentViewModel? ComponentAt(double x, double y) =>
-        _canvas.Components
+        _canvas.InteractiveComponents
             .Where(c => c.Component.IsRoutingObstacle && Contains(c, x, y))
             .LastOrDefault();
+
+    /// <summary>The die under the point when its parts are worked on in place (clicked empty die area).</summary>
+    private ComponentViewModel? DieSurfaceAt(double x, double y) =>
+        _canvas.Surface.IsEditable
+            ? _canvas.Components.LastOrDefault(c => c.Component is CAP_Core.Components.Core.ComponentGroup { IsDie: true } die
+                && CAP_Core.Components.Dies.DieAssembly.OutlineOf(die).Contains(x, y))
+            : null;
 
     /// <summary>Returns the topmost background component whose bounds contain the point, or null.</summary>
     private ComponentViewModel? BackgroundComponentAt(double x, double y) =>
@@ -683,8 +708,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     private void SelectAt(double x, double y)
     {
-        // Deselect all
-        foreach (var comp in _canvas.Components)
+        // Deselect all (parts on dies included)
+        foreach (var comp in _canvas.Components.Concat(_canvas.InteractiveComponents))
         {
             comp.IsSelected = false;
         }
@@ -701,7 +726,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         var connectionHit = component is null ? FindConnectionAt(x, y) : null;
         var frozenHit = component is null && connectionHit is null ? FindCanvasFrozenPathAt(x, y) : null;
         if (component is null && connectionHit is null && frozenHit is null)
-            component = BackgroundComponentAt(x, y);
+            component = DieSurfaceAt(x, y) ?? BackgroundComponentAt(x, y);
 
         if (component != null)
         {
@@ -777,14 +802,14 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     private void DeleteAt(double x, double y)
     {
-        var component = _canvas.Components
+        var component = _canvas.InteractiveComponents
             .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
             .LastOrDefault();
 
         if (component != null)
         {
             var name = component.Name;
-            var cmd = new DeleteComponentCommand(_canvas, component);
+            var cmd = OnDieSurface(new[] { component }, () => new DeleteComponentCommand(_canvas, component), "Delete");
             _commandManager.ExecuteCommand(cmd);
             SelectedComponent = null;
             UpdateStatus?.Invoke($"Deleted: {name}");
@@ -1036,9 +1061,9 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         // One batch command for a multi-selection, so a single undo restores everything.
-        IUndoableCommand cmd = deletable.Count == 1
+        IUndoableCommand cmd = OnDieSurface(deletable, () => deletable.Count == 1
             ? new DeleteComponentCommand(_canvas, deletable[0])
-            : new GroupDeleteCommand(_canvas, deletable);
+            : new GroupDeleteCommand(_canvas, deletable), "Delete");
         _commandManager.ExecuteCommand(cmd);
 
         selection.ClearSelection();
@@ -1046,6 +1071,27 @@ public partial class CanvasInteractionViewModel : ObservableObject
         UpdateStatus?.Invoke(deletable.Count == 1
             ? $"Deleted: {deletable[0].Name}"
             : $"Deleted {deletable.Count} components");
+    }
+
+    /// <summary>
+    /// The command built by <paramref name="build"/>, run so that parts sitting on a die are
+    /// handled in place (see <see cref="Commands.Dies.DieSurfaceCommand"/>); unchanged when
+    /// none of <paramref name="targets"/> is on a die.
+    /// </summary>
+    private IUndoableCommand OnDieSurface(IReadOnlyList<ComponentViewModel> targets, Func<IUndoableCommand> build, string description)
+    {
+        var onDies = targets.Where(_canvas.Surface.IsItem).ToList();
+        if (onDies.Count == 0)
+            return build();
+        return new Commands.Dies.DieSurfaceCommand(_canvas, build, onDies, _canvas.Surface.DieOf(onDies[0]), description);
+    }
+
+    /// <summary>The die under the center of <paramref name="part"/> (where a pasted part lands).</summary>
+    private CAP_Core.Components.Core.ComponentGroup? DieUnder(CAP_Core.Components.Core.Component part)
+    {
+        var (x, y, width, height) = CAP_Core.Components.Dies.DiePlacement.FootprintOf(part);
+        return CAP_Core.Components.Dies.DieAssembly.DieAt(
+            _canvas.Components.Select(c => c.Component), x + width / 2, y + height / 2);
     }
 
     [RelayCommand]
@@ -1085,8 +1131,11 @@ public partial class CanvasInteractionViewModel : ObservableObject
             return;
         }
 
-        var cmd = new PasteComponentsCommand(_canvas, _canvas.Clipboard, targetX, targetY);
-        _commandManager.ExecuteCommand(cmd);
+        var paste = new PasteComponentsCommand(_canvas, _canvas.Clipboard, targetX, targetY);
+        _commandManager.ExecuteCommand(_canvas.Surface.IsActive
+            ? new Commands.Dies.DieSurfaceCommand(_canvas, () => paste, Array.Empty<ComponentViewModel>(), DieUnder, "Paste")
+            : paste);
+        var cmd = paste;
 
         if (cmd.Result != null)
         {
@@ -1125,7 +1174,13 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private void CreateGroup()
     {
         var selectedComponents = _canvas.Selection.SelectedComponents.ToList();
-        var cmd = new CreateGroupCommand(_canvas, selectedComponents);
+        var dies = selectedComponents.Select(_canvas.Surface.DieOf).Distinct().ToList();
+        if (dies.Count > 1 && dies.Any(d => d != null))
+        {
+            UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Dies.Status.GroupOneDie"));
+            return;
+        }
+        var cmd = OnDieSurface(selectedComponents, () => new CreateGroupCommand(_canvas, selectedComponents), "Create group");
         _commandManager.ExecuteCommand(cmd);
         _canvas.Selection.ClearSelection();
 
@@ -1154,7 +1209,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
         if (selectedGroup != null)
         {
-            var cmd = new UngroupCommand(_canvas, selectedGroup);
+            var cmd = OnDieSurface(_canvas.Selection.SelectedComponents.ToList(),
+                () => new UngroupCommand(_canvas, selectedGroup), "Ungroup");
             _commandManager.ExecuteCommand(cmd);
             _canvas.Selection.ClearSelection();
             UpdateStatus?.Invoke($"Ungrouped: {selectedGroup.GroupName}");

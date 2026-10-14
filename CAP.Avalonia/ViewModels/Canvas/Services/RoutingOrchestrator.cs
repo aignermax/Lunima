@@ -144,6 +144,14 @@ public class RoutingOrchestrator
     }
 
     /// <summary>
+    /// Confines routes to the given rectangles (the dies of an assembly: a waveguide never
+    /// runs across the carrier between dies), or lifts the restriction with null. Takes effect
+    /// with the next grid initialization or routing pass.
+    /// </summary>
+    public void SetAllowedRoutingRegions(IReadOnlyList<(double X, double Y, double Width, double Height)>? regions) =>
+        _router.AllowedRoutingRegions = regions;
+
+    /// <summary>
     /// Cancels the currently running routing pass (status-bar Stop button). Already-routed
     /// connections keep their new routes; the pass reports how far it got.
     /// </summary>

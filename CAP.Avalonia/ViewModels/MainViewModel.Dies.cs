@@ -63,17 +63,21 @@ public partial class MainViewModel
         return true;
     }
 
-    /// <summary>The die the user currently works with: the open die, or the die selected on the assembly.</summary>
+    /// <summary>
+    /// The die the user currently works with: the die around the group being edited, the die
+    /// selected on the assembly, or the die of the selected part (parts are edited in place).
+    /// </summary>
     public ComponentGroup? ScopeDie =>
         Canvas.Dies.ActiveDie
-        ?? (Canvas.Dies.IsAssemblyRoot && Canvas.SelectedComponent?.Component is ComponentGroup { IsDie: true } die ? die : null);
+        ?? (Canvas.Dies.IsAssemblyRoot && Canvas.SelectedComponent?.Component is ComponentGroup { IsDie: true } die ? die : null)
+        ?? Canvas.Surface.DieOf(Canvas.SelectedComponent);
 
     private void InitializeDies()
     {
         IReadOnlyList<ProcessGroup> Catalog() => ProcessCatalog.BuildGroups(LeftPanel.GetLoadedPdkProcessEntries());
         DieProperties = new DiePropertiesViewModel(Canvas, CommandManager, Catalog)
         {
-            OpenDieRequested = OpenDie,
+            ZoomToDieRequested = ZoomToDie,
         };
         NewDie = new NewDieViewModel(Canvas, CommandManager, Catalog, () => FileOperations.ActiveProcess)
         {
@@ -107,13 +111,50 @@ public partial class MainViewModel
         NewDie.CreateCommand.Execute(null);
     }
 
-    /// <summary>Opens <paramref name="die"/> for editing (undoable like a double-click).</summary>
-    public void OpenDie(ComponentGroup die)
+    /// <summary>
+    /// Frames <paramref name="die"/> on the canvas and selects it (double-click on a die, the
+    /// Chiplets row, the die properties and the context menu). A die is a work surface — its
+    /// parts are edited in place on the assembly, so it is never entered like a group.
+    /// </summary>
+    public void ZoomToDie(ComponentGroup die)
     {
+        ArgumentNullException.ThrowIfNull(die);
         if (Canvas.IsInGroupEditMode)
             Canvas.ExitToRoot();
-        CommandManager.ExecuteCommand(new EnterGroupEditModeCommand(Canvas, die));
-        LeftPanel.HierarchyPanel?.RebuildTree();
+        var outline = CAP_Core.Components.Dies.DieAssembly.OutlineOf(die);
+        ViewportControl.ZoomToRect(outline.X, outline.Y, outline.Width, outline.Height);
+        if (Canvas.Components.FirstOrDefault(c => ReferenceEquals(c.Component, die)) is { } vm)
+        {
+            Canvas.Selection.SelectSingle(vm);
+            Canvas.SelectedComponent = vm;
+        }
+        StatusText = string.Format(System.Globalization.CultureInfo.CurrentCulture,
+            Services.Localization.LocalizationService.Instance.Translate("Dies.Status.ZoomedToDie"), die.GroupName);
+    }
+
+    /// <summary>
+    /// System workspace: the unit of work is the die — its parts and wires are dimmed and
+    /// locked (clicks select the die). Elsewhere the parts on the dies are worked on directly.
+    /// A part selected when the lock engages hands its selection over to its die.
+    /// </summary>
+    private void ApplyDieSurfaceLock(bool locked)
+    {
+        var selectedDie = Canvas.Surface.DieOf(Canvas.SelectedComponent);
+        Canvas.Surface.IsContentLocked = locked;
+        if (locked)
+        {
+            if (selectedDie != null && Canvas.Components.FirstOrDefault(c => ReferenceEquals(c.Component, selectedDie)) is { } dieVm)
+            {
+                Canvas.Selection.SelectSingle(dieVm);
+                Canvas.SelectedComponent = dieVm;
+            }
+            foreach (var part in Canvas.Surface.Items.Where(p => p.IsSelected))
+            {
+                part.IsSelected = false;
+                Canvas.Selection.SelectedComponents.Remove(part);
+            }
+        }
+        Canvas.RepaintRequested?.Invoke();
     }
 
     private void OnDieCreated(ComponentGroup die)

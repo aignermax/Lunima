@@ -146,7 +146,14 @@ public enum DesignIssueType
     /// An edge coupler on a die whose facet does not sit on the die edge. An error: light
     /// can only leave or enter a die through a facet on its cleaved edge.
     /// </summary>
-    EdgeCouplerOffDieEdge
+    EdgeCouplerOffDieEdge,
+
+    /// <summary>
+    /// A waveguide runs from one die to another (or between a die and the bare carrier). An
+    /// error: a waveguide cannot cross a die edge — dies connect only through facing edge
+    /// couplers (a die-to-die link).
+    /// </summary>
+    CrossDieWaveguide
 }
 
 /// <summary>

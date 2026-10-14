@@ -39,6 +39,14 @@ public class ComponentPlacementService
     public double ChipMaxY { get; set; } = 5000;
 
     /// <summary>
+    /// Placement rule of a die assembly, consulted first by <see cref="CanPlaceComponent"/>: a
+    /// footprint is valid on a die, clear of that die's parts — the dies themselves are the
+    /// surface, not obstacles. Returns null when the rule does not apply (single-die design,
+    /// inside a group, or the item is a die).
+    /// </summary>
+    public Func<double, double, double, double, ComponentViewModel?, bool?>? AssemblyPlacementCheck { get; set; }
+
+    /// <summary>
     /// Whether the user is currently dragging a component.
     /// </summary>
     public bool IsDragging { get; set; }
@@ -175,6 +183,9 @@ public class ComponentPlacementService
     public bool CanPlaceComponent(double x, double y, double width, double height,
         ComponentViewModel? excludeComponent = null)
     {
+        if (AssemblyPlacementCheck?.Invoke(x, y, width, height, excludeComponent) is bool onDie)
+            return onDie;
+
         if (x < ChipMinX || y < ChipMinY ||
             x + width > ChipMaxX || y + height > ChipMaxY)
             return false;

@@ -69,7 +69,20 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
 
         if (_state.DraggingComponent == null) return false;
 
-        if (IsDoubleClick(_state.DraggingComponent) && _state.DraggingComponent.Component is ComponentGroup group)
+        // The platform's click count is measured on the input events themselves, so a slow
+        // first click (selecting a die re-scopes the library) cannot break the double-click.
+        bool sameAsLastClick = _state.LastClickedComponent == _state.DraggingComponent;
+        bool isDoubleClick = IsDoubleClick(_state.DraggingComponent, e.Timestamp) | (e.ClickCount >= 2 && sameAsLastClick);
+        if (isDoubleClick && _state.DraggingComponent.Component is ComponentGroup { IsDie: true } die)
+        {
+            // A die is a work surface, never entered: double-click frames it instead.
+            mainVm.ZoomToDie(die);
+            _state.DraggingComponent = null;
+            _invalidate();
+            return true;
+        }
+
+        if (isDoubleClick && _state.DraggingComponent.Component is ComponentGroup group)
         {
             EnterGroupEditMode(canvas, mainVm, group);
             _state.DraggingComponent = null;
@@ -84,7 +97,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
     private ComponentViewModel? ResolveTarget(ComponentViewModel? hit, DesignCanvasViewModel canvas)
     {
         if (hit == null) return null;
-        if (canvas.IsInGroupEditMode) return hit;
+        if (canvas.IsInGroupEditMode || canvas.Surface.IsItem(hit)) return hit;
         if (hit.Component is ComponentGroup) return hit;
         if (hit.Component.ParentGroup == null) return hit;
         var top = GetTopLevelGroup(hit.Component);
@@ -195,7 +208,8 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
             else
             {
                 var comp = DesignCanvasHitTesting.HitTestComponent(canvasPoint, canvas);
-                _state.HoveredGroup = comp?.Component.ParentGroup != null
+                _state.HoveredGroup = canvas.Surface.IsItem(comp) ? comp!.Component as ComponentGroup
+                    : comp?.Component.ParentGroup != null
                     ? GetTopLevelGroup(comp.Component)
                     : comp?.Component as ComponentGroup;
                 // Only a plain (non-group) component claims name-label hover priority; a group
@@ -347,11 +361,19 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
         _invalidate();
     }
 
-    private bool IsDoubleClick(ComponentViewModel? component)
+    /// <summary>
+    /// A second press on the same item within the double-click time, measured on the input
+    /// events' own timestamps: a slow first click (selecting a die re-scopes the library) must
+    /// not turn a real double-click into two single clicks.
+    /// </summary>
+    private bool IsDoubleClick(ComponentViewModel? component, ulong timestamp)
     {
         var now = DateTime.UtcNow;
-        bool isDouble = (now - _state.LastClickTime).TotalMilliseconds < CanvasInteractionState.DoubleClickMilliseconds
-                        && _state.LastClickedComponent == component;
+        bool withinWindow = timestamp > 0 && _state.LastClickTimestamp > 0
+            ? timestamp - _state.LastClickTimestamp < CanvasInteractionState.DoubleClickMilliseconds
+            : (now - _state.LastClickTime).TotalMilliseconds < CanvasInteractionState.DoubleClickMilliseconds;
+        bool isDouble = withinWindow && _state.LastClickedComponent == component;
+        _state.LastClickTimestamp = timestamp;
         _state.LastClickTime = now;
         _state.LastClickedComponent = component;
         return isDouble;

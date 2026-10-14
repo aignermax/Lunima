@@ -29,15 +29,41 @@ public class CreateConnectionCommand : IUndoableCommand
     // sub whose crossing was dissolved would leave ghost pins on a dead component.
     private List<WaveguideConnection>? _removedConnections;
 
+    private readonly Ownership.WireHomingStep _homing;
+
     public CreateConnectionCommand(
         DesignCanvasViewModel canvas,
         PhysicalPin startPin,
         PhysicalPin endPin)
     {
         _canvas = canvas;
-        _startPin = startPin;
-        _endPin = endPin;
+        _homing = new Ownership.WireHomingStep(canvas);
+        _startPin = InsideDie(startPin);
+        _endPin = InsideDie(endPin);
     }
+
+    /// <summary>
+    /// A die's boundary pin stands for the part pin it exposes; wires on the assembly attach
+    /// to that part pin (the die's synthesized pins are rebuilt with its S-matrix).
+    /// </summary>
+    private static PhysicalPin InsideDie(PhysicalPin pin) =>
+        pin.ParentComponent is ComponentGroup { IsDie: true } die
+            && die.ExternalPins.FirstOrDefault(p => p.Name == pin.Name)?.InternalPin is { } inner
+            ? inner
+            : pin;
+
+    /// <summary>
+    /// True when the request is refused because it would run a waveguide across a die edge
+    /// (see <see cref="CAP_Core.Components.Dies.DieWiringPolicy"/>).
+    /// </summary>
+    public bool CrossesDieEdge =>
+        CAP_Core.Components.Dies.DieWiringPolicy.Evaluate(_startPin, _endPin).RefusalKey != null;
+
+    /// <summary>
+    /// Completes when a wire that belongs to a group below the current level has been routed
+    /// and stored in that group (immediately for every other wire).
+    /// </summary>
+    public Task HomingCompletion { get; private set; } = Task.CompletedTask;
 
     public string Description => $"Connect {_startPin.Name} to {_endPin.Name}";
 
@@ -50,26 +76,24 @@ public class CreateConnectionCommand : IUndoableCommand
     {
         // Optical ↔ electrical connections are physically meaningless — refuse to create them
         // regardless of which UI path (drag gesture, click-to-connect, …) issued the command.
-        if (!ArePinKindsCompatible)
+        // A waveguide across a die edge is refused too: dies connect only through couplers.
+        if (!ArePinKindsCompatible || CrossesDieEdge)
             return;
 
         if (_connection != null && _connectionViewModel != null)
         {
-            // Redo: remove any restored connections first, then re-add the new connection.
-            // RemoveConnectionDeferred dissolves a crossing if one was re-inserted meanwhile.
-            if (_removedConnections != null)
+            // Redo: remove any restored connections first, then re-add the new connection —
+            // into its owning group when it was stored there.
+            RemoveReplacedConnections();
+            if (_homing.HasHome)
             {
-                foreach (var conn in _removedConnections)
-                {
-                    var vm = _canvas.Connections.FirstOrDefault(c => c.Connection == conn);
-                    if (vm != null)
-                        _canvas.Connections.Remove(vm);
-                    _canvas.ConnectionManager.RemoveConnectionDeferred(conn);
-                }
+                _homing.Rehome();
+                _canvas.InvalidateSimulation();
+                return;
             }
-
             _canvas.ConnectionManager.AddExistingConnection(_connection);
             _canvas.Connections.Add(_connectionViewModel);
+            HomingCompletion = _homing.HomeWhenRoutedAsync(_connectionViewModel);
         }
         else
         {
@@ -106,6 +130,8 @@ public class CreateConnectionCommand : IUndoableCommand
             if (_connectionViewModel != null)
             {
                 _connection = _connectionViewModel.Connection;
+                // A wire between two parts of a group below this level belongs to that group.
+                HomingCompletion = _homing.HomeWhenRoutedAsync(_connectionViewModel);
             }
         }
         // Trigger async re-routing so the UI doesn't block
@@ -116,10 +142,18 @@ public class CreateConnectionCommand : IUndoableCommand
     {
         if (_connection != null && _connectionViewModel != null)
         {
-            // Remove the new connection. If the crossing pass split it, this
-            // dissolves the crossing instead of removing a stale object (#705).
-            _canvas.ConnectionManager.RemoveConnectionDeferred(_connection);
-            _canvas.Connections.Remove(_connectionViewModel);
+            _homing.Cancel();
+            if (_homing.IsHomed)
+            {
+                _homing.Unhome();
+            }
+            else
+            {
+                // Remove the new connection. If the crossing pass split it, this
+                // dissolves the crossing instead of removing a stale object (#705).
+                _canvas.ConnectionManager.RemoveConnectionDeferred(_connection);
+                _canvas.Connections.Remove(_connectionViewModel);
+            }
 
             // Restore any connections that were removed
             if (_removedConnections != null)
@@ -137,6 +171,18 @@ public class CreateConnectionCommand : IUndoableCommand
         }
     }
 
+    private void RemoveReplacedConnections()
+    {
+        if (_removedConnections == null)
+            return;
+        foreach (var conn in _removedConnections)
+        {
+            var vm = _canvas.Connections.FirstOrDefault(c => c.Connection == conn);
+            if (vm != null)
+                _canvas.Connections.Remove(vm);
+            _canvas.ConnectionManager.RemoveConnectionDeferred(conn);
+        }
+    }
     private bool TouchesEitherPin(WaveguideConnection connection) =>
         connection.StartPin == _startPin || connection.EndPin == _startPin
         || connection.StartPin == _endPin || connection.EndPin == _endPin;

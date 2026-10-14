@@ -36,9 +36,13 @@ public partial class MainViewModel
         };
         workspaces.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(WorkspaceViewModel.Current) && workspaces.IsSystem)
+            if (e.PropertyName != nameof(WorkspaceViewModel.Current))
+                return;
+            ApplyDieSurfaceLock(workspaces.Profile.LocksDieContent);
+            if (workspaces.IsSystem)
                 RefreshSystemOverview();
         };
+        ApplyDieSurfaceLock(workspaces.Profile.LocksDieContent);
         BottomPanel.Analysis.Readiness.PlaceLightSourceRequested = ArmLightSourcePlacement;
         return workspaces;
     }

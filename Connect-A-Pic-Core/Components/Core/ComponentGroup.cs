@@ -337,6 +337,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
         if (removed)
         {
             UpdateGroupBounds();
+            InvalidateSMatrix();
         }
         return removed;
     }
@@ -351,6 +352,16 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             throw new ArgumentNullException(nameof(pin));
 
         ExternalPins.Add(pin);
+        InvalidateSMatrix();
+    }
+
+    /// <summary>Re-inserts an external pin at <paramref name="index"/> (clamped), e.g. when undoing its removal.</summary>
+    /// <param name="index">Position in <see cref="ExternalPins"/>.</param>
+    /// <param name="pin">The group pin to restore.</param>
+    public void InsertExternalPin(int index, GroupPin pin)
+    {
+        ArgumentNullException.ThrowIfNull(pin);
+        ExternalPins.Insert(Math.Clamp(index, 0, ExternalPins.Count), pin);
         InvalidateSMatrix();
     }
 

@@ -34,6 +34,6 @@ public partial class ChipletsPane : UserControl
     {
         if (DataContext is MainViewModel vm
             && (sender as Control)?.DataContext is ChipletSummaryRow { Group: { IsDie: true } die })
-            vm.OpenDie(die);
+            vm.ZoomToDie(die);
     }
 }
