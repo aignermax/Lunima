@@ -27,7 +27,7 @@ public static class GateViewSceneBuilder
         var symbols = graph.Nodes.Select(node => GateSymbolGeometry.Place(node, groupBounds(node.Group))).ToList();
         var byId = symbols.ToDictionary(symbol => symbol.Node.GateId);
         var tracks = new GateTrackRegistry();
-        var obstacles = symbols.Select(symbol => symbol.Footprint).ToList();
+        var obstacles = new GateObstacleIndex(symbols.Select(symbol => symbol.Footprint));
         var routes = graph.Nets.Select(net => RouteNet(net, byId, tracks, obstacles)).ToList();
         return new GateViewScene(symbols, routes, Blocks(graph, topLevel, groupBounds));
     }
@@ -36,7 +36,7 @@ public static class GateViewSceneBuilder
         GateViewNet net,
         IReadOnlyDictionary<string, GateSymbolPlacement> byId,
         GateTrackRegistry tracks,
-        IReadOnlyList<Rect> obstacles)
+        GateObstacleIndex obstacles)
     {
         var loads = net.Loads
             .Select(load => (Load: load, Symbol: byId.GetValueOrDefault(load.GateId)))

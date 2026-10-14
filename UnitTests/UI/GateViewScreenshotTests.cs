@@ -49,6 +49,7 @@ public class GateViewScreenshotTests
                 setInputs: vm => SetInput(vm, "S̄", true));
             await CaptureExample(dir, manifest, "Logic Gate ALU + RAM + ACC.lun", "alu-ram-acc", build: false, setInputs: null,
                 detail: new Rect(250, 0, 4900, 1050));
+            await CaptureWindowWithRunHint(dir, manifest);
         }
         finally
         {
@@ -88,6 +89,44 @@ public class GateViewScreenshotTests
             setInputs?.Invoke(vm);
             Capture(vm, world, Path.Combine(dir, $"{slug}-levels.png"));
             manifest.Add(new { file = $"{slug}-levels.png", caption = $"{file}: after Run — nets coloured by live level." });
+        }
+    }
+
+    /// <summary>
+    /// The whole window in Logic: toolbar with the Gates | Physical switch, the gate view on
+    /// the canvas, and the "L — Build logic network" hint under Run after pressing L.
+    /// </summary>
+    private static async Task CaptureWindowWithRunHint(string dir, List<object> manifest)
+    {
+        var vm = UnitTests.UI.Showcase.ShowcaseCircuit.CreateStagedViewModel();
+        var path = Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), "Logic Gate Half Adder.lun");
+        (await vm.FileOperations.OpenDesignAsCopyAsync(path)).ShouldBeTrue();
+        await vm.FileOperations.PostLoadRouting;
+        var window = UnitTests.UI.Showcase.ShowcaseCircuit.BootMainWindow(vm, 1600, 900);
+        try
+        {
+            vm.WorkspaceSwitch.Current.ShouldBe(Workspace.Logic);
+            await vm.GateView.RebuildNowAsync();
+            await vm.RunWorkspaceFromShortcutCommand.ExecuteAsync(null);
+            vm.RightPanel.Logic.Inputs.Single(i => i.PinName == "A").IsOn = true;
+            Dispatcher.UIThread.RunJobs();
+            // The two left gate columns at working zoom (the dock opened by Run shrinks the canvas).
+            UnitTests.UI.Showcase.ShowcaseCircuit.SetView(window, vm, (250, 20, 2650, 1150));
+            vm.RunHint.IsVisible.ShouldBeTrue();
+            Dispatcher.UIThread.RunJobs();
+            UnitTests.UI.Showcase.ShowcaseCapture.PumpRenderLoop();
+            UnitTests.UI.Showcase.ShowcaseCapture.CaptureWindow(window, Path.Combine(dir, "logic-window-run-hint.png"));
+            manifest.Add(new
+            {
+                file = "logic-window-run-hint.png",
+                caption = "Logic workspace: Gates | Physical switch (V) next to Run, the gate view on the canvas, " +
+                          "and the 'L — Build logic network' hint after pressing L.",
+            });
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
         }
     }
 

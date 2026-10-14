@@ -42,7 +42,7 @@ public static class GateNetRouter
     public static double PreferredTrunkX(Point source, double gap) => source.X + gap * 0.5;
 
     /// <summary>Routes one wire around the given obstacles (symbol footprints), claiming its tracks.</summary>
-    internal static Point[] Route(Request request, IReadOnlyList<Rect> obstacles, GateTrackRegistry tracks)
+    internal static Point[] Route(Request request, GateObstacleIndex obstacles, GateTrackRegistry tracks)
     {
         var (s, t) = (request.Source, request.Target);
         var step = LaneStep(request.Gap);
@@ -74,7 +74,7 @@ public static class GateNetRouter
     /// load's row, and drops into the load from its left.
     /// </summary>
     private static Point[] ChannelRoute(
-        Request request, double xs, double baseXt, double step, IReadOnlyList<Rect> obstacles, GateTrackRegistry tracks)
+        Request request, double xs, double baseXt, double step, GateObstacleIndex obstacles, GateTrackRegistry tracks)
     {
         var (s, t) = (request.Source, request.Target);
         // Same-row and downward wires prefer the channel above the load: below it sits the gate name.
@@ -109,13 +109,15 @@ public static class GateNetRouter
     }
 
     /// <summary>True when no segment of the polyline passes through an obstacle's interior.</summary>
-    public static bool IsClear(IReadOnlyList<Point> polyline, IReadOnlyList<Rect> obstacles)
+    public static bool IsClear(IReadOnlyList<Point> polyline, GateObstacleIndex obstacles)
     {
         for (var i = 1; i < polyline.Count; i++)
         {
-            foreach (var obstacle in obstacles)
+            var (a, b) = (polyline[i - 1], polyline[i]);
+            var extent = new Rect(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
+            foreach (var obstacle in obstacles.Near(extent))
             {
-                if (Crosses(polyline[i - 1], polyline[i], obstacle))
+                if (Crosses(a, b, obstacle))
                     return false;
             }
         }

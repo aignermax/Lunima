@@ -1887,7 +1887,7 @@
   "Workspace.HelpIntro": "Un espacio de trabajo decide qué hace Ejecutar y qué pestañas de análisis ves. Nunca cambia tu diseño. Cambia con un clic o Ctrl+1–4.",
   "Workspace.HelpLayout": "Coloca, enruta y ordena el chip. Ejecutar comprueba el diseño (solapes, separaciones, reglas de proceso) y abre Comprobaciones de diseño.",
   "Workspace.HelpOptics": "Simula cómo viaja la luz por el circuito. En CW, Ejecutar es un interruptor: activado muestra la superposición de potencia y la mantiene al día; pulsarlo de nuevo la desactiva. Transitorio simula señales en el tiempo; espectro, barridos y Monte Carlo están aquí.",
-  "Workspace.HelpLogic": "Trata los grupos de puertas como lógica. Ejecutar construye la red lógica a partir de las puertas; volver a pulsar Ejecutar avanza el reloj.",
+  "Workspace.HelpLogic": "Trata los grupos de puertas como lógica: el lienzo muestra puertas y señales (V cambia a la vista física). Ejecutar construye la red lógica; pulsarlo de nuevo avanza el reloj.",
   "Workspace.HelpSystem": "Varios chiplets, cada uno en su propio proceso, unidos por acopladores de borde. Ejecutar comprueba la alineación de los enlaces y activa la simulación de todo el conjunto con la pérdida de acoplamiento de cada enlace; púlsalo de nuevo para desactivarla.",
   "Workspace.System.Chiplets": "Chiplets",
   "Workspace.System.Links": "Enlaces",

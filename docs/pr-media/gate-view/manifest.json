@@ -22,5 +22,9 @@
   {
     "file": "alu-ram-acc-detail.png",
     "caption": "Logic Gate ALU \u002B RAM \u002B ACC.lun: zoomed into the first adder stages."
+  },
+  {
+    "file": "logic-window-run-hint.png",
+    "caption": "Logic workspace: Gates | Physical switch (V) next to Run, the gate view on the canvas, and the \u0027L \u2014 Build logic network\u0027 hint after pressing L."
   }
 ]

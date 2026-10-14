@@ -20,9 +20,9 @@ internal static class GateViewLabelPainter
     private const double LabelPx = 11.0;
     private const double GapPx = 3.0;
     private const double TypicalBodyHeight = 150.0;
-    private const double NamedLabelMinBodyPx = 40.0;
+    private const double NamedLabelMinBodyPx = 36.0;
     private const double RawLabelMinBodyPx = 110.0;
-    private const double GateNameMinBodyPx = 40.0;
+    private const double GateNameMinBodyPx = 36.0;
     private const double SymbolTextMinBodyPx = 26.0;
     private const double BlockNameMinPx = 24.0;
     private const double PinLetterShare = 0.2;

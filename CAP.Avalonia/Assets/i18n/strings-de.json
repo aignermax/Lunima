@@ -1887,7 +1887,7 @@
   "Workspace.HelpIntro": "Ein Arbeitsbereich legt fest, was Ausführen tut und welche Analyse-Tabs sichtbar sind. Ihr Design bleibt unverändert. Wechseln mit einem Klick oder Strg+1–4.",
   "Workspace.HelpLayout": "Chip platzieren, verdrahten und aufräumen. Ausführen prüft das Layout (Überlappungen, Abstände, Prozessregeln) und öffnet die Designprüfungen.",
   "Workspace.HelpOptics": "Simulieren, wie Licht durch die Schaltung läuft. In CW ist Ausführen ein Ein/Aus-Schalter: an zeigt das Leistungs-Overlay und hält es aktuell, erneutes Drücken schaltet es aus. Transient simuliert Signale über die Zeit; Spektrum, Sweeps und Monte Carlo sind hier.",
-  "Workspace.HelpLogic": "Gatter-Gruppen als Logik behandeln. Ausführen baut das Logiknetz aus den Gattern; erneutes Ausführen schaltet den Takt weiter.",
+  "Workspace.HelpLogic": "Gattergruppen als Logik behandeln: Die Zeichenfläche zeigt Gatter und Signale (V wechselt zur physischen Ansicht). Ausführen baut das Logiknetz; erneutes Drücken schaltet den Takt weiter.",
   "Workspace.HelpSystem": "Mehrere Chiplets, jedes in seinem eigenen Prozess, verbunden über Kantenkoppler. Ausführen prüft die Ausrichtung der Verbindungen und schaltet die Simulation des ganzen Aufbaus samt Koppelverlust jeder Verbindung ein; erneut drücken schaltet sie aus.",
   "Workspace.System.Chiplets": "Chiplets",
   "Workspace.System.Links": "Verbindungen",
