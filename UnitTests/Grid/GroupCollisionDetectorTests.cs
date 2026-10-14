@@ -344,7 +344,8 @@ public class GroupCollisionDetectorTests
 
         // Create frozen path with bend segment
         var path = new RoutedPath();
-        path.Segments.Add(new BendSegment(75, 35, 20, 0, 90)); // Arc centered at (75,35) with radius 20
+        var bend = new BendSegment(75, 35, 20, 0, 90); // Arc centered at (75,35) with radius 20
+        path.Segments.Add(bend);
         var frozenPath = new FrozenWaveguidePath
         {
             PathId = Guid.NewGuid(),
@@ -354,15 +355,40 @@ public class GroupCollisionDetectorTests
         };
         group.AddInternalPath(frozenPath);
 
-        // Place obstacle at arc center
-        var obstacle = CreateComponent("obstacle", 165, 125, 10, 10); // At moved arc center (165,125)
+        // Place obstacle on the arc itself after a (90,90) move
+        var onArc = (X: bend.StartPoint.X + 90, Y: bend.StartPoint.Y + 90);
+        var obstacle = CreateComponent("obstacle", onArc.X - 5, onArc.Y - 5, 10, 10);
         var allComponents = new List<Component> { group, child1, child2, obstacle };
 
-        // Act - Move group so arc center would be at (165,125)
+        // Act - Move group so the arc runs through the obstacle
         bool canPlace = _detector.CanPlaceGroup(group, 90, 90, allComponents);
 
         // Assert - Arc should collide with obstacle
         canPlace.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void CanPlaceGroup_ObstacleAtArcCenterInsideArcBox_ShouldAllowPlacement()
+    {
+        // The arc's bounding box covers its center, the arc itself stays 20 µm away.
+        var group = CreateGroup("TestGroup", 0, 0);
+        var child1 = CreateComponent("child1", 10, 10, 50, 50);
+        var child2 = CreateComponent("child2", 100, 10, 50, 50);
+        group.AddChild(child1);
+        group.AddChild(child2);
+        var path = new RoutedPath();
+        path.Segments.Add(new BendSegment(75, 35, 20, 0, 90));
+        group.AddInternalPath(new FrozenWaveguidePath
+        {
+            Path = path,
+            StartPin = child1.PhysicalPins[0],
+            EndPin = child2.PhysicalPins[0]
+        });
+        var obstacle = CreateComponent("obstacle", 163, 123, 4, 4); // around the moved arc center (165,125)
+
+        bool canPlace = _detector.CanPlaceGroup(group, 90, 90, new List<Component> { group, obstacle });
+
+        canPlace.ShouldBeTrue();
     }
 
     #region Pre-drag overlap grandfathering
