@@ -65,6 +65,8 @@ public class ComponentPlacementService
     {
         IsDragging = true;
         _preDragOverlapPartners.Clear();
+        _dieDragStart = component is ComponentGroup { IsDie: true } die
+            ? CAP_Core.Components.Dies.DieAssembly.OutlineOf(die) : null;
         if (component is ComponentGroup group)
             CaptureGroupOverlapPartners(group);
         else
@@ -275,8 +277,13 @@ public class ComponentPlacementService
             .OfType<ComponentGroup>()
             .Where(g => g.IsDie && g != die)
             .Select(CAP_Core.Components.Dies.DieAssembly.OutlineOf);
-        return !CAP_Core.Components.Dies.DieAssembly.OverlapsAny(candidate, others);
+        // A die already overlapping another (pasted or loaded that way) may always move out.
+        var from = IsDragging && _dieDragStart is { } start ? start : CAP_Core.Components.Dies.DieAssembly.OutlineOf(die);
+        return CAP_Core.Components.Dies.DieAssembly.CanMoveTo(from, candidate, others);
     }
+
+    /// <summary>Outline of the die at the start of the current drag (null when no die is dragged).</summary>
+    private CAP_Core.Components.Dies.DieOutline? _dieDragStart;
 
     private bool MoveComponentGroup(
         ComponentViewModel component,

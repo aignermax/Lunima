@@ -92,7 +92,7 @@ public partial class MakeGateViewModel : ObservableObject
         _canvas = canvas;
         var group = component?.Component as ComponentGroup;
         var singleSelection = canvas == null || canvas.Selection.SelectedComponents.Count <= 1;
-        CanMakeGate = group != null && singleSelection;
+        CanMakeGate = group is { IsDie: false } && singleSelection;
         if (ReferenceEquals(group, _group) && CanMakeGate)
             return;
 

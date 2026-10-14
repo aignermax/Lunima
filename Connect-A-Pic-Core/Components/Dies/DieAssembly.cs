@@ -88,6 +88,14 @@ public static class DieAssembly
     public static bool OverlapsAny(DieOutline candidate, IEnumerable<DieOutline> others) =>
         others.Any(candidate.Overlaps);
 
+    /// <summary>
+    /// True when a die may move from <paramref name="from"/> to <paramref name="to"/>: it must not
+    /// overlap a die it did not already overlap — so a die stuck in an overlap can always be
+    /// moved out of it, but never into another die.
+    /// </summary>
+    public static bool CanMoveTo(DieOutline from, DieOutline to, IEnumerable<DieOutline> others) =>
+        others.All(other => !to.Overlaps(other) || from.Overlaps(other));
+
     /// <summary>Next free default die name ("Die 1", "Die 2", …) not used by <paramref name="existingNames"/>.</summary>
     public static string NextDieName(IEnumerable<string> existingNames, string prefix = "Die")
     {

@@ -19,7 +19,7 @@ namespace UnitTests.UI.Flows;
 
 /// <summary>
 /// The product owner's die scenario through the real window, Layout workspace, no die ever
-/// entered: New die next to the chip → place two 2×2 MMIs on Die 2 → wire them → drag Die 2
+/// entered: New die next to the chip → place two 2×2 MMIs on Die 2 → wire them → drag Die 2 (in System)
 /// (the route moves rigidly, nothing re-routes, no red outline) → drag a wire from a non-coupler
 /// pin on Die 2 to Die 1 (refused with the hint) → System dims and locks the die content →
 /// double-click frames a die. Screenshots land in <c>docs/pr-media/die-work-surface/</c>.
@@ -73,7 +73,9 @@ public class UiFlowDieWorkSurfaceTests
         DieFlowShots.Capture(win, shots, "01-parts-on-die-at-root.png");
         DieFlowShots.Fit(win, vm, die1, die2);
 
-        // Drag Die 2 by an empty spot: everything on it moves rigidly, nothing re-routes.
+        // Drag Die 2 by an empty spot in System (dies move there): everything on it moves
+        // rigidly, nothing re-routes.
+        vm.WorkspaceSwitch.Current = Workspace.System;
         vm.CanvasInteraction.CurrentMode = InteractionMode.Select;
         var grab = new Point(o2.X + 80, o2.Bottom - 80);
         UiInput.DragMouse(win, DieFlowShots.CanvasPoint(win, vm, grab.X, grab.Y), DieFlowShots.CanvasPoint(win, vm, grab.X + 300, grab.Y + 200));
@@ -93,6 +95,7 @@ public class UiFlowDieWorkSurfaceTests
             .ShouldNotContain(i => i.Type == DesignIssueType.ComponentOffDie, "parts on the die are on their die");
 
         // A wire from an MMI pin on Die 2 to the part on Die 1 is refused with the hint.
+        vm.WorkspaceSwitch.Current = Workspace.Layout;
         vm.CanvasInteraction.CurrentMode = InteractionMode.Connect;
         DragWire(win, vm, Pin(mmiRight, "out2"), Pin(onDie1, "in2"));
         vm.Canvas.Connections.Count.ShouldBe(1, "no waveguide crosses a die edge");
@@ -111,6 +114,10 @@ public class UiFlowDieWorkSurfaceTests
         vm.CanvasInteraction.CurrentMode = InteractionMode.Select;
         var empty = DieAssembly.OutlineOf(die2);
         var point = DieFlowShots.CanvasPoint(win, vm, empty.X + 80, empty.Bottom - 80);
+        UiInput.ClickAt(win, point);
+        DoubleClick(win, point);
+        vm.Canvas.SelectedComponent.ShouldBeNull("outside System a die is background: double-click does nothing special");
+        vm.WorkspaceSwitch.Current = Workspace.System;
         UiInput.ClickAt(win, point);
         DoubleClick(win, point);
         vm.Canvas.IsInGroupEditMode.ShouldBeFalse("double-click frames a die, it never enters it");

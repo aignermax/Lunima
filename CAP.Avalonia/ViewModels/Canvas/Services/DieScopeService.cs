@@ -105,6 +105,34 @@ public sealed class DieScopeService
     /// <summary>Applies <see cref="CurrentBounds"/> to placement and, optionally, the A* grid.</summary>
     public void ApplyScopeBounds(bool reinitializeRouting = true)
     {
+        var bounds = ApplyPlacementBounds();
+        // At the assembly root a waveguide may only run on a die, never across the carrier.
+        _routing.SetAllowedRoutingRegions(RoutingRegions());
+        if (reinitializeRouting)
+            _routing.InitializeAStarRouting(bounds.X, bounds.Y, bounds.Right, bounds.Bottom);
+    }
+
+    /// <summary>
+    /// The routing grid rebuild still running after <see cref="ApplyScopeBoundsInBackground"/>
+    /// (completed when none is pending).
+    /// </summary>
+    public Task PendingGridRebuild { get; private set; } = Task.CompletedTask;
+
+    /// <summary>
+    /// Like <see cref="ApplyScopeBounds"/>, but only the placement bounds change right away; the
+    /// routing regions and A* grid are rebuilt off the UI thread. Used after a die move, where a
+    /// synchronous rebuild of the carrier grid stalled the drop for a second or more.
+    /// </summary>
+    public Task ApplyScopeBoundsInBackground()
+    {
+        var bounds = ApplyPlacementBounds();
+        PendingGridRebuild = _routing.ReinitializeAStarRoutingInBackgroundAsync(
+            bounds.X, bounds.Y, bounds.Right, bounds.Bottom, RoutingRegions());
+        return PendingGridRebuild;
+    }
+
+    private DieOutline ApplyPlacementBounds()
+    {
         if (_placementHoldsRootChip)
         {
             _rootChipWidth = _placement.ChipMaxX;
@@ -116,13 +144,13 @@ public sealed class DieScopeService
         _placement.ChipMinY = bounds.Y;
         _placement.ChipMaxX = bounds.Right;
         _placement.ChipMaxY = bounds.Bottom;
-        // At the assembly root a waveguide may only run on a die, never across the carrier.
-        _routing.SetAllowedRoutingRegions(IsAssemblyRoot
-            ? RootDies.Select(DieAssembly.OutlineOf).Select(o => (o.X, o.Y, o.Width, o.Height)).ToList()
-            : null);
-        if (reinitializeRouting)
-            _routing.InitializeAStarRouting(bounds.X, bounds.Y, bounds.Right, bounds.Bottom);
+        return bounds;
     }
+
+    private List<(double X, double Y, double Width, double Height)>? RoutingRegions() =>
+        IsAssemblyRoot
+            ? RootDies.Select(DieAssembly.OutlineOf).Select(o => (o.X, o.Y, o.Width, o.Height)).ToList()
+            : null;
 
     private DieOutline RootChipOutline() => new(0, 0, _rootChipWidth, _rootChipHeight);
 }

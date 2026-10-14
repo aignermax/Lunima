@@ -49,6 +49,15 @@ public class SelectionBoxGestureRecognizer : IGestureRecognizer
             return true;
         }
 
+        // System workspace, single-die design: a double-click on the chip frames Die 1.
+        if (canvas.Surface.IsContentLocked && canvas.ChipDie.Contains(canvasPoint.X, canvasPoint.Y) && IsDoubleClick())
+        {
+            mainVm.ZoomToDie(canvas.ChipDie.Die);
+            UpdateClickTime();
+            _invalidate();
+            return true;
+        }
+
         UpdateClickTime();
         _activeCanvas = canvas;
         canvas.Selection.IsBoxSelecting = true;

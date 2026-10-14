@@ -105,6 +105,12 @@ public sealed class GridRenderer
 
     private static void DrawChipFrame(DrawingContext context, DesignCanvasViewModel vm, CanvasPens pens, double zoom)
     {
+        // Every design is an assembly of at least one die: the chip of a single-die design is Die 1.
+        if (vm.ChipDie.IsShown && vm.ChipDie.Die.IsDie)
+        {
+            DieFrameRenderer.Render(context, vm.ChipDie.Die, vm.ChipDie.IsSelected, false, zoom, showEdgeZone: false);
+            return;
+        }
         var chipRect = ChipWorldRect(vm);
         context.DrawRectangle(null, pens.ChipBorder, chipRect);
         DrawCornerTicks(context, chipRect, pens.ChipCorner, CornerTickPx / zoom);

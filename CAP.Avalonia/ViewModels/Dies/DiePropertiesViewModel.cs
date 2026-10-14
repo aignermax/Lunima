@@ -46,8 +46,19 @@ public partial class DiePropertiesViewModel : ObservableObject
     [ObservableProperty] private DieProcessOption? _selectedProcess;
     [ObservableProperty] private string _statusText = "";
 
+    /// <summary>
+    /// False outside the System workspace: there the die is shown read-only — dies are
+    /// placed, sized and bound to a process only in System.
+    /// </summary>
+    [ObservableProperty] private bool _isEditable = true;
+
     /// <summary>True while a die is shown.</summary>
     public bool IsVisible => Die != null;
+
+    /// <summary>True when the shown die may be deleted: editable here, and not the chip die of a single-die design.</summary>
+    public bool CanDelete => IsEditable && Die != null && !_canvas.ChipDie.IsProxy(Die);
+
+    partial void OnIsEditableChanged(bool value) => OnPropertyChanged(nameof(CanDelete));
 
     /// <summary>Size choices for the die's process.</summary>
     public ObservableCollection<DieSizeOption> SizeOptions { get; } = new();
@@ -84,6 +95,7 @@ public partial class DiePropertiesViewModel : ObservableObject
             if (Die?.Die is { } definition)
                 Load(Die, definition);
             OnPropertyChanged(nameof(IsVisible));
+            OnPropertyChanged(nameof(CanDelete));
             OnPropertyChanged(nameof(ProcessBrush));
             OnPropertyChanged(nameof(PdkSummary));
         }
@@ -190,8 +202,15 @@ public partial class DiePropertiesViewModel : ObservableObject
 
     private void Commit(Func<DieState, DieState> edit)
     {
-        if (_loading || Die is not { IsDie: true } die)
+        if (_loading || !IsEditable || Die is not { IsDie: true } die)
             return;
+        if (_canvas.ChipDie.IsProxy(die))
+        {
+            var edited = edit(DieState.Of(die));
+            if (edited != DieState.Of(die))
+                PromoteChipDie(edited);
+            return;
+        }
         var command = UpdateDieCommand.TryCreate(_canvas, die, edit(DieState.Of(die)), out var refusal);
         if (command != null)
         {
@@ -203,6 +222,24 @@ public partial class DiePropertiesViewModel : ObservableObject
             StatusText = refusal;
         }
         Reload();
+    }
+
+    /// <summary>
+    /// The first edit of the chip die makes the chip a real die with the edited properties (one
+    /// undo step); the new die stays selected and shown.
+    /// </summary>
+    private void PromoteChipDie(DieState edited)
+    {
+        var command = new PromoteChipToDieCommand(_canvas, edited);
+        _commands.ExecuteCommand(command);
+        StatusText = "";
+        var vm = _canvas.Components.FirstOrDefault(c => ReferenceEquals(c.Component, command.CreatedDie));
+        if (vm != null)
+        {
+            _canvas.Selection.SelectSingle(vm);
+            _canvas.SelectedComponent = vm;
+        }
+        Show(command.CreatedDie);
     }
 
     /// <summary>Zooms the canvas onto the die (its parts are edited in place, never by entering it).</summary>
@@ -218,7 +255,7 @@ public partial class DiePropertiesViewModel : ObservableObject
     private void DeleteDie()
     {
         var vm = _canvas.Components.FirstOrDefault(c => c.Component == Die);
-        if (vm == null)
+        if (vm == null || !IsEditable)
             return;
         _commands.ExecuteCommand(new DeleteDieCommand(_canvas, vm));
         Show(null);

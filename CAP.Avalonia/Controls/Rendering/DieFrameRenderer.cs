@@ -44,13 +44,16 @@ public static class DieFrameRenderer
     /// <param name="isSelected">True when the die is selected (thicker accent frame).</param>
     /// <param name="isHovered">True when the pointer hovers the die.</param>
     /// <param name="zoom">Current zoom (screen px per µm).</param>
-    public static void Render(DrawingContext context, ComponentGroup die, bool isSelected, bool isHovered, double zoom)
+    /// <param name="showEdgeZone">False for the chip die of a single-die design (no die-to-die edge there).</param>
+    public static void Render(DrawingContext context, ComponentGroup die, bool isSelected, bool isHovered, double zoom,
+        bool showEdgeZone = true)
     {
         var outline = DieAssembly.OutlineOf(die);
         var rect = new Rect(outline.X, outline.Y, outline.Width, outline.Height);
         var color = DieProcessColors.For(die.ProcessBinding);
 
-        DrawEdgeZone(context, rect, die.Die!.EdgeZoneMicrometers, color, zoom);
+        if (showEdgeZone)
+            DrawEdgeZone(context, rect, die.Die!.EdgeZoneMicrometers, color, zoom);
 
         var framePen = new ImmutablePen(CanvasPalette.Brush(color), FramePx / zoom);
         context.DrawRectangle(null, framePen, rect);
