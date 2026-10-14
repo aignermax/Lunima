@@ -1,0 +1,52 @@
+[
+  {
+    "file": "hero-loop.gif",
+    "test": "ShowcaseHeroLoopScreenshotTests.CaptureHeroLoop",
+    "caption": "README / landing-page hero loop (1280x628, ~6 s): the staged Mach-Zehnder chip built live in the real MainWindow with the workspace bar visible — components placed one by one from the bundled Demo and SiEPIC PDKs, the production router wiring connection after connection (diagonal pathfinding), DC probe/bond pads with golden metal traces, two hand-styled bends — then the switch to the Optics workspace and Run lighting up the real CW power-flow overlay."
+  },
+  {
+    "file": "workspaces.gif",
+    "test": "ShowcaseWorkspacesGifTests.CaptureWorkspaces",
+    "caption": "The shipped 'Two Chiplets - Edge-Coupler Link' example seen through Layout (Run checks), Optics (Run switches the live simulation on), Logic (Gates panel, Logic tab) and System (Chiplets panel, chiplet/link strip): accent colour, Run button, left panel and analysis tabs follow the workspace."
+  },
+  {
+    "file": "live-simulation.gif",
+    "test": "ShowcaseLiveSimulationGifTests",
+    "caption": "Optics workspace with the simulation on: connecting the missing combiner-to-detector wire lights it up automatically; sweeping the phase shifter's Phase parameter through 360 degrees moves the light between the photodetector and the output coupler — every frame is a real live re-run."
+  },
+  {
+    "file": "crossings.gif",
+    "test": "ShowcaseCrossingsGifTests",
+    "caption": "Two wires cross through a waveguide crossing; the Cut tool cuts the wire coming out of it, a PDK crossing drops in and a third wire runs through it; dragging the first crossing along its wire patches only the along-axis pieces while the two perpendicular pieces re-route."
+  },
+  {
+    "file": "make-gate.gif",
+    "test": "ShowcaseMakeGateGifTests.CaptureMakeGate",
+    "caption": "The shipped 'Build your first gate' kit in the Logic workspace: the parts are box-selected, Make gate groups them and opens the gate steps, and the real simulation of all four input combinations with the suggested threshold reads NAND in every row. Re-render alone with --filter FullyQualifiedName~ShowcaseMakeGateGif."
+  },
+  {
+    "file": "eye-analysis.png",
+    "test": "ShowcaseAnalysisScreenshotTests.CaptureTransientAndEyeAnalysis",
+    "caption": "Eye/BER analysis in the Optics dock: a PRBS-7-modulated transient folded into an eye-persistence heat map at 25 Gbps, with bit rate, PRBS pattern and decision-threshold controls plus CSV export."
+  },
+  {
+    "file": "component-editor.png",
+    "test": "ShowcaseWindowScreenshotTests.CaptureComponentEditor",
+    "caption": "The unified component editor in edit mode: PDK and fabrication-process context, syntax-highlighted gdsfactory Python definition, a rendered geometry preview of the 1x2 MMI, and one-click S-matrix computation via Meep FDTD."
+  },
+  {
+    "file": "canvas-vs-gds.png",
+    "test": "ShowcaseCanvasVsGdsScreenshotTests.CaptureCanvasVsGds",
+    "caption": "What you draw is what you tape out: the staged chip's MZI core on the canvas next to the polygons of the REAL exported GDS (the production gdsfactory script executed, design.gds read back with gdstk and drawn with the canvas' zoom/pan)."
+  },
+  {
+    "file": "gds-export.png",
+    "test": "ShowcaseGdsExportScreenshotTests.CaptureGdsExport",
+    "caption": "The manufacturing story: the Export flyout over the staged chip, the PDK offset/calibration editor rendering the SiEPIC grating coupler's GDS geometry with its pins aligned, and the all-green Check-All calibration report."
+  },
+  {
+    "file": "social-card.png",
+    "test": "ShowcaseSocialCardScreenshotTests.CaptureSocialCard",
+    "caption": "The 1200x630 Open-Graph/Twitter card behind the landing page's link preview: a live-simulation crop of the staged chip under a navy gradient, the Lunima wordmark (waveguide-L, rebuilt from docs/media/brand/lunima-wordmark-dark.svg) and the 'Draw the chip. / Watch the light.' claim."
+  }
+]

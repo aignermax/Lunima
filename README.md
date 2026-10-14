@@ -1,94 +1,68 @@
-# Lunima
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/brand/lunima-wordmark-dark.svg">
+    <img src="docs/media/brand/lunima-wordmark-light.svg" alt="Lunima" height="64">
+  </picture>
+</h1>
 
 **Design, simulate, and lay out photonic integrated circuits — visually, on your own PDK, with open formats at every step.**
 
-[![A Mach-Zehnder chip building itself on the Lunima canvas: components placed, the router wiring connection after connection, golden DC metal traces — then a live CW simulation lights up the power flow](docs/media/v0.12/hero-loop.gif)](docs/media/v0.12/hero-canvas.png)
+![A Mach-Zehnder chip builds itself in the Lunima main window: components are placed one by one, the router wires connection after connection, golden DC metal traces reach the probe and bond pads — then Run in the Optics workspace lights up the simulated power flow](docs/media/v0.17/hero-loop.gif)
 
-*The staged Mach-Zehnder chip wiring itself up: the production router connects component after component (diagonal routing, hand-styled bends), DC probe and bond pads get golden metal traces — then a live CW simulation lights up the power flow on every waveguide. Built from the bundled Demo and SiEPIC PDKs; click for the [full-resolution still](docs/media/v0.12/hero-canvas.png).*
+*A chip building itself: parts placed, the production router wiring connection after connection, DC metal traces to the pads — then **Run** in the Optics workspace lights up the simulated power flow on every waveguide.*
 
 [![Latest release](https://img.shields.io/github/v/release/aignermax/Lunima?label=Download&color=2ea44f)](https://github.com/aignermax/Lunima/releases/latest) · [Landing page](https://aignermax.github.io/Lunima/) · [Changelog](CHANGELOG.md) · [Architecture](ARCHITECTURE.md)
 
 ---
 
-## Layout & routing
+## Workspaces
 
-Lunima's canvas is built for direct manipulation: click a routed connection and it becomes editable geometry, not a black-box autoroute.
+Layout, Optics, Logic and System look at the same design — each with its own accent colour, its own **Run** button (check, simulate, build logic, link chiplets) and the left panel and analysis tabs that fit the job.
 
-![Figma-style waveguide editing: a selected connection with draggable in-canvas bend-radius handles and live radius labels, plus the per-connection Routing panel](docs/media/v0.12/waveguide-editing.png)
+![Switching the shipped two-chiplet example through the Layout, Optics, Logic and System workspaces: accent colour, Run button, left panel and analysis tabs change with each](docs/media/v0.17/workspaces.gif)
 
-- **Figma-style waveguide editing** — select a connection to get draggable in-canvas bend-radius handles with live radius labels; every segment shows its exact length and loss (e.g. `413 µm, 0.14 dB`).
-- **Per-connection routing styles** — choose SBend, Bend, and custom radii per connection instead of accepting one global autoroute; freeze routes you've tuned by hand. Manual edits are never silently overwritten.
-- **Process-aware routing** — the A\* router honors your fabrication process's minimum bend radius; radius handles clamp to the process floor.
-- **Diagonal routing (opt-in beta)** — 45° routes for denser layouts. Works, but is still slow on large designs; enable it in Settings → Routing.
-- **Automatic crossing insertion (opt-in)** — inserts a real PDK crossing component where waveguides must cross. Off by default.
-- **Metal routing** — wire DC probe pads and bond pads to modulator and detector contacts with electrical traces, alongside the optical layer.
-- Snapping, grouping, hierarchy with reusable subcircuits, element locking, and undo/redo throughout.
+## Live simulation
 
-## Simulate & measure
+Switch the simulation on once — every edit after that re-runs it in the background. Connect a wire and it lights up; turn a phase shifter and watch the light move between the outputs.
 
-Simulation is not a separate app — it runs on the canvas while you design, and every result can leave the tool as data.
+![With the simulation on, connecting the missing combiner-to-detector wire lights it up by itself; sweeping the phase shifter through 360 degrees moves the light between the photodetector and the output coupler](docs/media/v0.17/live-simulation.gif)
 
-![Transient analysis: time-domain power of several output pins as toggleable traces, computed from the circuit S-parameters](docs/media/v0.12/transient-analysis.png)
+## Crossings that stay out of your way
 
-![Eye/BER analysis: a PRBS-7 modulated transient folded into an eye-persistence heat map at 25 Gbps](docs/media/v0.12/eye-analysis.png)
+Cut any wire — even one coming out of a crossing — and a real PDK crossing drops in. Slide a crossing along its wire and only the two perpendicular pieces re-route.
 
-- **Live CW power flow** — run a continuous-wave simulation and read power directly off the canvas: waveguide color plus dB/percent labels on every connection.
-- **Transient analysis** — IFFT of the circuit S-parameters convolved with your source (Gaussian pulse, CW, PRBS), plotted per output pin; a sample-mode driver with a signal-source library drives active, time-dependent compact models such as modulators.
-- **Eye / BER analysis** — fold a PRBS-modulated transient into an eye-persistence heat map, with Q-factor and BER estimates (shot/thermal/RIN noise), bit-rate and decision-threshold controls, and CSV export.
-- **ONA sweeps** — place an Optical Network Analyzer component to sweep transmission over wavelength.
-- **FDTD with Meep** — recompute a component's S-matrix from its actual geometry using the open-source Meep FDTD solver in Docker; a guided setup dialog walks you through installing Docker if it's missing.
-- **Bring measured data back** — load S-matrices from file (measured on your own devices or computed in another tool) onto any component, and inspect stored S-matrices per component.
-- **Mode-slice inspector** — point-and-probe waveguide modes anywhere on the canvas, including fiber overlap at couplers.
+![The Cut tool cuts a wire coming out of a crossing, a new crossing drops in and a third wire runs through it; dragging the first crossing along its wire re-routes only the perpendicular pieces](docs/media/v0.17/crossings.gif)
 
-## Your PDK, your components
+## Make a logic gate
 
-Custom PDKs are a first-class flow, not an expert backdoor. Lunima ships with a Demo PDK, a CornerStone SiN library, and a SiEPIC EBeam PDK, and everything they can do, your own libraries can do too.
+Select a few photonic parts and press **Make gate**: Lunima groups them, simulates every input combination and proposes the threshold that turns optical power into a truth table.
 
-![The unified component editor: PDK and process context, syntax-highlighted gdsfactory Python, rendered geometry preview, and one-click Meep S-matrix computation](docs/media/v0.12/component-editor.png)
+![In the Logic workspace the gate kit is box-selected, Make gate groups it, and the simulated truth table with its automatic threshold reads NAND in every row](docs/media/v0.17/make-gate.gif)
 
-- **Define components in Python** — write or paste a component definition in **gdsfactory or nazca** (both backends are supported end to end, from geometry preview to GDS export), preview the rendered geometry, and compute its S-matrix with Meep — all in one editor.
-- **Fork-on-save** — editing a bundled component forks it into your own user PDK, which shadows the original; a per-component quick action restores the original at any time.
-- **Trash, not dread** — deleted PDKs and single components go to a trash panel and can be restored for 30 days.
+<!--CHIPLETS-->
+<!--AGENT-->
 
-![PDK lifecycle in one view: component library with per-component edit and restore actions, PDK management with a forked user copy shadowing its bundled original, and the trash panel](docs/media/v0.12/pdk-management.png)
+---
 
-- **Fabrication-process editor** — each PDK carries its process: GDS layer stack, optical and metal cross-sections with minimum and recommended bend radii (which the router enforces), and materials with your own refractive indices. Foundry values stay yours — they are entered per process, not shipped.
-- **Design checks** — validate a design against its process, including layer-divergence warnings when PDKs disagree.
+## More of what's inside
 
-![The fabrication-process editor on a SiN 300 nm process: layer stack, cross-sections with per-cross-section bend radii, and user-supplied material indices](docs/media/v0.12/process-editor.png)
+**Simulate & measure.** Transient analysis (IFFT of the circuit S-parameters with pulse, CW or PRBS sources), eye diagrams with Q-factor and BER, wavelength sweeps, Monte-Carlo, FDTD with Meep in Docker, and measured S-matrices loaded back onto the components you drew.
 
-## From canvas to fab
+![Eye/BER analysis: a PRBS-7 modulated transient folded into an eye-persistence heat map at 25 Gbps](docs/media/v0.17/eye-analysis.png)
 
-Designs are laid out against real foundry processes, not abstract schematics — so what leaves the tool is a GDS a fab can actually make.
+**Your PDK, your components.** Define components in **gdsfactory or nazca** Python, preview the geometry and compute the S-matrix with Meep — all in one editor. Editing a bundled component forks it into your own PDK; deleted PDKs go to a trash you can restore from. Each PDK carries its fabrication process (layer stack, cross-sections, bend radii the router enforces, your own refractive indices).
 
-![What you draw is what you tape out: the MZI core of the staged chip on the Lunima canvas next to the rendered polygons of the GDS actually exported through gdsfactory](docs/media/v0.12/canvas-vs-gds.png)
+<img src="docs/media/v0.17/component-editor.png" alt="The unified component editor: PDK and process context, syntax-highlighted gdsfactory Python, rendered geometry preview, and one-click Meep S-matrix computation" width="420">
 
-*What you draw is what you tape out: the chip's MZI core on the canvas (left) and the geometry of the real exported GDS (right) — the generated gdsfactory script was executed and the resulting `design.gds` rendered back at the same scale and position. Every waveguide, bend, and golden DC metal trace lands in the same place.*
+**From canvas to fab.** Bundled [CornerStone](https://www.cornerstone.sotonfab.co.uk/) SiN 300 nm and [SiEPIC EBeam](https://github.com/SiEPIC/SiEPIC_EBeam_PDK) SOI 220 nm PDKs, pin-calibrated against their real GDS cells. One design, one process — free mixing lives in a Playground the status bar labels *not manufacturable*. Export GDS through gdsfactory or nazca, plus SAX, PhotonTorch, Verilog-A and gdsfactory YAML netlists.
 
-![The manufacturing story in one frame: the unified Export flyout over the chip with gdsfactory and nazca GDS back-ends, the PDK calibration editor showing the SiEPIC grating coupler's rendered GDS geometry with its pin sitting exactly on the cell origin, and an all-green Check-All calibration report](docs/media/v0.12/gds-export.png)
+![What you draw is what you tape out: the MZI core on the Lunima canvas next to the rendered polygons of the GDS actually exported through gdsfactory](docs/media/v0.17/canvas-vs-gds.png)
 
-- **Real foundry PDKs, bundled** — a [CornerStone](https://www.cornerstone.sotonfab.co.uk/) SiN 300 nm library and the open [SiEPIC EBeam](https://github.com/SiEPIC/SiEPIC_EBeam_PDK) SOI 220 nm PDK ship with the app, next to the Demo PDK. Bundled SiEPIC cells are pin-calibrated against their actual GDS geometry: the calibration editor renders the real polygons, reports per-pin deltas, and a Check-All pass verifies the whole library — with the shipped calibrations locked by end-to-end tests.
-- **One design, one process** — every design is locked to a single fabrication process; components from incompatible PDKs can't land on the same chip. Free mixing lives in an explicit Playground mode that the status bar (and the exporter) honestly labels *not manufacturable*. Design checks enforce the rest: bend-radius floors in the router and the drag handles, layer-divergence warnings, calibrated pin positions.
-- **GDS through gdsfactory *or* nazca** — one Export menu, two GDS back-ends: a runnable gdsfactory Python script (standalone geometry stubs or real ubcpdk/SiEPIC cells) or a nazca script, each generating the GDS layout alongside the code. Your own components can be defined in either backend, so the export path matches however you write geometry.
-- **Honest scope** — Lunima gets you to a fab-ready GDS against your process design kit. Booking the MPW run and clearing the foundry's own sign-off DRC remains between you and your foundry — as it should be.
+*Left: the canvas. Right: the real exported GDS — the generated gdsfactory script was executed and `design.gds` rendered back at the same scale and position.*
 
-## Open by design
+![The Export flyout over the chip, the PDK calibration editor showing the SiEPIC grating coupler's real GDS geometry with its pins aligned, and an all-green Check-All report](docs/media/v0.17/gds-export.png)
 
-Every pipeline stage has an escape hatch. Nothing you build in Lunima is locked in.
-
-![Netlist export: a gdsfactory YAML circuit netlist derived from the canvas, with instances, placements, connections (electrical traces marked), and exposed ports](docs/media/v0.12/netlist-export.png)
-
-- **gdsfactory YAML netlist export** — derive a circuit netlist straight from the canvas: instances with settings, informational placements, logical port-to-port connections (metal traces marked `# electrical`), and exposed ports. Copy it or save as `.yml` and feed it to SAX or any gdsfactory-based flow.
-- **Open, diff-able PDKs** — component libraries are plain JSON ([format documentation](docs/PDK_JSON_FORMAT.md)); processes and S-matrices live in inspectable files, not a proprietary database.
-- **GDS export** — export designs through gdsfactory or nazca to GDS for fabrication pipelines (see [From canvas to fab](#from-canvas-to-fab)).
-- **Autorouting is optional** — routing can be styled, frozen, or replaced per connection; the router suggests, you decide.
-- **AI design assistant** — describe a circuit in natural language (bring your own Claude API key).
-
-## Speaks your language
-
-![The main window live-switched between English and Japanese](docs/media/v0.12/multilanguage.png)
-
-The UI ships in five languages — **English, Deutsch, Español, 简体中文, 日本語** — auto-detected from your system and live-switchable: every toolbar, panel, and canvas HUD string re-reads instantly.
+**Open by design.** Open JSON PDKs ([format](docs/PDK_JSON_FORMAT.md)), netlists you can feed to SAX, routing you can style, freeze or replace per connection, and a UI in five languages (English, Deutsch, Español, 简体中文, 日本語).
 
 ---
 
