@@ -65,7 +65,25 @@ internal static class GroupInternalRerouteBake
 
         var placed = new List<Component>();
         if (routedBlocked > 0)
-            GroupCrossingChainBake.ScratchService(crossingFactory, placed).ConnectBlockedWiresThroughCrossings(manager, router);
+        {
+            var service = GroupCrossingChainBake.ScratchService(crossingFactory, placed);
+            var inserter = (CrossingChainInserter?)typeof(CrossingInsertionService)
+                .GetField("_chainInserter", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(service);
+            var reasons = new Dictionary<string, int>();
+            if (inserter != null) inserter.Rejected = reason => reasons[reason] = reasons.GetValueOrDefault(reason) + 1;
+            service.ConnectBlockedWiresThroughCrossings(manager, router);
+            if (manager.Connections.Any(c => c.IsBlockedFallback))
+            {
+                // A second chain sweep on the plain grid: a breakout region reserved for a
+                // sibling can be exactly where the leftover wire's crossing has to land.
+                router.UsePinBreakouts = false;
+                router.ClearPinBreakouts();
+                manager.UnroutableWires.Clear();
+                service.ConnectBlockedWiresThroughCrossings(manager, router);
+            }
+            if (reasons.Count > 0)
+                log($"[group-bake]   {group.GroupName} chain rejections: {string.Join(", ", reasons.Select(r => $"{r.Key}×{r.Value}"))}");
+        }
         int after = manager.Connections.Count(c => c.IsBlockedFallback);
         int crossingsAfter = CrossingPairs(manager.Connections.Where(c => !c.IsBlockedFallback && c.RoutedPath != null)
             .Select(c => c.RoutedPath!).ToList());
