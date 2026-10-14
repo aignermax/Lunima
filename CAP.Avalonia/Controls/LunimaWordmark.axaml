@@ -9,15 +9,9 @@
             <Canvas.RenderTransform>
                 <TranslateTransform X="-226" Y="-86"/>
             </Canvas.RenderTransform>
-            <Canvas.Resources>
-                <LinearGradientBrush x:Key="WordmarkLight" StartPoint="0%,0%" EndPoint="0%,100%">
-                    <GradientStop Offset="0" Color="#B092F7"/>
-                    <GradientStop Offset="1" Color="#38C6D4"/>
-                </LinearGradientBrush>
-            </Canvas.Resources>
-            <Path Data="M360 220 V560 A180 180 0 0 0 540 740 H800" Stroke="{StaticResource WordmarkLight}" StrokeThickness="88" StrokeLineCap="Round"/>
-            <Path Data="M360 220 V560 A180 180 0 0 0 540 740 H800" Stroke="#8CFFFFFF" StrokeThickness="18" StrokeLineCap="Round"/>
-            <Path Fill="#E8FBFF">
+            <Path Data="M360 220 V560 A180 180 0 0 0 540 740 H800" Stroke="{DynamicResource Brush.Brand.Light}" StrokeThickness="88" StrokeLineCap="Round"/>
+            <Path Data="M360 220 V560 A180 180 0 0 0 540 740 H800" Stroke="{DynamicResource Brush.Brand.Highlight}" StrokeThickness="18" StrokeLineCap="Round"/>
+            <Path Fill="{DynamicResource Brush.Brand.Spot}">
                 <Path.Data><EllipseGeometry Center="800,740" RadiusX="70" RadiusY="70"/></Path.Data>
             </Path>
             <Path Fill="{DynamicResource Brush.Text.Primary}"
