@@ -101,10 +101,12 @@ public sealed class KeyboardHandler
                 e.Handled = true;
                 break;
             case Key.L:
-                mainVm.RunWorkspaceCommand.Execute(null);
+                mainVm.RunWorkspaceFromShortcutCommand.Execute(null);
                 e.Handled = true;
                 break;
             case Key.V when !ctrl:
+                // V = view: gate view ↔ physical view in the Logic workspace (no-op elsewhere).
+                mainVm.GateView.ToggleCommand.Execute(null);
                 e.Handled = true;
                 break;
         }

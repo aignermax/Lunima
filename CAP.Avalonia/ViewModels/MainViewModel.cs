@@ -414,6 +414,8 @@ public partial class MainViewModel : ObservableObject
         Home.OpenExampleRequested = FileOperations.OpenDesignAsCopyAsync;
         WorkspaceSwitch = InitializeWorkspaces();
         InitializeWorkspaceContext();
+        InitializeGateView();
+        InitializeRunHint();
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;

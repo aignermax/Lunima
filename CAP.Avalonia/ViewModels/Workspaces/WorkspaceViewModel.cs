@@ -20,6 +20,8 @@ public partial class WorkspaceViewModel : ObservableObject
 {
     private const string ActiveRunLabelKey = "Workspace.RunActive";
     private const string ActiveRunTipKey = "Workspace.RunActiveTip";
+    private const string LogicStepLabelKey = "Workspace.RunLogicStep";
+    private const string LogicStepTipKey = "Workspace.RunLogicStepTip";
 
     private readonly AnalysisDockViewModel _dock;
 
@@ -37,6 +39,15 @@ public partial class WorkspaceViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRunActive), nameof(RunLabel), nameof(RunTip))]
     private bool _isSimulationOn;
+
+    /// <summary>
+    /// Whether the Logic tab holds a built network with registers to clock. In Logic it
+    /// decides what Run does next — build the network, or step its clock — and the Run
+    /// label says which.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RunLabel), nameof(RunTip))]
+    private bool _canStepLogicClock;
 
     /// <summary>Creates the switch over the analysis dock it filters; starts in <see cref="Workspace.Layout"/>.</summary>
     public WorkspaceViewModel(AnalysisDockViewModel dock)
@@ -85,11 +96,14 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>Run button label naming the action, e.g. "Run checks", or "Simulation on" while active.</summary>
     public string RunLabel => LocalizationService.Instance.Translate(
-        IsRunActive ? ActiveRunLabelKey : Profile.RunLabelKey);
+        IsRunActive ? ActiveRunLabelKey : IsLogicStep ? LogicStepLabelKey : Profile.RunLabelKey);
 
     /// <summary>Run button tooltip: what Run does in this workspace (or how to turn it off), with its key hint.</summary>
     public string RunTip => LocalizationService.Instance.Translate(
-        IsRunActive ? ActiveRunTipKey : Profile.RunTipKey);
+        IsRunActive ? ActiveRunTipKey : IsLogicStep ? LogicStepTipKey : Profile.RunTipKey);
+
+    /// <summary>True when Run steps the clock of an already built logic network.</summary>
+    private bool IsLogicStep => IsLogic && CanStepLogicClock;
 
     /// <summary>Switches to <paramref name="workspace"/> (toolbar segments, Ctrl+1..4).</summary>
     [RelayCommand]

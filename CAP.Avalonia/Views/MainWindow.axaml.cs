@@ -544,6 +544,10 @@ public partial class MainWindow : Window
                     var canvasPos = DesignCanvasControl.LastCanvasPosition;
                     mainVm.PasteSelected(canvasPos.X, canvasPos.Y);
                 }
+                else
+                {
+                    mainVm.GateView.ToggleCommand.Execute(null);
+                }
                 break;
             case Key.D:
                 if (!ctrlPressed)
@@ -616,7 +620,7 @@ public partial class MainWindow : Window
                 break;
             case Key.L:
                 if (!ctrlPressed)
-                    mainVm.RunWorkspaceCommand.Execute(null);
+                    mainVm.RunWorkspaceFromShortcutCommand.Execute(null);
                 break;
             default:
                 return; // Don't mark as handled for unrecognized keys

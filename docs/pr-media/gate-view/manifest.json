@@ -1,0 +1,26 @@
+[
+  {
+    "file": "half-adder-gates.png",
+    "caption": "Logic Gate Half Adder.lun: gate view before Run (no levels yet)."
+  },
+  {
+    "file": "half-adder-levels.png",
+    "caption": "Logic Gate Half Adder.lun: after Run \u2014 nets coloured by live level."
+  },
+  {
+    "file": "counter-2bit-gates.png",
+    "caption": "Logic Gate Counter 2-bit.lun: gate view before Run (no levels yet)."
+  },
+  {
+    "file": "counter-2bit-levels.png",
+    "caption": "Logic Gate Counter 2-bit.lun: after Run \u2014 nets coloured by live level."
+  },
+  {
+    "file": "alu-ram-acc-gates.png",
+    "caption": "Logic Gate ALU \u002B RAM \u002B ACC.lun: gate view before Run (no levels yet)."
+  },
+  {
+    "file": "alu-ram-acc-detail.png",
+    "caption": "Logic Gate ALU \u002B RAM \u002B ACC.lun: zoomed into the first adder stages."
+  }
+]

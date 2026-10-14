@@ -7,6 +7,7 @@ using CAP.Avalonia.Controls.Canvas.AnalysisOutput;
 using CAP.Avalonia.Controls.Canvas.BendHandles;
 using CAP.Avalonia.Controls.Canvas.CrossingDrag;
 using CAP.Avalonia.Controls.Canvas.CutTool;
+using CAP.Avalonia.Controls.Canvas.GateView;
 using CAP.Avalonia.Controls.Canvas.LibraryDrop;
 using CAP.Avalonia.Controls.Canvas.SegmentShiftHandles;
 using CAP.Avalonia.Controls.Handlers;
@@ -90,6 +91,7 @@ public class DesignCanvas : Control
     private readonly CutToolOverlayRenderer _cutToolOverlayRenderer;
     private readonly CrossingAxisDragOverlayRenderer _crossingAxisDragRenderer;
     private readonly CanvasOverlayRenderer _overlayRenderer;
+    private readonly GateViewRenderer _gateViewRenderer = new();
 
     // ── Input Handlers ─────────────────────────────────────────────────────
 
@@ -180,6 +182,13 @@ public class DesignCanvas : Control
         Motion.BeginFrame();
         _gridRenderer.RenderBackground(context, rc);
 
+        var gateView = MainViewModel?.GateView;
+        if (gateView is { IsShown: true })
+        {
+            RenderGateView(context, rc, vm, gateView);
+            return;
+        }
+
         using (context.PushTransform(Matrix.CreateTranslation(vm.PanX, vm.PanY)))
         using (context.PushTransform(Matrix.CreateScale(Zoom, Zoom)))
         {
@@ -224,6 +233,27 @@ public class DesignCanvas : Control
             TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => InvalidateVisual());
     }
 
+    /// <summary>
+    /// The Logic workspace's gate view: gates and signal nets replace the physical
+    /// geometry; placement ghosts, the drag preview and the HUD stay, the waveguide
+    /// handles and overlays do not (gate view edits whole gates only).
+    /// </summary>
+    private void RenderGateView(DrawingContext context, CanvasRenderContext rc, DesignCanvasViewModel vm, ViewModels.Logic.GateView.GateViewViewModel gateView)
+    {
+        using (context.PushTransform(Matrix.CreateTranslation(vm.PanX, vm.PanY)))
+        using (context.PushTransform(Matrix.CreateScale(Zoom, Zoom)))
+        {
+            _gridRenderer.RenderWorld(context, rc);
+            _gateViewRenderer.Render(context, rc, gateView);
+            rc.Labels.Flush(context, Zoom);
+            _previewRenderer.Render(context, rc);
+        }
+
+        _overlayRenderer.Render(context, rc);
+        GateViewLegendRenderer.Render(context, Bounds, gateView);
+        Motion.EndFrame();
+    }
+
     // ── Mouse Input (delegates to gesture recognizers) ─────────────────────
 
     /// <inheritdoc/>
@@ -236,8 +266,11 @@ public class DesignCanvas : Control
         if (vm == null) return;
         var canvasPoint = ScreenToCanvas(point);
         _activeGesture = null;
+        var gateViewShown = MainViewModel?.GateView is { IsShown: true };
         foreach (var recognizer in _gestureRecognizers)
         {
+            if (gateViewShown && !GateViewGestures.Allows(recognizer))
+                continue;
             if (recognizer.TryRecognize(e, canvasPoint, vm, MainViewModel))
             {
                 _activeGesture = recognizer;
@@ -386,12 +419,14 @@ public class DesignCanvas : Control
             oldVm.CommandManager.StateChanged -= OnCommandStateChanged;
             oldVm.GdsPreviewRenderService.OnPreviewLoaded -= InvalidateVisual;
             oldVm.CanvasInteraction.PropertyChanged -= OnInteractionPropertyChanged;
+            oldVm.GateView.Changed -= InvalidateVisual;
         }
         if (e.NewValue is MainViewModel newVm)
         {
             newVm.CommandManager.StateChanged += OnCommandStateChanged;
             newVm.GdsPreviewRenderService.OnPreviewLoaded += InvalidateVisual;
             newVm.CanvasInteraction.PropertyChanged += OnInteractionPropertyChanged;
+            newVm.GateView.Changed += InvalidateVisual;
         }
     }
 
