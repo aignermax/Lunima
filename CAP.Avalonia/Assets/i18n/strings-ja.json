@@ -2029,8 +2029,7 @@
   "Toolbar.ComputeModesTip": "導波路断面の導波モード（実効屈折率、モードプロファイル）を計算します。レイアウト前に幅や層構成を確認するためのものです。",
   "TruthTable.NoThresholdGap": "出力パワーの間に隙間がなく、0 と 1 を分けるしきい値がありません。",
   "LeftRail.Gates": "ゲート",
-  "LeftRail.Gates.ShowLibrary": "すべてのコンポーネントを表示 ›",
-  "LeftRail.Gates.ShowLibraryTip": "コンポーネントライブラリ全体を開きます",
+  "LeftRail.Gates.ShowLibraryTip": "レイアウトに切り替えてコンポーネントライブラリ全体を開きます",
   "LeftRail.Gates.MakeGate": "選択範囲からゲートを作成",
   "LeftRail.Gates.MakeGateTip": "必要に応じて選択部品をグループ化し、ゲート作成の手順(ピンの役割・シミュレーション・しきい値・保存)を開きます。",
   "LeftRail.Gates.Saved": "保存済みゲート",
@@ -2104,5 +2103,14 @@
   "DesignChecks.CrossDieWaveguide": "'{0}' から '{1}' への導波路がダイ端を横切っています。ダイ間はエッジカプラでのみ接続できます",
   "DesignChecks.PdkDieProcessMismatch": "'{0}' は '{1}' に属しますが、ダイ '{2}'（{3}）では有効ではありません。",
   "Status.ProcessCount": "{0} 個のプロセス",
-  "Status.DieProcess": "ダイ '{0}': {1}"
+  "Status.DieProcess": "ダイ '{0}': {1}",
+  "Workspace.ToolSet.InstrumentsTitle": "計測器",
+  "Workspace.ToolSet.InstrumentsHint": "光源・検出器・アナライザー — 光学で配置できる部品です。",
+  "Workspace.ToolSet.PlaceInLayout": "回路部品はレイアウトで配置 ›",
+  "Workspace.ToolSet.PlaceInLayoutTip": "コンポーネントライブラリ全体があるレイアウト ワークスペース (Ctrl+1) に切り替えます",
+  "Workspace.ToolSet.PlacementRefused": "{0} は {1} ではなくレイアウトで配置します — 回路部品を配置するにはレイアウト (Ctrl+1) に切り替えてください。",
+  "Context.ShowInLayout": "レイアウトで表示",
+  "Context.ShowInLayoutTip": "この要素を中心にレイアウトへ切り替えます",
+  "Context.EditGate": "ゲートを編集…",
+  "Context.EditGateTip": "このゲートの作成手順を開きます：ピンの役割、シミュレーション、しきい値、保存。"
 }

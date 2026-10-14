@@ -2029,8 +2029,7 @@
   "Toolbar.ComputeModesTip": "求解波导截面的导模（有效折射率、模场分布），用于在版图前检查宽度和层叠结构。",
   "TruthTable.NoThresholdGap": "输出功率之间没有间隔——没有阈值能区分 0 和 1。",
   "LeftRail.Gates": "逻辑门",
-  "LeftRail.Gates.ShowLibrary": "显示全部元件 ›",
-  "LeftRail.Gates.ShowLibraryTip": "打开完整的元件库",
+  "LeftRail.Gates.ShowLibraryTip": "切换到版图并打开完整的元件库",
   "LeftRail.Gates.MakeGate": "从所选内容创建逻辑门",
   "LeftRail.Gates.MakeGateTip": "必要时先将所选部件编组，然后打开创建逻辑门的步骤：引脚角色、仿真、阈值、保存。",
   "LeftRail.Gates.Saved": "已保存的逻辑门",
@@ -2104,5 +2103,14 @@
   "DesignChecks.CrossDieWaveguide": "从“{0}”到“{1}”的波导跨越了裸片边缘——裸片之间只能通过端面耦合器连接",
   "DesignChecks.PdkDieProcessMismatch": "“{0}”属于“{1}”，该 PDK 未在裸片“{2}”（{3}）上启用。",
   "Status.ProcessCount": "{0} 种工艺",
-  "Status.DieProcess": "裸片“{0}”：{1}"
+  "Status.DieProcess": "裸片“{0}”：{1}",
+  "Workspace.ToolSet.InstrumentsTitle": "仪器",
+  "Workspace.ToolSet.InstrumentsHint": "光源、探测器和分析仪 — 光学工作区可放置的部件。",
+  "Workspace.ToolSet.PlaceInLayout": "在版图中放置电路元件 ›",
+  "Workspace.ToolSet.PlaceInLayoutTip": "切换到带完整元件库的版图工作区 (Ctrl+1)",
+  "Workspace.ToolSet.PlacementRefused": "{0} 应在版图中放置，而不是在{1}中 — 切换到版图 (Ctrl+1) 以放置电路元件。",
+  "Context.ShowInLayout": "在版图中显示",
+  "Context.ShowInLayoutTip": "切换到版图并以此元素为中心",
+  "Context.EditGate": "编辑逻辑门…",
+  "Context.EditGateTip": "打开此逻辑门的创建步骤：引脚角色、仿真、阈值、保存。"
 }

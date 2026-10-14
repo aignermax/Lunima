@@ -2029,8 +2029,7 @@
   "Toolbar.ComputeModesTip": "Solves the guided modes of a waveguide cross-section (effective index, mode profile) — for checking widths and layer stacks before layout.",
   "TruthTable.NoThresholdGap": "No gap between the output powers — no threshold separates 0 from 1.",
   "LeftRail.Gates": "Gates",
-  "LeftRail.Gates.ShowLibrary": "Show all components ›",
-  "LeftRail.Gates.ShowLibraryTip": "Open the full component library",
+  "LeftRail.Gates.ShowLibraryTip": "Switch to Layout and open the full component library",
   "LeftRail.Gates.MakeGate": "Make gate from selection",
   "LeftRail.Gates.MakeGateTip": "Groups the selected parts if needed, then opens the Make-gate steps: pin roles, simulate, threshold, save.",
   "LeftRail.Gates.Saved": "Saved gates",
@@ -2104,5 +2103,14 @@
   "DesignChecks.CrossDieWaveguide": "Waveguide from '{0}' to '{1}' crosses a die edge — dies connect only through edge couplers",
   "DesignChecks.PdkDieProcessMismatch": "'{0}' belongs to '{1}', which is not enabled on die '{2}' ({3}).",
   "Status.ProcessCount": "{0} processes",
-  "Status.DieProcess": "Die '{0}': {1}"
+  "Status.DieProcess": "Die '{0}': {1}",
+  "Workspace.ToolSet.InstrumentsTitle": "Instruments",
+  "Workspace.ToolSet.InstrumentsHint": "Sources, detectors and analyzers — what Optics places.",
+  "Workspace.ToolSet.PlaceInLayout": "Place circuit parts in Layout ›",
+  "Workspace.ToolSet.PlaceInLayoutTip": "Switch to the Layout workspace (Ctrl+1) with the full component library",
+  "Workspace.ToolSet.PlacementRefused": "{0} is placed in Layout, not in {1} — switch to Layout (Ctrl+1) to place circuit parts.",
+  "Context.ShowInLayout": "Show in Layout",
+  "Context.ShowInLayoutTip": "Switches to Layout, centred on this element",
+  "Context.EditGate": "Edit gate…",
+  "Context.EditGateTip": "Opens the Make-gate steps for this gate: pin roles, simulate, threshold, save."
 }

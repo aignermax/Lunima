@@ -421,6 +421,7 @@ public partial class MainViewModel : ObservableObject
         InitializeWorkspacePresentation();
         InitializeGateView();
         InitializeRunHint();
+        InitializeWorkspaceToolSets();
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;

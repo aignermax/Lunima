@@ -138,6 +138,8 @@ public partial class MainViewModel
     /// <summary>
     /// Fix for "no light source": arms placement of the first light-source coupler the
     /// library offers that the active process allows (the next canvas click places it).
+    /// A light source is an instrument: a workspace that does not place instruments hands
+    /// over to Optics first.
     /// </summary>
     private void ArmLightSourcePlacement()
     {
@@ -150,6 +152,8 @@ public partial class MainViewModel
             StatusText = LocalizationService.Instance.Translate("Readiness.NoLightSourceTemplate");
             return;
         }
+        if (!WorkspaceSwitch.Profile.ToolSet.CanPlace(template))
+            WorkspaceSwitch.Current = Workspace.Optics;
         CanvasInteraction.SelectedTemplate = template;
     }
 

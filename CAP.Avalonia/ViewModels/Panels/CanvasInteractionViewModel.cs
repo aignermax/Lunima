@@ -155,6 +155,17 @@ public partial class CanvasInteractionViewModel : ObservableObject
     public PlacementPolicyContext PlacementContext { get; set; } = PlacementPolicyContext.Unrestricted;
 
     /// <summary>
+    /// The active workspace's placement rule for library components: the hint to show when the
+    /// workspace does not place the template, null when it does. Consulted when a template is
+    /// armed and again at every placement (click, drag &amp; drop), so no path bypasses it.
+    /// Wired by <c>MainViewModel</c>; unwired, every template is placeable.
+    /// </summary>
+    public Func<ComponentTemplate, string?>? ComponentPlacementRefusal { get; set; }
+
+    /// <summary>The group-template twin of <see cref="ComponentPlacementRefusal"/> (saved groups, PDK macros, gates).</summary>
+    public Func<GroupTemplate, string?>? GroupPlacementRefusal { get; set; }
+
+    /// <summary>
     /// Callback returning the minimum allowed waveguide bend radius (µm) of the design's active
     /// fabrication process, consulted by the in-canvas bend-handle drag so an edit cannot shrink
     /// a bend below what the process permits. Wired by <c>MainViewModel</c> to
@@ -222,6 +233,11 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     partial void OnSelectedTemplateChanged(ComponentTemplate? value)
     {
+        if (value != null && IsRefused(ComponentPlacementRefusal?.Invoke(value)))
+        {
+            SelectedTemplate = null;
+            return;
+        }
         if (value != null)
         {
             CurrentMode = InteractionMode.PlaceComponent;
@@ -233,6 +249,12 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     partial void OnSelectedGroupTemplateChanged(GroupTemplate? value)
     {
+        if (value != null && IsRefused(GroupPlacementRefusal?.Invoke(value)))
+        {
+            SelectedGroupTemplate = null;
+            ClearLeftPanelGroupSelection?.Invoke();
+            return;
+        }
         if (value != null)
         {
             CurrentMode = InteractionMode.PlaceGroupTemplate;
@@ -459,7 +481,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     private void PlaceComponentTemplateAt(ComponentTemplate? template, double x, double y)
     {
-        if (template == null) return;
+        if (template == null || IsRefused(ComponentPlacementRefusal?.Invoke(template))) return;
 
         if (_canvas.Dies.IsAssemblyRoot)
         {
@@ -547,6 +569,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private void PlaceGivenGroupTemplateAt(GroupTemplate? groupTemplate, double x, double y)
     {
         if (groupTemplate == null || _libraryViewModel == null) return;
+        if (IsRefused(GroupPlacementRefusal?.Invoke(groupTemplate))) return;
 
         // On a die assembly a saved group lands on the die under the pointer, in place.
         var targetDie = _canvas.Dies.IsAssemblyRoot
@@ -613,6 +636,15 @@ public partial class CanvasInteractionViewModel : ObservableObject
             ? cmd
             : new Commands.Dies.DieSurfaceCommand(_canvas, () => cmd, Array.Empty<ComponentViewModel>(), targetDie, cmd.Description));
         UpdateStatus?.Invoke($"Placed group '{groupTemplate.Name}' at ({x:F0}, {y:F0})µm");
+    }
+
+    /// <summary>Shows a workspace refusal hint; true when there was one (the placement is refused).</summary>
+    private bool IsRefused(string? refusal)
+    {
+        if (refusal == null)
+            return false;
+        UpdateStatus?.Invoke(refusal);
+        return true;
     }
 
     /// <summary>
