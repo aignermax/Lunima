@@ -35,19 +35,26 @@ internal static class GroupInternalRerouteBake
     /// many groups were rewritten.
     /// </summary>
     public static int Bake(ComponentGroup group, Func<Component?> crossingFactory, double bendRadiusMicrometers,
-                           double waveguideWidthMicrometers, (double Width, double Height) chip, Action<string> log)
+                           double waveguideWidthMicrometers, (double Width, double Height) chip,
+                           IReadOnlySet<PhysicalPin> topLevelPins, IReadOnlySet<PhysicalPin> blockedTopLevelPins,
+                           Action<string> log)
     {
         int changed = group.ChildComponents.OfType<ComponentGroup>().ToList()
-            .Sum(child => Bake(child, crossingFactory, bendRadiusMicrometers, waveguideWidthMicrometers, chip, log));
+            .Sum(child => Bake(child, crossingFactory, bendRadiusMicrometers, waveguideWidthMicrometers, chip,
+                topLevelPins, blockedTopLevelPins, log));
         changed += RemoveOrphanCrossings(group, log);
         if (group.InternalPaths.Count == 0 || group.InternalPaths.Any(p => p.StartPin == null || p.EndPin == null))
             return changed;
         int before = group.InternalPaths.Count(p => p.Path.IsBlockedFallback);
         int crossingsBefore = CrossingPairs(group.InternalPaths.Where(p => !p.Path.IsBlockedFallback).Select(p => p.Path).ToList());
-        if (before == 0 && crossingsBefore == 0)
+        var members = group.GetAllComponentsRecursive().ToHashSet();
+        bool sealsTopLevelWire = blockedTopLevelPins.Any(p => members.Contains(p.ParentComponent));
+        if (before == 0 && crossingsBefore == 0 && !sealsTopLevelWire)
             return changed;
 
         var (router, manager) = CreateScratch(group, bendRadiusMicrometers, waveguideWidthMicrometers, chip);
+        var lanes = KeepTopLevelExitsOpen(group, router, topLevelPins, waveguideWidthMicrometers);
+        var dissolved = DissolveChains(manager, router);
         foreach (var connection in manager.Connections.Where(c => !IsChainPiece(c)).ToList())
         {
             connection.IsRouteFrozen = false;
@@ -62,14 +69,22 @@ internal static class GroupInternalRerouteBake
         int after = manager.Connections.Count(c => c.IsBlockedFallback);
         int crossingsAfter = CrossingPairs(manager.Connections.Where(c => !c.IsBlockedFallback && c.RoutedPath != null)
             .Select(c => c.RoutedPath!).ToList());
-        bool better = after < before ? crossingsAfter <= crossingsBefore
-                                     : after == before && crossingsAfter < crossingsBefore;
-        log($"[group-bake] {group.GroupName}: internal blocked {before} → {after} (routing {routedBlocked}, " +
+        // A group that seals a top-level wire is rewritten whenever its own wiring stays
+        // crossing-free: the fenced exits are the gain, and the caller keeps the result only
+        // when the whole design ends up with fewer problems.
+        bool better = sealsTopLevelWire ? crossingsAfter <= crossingsBefore
+                    : after < before ? crossingsAfter <= crossingsBefore
+                    : after == before && crossingsAfter < crossingsBefore;
+        int laneCrossings = manager.Connections.Where(c => !c.IsBlockedFallback && c.RoutedPath != null)
+            .Sum(c => lanes.Count(l => PathIntersectionDetector.Crosses(c.RoutedPath!, l)));
+        log($"[group-bake] {group.GroupName}: exit lanes {lanes.Count} (crossed {laneCrossings}), internal blocked {before} → {after} (routing {routedBlocked}, " +
             $"crossings placed {placed.Count}), crossing pairs {crossingsBefore} → {crossingsAfter}{(better ? "" : " — kept")}");
         if (!better)
             return changed;
 
         GroupCrossingChainBake.WriteBack(group, manager, placed);
+        foreach (var crossing in dissolved)
+            group.RemoveChild(crossing);
         return changed + 1;
     }
 
@@ -86,7 +101,13 @@ internal static class GroupInternalRerouteBake
             Math.Min(chip.Height, children.Max(c => c.PhysicalY + c.HeightMicrometers) + GridMarginMicrometers),
             children);
         router.PathfindingGrid!.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
-        var manager = new WaveguideConnectionManager(router) { WaveguideWidthMicrometers = waveguideWidthMicrometers };
+        // Parallel cascade attempts route on grid clones rebuilt from components only — they
+        // would not see the exit lanes fenced below.
+        var manager = new WaveguideConnectionManager(router)
+        {
+            WaveguideWidthMicrometers = waveguideWidthMicrometers,
+            UseParallelOrderingCascade = false,
+        };
         foreach (var path in group.InternalPaths)
         {
             var connection = new WaveguideConnection { StartPin = path.StartPin!, EndPin = path.EndPin! };
@@ -98,6 +119,58 @@ internal static class GroupInternalRerouteBake
             manager.Connections.Add(connection);
         }
         return (router, manager);
+    }
+
+    /// <summary>
+    /// Fences a straight lane from every pin a top-level wire ends at out to the edge of the
+    /// scratch grid: the group's own wires must leave the way out open (a wire running
+    /// along the group's edge would otherwise seal the pin from the outside for good).
+    /// </summary>
+    private static List<RoutedPath> KeepTopLevelExitsOpen(ComponentGroup group, WaveguideRouter router,
+        IReadOnlySet<PhysicalPin> topLevelPins, double waveguideWidthMicrometers)
+    {
+        var members = group.GetAllComponentsRecursive().ToHashSet();
+        var children = group.ChildComponents.ToList();
+        double minX = children.Min(c => c.PhysicalX), minY = children.Min(c => c.PhysicalY);
+        double maxX = children.Max(c => c.PhysicalX + c.WidthMicrometers), maxY = children.Max(c => c.PhysicalY + c.HeightMicrometers);
+        var lanes = new List<RoutedPath>();
+        foreach (var pin in topLevelPins.Where(p => members.Contains(p.ParentComponent)))
+        {
+            var (x, y) = pin.GetAbsolutePosition();
+            double rad = pin.GetAbsoluteAngle() * Math.PI / 180.0;
+            double dx = Math.Round(Math.Cos(rad), 9), dy = Math.Round(Math.Sin(rad), 9);
+            double reach = dx > 0 ? maxX - x : dx < 0 ? x - minX : dy > 0 ? maxY - y : y - minY;
+            reach = Math.Max(0, reach) + GridMarginMicrometers;
+            var lane = new RoutedPath();
+            lane.Segments.Add(new StraightSegment(x + dx * ComponentClearanceMicrometers, y + dy * ComponentClearanceMicrometers,
+                x + dx * reach, y + dy * reach, pin.GetAbsoluteAngle()));
+            lanes.Add(lane);
+        }
+        ForeignWireFence.Mark(router.PathfindingGrid!, lanes, waveguideWidthMicrometers);
+        return lanes;
+    }
+
+    /// <summary>
+    /// Merges every crossing chain of the scratch design back into whole wires (the crossing
+    /// cells leave the scratch grid), so they re-route pin to pin like every other wire; the
+    /// crossing pass places new crossings where they are still needed. Returns the cells taken out.
+    /// </summary>
+    private static List<Component> DissolveChains(WaveguideConnectionManager manager, WaveguideRouter router)
+    {
+        var dissolved = new List<Component>();
+        var stuck = new HashSet<WaveguideConnection>();
+        while (manager.Connections.FirstOrDefault(c => IsChainPiece(c) && !stuck.Contains(c)) is { } piece)
+        {
+            var merged = ChainDissolver.TryDissolveChain(piece, manager, router, out var gone, out _,
+                CrossingComponentCatalog.IsCrossing);
+            if (merged == null)
+            {
+                stuck.Add(piece);
+                continue;
+            }
+            dissolved.AddRange(gone);
+        }
+        return dissolved;
     }
 
     /// <summary>Removes crossing cells of <paramref name="group"/> whose ports no frozen path and no group pin uses.</summary>
