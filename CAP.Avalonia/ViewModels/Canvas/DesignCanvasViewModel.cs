@@ -64,6 +64,9 @@ public partial class DesignCanvasViewModel : ObservableObject
     public AlignmentGuideViewModel AlignmentGuide { get; } = new();
     public GridSnapSettings GridSnap { get; } = new();
 
+    /// <summary>Workspace-driven, view-only settings: drawing emphasis and design-check markers.</summary>
+    public ViewSettings.CanvasViewSettings ViewSettings { get; } = new();
+
     // ── Observable properties (for AXAML bindings) ────────────────────────
     [ObservableProperty] private bool _showPowerFlow;
 

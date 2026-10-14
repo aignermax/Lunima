@@ -86,14 +86,15 @@ internal sealed class PinRenderer
     /// <see cref="LabelDeclutter.ComponentNameLabelComputer.GetLabelAnchor"/>) into the
     /// deferred topmost pass, using the <see cref="FormattedText"/>
     /// <see cref="LabelDeclutter.ComponentNameLabelComputer"/> already measured. Names at rest
-    /// use the secondary text color; a selected or hovered name is promoted to primary.
+    /// use the secondary text color (or <paramref name="highlightBrush"/>, e.g. a light endpoint
+    /// in Optics); a selected or hovered name is promoted to primary.
     /// </summary>
     public void DrawComponentName(DeferredLabelLayer labels, ComponentViewModel comp, FormattedText labelText,
-        bool isDimmed = false, bool isEmphasized = false)
+        bool isDimmed = false, bool isEmphasized = false, IBrush? highlightBrush = null)
     {
         IBrush brush = isDimmed ? DimmedNameBrush
             : isEmphasized ? CanvasPalette.TextPrimaryBrush
-            : CanvasPalette.TextSecondaryBrush;
+            : highlightBrush ?? CanvasPalette.TextSecondaryBrush;
         labels.Enqueue(labelText, brush,
             LabelDeclutter.ComponentNameLabelComputer.GetLabelAnchor(comp, labelText.Height));
     }

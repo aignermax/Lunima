@@ -11,6 +11,7 @@ using CAP.Avalonia.Controls.Canvas.LibraryDrop;
 using CAP.Avalonia.Controls.Canvas.SegmentShiftHandles;
 using CAP.Avalonia.Controls.Handlers;
 using CAP.Avalonia.Controls.Rendering;
+using CAP.Avalonia.Controls.Rendering.WorkspaceEmphasis;
 using CAP.Avalonia.Gestures;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels;
@@ -198,6 +199,7 @@ public class DesignCanvas : Control
             // Blocked-connection warnings sit above components and labels: a route the router
             // could not place must never hide under a body or a name.
             _waveguideConnectionRenderer.RenderBlockedMarkers(context, rc);
+            DesignCheckMarkerRenderer.Render(context, rc);
             // Analysis-output overlay (#754) sits on top of components so the candidate
             // glow and the designated "OUT" tag are never hidden by component fills.
             _analysisOutputRenderer.Render(context, rc);
@@ -416,6 +418,7 @@ public class DesignCanvas : Control
             oldCanvas.Connections.CollectionChanged -= OnConnectionsCollectionChanged;
             oldCanvas.CanvasFrozenPaths.CollectionChanged -= OnConnectionsCollectionChanged;
             oldCanvas.AnalysisOutput.PropertyChanged -= OnAnalysisOutputChanged;
+            oldCanvas.ViewSettings.PropertyChanged -= OnAnalysisOutputChanged;
             oldCanvas.LogicGateStates.StatesChanged -= OnLogicGateStatesChanged;
         }
         if (e.NewValue is DesignCanvasViewModel newCanvas)
@@ -426,11 +429,12 @@ public class DesignCanvas : Control
             newCanvas.Connections.CollectionChanged += OnConnectionsCollectionChanged;
             newCanvas.CanvasFrozenPaths.CollectionChanged += OnConnectionsCollectionChanged;
             newCanvas.AnalysisOutput.PropertyChanged += OnAnalysisOutputChanged;
+            newCanvas.ViewSettings.PropertyChanged += OnAnalysisOutputChanged;
             newCanvas.LogicGateStates.StatesChanged += OnLogicGateStatesChanged;
         }
     }
 
-    /// <summary>Repaints when the designated analysis output changes (#754) so the "OUT" tag follows.</summary>
+    /// <summary>Repaints when the designated analysis output (the "OUT" tag) or the workspace view settings change.</summary>
     private void OnAnalysisOutputChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         => InvalidateVisual();
 

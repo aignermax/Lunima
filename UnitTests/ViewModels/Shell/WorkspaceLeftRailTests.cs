@@ -51,6 +51,10 @@ public class WorkspaceLeftRailTests
         rail.LibraryOrder.ShouldBe(1);
 
         rail.ApplyWorkspace(Workspace.Layout);
+        new[] { rail.LibraryOrder, rail.PdksOrder, rail.HierarchyOrder, rail.GatesOrder, rail.ChipletsOrder }
+            .ShouldBe(new[] { 0, 1, 2, 3, 4 }, "Layout keeps the fabrication context (PDKs) under the library");
+
+        rail.ApplyWorkspace(Workspace.Optics);
         new[] { rail.LibraryOrder, rail.HierarchyOrder, rail.PdksOrder, rail.GatesOrder, rail.ChipletsOrder }
             .ShouldBe(new[] { 0, 1, 2, 3, 4 });
     }

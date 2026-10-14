@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.Controls.Rendering.LabelDeclutter;
+using CAP.Avalonia.Controls.Rendering.WorkspaceEmphasis;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
@@ -66,6 +67,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
 
         bool isHovered = ReferenceEquals(rc.InteractionState.HoveredComponent, comp);
         using (PushDim(context, isDimmed))
+        using (LightEmphasis.PushRecede(context, rc, comp.Component, comp.IsSelected || isHovered))
         {
             DrawComponentBody(context, comp, rc, rect, isHovered);
             DrawComponentDecorations(context, comp, rc, rect, visibleNameIds, isHovered, isDimmed);
@@ -88,7 +90,8 @@ public sealed class ComponentRenderer : ICanvasRenderer
         if (visibleNameIds.Contains(comp.Component.Id)
             && _nameLabels.TryGetLabelText(comp.Component.Id) is { } labelText
             && IsNameLegibleAtZoom(comp.Width, labelText.Width, rc.Zoom, comp.IsSelected || isHovered))
-            _pinRenderer.DrawComponentName(rc.Labels, comp, labelText, isDimmed, comp.IsSelected || isHovered);
+            _pinRenderer.DrawComponentName(rc.Labels, comp, labelText, isDimmed, comp.IsSelected || isHovered,
+                LightEmphasis.EndpointNameBrushFor(rc, comp.Component));
 
         if (comp.IsLocked)
             DrawLockIcon(context, comp, rc.Zoom);
@@ -220,8 +223,9 @@ public sealed class ComponentRenderer : ICanvasRenderer
         }
         else
         {
-            ComponentBodyRenderer.Draw(context, child, childRect, default, rc,
-                rc.GdsPreviewRenderService?.TryGetPreview(child));
+            using (LightEmphasis.PushRecede(context, rc, child, isGroupHovered))
+                ComponentBodyRenderer.Draw(context, child, childRect, default, rc,
+                    rc.GdsPreviewRenderService?.TryGetPreview(child));
         }
 
         if (isGroupHovered)

@@ -63,17 +63,46 @@
                                 ToolTip.Tip="{loc:Localize Toolbar.DeleteModeTip}">
                             <controls:Icon Data="{StaticResource Icon.Eraser}"/>
                         </Button>
-                        <!-- Probe belongs to the geometry/light workspaces (Layout, Optics); the edit tools stay everywhere. -->
+                        <!-- Probe and Cut are primary where the workspace's profile says so (WorkspacePresentation);
+                             elsewhere they sit one click away under "More tools". Select/Connect/Delete stay everywhere. -->
                         <Button x:Name="ProbeToolButton" Classes="toolbar" Command="{Binding SetProbeModeCommand}"
                                 IsVisible="{Binding WorkspaceSwitch.ShowsProbeTool}"
                                 Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Probe}"
                                 ToolTip.Tip="{loc:Localize Toolbar.ProbeModeTip}">
                             <controls:Icon Data="{StaticResource Icon.ScanSearch}"/>
                         </Button>
-                        <Button Classes="toolbar" Command="{Binding SetCutModeCommand}"
+                        <Button x:Name="CutToolButton" Classes="toolbar" Command="{Binding SetCutModeCommand}"
+                                IsVisible="{Binding WorkspaceSwitch.IsCutPrimary}"
                                 Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Cut}"
                                 ToolTip.Tip="{loc:Localize Toolbar.CutModeTip}">
                             <controls:Icon Data="{StaticResource Icon.Scissors}"/>
+                        </Button>
+                        <Button x:Name="MoreToolsButton" Classes="toolbar menu"
+                                IsVisible="{Binding WorkspaceSwitch.HasOverflowTools}"
+                                ToolTip.Tip="{loc:Localize Toolbar.MoreToolsTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <controls:Icon Data="{StaticResource Icon.Ellipsis}"/>
+                                <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
+                            </StackPanel>
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                    <MenuItem x:Name="MoreToolsProbeItem" Header="{loc:Localize Toolbar.ProbeMode}"
+                                              Command="{Binding SetProbeModeCommand}"
+                                              IsVisible="{Binding WorkspaceSwitch.IsProbeInOverflow}">
+                                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.ScanSearch}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem x:Name="MoreToolsCutItem" Header="{loc:Localize Toolbar.CutMode}"
+                                              Command="{Binding SetCutModeCommand}" InputGesture="X"
+                                              IsVisible="{Binding WorkspaceSwitch.IsCutInOverflow}">
+                                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Scissors}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{loc:Localize Toolbar.CleanUpCrossings}"
+                                              Command="{Binding Canvas.CleanUpCrossingsCommand}"
+                                              IsVisible="{Binding WorkspaceSwitch.IsCutInOverflow}">
+                                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Eraser}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
                         </Button>
 
                         <Border Classes="divider"/>
@@ -97,6 +126,30 @@
                                       ToolTip.Tip="{loc:Localize Toolbar.GridSnapTip}">
                             <controls:Icon Data="{StaticResource Icon.Grid3x3}"/>
                         </ToggleButton>
+                        <!-- Canvas overlays: each workspace sets the defaults and remembers what the user picks here. -->
+                        <Button x:Name="OverlaysButton" Classes="toolbar menu"
+                                ToolTip.Tip="{loc:Localize Toolbar.OverlaysTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <controls:Icon Data="{StaticResource Icon.Layers}"/>
+                                <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
+                            </StackPanel>
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                    <MenuItem x:Name="OverlayPowerFlowItem" Header="{loc:Localize Toolbar.OverlayPowerFlow}"
+                                              Command="{Binding TogglePowerOverlayCommand}" InputGesture="P">
+                                        <MenuItem.Icon>
+                                            <controls:Icon Data="{StaticResource Icon.Check}" IsVisible="{Binding Canvas.ShowPowerFlow}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem x:Name="OverlayDesignChecksItem" Header="{loc:Localize Toolbar.OverlayDesignChecks}"
+                                              Command="{Binding Canvas.ViewSettings.ToggleDesignCheckMarkersCommand}">
+                                        <MenuItem.Icon>
+                                            <controls:Icon Data="{StaticResource Icon.Check}" IsVisible="{Binding Canvas.ViewSettings.ShowDesignCheckMarkers}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
 
                         <Border Classes="divider"/>
 

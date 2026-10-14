@@ -69,6 +69,9 @@ public partial class DesignValidationViewModel : ObservableObject
     /// </summary>
     public ObservableCollection<DesignIssue> Issues { get; } = new();
 
+    /// <summary>Every finding of the last validation run, hints included (canvas markers).</summary>
+    public IReadOnlyList<DesignIssue> AllFindings => _allIssues;
+
     /// <summary>
     /// Callback to pan/zoom the canvas to a specific coordinate.
     /// Set by MainViewModel to wire up canvas navigation.

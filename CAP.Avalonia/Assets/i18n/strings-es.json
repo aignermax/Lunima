@@ -1611,6 +1611,12 @@
   "Toolbar.ZoomInTip": "Acercar (rueda del ratón)",
   "Toolbar.ZoomOutTip": "Alejar (rueda del ratón)",
   "Toolbar.ZoomToFitTip": "Ajustar zoom a todos los componentes (F)",
+  "Toolbar.MoreToolsTip": "Más herramientas — herramientas que este espacio de trabajo saca de la barra principal; sus atajos de teclado funcionan en todas partes",
+  "Toolbar.ProbeMode": "Sonda (corte de modo)",
+  "Toolbar.CutMode": "Cortar — insertar cruce",
+  "Toolbar.OverlaysTip": "Superposiciones del lienzo — cada espacio de trabajo tiene sus valores por defecto y recuerda lo que elijas aquí",
+  "Toolbar.OverlayPowerFlow": "Luz (flujo de potencia)",
+  "Toolbar.OverlayDesignChecks": "Marcadores de comprobación de diseño",
   "TransientHelp.CwBody": " — luz encendida de forma continua; muestra el reparto de potencia ya estable.",
   "TransientHelp.CwLabel": "Onda continua (CW)",
   "TransientHelp.DelayThresholdBody": "El centro del pulso define cuándo entra el destello; una llegada más tardía en la gráfica significa un camino más largo — la luz necesita unos 10 ps por milímetro de chip. Las curvas son niveles de potencia analógicos; para leerlos como bits hace falta un umbral de decisión (el parámetro Threshold de la pestaña «Ojo / BER»): por encima vale 1, por debajo 0. La lógica fotónica necesita ese umbral porque la luz no tiene un «apagado» rotundo — la división, las pérdidas y el ruido difuminan los niveles, y una puerta aun así debe decidir.",
@@ -1866,7 +1872,7 @@
   "Workspace.RunActiveTip": "La simulación está activa: la superposición de potencia sigue tus cambios. Desactivar la simulación (L, P).",
   "Workspace.HelpTitle": "Espacios de trabajo",
   "Workspace.HelpIntro": "Un espacio de trabajo decide qué hace Ejecutar y qué pestañas de análisis ves. Nunca cambia tu diseño. Cambia con un clic o Ctrl+1–4.",
-  "Workspace.HelpLayout": "Coloca, enruta y ordena el chip. Ejecutar comprueba el diseño (solapes, separaciones, reglas de proceso) y abre Comprobaciones de diseño.",
+  "Workspace.HelpLayout": "Coloca, enruta y ordena el chip, la geometría primero: los hallazgos de las comprobaciones se marcan en el lienzo y la superposición de luz queda apagada. Ejecutar comprueba el diseño (solapes, separaciones, reglas de proceso) y abre Comprobaciones de diseño.",
   "Workspace.HelpOptics": "Simula cómo viaja la luz por el circuito. En CW, Ejecutar es un interruptor: activado muestra la superposición de potencia y la mantiene al día; pulsarlo de nuevo la desactiva. Transitorio simula señales en el tiempo; espectro, barridos y Monte Carlo están aquí.",
   "Workspace.HelpLogic": "Trata los grupos de puertas como lógica. Ejecutar construye la red lógica a partir de las puertas; volver a pulsar Ejecutar avanza el reloj.",
   "Workspace.HelpSystem": "Varios chiplets, cada uno en su propio proceso, unidos por acopladores de borde. Ejecutar comprueba la alineación de los enlaces y activa la simulación de todo el conjunto con la pérdida de acoplamiento de cada enlace; púlsalo de nuevo para desactivarla.",
@@ -1974,5 +1980,5 @@
   "LeftRail.Chiplets.SelectTip": "Selecciona este chiplet y centra el lienzo en él",
   "LeftRail.Sources": "Fuentes y detectores",
   "LeftRail.SourcesTip": "Donde la luz entra y sale del circuito: acopladores de fibra, láseres, detectores y terminadores",
-  "Workspace.HelpTools": "Seleccionar, Conectar, Eliminar y Cortar funcionan en todos los espacios de trabajo. La sonda está en Layout y Óptica, las herramientas de puertas en Lógica y Sistema. La barra izquierda abre primero el panel propio de cada espacio; todos los paneles siguen a un clic."
+  "Workspace.HelpTools": "Todas las herramientas funcionan en todos los espacios de trabajo y conservan su atajo. Óptica atenúa la geometría para que se lea la luz y mueve Cortar a Más herramientas; Lógica y Sistema dejan allí la sonda. Cada espacio recuerda sus superposiciones (icono de capas)."
 }

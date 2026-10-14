@@ -414,6 +414,7 @@ public partial class MainViewModel : ObservableObject
         Home.OpenExampleRequested = FileOperations.OpenDesignAsCopyAsync;
         WorkspaceSwitch = InitializeWorkspaces();
         InitializeWorkspaceContext();
+        InitializeWorkspacePresentation();
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
@@ -1519,6 +1520,7 @@ public partial class MainViewModel : ObservableObject
                 wavelengthNm: Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm);
 
             StatusText = RightPanel.DesignValidation.StatusText;
+            Canvas.ViewSettings.SetDesignCheckFindings(RightPanel.DesignValidation.AllFindings);
         }
         finally
         {

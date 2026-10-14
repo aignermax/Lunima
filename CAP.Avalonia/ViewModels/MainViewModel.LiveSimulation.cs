@@ -44,6 +44,7 @@ public partial class MainViewModel
     private void OnProjectOpened()
     {
         Home.OnProjectOpened();
+        ResetWorkspacePresentationForNewDesign();
         if (!Canvas.ShowPowerFlow)
             return;
         if (Canvas.Components.Count == 0)
