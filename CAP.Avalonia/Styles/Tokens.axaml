@@ -69,6 +69,14 @@
   <SolidColorBrush x:Key="Brush.Text.OnAccent" Color="#FFFFFF"/>
   <SolidColorBrush x:Key="Brush.Text.Link" Color="{StaticResource Color.AccentHover}"/>
 
+  <!-- ── Brand (app icon / wordmark; fixed in every theme, see scripts/generate_icon.py) ── -->
+  <LinearGradientBrush x:Key="Brush.Brand.Light" StartPoint="0%,0%" EndPoint="0%,100%">
+    <GradientStop Offset="0" Color="#B092F7"/>
+    <GradientStop Offset="1" Color="#38C6D4"/>
+  </LinearGradientBrush>
+  <SolidColorBrush x:Key="Brush.Brand.Highlight" Color="#8CFFFFFF"/>
+  <SolidColorBrush x:Key="Brush.Brand.Spot" Color="#E8FBFF"/>
+
   <!-- ── Accent & semantic brushes ────────────────────────────────────────── -->
   <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}"/>
   <SolidColorBrush x:Key="Brush.Accent.Hover" Color="{StaticResource Color.AccentHover}"/>
