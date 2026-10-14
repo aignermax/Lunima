@@ -16,12 +16,15 @@ public class RunShortcutHintTests
     [Fact]
     public async Task Hint_ShowsTheFirstFewTimesPerAction_ThenStaysQuiet()
     {
-        var hint = new RunShortcutHintViewModel(delay: async (_, _) => await Task.Yield());
+        var elapse = new TaskCompletionSource();
+        var hint = new RunShortcutHintViewModel(delay: (_, _) => elapse.Task);
 
         for (var i = 0; i < RunShortcutHintViewModel.MaxShowsPerAction; i++)
         {
+            elapse = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             hint.TryShow("Workspace.Action.Checks").ShouldBeTrue();
             hint.IsVisible.ShouldBeTrue();
+            elapse.SetResult();
             await hint.PendingHide;
             hint.IsVisible.ShouldBeFalse("the hint hides itself");
         }
