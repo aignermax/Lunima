@@ -24,7 +24,9 @@ namespace UnitTests.Integration;
 /// threshold 0.375 for NOT (resting 0.5 bright, single-input 0.25 dark), enumerate
 /// A and B at threshold 0.125 for NAND: raw powers 0.5 / 0.25 / 0.25 / 0.0 — ideal
 /// values; the raw-power constants below carry the group's internal waveguide loss
-/// (frozen paths keep their bend loss), which also limits the dark row's extinction.
+/// (frozen paths keep the radius-dependent loss of their Demo-PDK SOI strip waveguides:
+/// propagation plus near-zero bend loss at ≥ 10 µm radii), so they sit just below the
+/// ideal levels and the dark row is extinguished to ~1e-9.
 /// </summary>
 public class LogicGateNotNandExampleTests
 {
@@ -33,9 +35,9 @@ public class LogicGateNotNandExampleTests
     private const double PowerTolerance = 1e-6;
     private const double NotThreshold = 0.375;
     private const double NandThreshold = 0.125;
-    private const double RestingPower = 0.4886186104779054;
-    private const double SingleInputPower = 0.2443420631494358;
-    private const double ExtinguishedPower = 6.551582096650341E-05;
+    private const double RestingPower = 0.4999309272082164;
+    private const double SingleInputPower = 0.2499654647969531;
+    private const double ExtinguishedPower = 2.385690071525285E-09;
     private const double NoBiasPassThroughPower = 0.25;
     private const int WavelengthNm = 1550;
 
@@ -111,8 +113,8 @@ public class LogicGateNotNandExampleTests
         vm.OutputHeaders.ShouldBe(Outputs);
         vm.BiasSummaryText.ShouldContain("BIAS"); // the bias assignment shows on the result table
         vm.Rows.Count.ShouldBe(2);
-        AssertPanelRow(vm, "0", expectedBit: true, expectedPowerText: "0.49");
-        AssertPanelRow(vm, "1", expectedBit: false, expectedPowerText: "0.24");
+        AssertPanelRow(vm, "0", expectedBit: true, expectedPowerText: "0.50");
+        AssertPanelRow(vm, "1", expectedBit: false, expectedPowerText: "0.25");
     }
 
     [Fact]
@@ -123,9 +125,9 @@ public class LogicGateNotNandExampleTests
         vm.HasResult.ShouldBeTrue();
         vm.BiasSummaryText.ShouldContain("BIAS");
         vm.Rows.Count.ShouldBe(4);
-        AssertPanelRow(vm, "0 0", expectedBit: true, expectedPowerText: "0.49");
-        AssertPanelRow(vm, "1 0", expectedBit: true, expectedPowerText: "0.24");
-        AssertPanelRow(vm, "0 1", expectedBit: true, expectedPowerText: "0.24");
+        AssertPanelRow(vm, "0 0", expectedBit: true, expectedPowerText: "0.50");
+        AssertPanelRow(vm, "1 0", expectedBit: true, expectedPowerText: "0.25");
+        AssertPanelRow(vm, "0 1", expectedBit: true, expectedPowerText: "0.25");
         AssertPanelRow(vm, "1 1", expectedBit: false, expectedPowerText: "0.00");
     }
 

@@ -137,7 +137,14 @@ public sealed class LogicNetworkAssembler
     /// <summary>Wraps one frozen group-internal path as a connection between its endpoint pins.</summary>
     private static WaveguideConnection ToVirtualConnection(FrozenWaveguidePath path)
     {
-        var connection = new WaveguideConnection { StartPin = path.StartPin!, EndPin = path.EndPin! };
+        var connection = new WaveguideConnection
+        {
+            StartPin = path.StartPin!,
+            EndPin = path.EndPin!,
+            PropagationLossDbPerCm = path.PropagationLossDbPerCm,
+            ExcessBendLossDbPer90Deg = path.ExcessBendLossDbPer90Deg,
+            BendLoss = path.ResolveBendLoss(),
+        };
         connection.RestoreCachedPath(path.Path);
         return connection;
     }

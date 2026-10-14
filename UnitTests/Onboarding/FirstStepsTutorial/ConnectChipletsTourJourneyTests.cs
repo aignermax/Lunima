@@ -82,11 +82,17 @@ public class ConnectChipletsTourJourneyTests
         await validation.AlignChipletCommand.ExecuteAsync(null);
         await canvas.RecalculateRoutesAsync();
         validation.Issues.ShouldBeEmpty("Design Checks must be clean after the alignment");
-        tour.CurrentStepIndex.ShouldBe(5, "the clean checks must advance to the closing words");
+        tour.CurrentStepIndex.ShouldBe(5, "the clean checks must advance to the New die step");
 
         double amplitudeAligned = await SimulateOutputAmplitudeAsync(canvas, chipletA, chipletB);
         amplitudeAligned.ShouldBe(amplitude0, amplitude0 * RelativePowerTolerance,
             "the received power must return to the initial value within 1e-9 relative");
+
+        // Step 5 → 6: a die of your own, through the same command the New die flyout runs.
+        commandManager.ExecuteCommand(new CAP.Avalonia.Commands.Dies.CreateDieCommand(canvas,
+            new CAP.Avalonia.Commands.Dies.DieSpec("My die", null, 1000, 1000),
+            new CAP.Avalonia.Commands.Dies.DieSpec("Die 1", null, 5000, 5000)));
+        tour.CurrentStepIndex.ShouldBe(6, "a new die must advance to the closing words");
 
         tour.NextCommand.Execute(null);
         tour.IsCompleted.ShouldBeTrue();

@@ -18,6 +18,14 @@ namespace CAP_Core.Analysis;
 /// range <c>z_R = π·n·w0² / λ</c> (issue #1238);</item>
 /// <item>total power coupling is <c>η_offset · η_gap</c>, applied as the field factor
 /// <c>sqrt(η_total)</c>;</item>
+/// <item>couplers with different mode sizes (PDK field <c>modeFieldDiameterMicrometers</c>,
+/// waists w1, w2) additionally lose to spot-size mismatch: on axis
+/// <c>η = 4·w1²·w2² / ((w1² + w2²)² + (λ·z / (π·n))²)</c>, which reduces to the identical-mode
+/// gap formula above for w1 = w2, and the offset term becomes <c>exp(-2·d² / (w1² + w2²))</c>
+/// (exact at zero gap);</item>
+/// <item>the medium filling the gap is air unless the link carries its own refractive
+/// index (<see cref="WaveguideConnection.FacetGapMediumIndex"/>, e.g. index-matching
+/// adhesive);</item>
 /// <item>same-chiplet and non-edge-coupler links keep their transmission untouched
 /// (factor 1).</item>
 /// </list>
@@ -40,6 +48,38 @@ public static class ChipletEdgeCouplerCoupling
     public const double GapMediumRefractiveIndex = 1.0;
 
     private const double NanometersPerMicrometer = 1000.0;
+    private const double DiameterPerRadius = 2.0;
+
+    /// <summary>
+    /// Mode-field radius (waist) of an edge coupler: half its PDK-declared mode-field
+    /// diameter, or <see cref="ModeWaistMicrometers"/> when the part declares none.
+    /// </summary>
+    public static double WaistOf(CAP_Core.Components.Core.Component? coupler) =>
+        coupler?.ModeFieldDiameterMicrometers is > 0 and var diameter
+            ? diameter / DiameterPerRadius
+            : ModeWaistMicrometers;
+
+    /// <summary>
+    /// Power coupling of two Gaussian modes with waists <paramref name="waistAMicrometers"/>
+    /// and <paramref name="waistBMicrometers"/> facing each other across a gap of
+    /// <paramref name="gapMicrometers"/> in a medium of index <paramref name="mediumIndex"/>,
+    /// laterally offset by <paramref name="lateralOffsetMicrometers"/>: the exact on-axis
+    /// mismatch-and-divergence overlap times the offset overlap.
+    /// </summary>
+    public static double PowerCoupling(
+        double waistAMicrometers, double waistBMicrometers,
+        double lateralOffsetMicrometers, double gapMicrometers,
+        double wavelengthNm, double mediumIndex = GapMediumRefractiveIndex)
+    {
+        double w1Sq = waistAMicrometers * waistAMicrometers;
+        double w2Sq = waistBMicrometers * waistBMicrometers;
+        double sum = w1Sq + w2Sq;
+        double wavelengthMicrometers = wavelengthNm / NanometersPerMicrometer;
+        double divergence = wavelengthMicrometers * Math.Max(0.0, gapMicrometers) / (Math.PI * mediumIndex);
+        double onAxis = 4.0 * w1Sq * w2Sq / (sum * sum + divergence * divergence);
+        double offset = Math.Exp(-2.0 * lateralOffsetMicrometers * lateralOffsetMicrometers / sum);
+        return onAxis * offset;
+    }
 
     /// <summary>
     /// Power coupling η of two identical Gaussian modes whose axes are laterally offset
@@ -99,6 +139,8 @@ public static class ChipletEdgeCouplerCoupling
         double startAngle = start.Pin.GetAbsoluteAngle();
         double lateral = ChipletInterfaceChecker.LateralOffset(startX, startY, endX, endY, startAngle);
         double gap = ChipletInterfaceChecker.AxialGap(startX, startY, endX, endY, startAngle);
-        return Math.Sqrt(PowerCouplingForOffset(lateral) * PowerCouplingForGap(gap, wavelengthNm));
+        return Math.Sqrt(PowerCoupling(
+            WaistOf(start.Pin.ParentComponent), WaistOf(end.Pin.ParentComponent),
+            lateral, gap, wavelengthNm, connection.FacetGapMediumIndex));
     }
 }

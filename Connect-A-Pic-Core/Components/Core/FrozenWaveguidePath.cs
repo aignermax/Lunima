@@ -1,5 +1,6 @@
 using System.Numerics;
 using CAP_Core.Components.Connections;
+using CAP_Core.LightCalculation.BendLoss;
 using CAP_Core.LightCalculation.MaterialDispersion;
 using CAP_Core.Routing;
 
@@ -80,11 +81,19 @@ public class FrozenWaveguidePath : ICloneable
     public double PropagationLossDbPerCm { get; set; } = 0.5;
 
     /// <summary>
-    /// Loss per 90-degree bend in dB, captured from the original connection so the
-    /// frozen path keeps the connection's bend loss. Default matches the
-    /// WaveguideConnection default (0.05 dB per 90° bend).
+    /// Flat extra bend loss per 90° (dB) captured from the original connection
+    /// (<see cref="WaveguideConnection.ExcessBendLossDbPer90Deg"/>). Default 0.
     /// </summary>
-    public double BendLossDbPer90Deg { get; set; } = 0.05;
+    public double ExcessBendLossDbPer90Deg { get; set; }
+
+    /// <summary>
+    /// Bend-loss model captured from the original connection when the group was formed.
+    /// Null after a .lun round-trip (the model is not persisted): <see cref="ResolveBendLoss"/>
+    /// then falls back to the endpoint components' PDK model, else
+    /// <see cref="BendLossPresets.Generic"/> — the same resolution a freshly routed
+    /// connection gets.
+    /// </summary>
+    public BendLossModel? BendLoss { get; set; }
 
     /// <summary>
     /// Dispersion model of the original connection's waveguide (group index and loss vs.
@@ -146,7 +155,8 @@ public class FrozenWaveguidePath : ICloneable
         WidthMicrometers = connection.WidthMicrometers;
         IsRouteFrozen = connection.IsRouteFrozen;
         PropagationLossDbPerCm = connection.PropagationLossDbPerCm;
-        BendLossDbPer90Deg = connection.BendLossDbPer90Deg;
+        ExcessBendLossDbPer90Deg = connection.ExcessBendLossDbPer90Deg;
+        BendLoss = connection.BendLoss;
         DispersionModel = connection.DispersionModel;
         BendRadiusOverrides.Clear();
         foreach (var (bendIndex, radius) in connection.BendRadiusOverrides)
@@ -172,7 +182,8 @@ public class FrozenWaveguidePath : ICloneable
         connection.WidthMicrometers = WidthMicrometers;
         connection.IsRouteFrozen = IsRouteFrozen;
         connection.PropagationLossDbPerCm = PropagationLossDbPerCm;
-        connection.BendLossDbPer90Deg = BendLossDbPer90Deg;
+        connection.ExcessBendLossDbPer90Deg = ExcessBendLossDbPer90Deg;
+        connection.BendLoss = ResolveBendLoss();
         connection.DispersionModel = DispersionModel;
         connection.BendRadiusOverrides.Clear();
         foreach (var (bendIndex, radius) in BendRadiusOverrides)
@@ -211,7 +222,8 @@ public class FrozenWaveguidePath : ICloneable
         WidthMicrometers = source.WidthMicrometers;
         IsRouteFrozen = source.IsRouteFrozen;
         PropagationLossDbPerCm = source.PropagationLossDbPerCm;
-        BendLossDbPer90Deg = source.BendLossDbPer90Deg;
+        ExcessBendLossDbPer90Deg = source.ExcessBendLossDbPer90Deg;
+        BendLoss = source.BendLoss;
         DispersionModel = source.DispersionModel;
         BendRadiusOverrides.Clear();
         foreach (var (bendIndex, radius) in source.BendRadiusOverrides)
@@ -222,14 +234,28 @@ public class FrozenWaveguidePath : ICloneable
     }
 
     /// <summary>
-    /// Amplitude transmission coefficient accounting for propagation and bend loss —
-    /// the same loss model WaveguideConnection applies, so freezing a connection does
-    /// not silently drop its bend loss. Smooth polyline styles (SBend/Cobra) contain
-    /// no bend segments: their bend loss stays approximated as pure propagation loss
-    /// over the sampled curve length, exactly like the connection does.
-    /// Returns Complex.One when no path is available (conservative, no loss assumed).
-    /// Formula: amplitude = 10^(-loss_dB / 20), where
-    /// loss_dB = PropagationLossDbPerCm * length_cm + equivalent_90deg_bends * BendLossDbPer90Deg.
+    /// The bend-loss model in effect: the captured <see cref="BendLoss"/>, else the PDK model
+    /// stamped on an endpoint pin's component (start pin wins), else
+    /// <see cref="BendLossPresets.Generic"/>.
+    /// </summary>
+    public BendLossModel ResolveBendLoss() =>
+        BendLoss
+        ?? StartPin?.ParentComponent?.WaveguideBendLoss
+        ?? EndPin?.ParentComponent?.WaveguideBendLoss
+        ?? BendLossPresets.Generic;
+
+    /// <summary>
+    /// Itemized loss of the frozen geometry — computed by the same
+    /// <see cref="ConnectionLossCalculator"/> a routed connection uses, so freezing a
+    /// connection into a group changes neither its bend nor its junction loss.
+    /// </summary>
+    public ConnectionLossBreakdown LossBreakdown =>
+        ConnectionLossCalculator.Compute(Path, ResolveBendLoss(), PropagationLossDbPerCm, ExcessBendLossDbPer90Deg);
+
+    /// <summary>
+    /// Amplitude transmission coefficient |t| = 10^(−loss_dB/20) of <see cref="LossBreakdown"/>
+    /// (propagation + radius-dependent bend radiation + junction mismatch). Returns
+    /// Complex.One when no path is available (no geometry, no loss assumed).
     /// </summary>
     public Complex TransmissionCoefficient
     {
@@ -237,13 +263,7 @@ public class FrozenWaveguidePath : ICloneable
         {
             if (Path?.Segments == null || Path.Segments.Count == 0)
                 return Complex.One;
-
-            double lengthMicrometers = Path.TotalLengthMicrometers;
-            double lengthCm = lengthMicrometers / 10_000.0;
-            double lossDb = PropagationLossDbPerCm * lengthCm
-                + Path.TotalEquivalent90DegreeBends * BendLossDbPer90Deg;
-            double amplitude = Math.Pow(10.0, -lossDb / 20.0);
-            return new Complex(amplitude, 0);
+            return new Complex(LossBreakdown.AmplitudeTransmission, 0);
         }
     }
 

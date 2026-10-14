@@ -94,7 +94,7 @@ public class UngroupCommand : IUndoableCommand
                     StartPin = frozenPath.StartPin,
                     EndPin = frozenPath.EndPin,
                     PropagationLossDbPerCm = _canvas.ConnectionManager.DefaultPropagationLossDbPerCm,
-                    BendLossDbPer90Deg = _canvas.ConnectionManager.DefaultBendLossDbPer90Deg
+                    ExcessBendLossDbPer90Deg = _canvas.ConnectionManager.DefaultExcessBendLossDbPer90Deg
                 };
 
                 // Restore the per-connection routing settings (style, radius, width,

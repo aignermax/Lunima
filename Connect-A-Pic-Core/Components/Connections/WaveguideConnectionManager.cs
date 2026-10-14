@@ -72,9 +72,10 @@ public partial class WaveguideConnectionManager
     public bool EnableCoherentPropagationPhase { get; set; } = false;
 
     /// <summary>
-    /// Default bend loss applied to new connections (dB per 90° bend).
+    /// Flat extra bend loss (dB per 90°) applied to new connections on top of their
+    /// radius-dependent <see cref="WaveguideConnection.BendLoss"/> model. Default 0.
     /// </summary>
-    public double DefaultBendLossDbPer90Deg { get; set; } = 0.05;
+    public double DefaultExcessBendLossDbPer90Deg { get; set; }
 
     /// <summary>
     /// Whether to use sequential routing with waveguide collision avoidance.
@@ -125,7 +126,8 @@ public partial class WaveguideConnectionManager
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
-            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg,
+            ExcessBendLossDbPer90Deg = DefaultExcessBendLossDbPer90Deg,
+            BendLoss = ResolveBendLoss(startPin, endPin),
             DispersionModel = ResolveWaveguideDispersion(startPin, endPin)
         };
         lock (_connectionsSync)
@@ -155,7 +157,8 @@ public partial class WaveguideConnectionManager
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
-            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg,
+            ExcessBendLossDbPer90Deg = DefaultExcessBendLossDbPer90Deg,
+            BendLoss = ResolveBendLoss(startPin, endPin),
             DispersionModel = ResolveWaveguideDispersion(startPin, endPin)
         };
 
@@ -215,7 +218,8 @@ public partial class WaveguideConnectionManager
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
-            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg,
+            ExcessBendLossDbPer90Deg = DefaultExcessBendLossDbPer90Deg,
+            BendLoss = ResolveBendLoss(startPin, endPin),
             DispersionModel = ResolveWaveguideDispersion(startPin, endPin)
         };
         lock (_connectionsSync)
@@ -607,6 +611,9 @@ public partial class WaveguideConnectionManager
         // This ensures new/re-routed connections route around existing infrastructure.
         foreach (var connection in validConnections)
         {
+            // A die-to-die facet link may carry no geometry yet (it is never routed).
+            if (connection.RoutedPath is not { Segments: not null })
+                continue;
             grid.AddWaveguideObstacle(
                 connection.Id,
                 connection.RoutedPath!.Segments,

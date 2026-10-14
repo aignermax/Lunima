@@ -27,6 +27,7 @@
     { "file": "Logic Gate ALU + RAM + ACC.lun", "rank": 103, "level": "Systems", "descriptionKey": "Examples.AluRamAccChip.Description" },
     { "file": "Logic Gate PC 2-bit.lun", "rank": 105, "level": "Datapath", "descriptionKey": "Examples.Pc2bit.Description" },
     { "file": "Two Chiplets - Edge-Coupler Link.lun", "rank": 110, "level": "Systems", "descriptionKey": "Examples.TwoChiplets.Description" },
-    { "file": "Logic Gate Across Two Chiplets.lun", "rank": 115, "level": "Systems", "descriptionKey": "Examples.LogicAcrossTwoChiplets.Description" }
+    { "file": "Logic Gate Across Two Chiplets.lun", "rank": 115, "level": "Systems", "descriptionKey": "Examples.LogicAcrossTwoChiplets.Description" },
+    { "file": "Two Dies - SOI and SiN Edge-Coupler Link.lun", "rank": 112, "level": "Systems", "descriptionKey": "Examples.TwoDiesSoiSin.Description" }
   ]
 }

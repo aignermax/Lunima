@@ -32,6 +32,12 @@ public partial class BottomPanelViewModel : ObservableObject
     public LengthMatchingViewModel LengthMatching { get; }
 
     /// <summary>
+    /// ViewModel for the insertion-loss breakdown (propagation / bends / junctions) of the
+    /// selected waveguide connection.
+    /// </summary>
+    public Canvas.ConnectionLoss.ConnectionLossViewModel ConnectionLoss { get; }
+
+    /// <summary>
     /// ViewModel for locking/unlocking components and connections.
     /// </summary>
     public ElementLockViewModel ElementLock { get; }
@@ -60,11 +66,13 @@ public partial class BottomPanelViewModel : ObservableObject
         LengthMatchingViewModel lengthMatching,
         ElementLockViewModel elementLock,
         ErrorConsoleViewModel errorConsole,
-        AnalysisDockViewModel analysis)
+        AnalysisDockViewModel analysis,
+        Canvas.ConnectionLoss.ConnectionLossViewModel? connectionLoss = null)
     {
         ConnectionRouting = connectionRouting;
         RerouteImported = rerouteImported;
         LengthMatching = lengthMatching;
+        ConnectionLoss = connectionLoss ?? new Canvas.ConnectionLoss.ConnectionLossViewModel();
         ElementLock = elementLock;
         ErrorConsole = errorConsole;
         Analysis = analysis;

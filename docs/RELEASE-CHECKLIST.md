@@ -82,6 +82,16 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Nested groups render and simulate correctly. `(auto: ComponentGroupSMatrixBuilderTests)`
 - [ ] Hierarchy panel shows the design tree and selection syncs with the canvas. `(auto: HierarchyPanelViewModelTests)`
 
+### Dies (multi-die assemblies)
+
+- [ ] A single-chip design looks and behaves as before: one chip frame, chip-size setting, no die UI on the canvas. `(auto: DieCommandTests, DiePersistenceTests)`
+- [ ] System workspace → Chiplets → "New die": pick a process + size preset; the chip becomes "Die 1" and the new die appears to the right with its own process-coloured frame, name, size label and edge zone; one Ctrl+Z restores the single chip. `(auto: DieCommandTests, DieViewModelTests, ChipletAssemblyScreenshotTests)`
+- [ ] Selecting a die (Chiplets row or its frame) shows its properties on the right — name, size presets per process + custom, process, PDK checkboxes, edge zone, Open/Delete — every edit undoable; the library and PDK list only offer what the die's process and PDKs allow. `(auto: DieViewModelTests)`
+- [ ] Parts dropped on a die join it; dropping between dies places nothing and says why; double-click opens a die (bounds and routing stay inside its outline). `(auto: DieCommandTests)`
+- [ ] An edge coupler dropped near a die edge snaps onto it, facet facing out (Alt-drag places freely); one whose facet is not on the edge is a Design Check finding. `(auto: DieEdgeSnapperTests, DieAssemblyCheckerTests)`
+- [ ] Dragging a die toward another snaps facing couplers together at 2 µm with a dashed guide and live loss label; on release the link is created (undoable). Selecting the link edits gap (moves the die) and gap medium index. `(auto: DieLinkSnapperTests, DieViewModelTests, UiFlowChipletAssemblyTests)`
+- [ ] Old multi-chiplet files open as dies sized to their content; the shipped chiplet examples and "Two Dies - SOI and SiN Edge-Coupler Link" run in System with the link loss shown. `(auto: DiePersistenceTests, TwoDieExampleTests)`
+
 ## 6. Routing & connections
 
 - [ ] Connect mode draws a waveguide between two pins. `(auto: ViewModels/Canvas/ConnectModeAutoSwitchTests)`
@@ -98,6 +108,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Deleting a crossing (router- or user-placed) keeps the wires through it, merged; undo restores the crossing and its pieces. `(auto: ChainCrossingMaintenanceTests, DeleteCrossingKeepsWiresTests)`
 - [ ] A wire that cannot be routed with its pins stays red and is not retried on every recalculation. `(auto: UnroutableWireTests)`
 - [ ] Connection style panel changes curve type, width, radius, and freeze state. `(auto: ConnectionRoutingViewModelShapeTests, ConnectionRoutingStyleEffectTests)`
+- [ ] Selecting a waveguide shows its insertion-loss breakdown (propagation, bends with radii, junctions, total) in the Properties panel; a tight bend shows more bend loss than a gentle one; the (?) shows light leaking out of a tight bend. `(auto: ConnectionLossViewModelTests, BendLossBreakdownScreenshotTests)`
 - [ ] Frozen routes persist through save/load. `(auto: Serialization/LockStatePersistenceTests)`
 - [ ] Metal routing (electrical traces) exports with process-defined layers and widths. `(auto: MetalRouting/ElectricalConnectionExportTests)`
 - [ ] Design Checks see inside groups at any depth: open "Logic Gate RAM 2x4", run checks → blocked paths inside cells are listed as "Blocked path in group 'CELLx'…" and Next zooms onto them; the groups holding them show a red dashed outline with a "!" badge and the blocked path draws red without entering the group. `(auto: Analysis/Hierarchy/*, ExampleNestedDesignCheckTests, GroupBrokenPathMarkerTests)`
@@ -179,6 +190,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 ## 13. Export
 
 - [ ] Nazca Python export produces a runnable script with correct coordinates. `(auto: CodeExporter/SimpleNazcaExporterTests)`
+- [ ] A die assembly exports one cell per die (die-local coordinates, outline on layer 999) under an assembly top cell; Export → "Nazca → one file per die" writes one script/GDS per die; single-chip exports are unchanged. `(auto: DieAssemblyExportTests)`
 - [ ] GDS export writes a valid GDS file with layers, pins, and cells. `(auto: Export/GdsExportIntegrationTests)`
 - [ ] SAX export produces a SAX-compatible Python netlist/script. `(auto: Export/SaxScriptExecutionTests)`
 - [ ] gdsfactory export generates a YAML netlist and Python module. `(auto: Export/GdsFactoryExport/GdsFactoryExporterTests, Export/Netlist/GdsFactoryYamlNetlistWriterTests)`
@@ -198,6 +210,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] GDS layer mapping in exported files matches the active process. `(auto: Export/SimpleNazcaExporterConnectionSourceLayerTests)`
 - [ ] PDK offset editor calibrates component pin offsets against a reference GDS. `(auto: PdkOffsetEditorViewModelTests)`
 - [ ] Component outline polygons render and export correctly. `(auto: Controls/Canvas/ComponentPreview/GdsPolygonRendererTests)`
+- [ ] Waveguide companion layers: a demo-PDK design shows a translucent 8 µm trench band (2/0) around every routed waveguide, the band layer can be hidden in the Imported Layers panel, the exported GDS carries the band polygons along straights and arcs, and the Process Management window lists/edits the bands. `(auto: SimpleNazcaExporterCompanionLayerTests, CompanionLayerGdsExportTests, WaveguideCompanionBandScreenshotTests, ProcessManagementCompanionLayerTests; manual: canvas look)`
+- [ ] A process `KeepOut` band makes Design Checks flag two wires whose keep-out bands overlap (not at their crossing); shipped examples gain no findings. `(auto: WaveguideSpacingKeepOutTests, ExampleCompanionKeepOutDrcTests)`
 - [ ] GDS coordinate comparison tool reports differences between two exports. `(manual)`
 
 ## 15. AI design assistant

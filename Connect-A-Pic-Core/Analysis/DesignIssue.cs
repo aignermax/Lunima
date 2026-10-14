@@ -128,7 +128,25 @@ public enum DesignIssueType
     /// A frozen group path (any nesting depth) runs through the footprint of a component
     /// other than its own endpoint components.
     /// </summary>
-    WaveguideThroughComponent
+    WaveguideThroughComponent,
+
+    /// <summary>
+    /// Two dies of a multi-die assembly overlap. An error: dies are separate pieces of
+    /// material and cannot share area on the carrier.
+    /// </summary>
+    DieOverlap,
+
+    /// <summary>
+    /// A part of a multi-die assembly lies outside every die (on the bare carrier) or
+    /// outside the outline of the die it belongs to. An error: it cannot be fabricated.
+    /// </summary>
+    ComponentOffDie,
+
+    /// <summary>
+    /// An edge coupler on a die whose facet does not sit on the die edge. An error: light
+    /// can only leave or enter a die through a facet on its cleaved edge.
+    /// </summary>
+    EdgeCouplerOffDieEdge
 }
 
 /// <summary>

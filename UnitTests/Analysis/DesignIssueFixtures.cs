@@ -45,8 +45,30 @@ internal static class DesignIssueFixtures
         DesignIssueType.ChipletInterfaceLateralOffset => ProduceChipletIssue(type),
         DesignIssueType.ChipletInterfaceOffEdge => ProduceChipletIssue(type),
         DesignIssueType.ChipletInterfaceGapLoss => ProduceChipletIssue(type),
+        DesignIssueType.DieOverlap or DesignIssueType.ComponentOffDie or DesignIssueType.EdgeCouplerOffDieEdge
+            => ProduceDieIssue(type),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "unhandled issue type"),
     };
+
+    /// <summary>One die-assembly finding via <see cref="DieAssemblyChecker"/>.</summary>
+    private static DesignIssue ProduceDieIssue(DesignIssueType type)
+    {
+        var dieA = UnitTests.Dies.DieTestFixtures.Die("Die A", 0, 0, 1000, 500);
+        var topLevel = new List<Component> { dieA };
+        switch (type)
+        {
+            case DesignIssueType.DieOverlap:
+                topLevel.Add(UnitTests.Dies.DieTestFixtures.Die("Die B", 900, 0, 1000, 500));
+                break;
+            case DesignIssueType.ComponentOffDie:
+                topLevel.Add(UnitTests.Dies.DieTestFixtures.Part("stray", 3000, 0));
+                break;
+            default:
+                dieA.AddChild(UnitTests.Dies.DieTestFixtures.EdgeCoupler("ec", 300, 200));
+                break;
+        }
+        return new DieAssemblyChecker().Check(topLevel).Single(i => i.Type == type);
+    }
 
     /// <summary>Produces a blocked-path issue with the given router failure classification.</summary>
     public static DesignIssue ProduceBlockedPath(RoutingFailureReason reason) =>

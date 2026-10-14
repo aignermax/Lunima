@@ -156,6 +156,10 @@ public partial class MainViewModel
     [RelayCommand]
     public void RefreshSystemOverview()
     {
+        // Inside an open die the canvas shows only that die's content; the overview keeps
+        // the assembly's dies and links it last saw instead of going empty.
+        if (Canvas.IsInGroupEditMode && Canvas.Dies.ActiveDie != null)
+            return;
         var context = CanvasInteraction.PlacementContext;
         var wavelengthNm = Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm
                            ?? StandardWaveLengths.RedNM;

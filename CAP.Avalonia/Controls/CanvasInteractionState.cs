@@ -22,6 +22,9 @@ public class CanvasInteractionState
     public Point DragPreviewPosition { get; set; }
     public bool DragPreviewValid { get; set; }
 
+    /// <summary>The die-to-die snap shown while a die is dragged toward a neighbour (guide + loss), or null.</summary>
+    public CAP_Core.Components.Dies.DieLinkSnap? DieLinkPreview { get; set; }
+
     /// <summary>The axis-constrained crossing drag in progress, or null.</summary>
     public Canvas.CrossingDrag.CrossingAxisDragPreview? CrossingAxisDrag { get; set; }
 

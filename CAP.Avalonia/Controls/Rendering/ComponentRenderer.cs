@@ -181,7 +181,11 @@ public sealed class ComponentRenderer : ICanvasRenderer
         if (!cullRect.Intersects(bounds))
             return;
 
-        if (!isCurrentEditGroup)
+        if (group.IsDie && !isCurrentEditGroup)
+        {
+            DieFrameRenderer.Render(context, group, isSelected, isHovered, rc.Zoom);
+        }
+        else if (!isCurrentEditGroup)
         {
             if (isSelected)
                 ComponentGroupRenderer.RenderGroupSelectionBorder(context, bounds, rc, group.Id);

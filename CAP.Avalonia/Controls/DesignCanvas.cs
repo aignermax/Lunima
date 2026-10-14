@@ -80,6 +80,7 @@ public class DesignCanvas : Control
 
     private readonly GridRenderer _gridRenderer;
     private readonly PathfindingOverlayRenderer _pathfindingOverlayRenderer;
+    private readonly WaveguideCompanionBandRenderer _companionBandRenderer = new();
     private readonly WaveguideConnectionRenderer _waveguideConnectionRenderer;
     private readonly CanvasFrozenPathRenderer _canvasFrozenPathRenderer;
     private readonly BendHandleRenderer _bendHandleRenderer;
@@ -185,6 +186,8 @@ public class DesignCanvas : Control
         {
             _gridRenderer.RenderWorld(context, rc);
             _pathfindingOverlayRenderer.Render(context, rc);
+            // Process companion bands (trench / cladding / keep-out) sit under the cores.
+            _companionBandRenderer.Render(context, rc);
             _waveguideConnectionRenderer.Render(context, rc);
             // Canvas-level pin-less frozen paths (#856) draw with the other waveguide
             // geometry, below components, exactly like group-internal frozen paths.
@@ -212,6 +215,7 @@ public class DesignCanvas : Control
             // components and waveguides so the clickable markers are never obscured.
             _cutToolOverlayRenderer.Render(context, rc);
             _crossingAxisDragRenderer.Render(context, rc);
+            DieLinkGuideRenderer.Render(context, rc.InteractionState.DieLinkPreview, Zoom);
             // Handles draw last so they sit on top of the routed path and components; segment
             // midpoint handles go under the bend handles, matching the gesture priority (#791).
             _segmentShiftHandleRenderer.Render(context, rc);

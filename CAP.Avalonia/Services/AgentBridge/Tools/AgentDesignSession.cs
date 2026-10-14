@@ -15,6 +15,7 @@ public sealed class AgentDesignSession
 {
     private readonly Func<FileOperationsViewModel?> _fileOperations;
     private readonly Func<IReadOnlyList<ComponentTemplate>> _templates;
+    private readonly Func<IReadOnlyList<CAP_Core.Components.Process.ProcessGroup>> _processes;
 
     /// <summary>Creates the session.</summary>
     /// <param name="canvas">The design canvas the user sees.</param>
@@ -27,8 +28,10 @@ public sealed class AgentDesignSession
         CommandManager commands,
         Func<FileOperationsViewModel?> fileOperations,
         ExampleDesignsService examples,
-        Func<IReadOnlyList<ComponentTemplate>>? templates = null)
+        Func<IReadOnlyList<ComponentTemplate>>? templates = null,
+        Func<IReadOnlyList<CAP_Core.Components.Process.ProcessGroup>>? processes = null)
     {
+        _processes = processes ?? (() => Array.Empty<CAP_Core.Components.Process.ProcessGroup>());
         Canvas = canvas;
         Commands = commands;
         _fileOperations = fileOperations;
@@ -38,6 +41,9 @@ public sealed class AgentDesignSession
 
     /// <summary>The design canvas.</summary>
     public DesignCanvasViewModel Canvas { get; }
+
+    /// <summary>The fabrication processes of the loaded PDKs (a die is bound to one of them).</summary>
+    public IReadOnlyList<CAP_Core.Components.Process.ProcessGroup> Processes => _processes();
 
     /// <summary>The shared undo/redo history.</summary>
     public CommandManager Commands { get; }
