@@ -144,8 +144,11 @@ public partial class MultiProcessManufacturingJourneyTests
         loadedB!.MemberPdkNames.ShouldContain(_journey.Design.Siepic.Name,
             "Step 4: chiplet B reloads bound to the SiEPIC EBeam process");
 
-        _journey.LoadedCanvas.Connections.Count.ShouldBe(1,
-            "Step 4: the inter-chiplet link survives the round-trip");
+        // The chiplets load as dies; a die's own wires live on the assembly canvas, so only
+        // the wires between dies are counted here.
+        _journey.LoadedCanvas.Connections
+            .Count(c => !CAP.Avalonia.ViewModels.Canvas.DieSurface.DieWireStyle.IsOnOneDie(c.Connection))
+            .ShouldBe(1, "Step 4: the inter-chiplet link survives the round-trip");
         foreach (var (pinName, (x, y)) in _journey.PinPositionsBeforeSave)
         {
             var loadedChiplet = _journey.LoadedChipletA.ExternalPins.Any(p => UnitTests.Helpers.GroupPinLookup.ExposedId(p) == pinName)
