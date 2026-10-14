@@ -40,7 +40,7 @@ public class DesignCanvasHitTesting
         for (int i = vm.Components.Count - 1; i >= 0; i--)
         {
             var comp = vm.Components[i];
-            if (comp.Component is ComponentGroup group)
+            if (comp.Component is ComponentGroup group && !vm.Surface.IsInertDie(group))
             {
                 var labelBounds = ComponentGroupRenderer.CalculateLabelBounds(group, vm.ViewZoom);
                 if (labelBounds.Contains(canvasPoint))
@@ -66,7 +66,7 @@ public class DesignCanvasHitTesting
         for (int i = vm.Components.Count - 1; i >= 0; i--)
         {
             var comp = vm.Components[i];
-            if (comp.Component is ComponentGroup group)
+            if (comp.Component is ComponentGroup group && !vm.Surface.IsInertDie(group))
             {
                 var lockIconBounds = ComponentGroupRenderer.CalculateLockIconBounds(group);
                 if (lockIconBounds.Contains(canvasPoint))
@@ -132,7 +132,7 @@ public class DesignCanvasHitTesting
         for (int i = vm.Components.Count - 1; i >= 0; i--)
         {
             var comp = vm.Components[i];
-            if (!comp.Component.IsRoutingObstacle)
+            if (!comp.Component.IsRoutingObstacle || vm.Surface.IsInertDie(comp.Component))
                 continue;
 
             // For ComponentGroups, check the group's calculated bounds

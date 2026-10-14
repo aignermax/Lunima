@@ -38,6 +38,11 @@
             <TextBlock Grid.Column="1" Classes="label" Text="{loc:Localize Dies.Properties.Title}"/>
         </Grid>
 
+        <!-- Outside System the die is shown read-only: dies are edited where they are the unit of work. -->
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:Localize Dies.Properties.ReadOnlyHint}"
+                   IsVisible="{Binding !DieProperties.IsEditable}"/>
+
+        <StackPanel Spacing="6" IsEnabled="{Binding DieProperties.IsEditable}">
         <TextBox x:Name="DieNameBox" Text="{Binding DieProperties.Name, UpdateSourceTrigger=LostFocus}"
                  ToolTip.Tip="{loc:Localize Dies.Properties.NameTip}"/>
 
@@ -85,6 +90,7 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
+        </StackPanel>
 
         <TextBlock Classes="caption" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Warning}"
                    Text="{Binding DieProperties.StatusText}"
@@ -97,7 +103,8 @@
                     <TextBlock Text="{loc:Localize Dies.Properties.ZoomToDie}"/>
                 </StackPanel>
             </Button>
-            <Button Command="{Binding DieProperties.DeleteDieCommand}" ToolTip.Tip="{loc:Localize Dies.Properties.DeleteTip}">
+            <Button Command="{Binding DieProperties.DeleteDieCommand}" IsVisible="{Binding DieProperties.CanDelete}"
+                    ToolTip.Tip="{loc:Localize Dies.Properties.DeleteTip}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <controls:Icon Data="{StaticResource Icon.Trash2}"/>
                     <TextBlock Text="{loc:Localize Dies.Properties.Delete}"/>

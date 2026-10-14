@@ -16,9 +16,13 @@ public partial class DesignCanvasViewModel
     /// <summary>Parts on the dies of an assembly, worked on in place at the assembly root.</summary>
     public DieSurfaceService Surface { get; private set; } = null!;
 
+    /// <summary>The chip of a single-die design, shown and handled as its one die "Die 1".</summary>
+    public ChipDieService ChipDie { get; private set; } = null!;
+
     private void InitializeDieSurface()
     {
         Surface = new DieSurfaceService(Components, Groups) { ViewModelCreated = CreateSurfaceViewModel };
+        ChipDie = new ChipDieService(this);
         Placement.AssemblyPlacementCheck = (x, y, width, height, exclude) =>
             !Surface.IsActive || exclude?.Component is ComponentGroup { IsDie: true }
                 ? null
@@ -73,7 +77,7 @@ public partial class DesignCanvasViewModel
         RefreshFacetLinkPaths();
         // A drag re-bounds once on release; a command (undo, align, agent) re-bounds right away.
         if (!Placement.IsDragging && Dies.IsAssemblyRoot)
-            Dies.ApplyScopeBounds();
+            _ = Dies.ApplyScopeBoundsInBackground();
     }
 
     /// <summary>

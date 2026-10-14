@@ -61,7 +61,8 @@ public partial class DesignCanvasViewModel
         // the routing grid over the carrier is expensive and would stall the click.
         if (Math.Abs(component.X - _dragStart.X) < 1e-9 && Math.Abs(component.Y - _dragStart.Y) < 1e-9)
             return true;
-        Dies.ApplyScopeBounds();
+        // The carrier grid takes a second or more to rebuild — never on the UI thread at the drop.
+        _ = Dies.ApplyScopeBoundsInBackground();
         NotifyDiesChanged();
         return !DieMoveNeedsRouting(die);
     }

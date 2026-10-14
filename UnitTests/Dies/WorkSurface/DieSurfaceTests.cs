@@ -28,13 +28,16 @@ public class DieSurfaceTests
     }
 
     [Fact]
-    public void EmptyDieArea_HitsTheDie()
+    public void EmptyDieArea_HitsNothingOutsideSystem_ButTheDieInSystem()
     {
         var w = new WorkSurfaceCanvas();
         var outline = WorkSurfaceCanvas.Outline(w.Die2);
+        var center = new Point(outline.CenterX, outline.CenterY);
 
-        DesignCanvasHitTesting.HitTestComponent(new Point(outline.CenterX, outline.CenterY), w.Canvas)
-            .ShouldBe(w.DieVm(w.Die2));
+        DesignCanvasHitTesting.HitTestComponent(center, w.Canvas)
+            .ShouldBeNull("outside System a die is background — a press there starts a box selection");
+        w.Canvas.Surface.IsContentLocked = true;
+        DesignCanvasHitTesting.HitTestComponent(center, w.Canvas).ShouldBe(w.DieVm(w.Die2));
     }
 
     [Fact]

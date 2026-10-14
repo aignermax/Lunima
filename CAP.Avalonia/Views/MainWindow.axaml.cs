@@ -111,6 +111,8 @@ public partial class MainWindow : Window
                 vm.BottomPanel.Analysis.Spectrum.Overlay.FileDialogService = vm.FileDialogService;
                 ExportDialogWiring.Wire(vm, this, vm.ErrorConsole);
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
+        vm.ViewportControl.GetCursorCanvasPosition = () => DesignCanvasControl.IsPointerOver
+            ? (DesignCanvasControl.LastCanvasPosition.X, DesignCanvasControl.LastCanvasPosition.Y) : null;
 
                 // Wire up rename dialog for group templates
                 vm.LeftPanel.ComponentLibrary.ShowRenameDialogAsync = async (currentName) =>

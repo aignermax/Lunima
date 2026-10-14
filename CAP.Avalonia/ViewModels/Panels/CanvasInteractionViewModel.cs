@@ -195,6 +195,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
             (_, _) => OnPropertyChanged(nameof(IsConnectionSelected));
 
         RefreshModeShortcutHints();
+        InitializeDieRules();
     }
 
     /// <summary>
@@ -687,13 +688,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
             .Where(c => c.Component.IsRoutingObstacle && Contains(c, x, y))
             .LastOrDefault();
 
-    /// <summary>The die under the point when its parts are worked on in place (clicked empty die area).</summary>
-    private ComponentViewModel? DieSurfaceAt(double x, double y) =>
-        _canvas.Surface.IsEditable
-            ? _canvas.Components.LastOrDefault(c => c.Component is CAP_Core.Components.Core.ComponentGroup { IsDie: true } die
-                && CAP_Core.Components.Dies.DieAssembly.OutlineOf(die).Contains(x, y))
-            : null;
-
     /// <summary>Returns the topmost background component whose bounds contain the point, or null.</summary>
     private ComponentViewModel? BackgroundComponentAt(double x, double y) =>
         _canvas.Components
@@ -726,7 +720,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         var connectionHit = component is null ? FindConnectionAt(x, y) : null;
         var frozenHit = component is null && connectionHit is null ? FindCanvasFrozenPathAt(x, y) : null;
         if (component is null && connectionHit is null && frozenHit is null)
-            component = DieSurfaceAt(x, y) ?? BackgroundComponentAt(x, y);
+            component = BackgroundComponentAt(x, y) ?? ChipDieAt(x, y);
 
         if (component != null)
         {
@@ -1052,10 +1046,12 @@ public partial class CanvasInteractionViewModel : ObservableObject
             return;
         }
 
-        var deletable = targets.Where(c => !c.Component.IsLocked).ToList();
+        var deletable = targets.Where(c => !c.Component.IsLocked && !IsUndeletableDie(c)).ToList();
         if (deletable.Count == 0)
         {
-            if (targets.Count > 0)
+            if (DieDeleteRefusal(targets) is { } refusal)
+                UpdateStatus?.Invoke(refusal);
+            else if (targets.Count > 0)
                 UpdateStatus?.Invoke("Selection is locked — unlock elements to delete them");
             return;
         }
@@ -1100,9 +1096,9 @@ public partial class CanvasInteractionViewModel : ObservableObject
         var selection = _canvas.Selection;
         if (!selection.HasSelection) return;
 
-        _canvas.Clipboard.Copy(
-            selection.SelectedComponents.ToList(),
-            _canvas.Connections);
+        var copied = selection.SelectedComponents.Where(c => !_canvas.ChipDie.IsProxy(c.Component)).ToList();
+        if (copied.Count == 0) return;
+        _canvas.Clipboard.Copy(copied, _canvas.Connections);
 
         UpdateStatus?.Invoke($"Copied {selection.SelectedComponents.Count} component(s)");
     }
@@ -1160,7 +1156,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     [RelayCommand]
     private void RotateSelected()
     {
-        if (SelectedComponent != null)
+        if (SelectedComponent != null && !_canvas.ChipDie.IsProxy(SelectedComponent.Component))
         {
             var cmd = new RotateComponentCommand(_canvas, SelectedComponent);
             _commandManager.ExecuteCommand(cmd);
@@ -1173,6 +1169,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanCreateGroup))]
     private void CreateGroup()
     {
+        if (RefuseGroupingDies())
+            return;
         var selectedComponents = _canvas.Selection.SelectedComponents.ToList();
         var dies = selectedComponents.Select(_canvas.Surface.DieOf).Distinct().ToList();
         if (dies.Count > 1 && dies.Any(d => d != null))
@@ -1196,7 +1194,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     private bool CanCreateGroup()
     {
-        return _canvas.Selection.SelectedComponents.Count >= 2;
+        return _canvas.Selection.SelectedComponents.Count >= 2 && !SelectionHasDie;
     }
 
     [RelayCommand(CanExecute = nameof(CanUngroup))]
@@ -1207,6 +1205,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
             .OfType<CAP_Core.Components.Core.ComponentGroup>()
             .FirstOrDefault();
 
+        if (RefuseOnDie(selectedGroup))
+            return;
         if (selectedGroup != null)
         {
             var cmd = OnDieSurface(_canvas.Selection.SelectedComponents.ToList(),
@@ -1220,7 +1220,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private bool CanUngroup()
     {
         return _canvas.Selection.SelectedComponents.Count == 1 &&
-               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup;
+               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup { IsDie: false };
     }
 
     [RelayCommand(CanExecute = nameof(CanRenameGroup))]
@@ -1237,7 +1237,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
             .OfType<CAP_Core.Components.Core.ComponentGroup>()
             .FirstOrDefault();
 
-        if (selectedGroup == null)
+        if (selectedGroup == null || RefuseOnDie(selectedGroup))
             return;
 
         var currentName = selectedGroup.GroupName;
@@ -1273,7 +1273,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private bool CanRenameGroup()
     {
         return _canvas.Selection.SelectedComponents.Count == 1 &&
-               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup &&
+               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup { IsDie: false } &&
                _libraryViewModel != null &&
                _inputDialogService != null;
     }
@@ -1343,10 +1343,10 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private void OpenSelectedComponentSettings()
     {
         var selected = SelectedComponent;
-        if (selected != null)
+        if (selected != null && !IsDie(selected))
             OpenComponentSettings?.Invoke(selected);
     }
 
     private bool CanOpenSelectedComponentSettings()
-        => SelectedComponent != null;
+        => SelectedComponent != null && !IsDie(SelectedComponent);
 }

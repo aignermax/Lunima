@@ -72,12 +72,23 @@ public partial class MainViewModel
         ?? (Canvas.Dies.IsAssemblyRoot && Canvas.SelectedComponent?.Component is ComponentGroup { IsDie: true } die ? die : null)
         ?? Canvas.Surface.DieOf(Canvas.SelectedComponent);
 
+    /// <summary>
+    /// The die whose properties the panel shows: the die itself when it is selected, or the
+    /// die being worked inside when nothing is selected. A selected part keeps the panel on
+    /// the part — the die of a part never takes over the properties.
+    /// </summary>
+    private ComponentGroup? PropertiesDie =>
+        Canvas.SelectedComponent?.Component is ComponentGroup { IsDie: true } selected ? selected
+        : Canvas.SelectedComponent == null ? Canvas.Dies.ActiveDie
+        : null;
+
     private void InitializeDies()
     {
         IReadOnlyList<ProcessGroup> Catalog() => ProcessCatalog.BuildGroups(LeftPanel.GetLoadedPdkProcessEntries());
         DieProperties = new DiePropertiesViewModel(Canvas, CommandManager, Catalog)
         {
             ZoomToDieRequested = ZoomToDie,
+            IsEditable = Canvas.Surface.IsContentLocked,
         };
         NewDie = new NewDieViewModel(Canvas, CommandManager, Catalog, () => FileOperations.ActiveProcess)
         {
@@ -85,6 +96,8 @@ public partial class MainViewModel
         };
 
         DieLinkProperties = new DieLinkPropertiesViewModel(Canvas, CommandManager);
+        Canvas.ChipDie.ProcessSource = () => FileOperations.ActiveProcess;
+        ViewportControl.FitsWholeAssembly = () => WorkspaceSwitch.IsSystem;
 
         Canvas.DiesChanged += OnDiesChanged;
         Canvas.PropertyChanged += OnCanvasPropertyChangedForDies;
@@ -123,7 +136,9 @@ public partial class MainViewModel
             Canvas.ExitToRoot();
         var outline = CAP_Core.Components.Dies.DieAssembly.OutlineOf(die);
         ViewportControl.ZoomToRect(outline.X, outline.Y, outline.Width, outline.Height);
-        if (Canvas.Components.FirstOrDefault(c => ReferenceEquals(c.Component, die)) is { } vm)
+        var vm = Canvas.ChipDie.IsProxy(die) ? Canvas.ChipDie.ViewModel
+            : Canvas.Components.FirstOrDefault(c => ReferenceEquals(c.Component, die));
+        if (vm != null)
         {
             Canvas.Selection.SelectSingle(vm);
             Canvas.SelectedComponent = vm;
@@ -141,6 +156,8 @@ public partial class MainViewModel
     {
         var selectedDie = Canvas.Surface.DieOf(Canvas.SelectedComponent);
         Canvas.Surface.IsContentLocked = locked;
+        if (DieProperties != null)
+            DieProperties.IsEditable = locked;
         if (locked)
         {
             if (selectedDie != null && Canvas.Components.FirstOrDefault(c => ReferenceEquals(c.Component, selectedDie)) is { } dieVm)
@@ -173,6 +190,12 @@ public partial class MainViewModel
 
     private void OnDiesChanged()
     {
+        // The chip die stands for the chip only while the design is single-die.
+        if (Canvas.ChipDie.IsSelected && !Canvas.ChipDie.IsShown)
+        {
+            Canvas.Selection.ClearSelection();
+            Canvas.SelectedComponent = null;
+        }
         RefreshSystemOverview();
         DieProperties.Reload();
         DieLinkProperties.Reload();
@@ -191,7 +214,12 @@ public partial class MainViewModel
     /// </summary>
     private void UpdateDieScope(bool force = false)
     {
+        var shown = PropertiesDie;
+        if (!ReferenceEquals(DieProperties.Die, shown))
+            DieProperties.Show(shown);
         var die = ScopeDie;
+        if (die != null)
+            Canvas.Surface.LastWorkedDie = die;
         var state = die == null ? ((string?, string)?)null
             : (die.ProcessBinding?.DisplayName, string.Join("|", die.Die?.EnabledPdkNames ?? Array.Empty<string>()));
         if (!force && ReferenceEquals(die, _scopedDie) && state == _scopedDieState)
@@ -200,8 +228,6 @@ public partial class MainViewModel
         bool hadScope = _scopedDie != null;
         _scopedDie = die;
         _scopedDieState = state;
-        if (!ReferenceEquals(DieProperties.Die, die))
-            DieProperties.Show(die);
         OnPropertyChanged(nameof(ScopeDie));
 
         if (die != null)

@@ -68,6 +68,16 @@ public partial class HierarchyNodeViewModel : ObservableObject
     /// </summary>
     public bool IsGroup => Component is ComponentGroup;
 
+    /// <summary>True for a die of an assembly — shown with the chip icon and its process color, not as a group.</summary>
+    public bool IsDie => Component is ComponentGroup { IsDie: true };
+
+    /// <summary>True for an ordinary group (group icon).</summary>
+    public bool IsPlainGroup => IsGroup && !IsDie;
+
+    /// <summary>The die's process color (its frame color on the canvas); null for anything but a die.</summary>
+    public global::Avalonia.Media.IBrush? DieBrush =>
+        Component is ComponentGroup { IsDie: true } die ? CAP.Avalonia.Controls.Rendering.DieProcessColors.BrushFor(die.ProcessBinding) : null;
+
     /// <summary>
     /// Display name with child count for groups.
     /// </summary>
@@ -87,7 +97,20 @@ public partial class HierarchyNodeViewModel : ObservableObject
     /// <summary>
     /// Component type label (e.g., "Waveguide", "Coupler", "Group").
     /// </summary>
-    public string TypeLabel => Component is ComponentGroup ? "Group" : Component.NazcaFunctionName ?? "Component";
+    public string TypeLabel => Component switch
+    {
+        ComponentGroup { IsDie: true } die => DieKindLabel(die),
+        ComponentGroup => "Group",
+        _ => Component.NazcaFunctionName ?? "Component",
+    };
+
+    /// <summary>"Die · process" — the kind a die is listed as.</summary>
+    private static string DieKindLabel(ComponentGroup die)
+    {
+        var kind = Services.Localization.LocalizationService.Instance.Translate("Dies.Properties.Title");
+        var process = die.ProcessBinding?.DisplayName;
+        return string.IsNullOrWhiteSpace(process) ? kind : $"{kind} · {process}";
+    }
 
     /// <summary>
     /// Callback to focus/zoom the canvas to this component's position.

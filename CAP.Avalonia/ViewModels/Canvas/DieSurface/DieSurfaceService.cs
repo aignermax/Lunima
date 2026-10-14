@@ -33,11 +33,21 @@ public sealed class DieSurfaceService
     /// </summary>
     public bool IsContentLocked { get; set; }
 
+    /// <summary>The die the user worked with last (selection or placement) — zoom-to-fit frames it when nothing else is current.</summary>
+    public ComponentGroup? LastWorkedDie { get; set; }
+
     /// <summary>True at the root of a die assembly (the dies shown side by side).</summary>
     public bool IsActive => !_groups.IsInGroupEditMode && _components.Any(c => c.Component is ComponentGroup { IsDie: true });
 
     /// <summary>True when the parts on the dies can be worked on directly right now.</summary>
     public bool IsEditable => IsActive && !IsContentLocked;
+
+    /// <summary>
+    /// True when <paramref name="component"/> is a die that the pointer must pass through: outside
+    /// System the parts are the unit of work, so a die is never picked, dragged or double-clicked
+    /// and a press on its empty area starts a box selection.
+    /// </summary>
+    public bool IsInertDie(Component? component) => IsEditable && component is ComponentGroup { IsDie: true };
 
     /// <summary>The die groups at the root, in canvas order.</summary>
     public IReadOnlyList<ComponentGroup> Dies =>

@@ -1022,7 +1022,8 @@
                                    MainViewModel="{Binding}">
                 <controls:DesignCanvas.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Header="{loc:Localize Context.EditComponent}" Command="{Binding CanvasInteraction.OpenSelectedComponentSettingsCommand}">
+                    <MenuItem Header="{loc:Localize Context.EditComponent}" Command="{Binding CanvasInteraction.OpenSelectedComponentSettingsCommand}"
+                              IsVisible="{Binding !CanvasInteraction.IsDieSelected}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Settings}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
@@ -1033,17 +1034,21 @@
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.ClipboardPaste}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
-                    <MenuItem Header="{loc:Localize Context.CreateGroup}" Command="{Binding CreateGroupCommand}" InputGesture="Ctrl+G">
+                    <MenuItem Header="{loc:Localize Context.CreateGroup}" Command="{Binding CanvasInteraction.CreateGroupCommand}" InputGesture="Ctrl+G"
+                              ToolTip.Tip="{Binding CanvasInteraction.GroupBlockedReason}" ToolTip.ShowOnDisabled="True">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Group}"/></MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="{loc:Localize Context.MakeGate}" Command="{Binding MakeGateCommand}"
+                              IsVisible="{Binding !CanvasInteraction.IsDieSelected}"
                               ToolTip.Tip="{loc:Localize Context.MakeGateTip}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Binary}"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="{loc:Localize Context.Ungroup}" Command="{Binding UngroupCommand}" InputGesture="Ctrl+Shift+G">
+                    <MenuItem Header="{loc:Localize Context.Ungroup}" Command="{Binding UngroupCommand}" InputGesture="Ctrl+Shift+G"
+                              IsVisible="{Binding !CanvasInteraction.IsDieSelected}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Ungroup}"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="{loc:Localize Context.RenameGroup}" Command="{Binding CanvasInteraction.RenameGroupCommand}">
+                    <MenuItem Header="{loc:Localize Context.RenameGroup}" Command="{Binding CanvasInteraction.RenameGroupCommand}"
+                              IsVisible="{Binding !CanvasInteraction.IsDieSelected}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Pencil}"/></MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="{loc:Localize Context.SaveAsPrefab}" Command="{Binding CanvasInteraction.SaveGroupAsCommand}">
