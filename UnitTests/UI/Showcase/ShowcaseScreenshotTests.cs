@@ -13,11 +13,11 @@ using AvGrid = Avalonia.Controls.Grid;
 namespace UnitTests.UI.Showcase;
 
 /// <summary>
-/// v0.12 feature-showcase (canvas motifs): the hero shot of a staged photonic chip (MZI +
+/// Feature showcase (canvas motifs): the hero shot of a staged photonic chip (MZI +
 /// filter/coupler test structures) in the real MainWindow, the Figma-style waveguide-editing
 /// motif (selected connection with bend-radius handles + routing panel) and the
 /// gdsfactory-YAML netlist export view. Opt-in via <c>UI_SHOT_DIR</c>; PNGs land in
-/// <c>UI_SHOT_DIR/v0.12/</c>.
+/// <c>UI_SHOT_DIR/v0.17/</c>.
 /// </summary>
 [Trait("Category", "Showcase")]
 [Collection("LocalizationSingleton")]

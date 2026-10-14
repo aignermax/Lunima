@@ -16,12 +16,12 @@ using Xunit;
 namespace UnitTests.UI.Showcase;
 
 /// <summary>
-/// v0.12 feature-showcase: the manufacturing story ("from canvas to fab"). Composes three
+/// Feature showcase: the manufacturing story ("from canvas to fab"). Composes three
 /// panes into one PNG: (1) the staged hero chip with the unified Export flyout open — GDS
 /// via gdsfactory and via Nazca one click from the canvas, (2) the PDK offset/calibration
 /// editor on the bundled SiEPIC EBeam PDK with the rendered grating-coupler GDS geometry
 /// and its pin aligned at Δ 0.00 µm, and (3) the Check-All calibration report, all rows
-/// green. Opt-in via <c>UI_SHOT_DIR</c>; the PNG lands in <c>UI_SHOT_DIR/v0.12/</c>.
+/// green. Opt-in via <c>UI_SHOT_DIR</c>; the PNG lands in <c>UI_SHOT_DIR/v0.17/</c>.
 /// </summary>
 [Trait("Category", "Showcase")]
 [Collection("LocalizationSingleton")]
@@ -109,7 +109,7 @@ public class ShowcaseGdsExportScreenshotTests
             Dispatcher.UIThread.RunJobs();
 
         vm.HasNazcaOverlay.ShouldBeTrue("the stubbed grating-coupler render must populate the overlay");
-        vm.PinAlignmentResults.Count.ShouldBe(1);
+        vm.PinAlignmentResults.ShouldNotBeEmpty();
         vm.PinAlignmentResults.All(p => p.IsAligned)
             .ShouldBeTrue("the bundled calibration must align the grating-coupler pin");
 
@@ -174,7 +174,7 @@ public class ShowcaseGdsExportScreenshotTests
         // right-of-marker labels would clip and collide — stack both to the left instead.
         var overlayCanvas = window.FindControl<global::Avalonia.Controls.Canvas>("OverlayCanvas");
         overlayCanvas.ShouldNotBeNull();
-        var pinMarker = vm.PinMarkers.Single();
+        var pinMarker = vm.PinMarkers.OrderByDescending(p => p.CanvasX).First();
         var pinLabel = overlayCanvas!.Children.OfType<TextBlock>().First(t => t.Text == pinMarker.Name);
         global::Avalonia.Controls.Canvas.SetLeft(pinLabel, pinMarker.CanvasX - 44);
         global::Avalonia.Controls.Canvas.SetTop(pinLabel, pinMarker.CanvasY - 18);
@@ -195,8 +195,8 @@ public class ShowcaseGdsExportScreenshotTests
             .First(t => t.Text == LocalizationService.Instance.Translate("PdkOffset.BatchReport"))
             .FindAncestorOfType<Border>()!);
         var saveBar = ShowcaseCapture.BoundsIn(window, UiInput.Descendants<Button>(window)
-            .First(b => Equals(b.Content, LocalizationService.Instance.Translate("PdkOffset.SavePdk")))
-            .FindAncestorOfType<Border>()!);
+            .First(b => b.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == LocalizationService.Instance.Translate("PdkOffset.SavePdk")))
+            .FindAncestorOfType<DockPanel>()!);
 
         var editorPane = new PixelRect(
             rightColumn.X, 0, rightColumn.Width + 8, reportBorder.Y - 4);

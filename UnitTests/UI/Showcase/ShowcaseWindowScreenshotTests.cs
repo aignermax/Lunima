@@ -19,9 +19,9 @@ using Xunit;
 namespace UnitTests.UI.Showcase;
 
 /// <summary>
-/// v0.12 feature-showcase (window motifs): the unified component editor in edit mode with a
+/// Feature showcase (window motifs): the unified component editor in edit mode with a
 /// rendered geometry preview, the fabrication-process editor, and the two-language composite
-/// of the staged MainWindow. Opt-in via <c>UI_SHOT_DIR</c>; PNGs land in <c>UI_SHOT_DIR/v0.12/</c>.
+/// of the staged MainWindow. Opt-in via <c>UI_SHOT_DIR</c>; PNGs land in <c>UI_SHOT_DIR/v0.17/</c>.
 /// </summary>
 [Trait("Category", "Showcase")]
 [Collection("LocalizationSingleton")]

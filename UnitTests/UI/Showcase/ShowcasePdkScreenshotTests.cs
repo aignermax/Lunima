@@ -13,7 +13,7 @@ using Xunit;
 namespace UnitTests.UI.Showcase;
 
 /// <summary>
-/// v0.12 feature-showcase: PDK management. Boots the real MainWindow through the UI-flow
+/// Feature showcase: PDK management. Boots the real MainWindow through the UI-flow
 /// host (temp user-pdk root, English pinned), stages a forked user copy that shadows its
 /// bundled original plus an own user library, hovers a forked library row so the ✏/✕ quick
 /// actions show, and composes library + PDK-Mgmt sections with the per-component trash
