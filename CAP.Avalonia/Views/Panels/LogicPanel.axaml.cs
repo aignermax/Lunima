@@ -8,8 +8,9 @@ using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 namespace CAP.Avalonia.Views.Panels;
 
 /// <summary>
-/// Collapsible right-panel section that assembles the logic network of the loaded
-/// design and shows live gate outputs while the user toggles the network inputs.
+/// Logic tab of the bottom analysis dock: assembles the logic network of the loaded
+/// design and shows live gate outputs while the user toggles the network inputs,
+/// laid out as one toolbar row over side-by-side section columns.
 /// DataContext is inherited from MainWindow (MainViewModel). The ViewModel stays
 /// timer-free so tests advance playback ticks synchronously; this code-behind owns
 /// the DispatcherTimer that turns <see cref="LogicPanelViewModel.IsPlaying"/> into

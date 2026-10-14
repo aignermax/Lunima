@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:logic="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis"
+             x:Class="CAP.Avalonia.Views.Panels.LogicTab.LogicTimelineColumn"
+             x:DataType="vm:MainViewModel">
+
+    <UserControl.Styles>
+        <!-- Replay (#1058): the selected row — the instant the canvas badges currently
+             show — gets a visible highlight. -->
+        <Style Selector="Button.timeline-event">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="Button.timeline-event.selected">
+            <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Event timeline (#1045): the switch events of the last input toggle in
+         arrival-time order; the replay actions live in the tab toolbar. -->
+    <Grid RowDefinitions="Auto,*">
+        <Grid ColumnDefinitions="*,Auto" Classes="logicColumnHeader">
+            <TextBlock Classes="label" Text="{loc:Localize LogicPanel.Timeline}" VerticalAlignment="Center"/>
+            <controls:HelpFlyoutButton Grid.Column="1"
+                                       Title="{loc:Localize LogicPanelTimelineHelp.Title}"
+                                       VerticalAlignment="Center" Margin="4,0,0,0">
+                <controls:HelpFlyoutButton.HelpContent>
+                    <panels:LogicTimelineHelpFlyout/>
+                </controls:HelpFlyoutButton.HelpContent>
+            </controls:HelpFlyoutButton>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" Classes="logicColumnScroll" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <ItemsControl x:Name="LogicTimelineEvents" ItemsSource="{Binding RightPanel.Logic.TimelineEvents}"
+                              IsVisible="{Binding RightPanel.Logic.HasTimelineEvents}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="logic:LogicTimelineEventViewModel">
+                            <Button Classes="timeline-event"
+                                    Classes.selected="{Binding IsSelected}"
+                                    Command="{Binding $parent[ItemsControl].DataContext.RightPanel.Logic.SelectTimelineEventCommand}"
+                                    CommandParameter="{Binding}">
+                                <StackPanel>
+                                    <!-- Clock-step boundary (#1110): the divider label rides on the
+                                         first row a Step appended. -->
+                                    <TextBlock Classes="mono" Text="{Binding ClockBoundaryText}" Foreground="{DynamicResource Brush.Warning}"
+                                               FontSize="{DynamicResource FontSize.Caption}" FontWeight="Bold"
+                                               Margin="0,4,0,0"
+                                               IsVisible="{Binding HasClockBoundary}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,1">
+                                        <TextBlock Classes="mono" Text="{Binding TimeText}" Foreground="{DynamicResource Brush.Text.Primary}"
+                                                   FontSize="{DynamicResource FontSize.Caption}" Width="70" VerticalAlignment="Center"/>
+                                        <TextBlock Classes="mono" Text="{Binding GatePinText}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                                                   FontSize="{DynamicResource FontSize.Caption}" Width="110" VerticalAlignment="Center"/>
+                                        <TextBlock Classes="mono" Text="{Binding TransitionText}" FontSize="{DynamicResource FontSize.Caption}" FontWeight="Bold"
+                                                   Foreground="{DynamicResource Brush.Success}" IsVisible="{Binding IsRising}"/>
+                                        <TextBlock Classes="mono" Text="{Binding TransitionText}" FontSize="{DynamicResource FontSize.Caption}" FontWeight="Bold"
+                                                   Foreground="{DynamicResource Brush.Text.Tertiary}" IsVisible="{Binding IsRising, Converter={x:Static BoolConverters.Not}}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="caption" Text="{loc:Localize LogicPanel.TimelineEmpty}"
+                           FontStyle="Italic" TextWrapping="Wrap" MaxWidth="220"
+                           HorizontalAlignment="Left"
+                           IsVisible="{Binding RightPanel.Logic.HasTimelineEvents, Converter={x:Static BoolConverters.Not}}"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
