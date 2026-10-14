@@ -44,10 +44,69 @@ internal static class ShowcaseFraming
             .Intersect(bounds);
     }
 
+    /// <summary>The first visual descendant of type <typeparamref name="T"/> named <paramref name="name"/>.</summary>
+    public static T Named<T>(Window window, string name) where T : Control =>
+        window.GetVisualDescendants().OfType<T>().First(c => c.Name == name);
+
     /// <summary>The window-space bounds of a named control.</summary>
     public static PixelRect Named(Window window, string name) =>
         ShowcaseCapture.BoundsIn(window, window.GetVisualDescendants().OfType<Control>()
             .First(c => c.Name == name));
+
+    /// <summary>Hides the properties column — nothing is selected in most motifs, and the
+    /// canvas reads better with the space.</summary>
+    public static void HideRightPanel(Window window)
+    {
+        window.GetVisualDescendants().OfType<Border>()
+            .First(b => b.Name == "RightPanelBorder").IsVisible = false;
+        global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>Sets the properties column to a fixed width (it is content-driven otherwise).</summary>
+    public static void SetRightPanelWidth(Window window, double width)
+    {
+        window.GetVisualDescendants().OfType<Border>()
+            .First(b => b.Name == "RightPanelBorder").Width = width;
+        global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>Scrolls the properties column so <paramref name="target"/>'s bottom edge is in view
+    /// (the Make-gate results sit below the pin table).</summary>
+    public static void ScrollRightPanelTo(Window window, Visual target)
+    {
+        var panel = window.GetVisualDescendants().OfType<Border>().First(b => b.Name == "RightPanelBorder");
+        var scroller = panel.GetVisualDescendants().OfType<ScrollViewer>()
+            .OrderByDescending(s => s.Extent.Height).First();
+        var top = target.TranslatePoint(new Point(0, 0), scroller.Content as Visual ?? scroller);
+        if (top is { } p)
+            scroller.Offset = new Vector(0, Math.Max(0, p.Y + target.Bounds.Height - scroller.Viewport.Height));
+        global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>Centers the canvas on the components' bounding box at the largest zoom that
+    /// keeps a <paramref name="marginPx"/> border (zoom-to-fit also fits the chip outline).</summary>
+    public static void FitComponents(Window window, MainViewModel vm, double marginPx = 60)
+    {
+        var box = CAP.Avalonia.ViewModels.Canvas.BoundingBoxCalculator.Calculate(vm.Canvas.Components);
+        if (box is not { } b) return;
+        var canvas = Canvas(window);
+        double zoom = Math.Min((canvas.Bounds.Width - 2 * marginPx) / b.Width,
+            (canvas.Bounds.Height - 2 * marginPx) / b.Height);
+        canvas.Zoom = zoom;
+        vm.Canvas.PanX = canvas.Bounds.Width / 2 - b.CenterX * zoom;
+        vm.Canvas.PanY = canvas.Bounds.Height / 2 - b.CenterY * zoom;
+        canvas.InvalidateVisual();
+        global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>Fits the whole design into the canvas, like the toolbar's zoom-to-fit.</summary>
+    public static void ZoomToFit(Window window, MainViewModel vm)
+    {
+        var canvas = Canvas(window);
+        vm.ZoomToFit(canvas.Bounds.Width, canvas.Bounds.Height);
+        canvas.InvalidateVisual();
+        global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+    }
 
     /// <summary>The window's design canvas control.</summary>
     public static DesignCanvas Canvas(Window window) =>
