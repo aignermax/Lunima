@@ -6,14 +6,16 @@ namespace CAP.Avalonia.ViewModels.Shell;
 /// <summary>
 /// How the left rail arranges itself per workspace: which section opens by default and the
 /// order of the rail icons. Every workspace lists every section — only the default and the
-/// order change, so no panel ever becomes unreachable.
+/// order change, so no panel ever becomes unreachable. Layout puts the fabrication context
+/// (PDKs and their process) right under the library.
 /// </summary>
 public static class WorkspaceRailLayout
 {
     private static readonly IReadOnlyList<LeftRailSection> LayoutOrder =
-        [LeftRailSection.Library, LeftRailSection.Hierarchy, LeftRailSection.Pdks, LeftRailSection.Gates, LeftRailSection.Chiplets];
+        [LeftRailSection.Library, LeftRailSection.Pdks, LeftRailSection.Hierarchy, LeftRailSection.Gates, LeftRailSection.Chiplets];
 
-    private static readonly IReadOnlyList<LeftRailSection> OpticsOrder = LayoutOrder;
+    private static readonly IReadOnlyList<LeftRailSection> OpticsOrder =
+        [LeftRailSection.Library, LeftRailSection.Hierarchy, LeftRailSection.Pdks, LeftRailSection.Gates, LeftRailSection.Chiplets];
 
     private static readonly IReadOnlyList<LeftRailSection> LogicOrder =
         [LeftRailSection.Gates, LeftRailSection.Library, LeftRailSection.Hierarchy, LeftRailSection.Pdks, LeftRailSection.Chiplets];

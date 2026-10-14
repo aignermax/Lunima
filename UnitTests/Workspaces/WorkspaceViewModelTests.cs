@@ -39,8 +39,8 @@ public class WorkspaceViewModelTests
     [InlineData(Workspace.Layout, new[] { AnalysisDockTab.Checks })]
     [InlineData(Workspace.Optics, new[]
     {
+        AnalysisDockTab.Transient, AnalysisDockTab.Sweep, AnalysisDockTab.EyeBer,
         AnalysisDockTab.Spectrum, AnalysisDockTab.MonteCarlo, AnalysisDockTab.Optimization,
-        AnalysisDockTab.Sweep, AnalysisDockTab.Transient, AnalysisDockTab.EyeBer,
     })]
     [InlineData(Workspace.Logic, new[] { AnalysisDockTab.Logic })]
     [InlineData(Workspace.System, new[]
@@ -55,7 +55,7 @@ public class WorkspaceViewModelTests
         vm.SelectCommand.Execute(workspace);
 
         ShownTabs(dock).ShouldBe(expected, ignoreOrder: true);
-        dock.SelectedTabIndex.ShouldBe((int)expected[0], "Run lands on the workspace's first tab");
+        dock.SelectedTabIndex.ShouldBe((int)expected[0], "the dock opens on the workspace's first tab");
     }
 
     [Theory]

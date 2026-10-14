@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP.Avalonia.ViewModels.Workspaces.Presentation;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -11,8 +12,9 @@ namespace CAP.Avalonia.ViewModels.Workspaces;
 
 /// <summary>
 /// The toolbar's workspace switch (Layout / Optics / Logic / System): holds the active
-/// <see cref="Workspace"/>, restricts the analysis dock to the workspace's tabs and exposes
-/// the Run button's label, tooltip and pressed state. The workspace is stored per design in the .lun file
+/// <see cref="Workspace"/>, restricts the analysis dock to the workspace's tabs (returning to
+/// the tab last used there), places the workspace-dependent tools (primary toolbar or "More
+/// tools") and exposes the Run button's label, tooltip and pressed state. The workspace is stored per design in the .lun file
 /// (<see cref="CaptureForSave"/> / <see cref="RestoreAfterLoad"/>); switching it is a view
 /// change and does not mark the design dirty.
 /// </summary>
@@ -22,12 +24,20 @@ public partial class WorkspaceViewModel : ObservableObject
     private const string ActiveRunTipKey = "Workspace.RunActiveTip";
 
     private readonly AnalysisDockViewModel _dock;
+    private readonly Dictionary<Workspace, int> _rememberedDockTab = new();
+
+    /// <summary>
+    /// Raised after every workspace switch with the workspace left and the one entered, so
+    /// the canvas can apply the entered workspace's <see cref="WorkspacePresentation"/>.
+    /// </summary>
+    public event Action<Workspace, Workspace>? Switched;
 
     /// <summary>The active workspace.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLayout), nameof(IsOptics), nameof(IsLogic), nameof(IsSystem),
         nameof(Profile), nameof(RunLabel), nameof(RunTip), nameof(IsOpticalWorkspace),
-        nameof(ShowsProbeTool), nameof(ShowsGateTools), nameof(DisplayName), nameof(IsRunActive))]
+        nameof(ShowsProbeTool), nameof(ShowsGateTools), nameof(DisplayName), nameof(IsRunActive),
+        nameof(IsCutPrimary), nameof(IsProbeInOverflow), nameof(IsCutInOverflow), nameof(HasOverflowTools))]
     private Workspace _current;
 
     /// <summary>
@@ -65,11 +75,24 @@ public partial class WorkspaceViewModel : ObservableObject
     public bool IsOpticalWorkspace => Current is Workspace.Optics or Workspace.System;
 
     /// <summary>
-    /// True where the Probe tool (cross-section mode slice) is offered: Layout and Optics,
-    /// where waveguide geometry and modes matter. Select / Connect / Delete / Cut stay in
-    /// every workspace — manual edits are never locked away.
+    /// True where the Probe tool (cross-section mode slice) sits in the primary toolbar:
+    /// Layout and Optics, where waveguide geometry and modes matter. Elsewhere it is one
+    /// click away under "More tools". Select / Connect / Delete are primary everywhere —
+    /// manual edits are never locked away.
     /// </summary>
-    public bool ShowsProbeTool => Current is Workspace.Layout or Workspace.Optics;
+    public bool ShowsProbeTool => Profile.Presentation.IsPrimary(WorkspaceTool.Probe);
+
+    /// <summary>True where the Cut tool sits in the primary toolbar (not in Optics, where geometry recedes).</summary>
+    public bool IsCutPrimary => Profile.Presentation.IsPrimary(WorkspaceTool.Cut);
+
+    /// <summary>True where Probe is offered under "More tools" instead of the primary toolbar.</summary>
+    public bool IsProbeInOverflow => !ShowsProbeTool;
+
+    /// <summary>True where Cut is offered under "More tools" instead of the primary toolbar.</summary>
+    public bool IsCutInOverflow => !IsCutPrimary;
+
+    /// <summary>True when the toolbar shows the "More tools" overflow button.</summary>
+    public bool HasOverflowTools => Profile.Presentation.OverflowTools.Count > 0;
 
     /// <summary>True where the Truth Table / Make gate section belongs: Logic and System.</summary>
     public bool ShowsGateTools => Current is Workspace.Logic or Workspace.System;
@@ -95,7 +118,16 @@ public partial class WorkspaceViewModel : ObservableObject
     [RelayCommand]
     private void Select(Workspace workspace) => Current = workspace;
 
-    partial void OnCurrentChanged(Workspace value) => _dock.ApplyWorkspaceTabs(Profile.Tabs);
+    partial void OnCurrentChanged(Workspace oldValue, Workspace newValue)
+    {
+        _rememberedDockTab[oldValue] = _dock.SelectedTabIndex;
+        _dock.ApplyWorkspaceTabs(Profile.Tabs);
+        if (!_dock.ShowAllTabs
+            && _rememberedDockTab.TryGetValue(newValue, out var tab)
+            && Profile.Tabs.Contains((AnalysisDockTab)tab))
+            _dock.SelectedTabIndex = tab;
+        Switched?.Invoke(oldValue, newValue);
+    }
 
     /// <summary>The value written to the .lun file.</summary>
     public string CaptureForSave() => Current.ToString();
