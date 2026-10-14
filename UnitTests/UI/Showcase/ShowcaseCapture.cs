@@ -12,7 +12,7 @@ using Shouldly;
 namespace UnitTests.UI.Showcase;
 
 /// <summary>
-/// Shared capture plumbing for the v0.12 feature-showcase screenshots: opt-in gating via
+/// Shared capture plumbing for the feature-showcase screenshots and GIFs: opt-in gating via
 /// <c>UI_SHOT_DIR</c>, render-loop pumping, retry-capture with a blank-frame guard, and
 /// crop/compose helpers (all Avalonia-native, so they work on every OS).
 /// </summary>
@@ -26,13 +26,26 @@ internal static class ShowcaseCapture
     public static bool Enabled =>
         !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("UI_SHOT_DIR"));
 
-    /// <summary>Output directory <c>UI_SHOT_DIR/v0.12</c> (or repo-root <c>artifacts/ui-screenshots/v0.12</c>).</summary>
+    /// <summary>Showcase media version folder — the README and landing page embed <c>docs/media/v0.17/</c>.</summary>
+    public const string MediaVersion = "v0.17";
+
+    /// <summary>Output directory <c>UI_SHOT_DIR/v0.17</c> (or repo-root
+    /// <c>artifacts/ui-screenshots/v0.17</c>). Run with <c>UI_SHOT_DIR=docs/media</c> to
+    /// refresh the committed showcase media in place.</summary>
     public static string OutputDirectory()
     {
         var envDir = Environment.GetEnvironmentVariable("UI_SHOT_DIR");
         var root = !string.IsNullOrEmpty(envDir)
-            ? Path.Combine(envDir, "v0.12")
-            : Path.Combine(FindRepoRoot(), "artifacts", "ui-screenshots", "v0.12");
+            ? Path.Combine(envDir, MediaVersion)
+            : Path.Combine(RepoRoot(), "artifacts", "ui-screenshots", MediaVersion);
+        Directory.CreateDirectory(root);
+        return root;
+    }
+
+    /// <summary>Root for raw GIF frames, <c>artifacts/showcase-frames</c> (not committed).</summary>
+    public static string FramesRoot()
+    {
+        var root = Path.Combine(RepoRoot(), "artifacts", "showcase-frames");
         Directory.CreateDirectory(root);
         return root;
     }
@@ -166,7 +179,8 @@ internal static class ShowcaseCapture
         return colors.Count;
     }
 
-    private static string FindRepoRoot()
+    /// <summary>The repository root (the directory holding the <c>.sln</c>).</summary>
+    public static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null)

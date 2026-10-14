@@ -4,20 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lunima — draw the chip, watch the light</title>
-<meta name="description" content="Lunima is a free, open-source design tool for photonic integrated circuits: Figma-style waveguide editing, live on-canvas simulation, your own PDKs, and open formats end to end.">
+<meta name="description" content="Lunima is a free, open-source design tool for photonic integrated circuits: workspaces for layout, optics, logic and chiplet systems, live on-canvas simulation, your own PDKs, and open formats end to end.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://aignermax.github.io/Lunima/">
 <meta property="og:title" content="Lunima — draw the chip, watch the light">
 <meta property="og:description" content="Free, open-source photonic IC design: Figma-style waveguide editing, live on-canvas simulation, your own PDKs — and a fab-ready GDS at the end.">
-<meta property="og:image" content="https://aignermax.github.io/Lunima/media/v0.12/social-card.png">
+<meta property="og:image" content="https://aignermax.github.io/Lunima/media/v0.17/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Lunima — Draw the chip. Watch the light. A photonic chip with simulated power flow and golden DC metal traces on the design canvas.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Lunima — draw the chip, watch the light">
 <meta name="twitter:description" content="Free, open-source photonic IC design: Figma-style waveguide editing, live on-canvas simulation, your own PDKs — and a fab-ready GDS at the end.">
-<meta name="twitter:image" content="https://aignermax.github.io/Lunima/media/v0.12/social-card.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M2 24 C 12 24 12 8 22 8' fill='none' stroke='%23F2A83B' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='2' cy='24' r='3' fill='%2343DE85'/%3E%3Ccircle cx='22' cy='8' r='3' fill='%2343DE85'/%3E%3C/svg%3E">
+<meta name="twitter:image" content="https://aignermax.github.io/Lunima/media/v0.17/social-card.png">
+<link rel="icon" type="image/svg+xml" href="media/brand/lunima-icon.svg">
 <style>
   :root {
     --navy:   #0A1020;  /* page — the canvas */
@@ -67,13 +67,6 @@
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 0;
   }
-  .wordmark {
-    font-family: var(--mono);
-    font-size: 15px; letter-spacing: 0.32em; font-weight: 600;
-    color: var(--fg);
-  }
-  .wordmark:hover { text-decoration: none; color: var(--amber); }
-  .wordmark .v { color: var(--dim); letter-spacing: 0.05em; font-weight: 400; margin-left: 10px; }
   .nav-links { display: flex; align-items: center; gap: 22px; }
   .nav-links a { color: var(--dim); font-family: var(--mono); font-size: 13px; }
   .nav-links a:hover { color: var(--fg); text-decoration: none; }
@@ -143,13 +136,6 @@
   .frame-bar .hud { text-overflow: ellipsis; overflow: hidden; }
   .hero-frame { margin-bottom: 0; }
 
-  /* ---------- section connectors: real routed values from the pictured chip ---------- */
-  .connector { display: flex; justify-content: center; padding: 64px 0 56px; }
-  .connector svg { width: min(420px, 80vw); height: auto; }
-  .connector .wg { stroke: var(--amber); stroke-width: 2; fill: none; opacity: 0.75; }
-  .connector .port { fill: var(--green); }
-  .connector .lbl { font-family: var(--mono); font-size: 11px; fill: var(--dim); letter-spacing: 0.04em; }
-
   /* ---------- feature sections ---------- */
   .feature { display: grid; grid-template-columns: 5fr 7fr; gap: 56px; align-items: center; }
   .feature.flip .feat-text { order: 2; }
@@ -178,24 +164,7 @@
     vertical-align: 1px; white-space: nowrap;
   }
   .feat-media { min-width: 0; display: grid; gap: 22px; }
-  .frame.narrow { max-width: 540px; margin: 0 auto; width: 100%; }
-  .gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 26px; align-items: start; }
-
-  /* ---------- language band ---------- */
-  .lang-band {
-    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-    background: var(--panel);
-    padding: 60px 0;
-    text-align: center;
-  }
-  .lang-list {
-    font-size: clamp(1.4rem, 3.6vw, 2.4rem); font-weight: 700; letter-spacing: -0.01em;
-    display: flex; flex-wrap: wrap; justify-content: center; column-gap: 0.75em; row-gap: 0.3em;
-    margin: 16px 0 10px;
-  }
-  .lang-list .sep { color: var(--amber); font-weight: 400; }
-  .lang-note { color: var(--dim); font-size: 0.98rem; max-width: 56ch; margin: 0 auto 34px; }
-  .lang-band .frame { max-width: 920px; margin: 0 auto; text-align: left; }
+  .frame.narrow { max-width: 420px; margin: 0 auto; width: 100%; }
 
   /* ---------- download ---------- */
   .download { padding: 96px 0 40px; }
@@ -257,10 +226,63 @@
     .feature.flip .feat-text { order: 1; }
     .feature.flip .feat-media { order: 2; }
     .dl-grid { grid-template-columns: 1fr; }
-    .gallery { grid-template-columns: 1fr; }
     .hero { padding-top: 56px; }
-    .connector { padding: 48px 0 40px; }
     .nav-links a.gh-txt { display: none; }
+  }
+
+  /* ---------- brand ---------- */
+  .brand { display: inline-flex; align-items: center; }
+  .brand:hover { text-decoration: none; }
+  .brand img { height: 26px; width: auto; }
+  .brand .v { color: var(--dim); font-family: var(--mono); font-size: 13px; letter-spacing: 0.05em; margin-left: 12px; }
+  .hero-mark { height: 56px; width: auto; margin-bottom: 26px; }
+
+  /* ---------- feature media: GIFs keep their pixels crisp ---------- */
+  .frame img { width: 100%; }
+  .feature { margin-top: 112px; }
+  /* GIF sections: text across the top (intro left, list right), media full width below —
+     a wide screen recording squeezed into a side column would be unreadable */
+  .feature:not(.side) { grid-template-columns: 1fr; gap: 34px; }
+  .feature:not(.side) .feat-text {
+    display: grid; grid-template-columns: 5fr 6fr; grid-template-rows: auto auto 1fr;
+    column-gap: 56px; align-items: start;
+  }
+  .feature:not(.side) .feat-text > :not(ul) { grid-column: 1; }
+  .feature:not(.side) .feat-text ul { grid-column: 2; grid-row: 1 / span 3; margin-top: 4px; }
+  .feature:not(.side).flip .feat-text, .feature:not(.side).flip .feat-media { order: 0; }
+
+  /* ---------- text-only section ---------- */
+  .solo { margin-top: 112px; }
+  .solo h2 {
+    font-size: clamp(1.7rem, 3.2vw, 2.3rem); line-height: 1.12;
+    letter-spacing: -0.02em; font-weight: 750; margin: 14px 0 16px;
+  }
+  .solo-lede { color: var(--dim); max-width: 62ch; }
+  .solo-grid {
+    list-style: none; margin-top: 26px;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 40px;
+  }
+  .solo-grid li {
+    padding: 11px 0 11px 26px; position: relative;
+    border-top: 1px solid var(--line); font-size: 0.97rem; color: var(--dim);
+  }
+  .solo-grid li::before {
+    content: ""; position: absolute; left: 4px; top: 19px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 6px rgba(67, 222, 133, 0.55);
+  }
+  .solo-grid li strong { color: var(--fg); font-weight: 600; }
+
+  @media (max-width: 920px) {
+    .feature, .solo { margin-top: 72px; }
+    .feature:not(.side) .feat-text { grid-template-columns: 1fr; grid-template-rows: none; }
+    .feature:not(.side) .feat-text ul { grid-column: 1; grid-row: auto; margin-top: 20px; }
+    .solo-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .wrap { padding: 0 16px; }
+    .hero-mark { height: 44px; }
+    .frame-bar .hud { display: none; }
   }
 </style>
 </head>
@@ -268,10 +290,10 @@
 
 <header>
   <div class="wrap nav">
-    <a class="wordmark" href="#top">LUNIMA<span class="v" data-release-version>v0.13.0</span></a>
+    <a class="brand" href="#top"><img src="media/brand/lunima-wordmark-dark.svg" width="101" height="26" alt="Lunima"><span class="v" data-release-version>v0.17.0</span></a>
     <nav class="nav-links" aria-label="Main">
       <a class="gh-txt" href="https://github.com/aignermax/Lunima">GitHub</a>
-      <a class="gh-txt" data-release-notes href="https://github.com/aignermax/Lunima/releases/tag/v0.13.0">Release notes</a>
+      <a class="gh-txt" data-release-notes href="https://github.com/aignermax/Lunima/releases/tag/v0.17.0">Release notes</a>
       <a class="btn-sm" href="#download">Download</a>
     </nav>
   </div>
@@ -282,16 +304,17 @@
   <!-- ================= HERO ================= -->
   <section class="hero">
     <div class="wrap">
+      <img class="hero-mark" src="media/brand/lunima-wordmark-dark.svg" width="218" height="56" alt="Lunima">
       <p class="eyebrow">Open-source photonic IC design &nbsp;·&nbsp; λ = 1550 nm</p>
       <h1>Draw the chip.<br><em>Watch the light.</em></h1>
       <p class="lede">
         Lunima is a free, open-source design tool for photonic integrated circuits.
-        Route waveguides the way you'd edit vectors in Figma, <strong>watch simulated
-        power flow live on the canvas</strong>, bring your own PDK — and take everything
-        with you in open formats.
+        Place parts, let the router wire them, <strong>press Run and watch the simulated
+        power flow on the canvas</strong> — then build logic gates, link chiplets, and
+        take everything with you as a fab-ready GDS and open formats.
       </p>
       <div class="cta-row">
-        <a class="btn btn-primary" data-release-cta href="https://github.com/aignermax/Lunima/releases/tag/v0.13.0">Download v0.13.0</a>
+        <a class="btn btn-primary" data-release-cta href="https://github.com/aignermax/Lunima/releases/tag/v0.17.0">Download v0.17.0</a>
         <a class="btn btn-ghost" href="https://github.com/aignermax/Lunima">View on GitHub</a>
       </div>
       <p class="platforms">Windows · Linux · macOS — MIT licensed</p>
@@ -302,118 +325,201 @@
         <path class="pulse" d="M 8 20 C 250 20 250 88 480 88 L 700 88 C 930 88 930 20 1112 20" />
         <circle class="port" cx="8" cy="20" r="4.5" />
         <circle class="port" cx="1112" cy="20" r="4.5" />
-        <text class="lbl" x="560" y="76" text-anchor="middle">SBend — 163 µm, 0.11 dB</text>
       </svg>
 
       <figure class="frame hero-frame">
         <div class="frame-bar">
-          <span><span class="ok">▶ CW</span>&nbsp; Simulation complete: 2 source(s), 12 connections @ 1550 nm</span>
-          <span class="hud">Zoom: 78% | Components: 12 | Connections: 12</span>
+          <span><span class="ok">▶ Run</span>&nbsp; place → route → simulate</span>
+          <span class="hud">Optics · CW @ 1550 nm</span>
         </div>
-        <img src="media/v0.12/hero-canvas.png" width="1920" height="950"
-             alt="The Lunima main window running a live CW simulation on a Mach-Zehnder chip: waveguides colored by simulated power flow with dB labels, golden DC metal traces to probe and bond pads, diagonal routing and hand-styled bends.">
+        <img src="media/v0.17/hero-loop.gif" width="1280" height="628" decoding="async"
+             alt="A Mach-Zehnder chip builds itself in the Lunima main window: components are placed one by one, the router wires connection after connection, golden DC metal traces reach the probe and bond pads — then the Optics workspace's Run button lights up the simulated power flow on every waveguide.">
       </figure>
     </div>
   </section>
 
-  <!-- connector: real value from the pictured chip -->
-  <div class="connector" aria-hidden="true">
-    <svg viewBox="0 0 420 70">
-      <path class="wg" d="M 10 14 C 140 14 140 56 210 56 C 280 56 280 14 410 14" />
-      <circle class="port" cx="10" cy="14" r="4" />
-      <circle class="port" cx="410" cy="14" r="4" />
-      <text class="lbl" x="210" y="40" text-anchor="middle">Bend — 413 µm, 0.14 dB</text>
-    </svg>
-  </div>
-
-  <!-- ================= LAYOUT & ROUTING (Peter) ================= -->
-  <section class="wrap feature" id="layout">
+  <!-- ================= WORKSPACES ================= -->
+  <section class="wrap feature" id="workspaces">
     <div class="feat-text">
-      <p class="eyebrow">If you route by hand</p>
-      <h2>Routing that answers to you</h2>
+      <p class="eyebrow">One design, four views</p>
+      <h2>Workspaces that know what you're doing</h2>
       <p>
-        Click a connection and it becomes geometry you can grab: in-canvas bend-radius
-        handles, live length and loss on every segment, exact numbers everywhere.
-        The router suggests — it never overwrites what you set.
+        Layout, Optics, Logic and System look at the same design. Each brings its own
+        accent colour, its own Run button and the left panel and analysis tabs you need
+        right now — nothing else.
       </p>
       <ul>
-        <li><strong>Per-connection styles</strong> — SBend, Bend, custom radii; freeze routes you've tuned.</li>
-        <li><strong>Process-aware</strong> — routing honors your process's minimum bend radius; handles clamp to it.</li>
-        <li><strong>Diagonal 45° routing</strong><span class="tag">opt-in beta</span> — denser layouts; still slow on large designs.</li>
-        <li><strong>Auto crossing insertion</strong><span class="tag">opt-in</span> — a real PDK crossing component, only where you allow it.</li>
-        <li><strong>Metal routing</strong> — wire DC probe and bond pads next to the optical layer.</li>
+        <li><strong>Layout</strong> — component library, routing tools; Run checks the design.</li>
+        <li><strong>Optics</strong> — sources &amp; detectors; Run toggles the live simulation.</li>
+        <li><strong>Logic</strong> — gates and starter circuits; Run builds the logic network.</li>
+        <li><strong>System</strong> — chiplets and their links, with the loss across each link.</li>
       </ul>
     </div>
     <div class="feat-media">
       <figure class="frame">
         <div class="frame-bar">
-          <span><span class="ok">[S]</span>&nbsp; Select — Routing: Bend</span>
-          <span class="hud">radius 69 µm | 413 µm, 0.14 dB</span>
+          <span><span class="ok">Ctrl+1…4</span>&nbsp; Layout · Optics · Logic · System</span>
+          <span class="hud">Two Chiplets — Edge-Coupler Link</span>
         </div>
-        <img src="media/v0.12/waveguide-editing.png" width="1920" height="950"
-             alt="Figma-style waveguide editing: a selected connection shows draggable in-canvas bend-radius handles with live radius labels, and the per-connection Routing panel is set to the Bend style.">
+        <img src="media/v0.17/workspaces.gif" width="1280" height="720" loading="lazy" decoding="async"
+             alt="Switching the shipped two-chiplet example through the Layout, Optics, Logic and System workspaces: the accent colour, the Run button, the left panel (library, sources, gates, chiplets) and the analysis tabs change with each workspace.">
       </figure>
     </div>
   </section>
 
-  <div class="connector" aria-hidden="true">
-    <svg viewBox="0 0 420 70">
-      <path class="wg" d="M 10 56 C 140 56 140 14 210 14 C 280 14 280 56 410 56" />
-      <circle class="port" cx="10" cy="56" r="4" />
-      <circle class="port" cx="410" cy="56" r="4" />
-      <text class="lbl" x="210" y="48" text-anchor="middle">SBend — 325 µm, 0.02 dB</text>
-    </svg>
-  </div>
-
-  <!-- ================= SIMULATE & MEASURE (Priya / Mirko) ================= -->
+  <!-- ================= LIVE SIMULATION ================= -->
   <section class="wrap feature flip" id="simulate">
     <div class="feat-text">
       <p class="eyebrow">If you simulate — and then measure</p>
       <h2>Simulation lives on the canvas</h2>
       <p>
-        Run CW and read power straight off the waveguides. Go time-domain when you
-        need it. And when your devices come back from the fab, load the measured
-        S-matrices onto the very components you drew.
+        Turn the simulation on once. Every edit after that — a new wire, a moved part,
+        a parameter — re-runs it in the background and repaints the power flow.
       </p>
       <ul>
-        <li><strong>Transient</strong> — IFFT of the circuit S-parameters with pulse, CW or PRBS sources; a sample-mode driver runs active, time-dependent compact models.</li>
-        <li><strong>Eye / BER</strong> — PRBS eye-persistence heat maps with Q-factor and BER (shot/thermal/RIN noise), plus CSV export.</li>
-        <li><strong>ONA sweeps</strong> — transmission over wavelength via the Optical Network Analyzer component.</li>
-        <li><strong>FDTD with Meep</strong> — recompute a component's S-matrix from its geometry in Docker, with a guided setup dialog.</li>
-        <li><strong>Measured data in</strong> — load S-matrices from file; probe waveguide modes and fiber overlap right on the canvas.</li>
+        <li><strong>Live CW power flow</strong> — dB and percent on every waveguide, updated as you edit.</li>
+        <li><strong>Transient &amp; Eye / BER</strong> — IFFT of the circuit S-parameters, PRBS eye heat maps with Q-factor and BER, CSV export.</li>
+        <li><strong>ONA sweeps &amp; spectra</strong> — transmission over wavelength per output pin.</li>
+        <li><strong>FDTD with Meep</strong> — recompute a component's S-matrix from its geometry in Docker.</li>
+        <li><strong>Measured data in</strong> — load S-matrices from file onto the components you drew.</li>
       </ul>
     </div>
     <div class="feat-media">
       <figure class="frame">
         <div class="frame-bar">
-          <span><span class="ok">Transient</span>&nbsp; IFFT · GaussianPulse @ 1550 nm</span>
-          <span class="hud">Done — 3 output pin(s)</span>
+          <span><span class="ok">● Simulation on</span>&nbsp; live re-run on every edit</span>
+          <span class="hud">Phase shifter 0° → 360°</span>
         </div>
-        <img src="media/v0.12/transient-analysis.png" width="1340" height="480"
-             alt="Transient analysis panel plotting time-domain power of three output pins — MZI bar and cross ports and the photodetector input — as separate toggleable traces.">
+        <img src="media/v0.17/live-simulation.gif" width="1276" height="421" loading="lazy" decoding="async"
+             alt="With the simulation on, connecting the missing combiner-to-detector wire lights it up by itself; sweeping the phase shifter's phase through 360 degrees moves the light between the photodetector and the output coupler, every frame a real live re-run.">
       </figure>
       <figure class="frame">
         <div class="frame-bar">
           <span><span class="ok">Eye / BER</span>&nbsp; PRBS-7 @ 25 Gbps</span>
           <span class="hud">threshold 0.50 | Export CSV</span>
         </div>
-        <img src="media/v0.12/eye-analysis.png" width="1340" height="480"
+        <img src="media/v0.17/eye-analysis.png" width="1340" height="480" loading="lazy" decoding="async"
              alt="Eye/BER analysis: a PRBS-7 modulated transient folded into an eye-persistence heat map at 25 gigabits per second, with bit rate, pattern and threshold controls.">
       </figure>
     </div>
   </section>
 
-  <div class="connector" aria-hidden="true">
-    <svg viewBox="0 0 420 70">
-      <path class="wg" d="M 10 14 C 140 14 140 56 210 56 C 280 56 280 14 410 14" />
-      <circle class="port" cx="10" cy="14" r="4" />
-      <circle class="port" cx="410" cy="14" r="4" />
-      <text class="lbl" x="210" y="40" text-anchor="middle">Bend — 227 µm, 0.15 dB</text>
-    </svg>
-  </div>
+  <!-- ================= ROUTING & CROSSINGS ================= -->
+  <section class="wrap feature" id="layout">
+    <div class="feat-text">
+      <p class="eyebrow">If you route by hand</p>
+      <h2>Routing that answers to you</h2>
+      <p>
+        The router suggests, you decide. Cut a wire to let another one cross, slide a
+        crossing along its wire — only the pieces that have to move are re-routed.
+      </p>
+      <ul>
+        <li><strong>Cut tool</strong> — cut any wire, even one coming out of a crossing; a real PDK crossing drops in and the halves keep their geometry.</li>
+        <li><strong>Slide crossings</strong> — drag along an axis; Shift frees the drag.</li>
+        <li><strong>Per-connection styles</strong> — SBend, Bend, custom radii with in-canvas handles; freeze routes you've tuned.</li>
+        <li><strong>Process-aware</strong> — routing honours your process's minimum bend radius.</li>
+        <li><strong>Metal routing &amp; diagonal 45°</strong><span class="tag">opt-in</span> — DC traces next to the optical layer, denser layouts.</li>
+      </ul>
+    </div>
+    <div class="feat-media">
+      <figure class="frame">
+        <div class="frame-bar">
+          <span><span class="ok">✂ Cut</span>&nbsp; then drag the crossing</span>
+          <span class="hud">only the perpendicular pieces re-route</span>
+        </div>
+        <img src="media/v0.17/crossings.gif" width="952" height="598" loading="lazy" decoding="async"
+             alt="Two wires cross through a waveguide crossing. The Cut tool cuts the wire coming out of it, a new crossing drops in and a third wire runs straight through it; then dragging the first crossing along its wire stretches only the horizontal pieces while the two perpendicular pieces re-route.">
+      </figure>
+    </div>
+  </section>
 
-  <!-- ================= YOUR PDK (Priya) ================= -->
-  <section class="wrap feature" id="pdk">
+  <!-- ================= LOGIC ================= -->
+  <section class="wrap feature flip" id="logic">
+    <div class="feat-text">
+      <p class="eyebrow">If you compute with light</p>
+      <h2>From parts to a logic gate</h2>
+      <p>
+        Select a few photonic parts and press <em>Make gate</em>. Lunima groups them,
+        simulates every input combination and proposes the threshold that turns the
+        optical powers into a truth table.
+      </p>
+      <ul>
+        <li><strong>Make gate</strong> — pin roles, real simulation, suggested threshold and margin in dB.</li>
+        <li><strong>Gate library</strong> — save gates and drag them into bigger circuits: adders, latches, RAM, an ALU.</li>
+        <li><strong>Logic network</strong> — toggle inputs and watch every gate output live, or step the clock.</li>
+      </ul>
+    </div>
+    <div class="feat-media">
+      <figure class="frame">
+        <div class="frame-bar">
+          <span><span class="ok">Logic</span>&nbsp; Make gate → NAND</span>
+          <span class="hud">Reads NAND in every row</span>
+        </div>
+        <img src="media/v0.17/make-gate.gif" width="1440" height="835" loading="lazy" decoding="async"
+             alt="In the Logic workspace the parts of the gate kit are box-selected, Make gate groups them and opens the gate steps, and the simulated truth table with its automatic threshold reads NAND in every row.">
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= CHIPLETS ================= -->
+  <section class="wrap feature" id="chiplets">
+    <div class="feat-text">
+      <p class="eyebrow">If one die isn't enough</p>
+      <h2>Chiplets, linked by light</h2>
+      <p>
+        Put two dies side by side and butt-couple them through edge couplers. Knock one
+        out of alignment and the live simulation shows the link losing light — Design
+        Checks name the offset, one click snaps it back.
+      </p>
+      <ul>
+        <li><strong>Dies with their own process</strong> — the System workspace lists every chiplet with its process.</li>
+        <li><strong>Link loss you can see</strong> — every edge-coupler link carries its loss in dB.</li>
+        <li><strong>Align chiplet</strong> — a lateral offset is a design-check finding with a one-click fix.</li>
+        <li><strong>Logic across dies</strong> — gate networks follow the light through edge-coupler links.</li>
+      </ul>
+    </div>
+    <div class="feat-media">
+      <figure class="frame">
+        <div class="frame-bar">
+          <span><span class="ok">System</span>&nbsp; Transmitter ↔ Receiver chiplet</span>
+          <span class="hud">0.00 dB → 16.71 dB → 0.00 dB</span>
+        </div>
+        <img src="media/v0.17/chiplets.gif" width="1280" height="675" loading="lazy" decoding="async"
+             alt="Two chiplets butt-coupled through edge couplers in the System workspace: dragging the receiver die off the transmitter's edge coupler raises the link loss to 16.7 dB and dims the output, Design Checks report the lateral offset, and Align chiplet snaps the die back.">
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= AGENT BRIDGE ================= -->
+  <section class="wrap feature flip" id="agent">
+    <div class="feat-text">
+      <p class="eyebrow">If you work with an AI agent</p>
+      <h2>Claude can repair your design</h2>
+      <p>
+        Lunima's agent bridge speaks MCP. An agent such as Claude inspects the open
+        design, tries fixes in a sandbox and applies the one that works — through the
+        same undoable commands you use.
+      </p>
+      <ul>
+        <li><strong>Inspect</strong> — design summary, components, connections, routing timings, screenshots.</li>
+        <li><strong>Edit</strong> — move and delete components, reroute, undo.</li>
+        <li><strong>Repair</strong> — cut candidates, crossing slides, segment shifts, sandboxed fix suggestions.</li>
+      </ul>
+    </div>
+    <div class="feat-media">
+      <figure class="frame">
+        <div class="frame-bar">
+          <span><span class="ok">MCP</span>&nbsp; list_connections → suggest_fixes → move_component</span>
+          <span class="hud">0 of 12 blocked</span>
+        </div>
+        <img src="media/v0.17/agent-bridge.gif" width="952" height="628" loading="lazy" decoding="async"
+             alt="A terminal-style overlay lists the real MCP tool calls an agent makes on the canvas: list_connections finds the blocked metal trace of a moved probe pad, suggest_fixes tries nudges in a sandbox, move_component moves the pad clear and all 12 connections route.">
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= YOUR PDK ================= -->
+  <section class="wrap feature side flip" id="pdk">
     <div class="feat-text">
       <p class="eyebrow">If you run your own fab</p>
       <h2>Your PDK is a first-class citizen</h2>
@@ -424,68 +530,37 @@
       </p>
       <ul>
         <li><strong>One editor for everything</strong> — code, geometry preview and S-matrix side by side.</li>
-        <li><strong>Fork-on-save</strong> — editing a bundled component forks it into your PDK, shadowing the original; restore it any time.</li>
+        <li><strong>Fork-on-save</strong> — editing a bundled component forks it into your PDK; restore the original any time.</li>
         <li><strong>Trash, not dread</strong> — deleted PDKs and components restore for 30 days.</li>
-        <li><strong>Process editor</strong> — layer stack, cross-sections with min/recommended bend radii the router enforces, and your own refractive indices.</li>
-        <li><strong>Design checks</strong> — validate against the process, with layer-divergence warnings.</li>
+        <li><strong>Process editor</strong> — layer stack, cross-sections with bend radii the router enforces, your own refractive indices.</li>
       </ul>
     </div>
     <div class="feat-media">
       <figure class="frame narrow">
         <div class="frame-bar">
-          <span><span class="ok">Edit</span>&nbsp; 1x2 MMI Splitter — Demo PDK</span>
-          <span class="hud">GdsFactory | Compute with Meep</span>
+          <span><span class="ok">Edit</span>&nbsp; 1×2 MMI Splitter — Demo PDK</span>
+          <span class="hud">GdsFactory | Meep</span>
         </div>
-        <img src="media/v0.12/component-editor.png" width="1120" height="1760"
-             alt="The unified component editor: fork-on-save banner, PDK and fabrication-process context, syntax-highlighted gdsfactory Python code, a rendered geometry preview of the 1x2 MMI, and one-click S-matrix computation via Meep FDTD.">
+        <img src="media/v0.17/component-editor.png" width="560" height="880" loading="lazy" decoding="async"
+             alt="The unified component editor: PDK and fabrication-process context, syntax-highlighted gdsfactory Python code, a rendered geometry preview of the 1x2 MMI, and one-click S-matrix computation via Meep FDTD.">
       </figure>
     </div>
   </section>
 
-  <div class="wrap gallery">
-    <figure class="frame">
-      <div class="frame-bar">
-        <span><span class="ok">PDK Mgmt</span>&nbsp; 5/5 PDKs active</span>
-        <span class="hud">Trash — restores for 30 days</span>
-      </div>
-      <img src="media/v0.12/pdk-management.png" width="1744" height="920"
-           alt="The PDK lifecycle in one view: component library with per-component edit and restore-original actions, PDK management listing a forked user copy that shadows its bundled original, and the trash panel restoring deleted PDKs or single components.">
-    </figure>
-    <figure class="frame">
-      <div class="frame-bar">
-        <span><span class="ok">Process</span>&nbsp; Cornerstone SiN 300nm</span>
-        <span class="hud">strip_sin 1.2 µm | min R 30 µm</span>
-      </div>
-      <img src="media/v0.12/process-editor.png" width="1640" height="1360"
-           alt="The fabrication-process editor on a SiN 300 nm process: GDS layer stack, optical and metal cross-sections with per-cross-section minimum and recommended bend radii, and materials with user-supplied refractive indices.">
-    </figure>
-  </div>
-
-  <div class="connector" aria-hidden="true">
-    <svg viewBox="0 0 420 70">
-      <path class="wg" d="M 10 14 C 140 14 140 56 210 56 C 280 56 280 14 410 14" />
-      <circle class="port" cx="10" cy="14" r="4" />
-      <circle class="port" cx="410" cy="14" r="4" />
-      <text class="lbl" x="210" y="40" text-anchor="middle">ebeam_gc_te1550 — pin Δ 0.00 µm</text>
-    </svg>
-  </div>
-
-  <!-- ================= FROM CANVAS TO FAB (Priya / Peter) ================= -->
+  <!-- ================= FROM CANVAS TO FAB ================= -->
   <section class="wrap feature" id="fab">
     <div class="feat-text">
       <p class="eyebrow">If you tape out</p>
       <h2>Built to tape out</h2>
       <p>
         Layouts target real foundry processes from the first component you place —
-        so what leaves the Export menu is a GDS a fab can actually make, not a
-        pretty schematic.
+        so what leaves the Export menu is a GDS a fab can actually make.
       </p>
       <ul>
-        <li><strong>Real foundry PDKs, bundled</strong> — CornerStone SiN 300 nm and the open SiEPIC EBeam SOI 220 nm ship with the app, next to the Demo PDK.</li>
-        <li><strong>Calibrated against the cells</strong> — the offset editor renders the PDK's actual GDS polygons and verifies every pin position; Check-All audits the whole library.</li>
-        <li><strong>One design, one process</strong> — incompatible PDKs can't mix on a chip; free mixing lives in a Playground the status bar labels <em>not manufacturable</em>.</li>
-        <li><strong>Design checks</strong> — bend-radius floors in router and handles, layer-divergence warnings, process-bound cross-sections.</li>
-        <li><strong>GDS via gdsfactory or nazca</strong> — one Export menu, two GDS back-ends; your own components can be written in either. The MPW run stays between you and your foundry.</li>
+        <li><strong>Real foundry PDKs, bundled</strong> — CornerStone SiN 300 nm and the open SiEPIC EBeam SOI 220 nm, next to the Demo PDK.</li>
+        <li><strong>Calibrated against the cells</strong> — the offset editor renders the PDK's actual GDS polygons and verifies every pin.</li>
+        <li><strong>One design, one process</strong> — free mixing lives in a Playground the status bar labels <em>not manufacturable</em>.</li>
+        <li><strong>GDS via gdsfactory or nazca</strong> — plus SAX, PhotonTorch, Verilog-A and YAML netlists from the same menu.</li>
       </ul>
     </div>
     <div class="feat-media">
@@ -494,89 +569,41 @@
           <span><span class="ok">⇄ 1:1</span>&nbsp; canvas ↔ exported GDS (gdsfactory)</span>
           <span class="hud">same circuit · same scale · same position</span>
         </div>
-        <img src="media/v0.12/canvas-vs-gds.png" width="2642" height="752" loading="lazy"
+        <img src="media/v0.17/canvas-vs-gds.png" width="2580" height="735" loading="lazy" decoding="async"
              alt="What you draw is what you tape out: the MZI core drawn on the Lunima canvas next to the rendered polygons of the GDS actually exported through gdsfactory — every waveguide, bend and metal trace in the same place.">
       </figure>
       <figure class="frame">
         <div class="frame-bar">
-          <span><span class="ok">📤 Export</span>&nbsp; GDS via gdsfactory · nazca</span>
-          <span class="hud">Check-All: 8/8 aligned | Δ 0.00 µm</span>
+          <span><span class="ok">Export</span>&nbsp; GDS via gdsfactory · nazca</span>
+          <span class="hud">Check-All: all aligned | Δ 0.00 µm</span>
         </div>
-        <img src="media/v0.12/gds-export.png" width="2708" height="900" loading="lazy"
-             alt="The manufacturing story: the unified Export flyout over the chip listing gdsfactory and nazca GDS back-ends, the PDK calibration editor rendering the SiEPIC grating coupler's actual GDS geometry with its pin sitting exactly on the cell origin, and an all-green Check-All calibration report.">
+        <img src="media/v0.17/gds-export.png" width="2686" height="1015" loading="lazy" decoding="async"
+             alt="The manufacturing story: the Export flyout over the chip listing the GDS, SAX, PhotonTorch, Verilog-A and netlist back-ends, the PDK calibration editor rendering the SiEPIC grating coupler's actual GDS geometry with its pins aligned, and an all-green Check-All report.">
       </figure>
     </div>
   </section>
 
-  <div class="connector" aria-hidden="true">
-    <svg viewBox="0 0 420 70">
-      <path class="wg" d="M 10 56 C 140 56 140 14 210 14 C 280 14 280 56 410 56" />
-      <circle class="port" cx="10" cy="56" r="4" />
-      <circle class="port" cx="410" cy="56" r="4" />
-      <text class="lbl" x="210" y="48" text-anchor="middle">metal_dc — 266 µm&nbsp; # electrical</text>
-    </svg>
-  </div>
-
-  <!-- ================= OPEN BY DESIGN (Mirko) ================= -->
-  <section class="wrap feature flip" id="open">
-    <div class="feat-text">
-      <p class="eyebrow">If you don't trust black boxes</p>
-      <h2>Open by design</h2>
-      <p>
-        Every stage has an escape hatch. Your circuit is a graph you can export,
-        your PDK is JSON you can diff, and nothing in the pipeline requires you
-        to stay.
-      </p>
-      <ul>
-        <li><strong>gdsfactory YAML netlists</strong> — instances with settings, placements, logical connections (metal traces marked <code style="font-family: var(--mono); font-size: 0.85em; color: var(--gold);"># electrical</code>) and exposed ports — ready for SAX and any gdsfactory flow.</li>
-        <li><strong>Open JSON PDKs</strong> — documented, human-readable, version-controllable.</li>
-        <li><strong>GDS export</strong> — through gdsfactory or nazca, into your fabrication pipeline.</li>
-        <li><strong>Autorouting is optional</strong> — style it, freeze it, or route yourself; your edits are never overwritten.</li>
-        <li><strong>AI design assistant</strong> — describe a circuit in natural language, with your own Claude API key.</li>
-      </ul>
-    </div>
-    <div class="feat-media">
-      <figure class="frame">
-        <div class="frame-bar">
-          <span><span class="ok">Netlist</span>&nbsp; gdsfactory YAML</span>
-          <span class="hud">12 instances, 12 connections, 2 ports</span>
-        </div>
-        <img src="media/v0.12/netlist-export.png" width="1380" height="780"
-             alt="Netlist export: a gdsfactory YAML circuit netlist derived from the canvas — instances with settings, informational placements, logical port-to-port connections with metal traces marked electrical, and exposed ports.">
-      </figure>
-    </div>
-  </section>
-
-  <!-- ================= LANGUAGES ================= -->
-  <section class="lang-band" id="languages" style="margin-top: 96px;">
-    <div class="wrap">
-      <p class="eyebrow">Five languages, one canvas</p>
-      <p class="lang-list" lang="">
-        <span lang="en">English</span> <span class="sep">·</span>
-        <span lang="de">Deutsch</span> <span class="sep">·</span>
-        <span lang="es">Español</span> <span class="sep">·</span>
-        <span lang="zh-Hans">简体中文</span> <span class="sep">·</span>
-        <span lang="ja">日本語</span>
-      </p>
-      <p class="lang-note">
-        Auto-detected from your system and live-switchable — every toolbar, panel
-        and canvas HUD string re-reads instantly, no restart.
-      </p>
-      <figure class="frame">
-        <div class="frame-bar">
-          <span><span class="ok">Mode:</span>&nbsp; Select&nbsp; ⇄ &nbsp;モード: 選択</span>
-          <span class="hud">i18n — live switch</span>
-        </div>
-        <img src="media/v0.12/multilanguage.png" width="1482" height="620"
-             alt="The same Lunima main window shown side by side in English and Japanese — every toolbar, panel and canvas string is localized.">
-      </figure>
-    </div>
+  <!-- ================= OPEN BY DESIGN ================= -->
+  <section class="wrap solo" id="open">
+    <p class="eyebrow">If you don't trust black boxes</p>
+    <h2>Open by design</h2>
+    <p class="solo-lede">
+      Every stage has an escape hatch. Your circuit is a graph you can export, your PDK
+      is JSON you can diff, and nothing in the pipeline requires you to stay.
+    </p>
+    <ul class="solo-grid">
+      <li><strong>gdsfactory YAML netlists</strong> — instances, placements, connections and ports, ready for SAX.</li>
+      <li><strong>Open JSON PDKs</strong> — documented, human-readable, version-controllable.</li>
+      <li><strong>Five languages</strong> — English, Deutsch, Español, 简体中文, 日本語; live-switchable.</li>
+      <li><strong>Autorouting is optional</strong> — style it, freeze it, or route yourself.</li>
+    </ul>
   </section>
 
   <!-- ================= DOWNLOAD ================= -->
+
   <section class="download wrap" id="download">
     <p class="eyebrow">Get Lunima</p>
-    <h2 data-release-heading>Download v0.13.0</h2>
+    <h2 data-release-heading>Download v0.17.0</h2>
     <p class="sub">
       Free and MIT-licensed. Once installed, Lunima updates itself in place —
       download, swap, relaunch — on all three platforms.
@@ -585,21 +612,21 @@
       <div class="dl-card">
         <h3>Windows</h3>
         <p class="arch">x64</p>
-        <a class="asset" data-release-asset="msi" href="https://github.com/aignermax/Lunima/releases/download/v0.13.0/Lunima-Setup-0.13.0.msi">Lunima-Setup-0.13.0.msi</a>
-        <a class="asset" data-release-asset="win-zip" href="https://github.com/aignermax/Lunima/releases/download/v0.13.0/Lunima-0.13.0-win-x64.zip">Lunima-0.13.0-win-x64.zip</a>
+        <a class="asset" data-release-asset="msi" href="https://github.com/aignermax/Lunima/releases/download/v0.17.0/Lunima-Setup-0.17.0.msi">Lunima-Setup-0.17.0.msi</a>
+        <a class="asset" data-release-asset="win-zip" href="https://github.com/aignermax/Lunima/releases/download/v0.17.0/Lunima-0.17.0-win-x64.zip">Lunima-0.17.0-win-x64.zip</a>
         <p class="note">Installer, or portable zip — unzip and run.</p>
       </div>
       <div class="dl-card">
         <h3>Linux</h3>
         <p class="arch">x64</p>
-        <a class="asset" data-release-asset="linux-tar" href="https://github.com/aignermax/Lunima/releases/download/v0.13.0/Lunima-0.13.0-linux-x64.tar.gz">Lunima-0.13.0-linux-x64.tar.gz</a>
+        <a class="asset" data-release-asset="linux-tar" href="https://github.com/aignermax/Lunima/releases/download/v0.17.0/Lunima-0.17.0-linux-x64.tar.gz">Lunima-0.17.0-linux-x64.tar.gz</a>
         <p class="note">Extract into its own folder and run.</p>
       </div>
       <div class="dl-card">
         <h3>macOS</h3>
         <p class="arch">Apple Silicon · Intel</p>
-        <a class="asset" data-release-asset="osx-arm" href="https://github.com/aignermax/Lunima/releases/download/v0.13.0/Lunima-0.13.0-osx-arm64.dmg">Lunima-0.13.0-osx-arm64.dmg</a>
-        <a class="asset" data-release-asset="osx-x64" href="https://github.com/aignermax/Lunima/releases/download/v0.13.0/Lunima-0.13.0-osx-x64.dmg">Lunima-0.13.0-osx-x64.dmg</a>
+        <a class="asset" data-release-asset="osx-arm" href="https://github.com/aignermax/Lunima/releases/download/v0.17.0/Lunima-0.17.0-osx-arm64.dmg">Lunima-0.17.0-osx-arm64.dmg</a>
+        <a class="asset" data-release-asset="osx-x64" href="https://github.com/aignermax/Lunima/releases/download/v0.17.0/Lunima-0.17.0-osx-x64.dmg">Lunima-0.17.0-osx-x64.dmg</a>
         <p class="note">Unsigned build — see the first-launch note below.</p>
       </div>
     </div>
@@ -615,10 +642,10 @@
 <footer>
   <div class="wrap">
     <div class="foot-row">
-      <a class="wordmark" href="#top">LUNIMA</a>
+      <a class="brand" href="#top"><img src="media/brand/lunima-wordmark-dark.svg" width="101" height="26" alt="Lunima" loading="lazy"></a>
       <nav class="foot-links" aria-label="Footer">
         <a href="https://github.com/aignermax/Lunima">GitHub</a>
-        <a data-release-notes href="https://github.com/aignermax/Lunima/releases/tag/v0.13.0">Release notes</a>
+        <a data-release-notes href="https://github.com/aignermax/Lunima/releases/tag/v0.17.0">Release notes</a>
         <a href="https://github.com/aignermax/Lunima/blob/main/docs/PDK_JSON_FORMAT.md">PDK format</a>
         <a href="https://www.akhetonics.com/">Akhetonics</a>
         <a href="https://akhetonics.com/impressum">Imprint</a>
@@ -649,7 +676,7 @@
 </section>
 
 <!-- ================= DYNAMIC RELEASE INFO ================= -->
-<!-- Keeps the static v0.13.0 fallback above in sync with the latest GitHub
+<!-- Keeps the static v0.17.0 fallback above in sync with the latest GitHub
      release. Anonymous, unauthenticated API read only — no tracking, no
      storage, matching the privacy promise above. Any failure (offline, rate
      limit, missing asset) leaves the static markup exactly as it is. -->
@@ -715,7 +742,7 @@
     .then(function (response) { return response.ok ? response.json() : null; })
     .then(applyRelease)
     .catch(function () {
-      // Offline, rate-limited, or malformed response — the static v0.13.0
+      // Offline, rate-limited, or malformed response — the static v0.17.0
       // fallback markup above stays exactly as authored.
     });
 })();

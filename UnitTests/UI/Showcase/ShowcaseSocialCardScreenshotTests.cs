@@ -12,12 +12,12 @@ using Xunit;
 namespace UnitTests.UI.Showcase;
 
 /// <summary>
-/// v0.12 feature-showcase: the 1200x630 Open-Graph/Twitter social card behind the landing
+/// Feature showcase: the 1200x630 Open-Graph/Twitter social card behind the landing
 /// page's link preview. Full-bleed background: a live-simulation crop of the staged hero
 /// chip (power-flow colored waveguides plus the golden DC metal traces), overlaid with a
-/// navy legibility gradient and the landing page's typography — LUNIMA wordmark, green
+/// navy legibility gradient and the landing page's typography — the Lunima wordmark (waveguide-L), green
 /// eyebrow, and the "Draw the chip. / Watch the light." claim, sized to stay readable at
-/// thumbnail width. Opt-in via <c>UI_SHOT_DIR</c>; the PNG lands in <c>UI_SHOT_DIR/v0.12/</c>.
+/// thumbnail width. Opt-in via <c>UI_SHOT_DIR</c>; the PNG lands in <c>UI_SHOT_DIR/v0.17/</c>.
 /// </summary>
 [Trait("Category", "Showcase")]
 [Collection("LocalizationSingleton")]
@@ -25,6 +25,7 @@ public class ShowcaseSocialCardScreenshotTests
 {
     private const int CardWidth = 1200;
     private const int CardHeight = 630;
+    private const double WordmarkHeight = 58;
 
     /// <summary>World-space (µm) region of the staged chip behind the card: the MZI arms
     /// with the electro-optic phase shifter, probe/bond pads with golden metal traces and
@@ -115,13 +116,9 @@ public class ShowcaseSocialCardScreenshotTests
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
-        stack.Children.Add(new TextBlock
-        {
-            Text = "LUNIMA",
-            FontFamily = mono, FontSize = 27, FontWeight = FontWeight.SemiBold,
-            LetterSpacing = 9, Foreground = new SolidColorBrush(Color.Parse("#E9EEF7")),
-            Margin = new Thickness(0, 0, 0, 34),
-        });
+        var wordmark = ShowcaseWordmark.Create(WordmarkHeight);
+        wordmark.Margin = new Thickness(0, 0, 0, 30);
+        stack.Children.Add(wordmark);
         stack.Children.Add(new TextBlock
         {
             Text = "OPEN-SOURCE PHOTONIC IC DESIGN",

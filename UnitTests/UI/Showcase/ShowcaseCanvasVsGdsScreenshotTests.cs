@@ -12,7 +12,7 @@ using Xunit;
 namespace UnitTests.UI.Showcase;
 
 /// <summary>
-/// v0.12 feature-showcase: "what you draw is what you tape". Composes the staged chip's
+/// Feature showcase: "what you draw is what you tape". Composes the staged chip's
 /// MZI core as drawn on the canvas next to the rendered geometry of the REAL exported
 /// GDS of the same circuit: the gdsfactory script produced by the production exporter is
 /// executed with a real Python, the resulting <c>design.gds</c> is read back with gdstk,
