@@ -33,9 +33,9 @@
          actions sit in one toolbar row and the sections stand side by side as columns,
          each scrolling on its own. Below the summed column minimum the column row
          scrolls horizontally instead of clipping. -->
-    <Grid RowDefinitions="Auto,Auto,*" Margin="12,6,12,8">
-        <logicTab:LogicTabToolbar/>
-        <ProgressBar Grid.Row="1" IsIndeterminate="True" Height="3" Margin="0,4,0,0"
+    <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="*,Auto" Margin="12,6,12,8">
+        <logicTab:LogicTabToolbar Grid.ColumnSpan="2"/>
+        <ProgressBar Grid.Row="1" Grid.ColumnSpan="2" IsIndeterminate="True" Height="3" Margin="0,4,0,0"
                      IsVisible="{Binding RightPanel.Logic.IsProcessing}"/>
 
         <ScrollViewer Grid.Row="2" Margin="0,6,0,0" VerticalScrollBarVisibility="Auto"
@@ -67,7 +67,7 @@
             </Border>
         </ScrollViewer>
 
-        <!-- Columns: inputs | outputs + registers | timeline | waveforms + timing | fan-out. -->
+        <!-- Columns: inputs | outputs + registers | timeline | waveforms. -->
         <ScrollViewer Grid.Row="2" Margin="0,6,0,0"
                       HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                       IsVisible="{Binding RightPanel.Logic.HasNetwork}">
@@ -77,7 +77,6 @@
                     <ColumnDefinition Width="Auto" MinWidth="180" MaxWidth="340"/>
                     <ColumnDefinition Width="Auto" MinWidth="230" MaxWidth="380"/>
                     <ColumnDefinition Width="*" MinWidth="180"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <Grid RowDefinitions="Auto,*">
@@ -142,12 +141,15 @@
                     </Grid>
                 </Border>
 
-                <Border Grid.Column="4" Classes="logicColumn" Width="320"
-                        IsVisible="{Binding RightPanel.Logic.HasFanOutWarnings}">
-                    <logicTab:LogicFanOutColumn/>
-                </Border>
             </Grid>
         </ScrollViewer>
+
+        <!-- Fan-out warnings sit outside the sideways-scrolling columns so they stay in
+             view on a narrow dock, and show whenever warnings exist. -->
+        <Border Grid.Row="2" Grid.Column="1" Classes="logicColumn" Width="320" Margin="12,6,0,0"
+                IsVisible="{Binding RightPanel.Logic.HasFanOutWarnings}">
+            <logicTab:LogicFanOutColumn/>
+        </Border>
     </Grid>
 
 </UserControl>
