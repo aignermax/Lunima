@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
+using CAP_Core.Grid;
 
 namespace CAP.Avalonia.ViewModels.Canvas.Services;
 
@@ -57,10 +58,7 @@ public class ComponentPlacementService
     {
         IsDragging = true;
         _preDragOverlapPartners.Clear();
-        if (component is ComponentGroup group)
-            CaptureGroupOverlapPartners(group);
-        else
-            CaptureComponentOverlapPartners(component);
+        CaptureOverlapPartners(component);
     }
 
     /// <summary>Ends the drag and forgets the pre-drag overlap partners.</summary>
@@ -185,10 +183,17 @@ public class ComponentPlacementService
             return true;
 
         var testRect = GapInflatedRect(x, y, width, height);
+        var groupObstacles = new List<Component>();
 
         foreach (var comp in _components)
         {
             if (comp == excludeComponent || !comp.Component.IsRoutingObstacle) continue;
+            if (comp.Component is ComponentGroup group)
+            {
+                // A group blocks with its parts and waveguides, never with its bounding box.
+                groupObstacles.Add(group);
+                continue;
+            }
             if (IsDragging && excludeComponent is not null &&
                 IsPreDragOverlapPartner(excludeComponent.Component, comp.Component))
                 continue; // grandfathered: this pair already overlapped when the drag began.
@@ -196,7 +201,10 @@ public class ComponentPlacementService
             if (RectsOverlap(testRect, compRect))
                 return false;
         }
-        return true;
+
+        return groupObstacles.Count == 0 || new GroupCollisionDetector().CanPlaceFootprint(
+            x, y, width, height, groupObstacles, excludeComponent?.Component,
+            IsDragging ? _preDragOverlapPartners : null);
     }
 
     /// <summary>
@@ -240,8 +248,7 @@ public class ComponentPlacementService
         if (excludeComponent != null)
             excludeSet.Add(excludeComponent.Component);
 
-        var detector = new CAP_Core.Grid.GroupCollisionDetector();
-        return detector.CanPlaceGroup(group, x, y, allComponents, excludeSet,
+        return new GroupCollisionDetector().CanPlaceGroup(group, x, y, allComponents, excludeSet,
             IsDragging ? _preDragOverlapPartners : null);
     }
 
@@ -258,14 +265,9 @@ public class ComponentPlacementService
         double newX = component.X + deltaX;
         double newY = component.Y + deltaY;
 
-        if (!IsDragging && !IsExecutingCommand)
-        {
-            var groupBounds = CalculateGroupBounds(group);
-            double testX = groupBounds.X + deltaX;
-            double testY = groupBounds.Y + deltaY;
-            if (!CanPlaceComponent(testX, testY, groupBounds.Width, groupBounds.Height, excludeComponent: component))
-                return false;
-        }
+        if (!IsDragging && !IsExecutingCommand &&
+            !CanMoveGroupTo(group, group.PhysicalX + deltaX, group.PhysicalY + deltaY, excludeComponent: component))
+            return false;
 
         component.X = newX;
         component.Y = newY;
@@ -294,18 +296,6 @@ public class ComponentPlacementService
         return true;
     }
 
-    private static (double X, double Y, double Width, double Height) CalculateGroupBounds(ComponentGroup group)
-    {
-        if (group.ChildComponents.Count == 0)
-            return (group.PhysicalX, group.PhysicalY, group.WidthMicrometers, group.HeightMicrometers);
-
-        double minX = group.ChildComponents.Min(c => c.PhysicalX);
-        double minY = group.ChildComponents.Min(c => c.PhysicalY);
-        double maxX = group.ChildComponents.Max(c => c.PhysicalX + c.WidthMicrometers);
-        double maxY = group.ChildComponents.Max(c => c.PhysicalY + c.HeightMicrometers);
-        return (minX, minY, maxX - minX, maxY - minY);
-    }
-
     private void NotifyAffectedConnections(ComponentViewModel component)
     {
         foreach (var conn in _connections)
@@ -317,62 +307,17 @@ public class ComponentPlacementService
     }
 
     /// <summary>
-    /// Records every canvas component <paramref name="component"/> overlaps at
-    /// drag start, using the same gap-inflated rectangle test as
-    /// <see cref="CanPlaceComponent"/> so every pair that COULD reject a re-drop
-    /// at the original position is grandfathered.
+    /// Records every contact <paramref name="component"/> (a plain component or a group)
+    /// has at drag start, with the same geometry rules the drop check applies — footprints
+    /// with the component gap, frozen waveguides with their clearance, groups by their
+    /// parts — so every pair that COULD reject a re-drop at the original position is
+    /// grandfathered.
     /// </summary>
-    private void CaptureComponentOverlapPartners(Component component)
+    private void CaptureOverlapPartners(Component component)
     {
-        var testRect = GapInflatedRect(
-            component.PhysicalX, component.PhysicalY,
-            component.WidthMicrometers, component.HeightMicrometers);
-        var partners = new HashSet<Component>();
-        foreach (var comp in _components)
-        {
-            if (comp.Component == component) continue;
-            if (RectsOverlap(testRect, new Rect(comp.X, comp.Y, comp.Width, comp.Height)))
-                partners.Add(comp.Component);
-        }
-        if (partners.Count > 0)
-            _preDragOverlapPartners[component] = partners;
-    }
-
-    /// <summary>
-    /// Records, per leaf child of the moved <paramref name="group"/>, the
-    /// components it overlaps at drag start — at the granularity
-    /// <see cref="CAP_Core.Grid.GroupCollisionDetector"/> checks: regular
-    /// top-level components, and the leaf children of OTHER groups.
-    /// </summary>
-    private void CaptureGroupOverlapPartners(ComponentGroup group)
-    {
-        var members = new HashSet<Component>(group.GetAllComponentsRecursive()) { group };
-        foreach (var leaf in group.GetAllComponentsRecursive())
-        {
-            if (leaf is ComponentGroup) continue;
-            var testRect = GapInflatedRect(
-                leaf.PhysicalX, leaf.PhysicalY, leaf.WidthMicrometers, leaf.HeightMicrometers);
-            var partners = new HashSet<Component>();
-            foreach (var comp in _components)
-            {
-                if (members.Contains(comp.Component)) continue;
-                if (comp.Component is ComponentGroup otherGroup)
-                {
-                    foreach (var otherLeaf in otherGroup.GetAllComponentsRecursive())
-                    {
-                        if (otherLeaf is ComponentGroup) continue;
-                        if (RectsOverlap(testRect, RectOf(otherLeaf)))
-                            partners.Add(otherLeaf);
-                    }
-                }
-                else if (RectsOverlap(testRect, RectOf(comp.Component)))
-                {
-                    partners.Add(comp.Component);
-                }
-            }
-            if (partners.Count > 0)
-                _preDragOverlapPartners[leaf] = partners;
-        }
+        var obstacles = _components.Select(c => c.Component).Where(c => c.IsRoutingObstacle);
+        foreach (var (moved, partners) in new GroupCollisionDetector().FindContacts(component, obstacles))
+            _preDragOverlapPartners[moved] = partners;
     }
 
     /// <summary>
@@ -386,10 +331,6 @@ public class ComponentPlacementService
     private static Rect GapInflatedRect(double x, double y, double width, double height) =>
         new(x - MinComponentGapMicrometers, y - MinComponentGapMicrometers,
             width + MinComponentGapMicrometers * 2, height + MinComponentGapMicrometers * 2);
-
-    private static Rect RectOf(Component component) =>
-        new(component.PhysicalX, component.PhysicalY,
-            component.WidthMicrometers, component.HeightMicrometers);
 
     private static bool RectsOverlap(Rect a, Rect b)
     {
