@@ -23,18 +23,18 @@ public class ExampleNestedDesignCheckTests
         ["EBeam Add-Drop Ring.lun"] = "UnconnectedPin=3",
         ["EBeam Mach-Zehnder Interferometer.lun"] = "UnconnectedPin=2",
         ["Logic Gate - Build your first gate.lun"] = "UnconnectedPin=6",
-        ["Logic Gate 4-Bit Adder.lun"] = "BlockedPath=5 OverlappingPaths=5 UnconnectedPin=688",
+        ["Logic Gate 4-Bit Adder.lun"] = "BlockedPath=2 UnconnectedPin=688",
         // Wrapped RAM 4x4: its inter-cell wires are frozen one level deeper and now meet the
         // cells' frozen wires (+99 overlaps, as on the standalone RAM 4x4); the RAM group's
         // frozen wires leave the chip by up to 38 µm (top) and 16 µm (right edge).
-        ["Logic Gate ALU + RAM + ACC.lun"] = "BlockedPath=34 OutOfBounds=1 OverlappingPaths=227 UnconnectedPin=1099 WaveguideThroughComponent=4",
-        ["Logic Gate ALU + RAM.lun"] = "BlockedPath=34 OutOfBounds=1 OverlappingPaths=227 UnconnectedPin=1035 WaveguideThroughComponent=4",
+        ["Logic Gate ALU + RAM + ACC.lun"] = "BlockedPath=31 OutOfBounds=1 OverlappingPaths=222 UnconnectedPin=1087 WaveguideThroughComponent=1",
+        ["Logic Gate ALU + RAM.lun"] = "BlockedPath=31 OutOfBounds=1 OverlappingPaths=222 UnconnectedPin=1023 WaveguideThroughComponent=1",
         ["Logic Gate ALU 1-bit.lun"] = "UnconnectedPin=18",
         ["Logic Gate AND 4-bit.lun"] = "UnconnectedPin=12",
         ["Logic Gate AND-from-NAND.lun"] = "UnconnectedPin=3",
         ["Logic Gate Across Two Chiplets.lun"] = "UnconnectedPin=5",
         ["Logic Gate Bit.lun"] = "UnconnectedPin=8",
-        ["Logic Gate Counter 2-bit.lun"] = "BlockedPath=1 OverlappingPaths=1 UnconnectedPin=10",
+        ["Logic Gate Counter 2-bit.lun"] = "BlockedPath=1 UnconnectedPin=10",
         ["Logic Gate Full Adder.lun"] = "UnconnectedPin=64",
         ["Logic Gate Half Adder.lun"] = "UnconnectedPin=14",
         ["Logic Gate Logic Unit 4-bit.lun"] = "UnconnectedPin=20",
@@ -43,11 +43,9 @@ public class ExampleNestedDesignCheckTests
         ["Logic Gate NOT-NAND.lun"] = "UnconnectedPin=2",
         ["Logic Gate OR-AND.lun"] = "",
         ["Logic Gate PC 2-bit.lun"] = "BlockedPath=2 OverlappingPaths=2 UnconnectedPin=24",
-        ["Logic Gate RAM 2x2.lun"] = "BlockedPath=1 OverlappingPaths=1 UnconnectedPin=46",
-        ["Logic Gate RAM 2x4.lun"] = "BlockedPath=5 OverlappingPaths=8 UnconnectedPin=120",
-        // CELL3 carries orphaned Waveguide Crossing components (all four ports unwired)
-        // that frozen wires run straight through.
-        ["Logic Gate RAM 4x4.lun"] = "BlockedPath=29 OverlappingPaths=100 UnconnectedPin=292 WaveguideThroughComponent=3",
+        ["Logic Gate RAM 2x2.lun"] = "BlockedPath=1 UnconnectedPin=46",
+        ["Logic Gate RAM 2x4.lun"] = "BlockedPath=1 OverlappingPaths=3 UnconnectedPin=120",
+        ["Logic Gate RAM 4x4.lun"] = "BlockedPath=28 OverlappingPaths=100 UnconnectedPin=280",
         ["Logic Gate Register 2-bit.lun"] = "UnconnectedPin=14",
         ["Logic Gate SR-Latch.lun"] = "UnconnectedPin=4",
         ["Logic Gate Zero Detect 4-bit.lun"] = "UnconnectedPin=2",

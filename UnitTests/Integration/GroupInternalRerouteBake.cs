@@ -19,6 +19,9 @@ namespace UnitTests.Integration;
 /// </summary>
 internal static class GroupInternalRerouteBake
 {
+    /// <summary>Set to "1" to only take orphaned crossing cells out and leave every frozen path as it is.</summary>
+    public const string OrphansOnlyVariable = "CAP_BAKE_GROUPS_ORPHANS_ONLY";
+
     /// <summary>Margin (µm) around the group's children for the scratch routing grid.</summary>
     private const double GridMarginMicrometers = 100;
 
@@ -43,6 +46,8 @@ internal static class GroupInternalRerouteBake
             .Sum(child => Bake(child, crossingFactory, bendRadiusMicrometers, waveguideWidthMicrometers, chip,
                 topLevelPins, blockedTopLevelPins, log));
         changed += RemoveOrphanCrossings(group, log);
+        if (Environment.GetEnvironmentVariable(OrphansOnlyVariable) == "1")
+            return changed;
         if (group.InternalPaths.Count == 0 || group.InternalPaths.Any(p => p.StartPin == null || p.EndPin == null))
             return changed;
         int before = group.InternalPaths.Count(p => p.Path.IsBlockedFallback);
