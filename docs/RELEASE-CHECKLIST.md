@@ -155,6 +155,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 9. Analysis panels
 
+- [ ] Transient trace visibility toggles preserve chart zoom and existing sample buffers. Tracking long transient or spectrum traces remains responsive; exact samples, interpolated values, duplicate coordinates, and unsorted data retain their tracker behavior. `(auto: TimeTraceVisibilityTests, XTrackingLineSeriesTests; manual: large transient result)`
+
 - [ ] ONA wavelength sweep panel measures transmission across a wavelength range. `(auto: OnaAnalysis/OnaAnalyzerSimulationTests)`
 - [ ] Wavelength spectrum panel plots transmission curves. `(auto: WavelengthSpectrum/WavelengthSpectrumViewModelTests)`
 - [ ] Spectrum tab "Coherent interference" toggle: EBeam MZI sweep shows fringes (FSR = λ²/(n_g·ΔL)) when on, none when off; the flag round-trips through .lun save/load; (?) help shows the ΔL→fringes animation. `(auto: Integration/EBeamMziSpectrumToggleTests, Persistence/CoherentPropagationPhasePersistenceTests)`
