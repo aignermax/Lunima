@@ -62,6 +62,7 @@ public class AgentBridgeExampleDesignTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task MoveGroup_ThenUndo_RestoresPositionAndConnectionCount()
     {
         var (session, commands) = await LoadAsync();

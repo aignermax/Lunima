@@ -95,6 +95,7 @@ public class GdsExportIntegrationTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task ViewModel_ExportScriptToGds_WithGenerateEnabled_AttemptsGdsGeneration()
     {
         // Arrange

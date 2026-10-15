@@ -1,181 +1,206 @@
 name: 🔍 xUnit Tests
 
-# Run on PRs (the required check for branch protection) and on pushes to main
-# only. Previously `push:` had no branch filter, so a push to a branch that also
-# had an open PR triggered BOTH events → the suite ran twice.
+# Pipeline (see docs/TESTING.md → "CI test pipeline"):
+#   changes    — decides which shards this run needs (scripts/ci/select_test_shards.py)
+#   tests      — one job per shard, each on its own runner (scripts/ci/test-shards.json)
+#   partition  — proves the shard filters still partition the suite
+#   xunit      — "🔍 xUnit Tests", the single required status check; aggregates the rest
+#
+# Pull requests skip [Trait("Category", "Heavy")] tests and, for docs-only changes,
+# every shard. Pushes to dev/main, release tags, the nightly schedule and manual
+# runs always execute the full suite including Heavy, so anything a PR run skipped
+# is caught right after merge.
 on:
   push:
-    branches: [main]
+    branches: [dev, main]
     # Every release tag runs the suite on exactly the tagged commit.
     tags: ['v*']
   pull_request:
-  # On-demand baseline runs (e.g. on dev-ki) so a red PR check can be told
-  # apart from an already-red integration branch.
+  schedule:
+    # Nightly full run (Heavy included) on the integration branch, catches flakes
+    # and anything that slipped through between pushes.
+    - cron: '30 2 * * *'
+  # On-demand full runs, e.g. to tell a red PR apart from an already-red dev.
   workflow_dispatch:
 
-# A newer push to the same PR supersedes the running check.
+# A newer push to the same PR supersedes the running check; branch pushes queue.
 concurrency:
-  group: xunit-${{ github.event.pull_request.number || github.ref }}
+  group: xunit-${{ github.event.pull_request.number || (github.event_name == 'schedule' && 'nightly') || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-jobs:
-  nunit_tests:
-    name: 🔍 xUnit Tests
-    runs-on: ubuntu-latest
-    # Safety net: a run takes ~12 min (setup, build, three test shards).
-    # Anything beyond 50 min is a hang.
-    timeout-minutes: 50
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+  # Scheduled runs start on the default branch; the nightly is meant for dev.
+  CHECKOUT_REF: ${{ github.event_name == 'schedule' && 'dev' || '' }}
 
-    env:
-      DOTNET_CLI_TELEMETRY_OPTOUT: true
-      DOTNET_NOLOGO: true
+jobs:
+  changes:
+    name: 🧭 Select test shards
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.select.outputs.run }}
+      mode: ${{ steps.select.outputs.mode }}
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - name: 🧾 Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+          # On pull_request HEAD is the merge commit; HEAD^1 is the base tip.
+          fetch-depth: 2
+
+      - name: 🧭 Select shards
+        id: select
+        run: python3 scripts/ci/select_test_shards.py --event "${{ github.event_name }}"
+
+  tests:
+    name: 🧪 ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    # A shard takes ~5–10 min of tests plus ~4 min setup; beyond 30 min it hangs.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
 
     steps:
       - name: 🧾 Checkout
         uses: actions/checkout@v4
         with:
-          lfs: true
-          submodules: 'recursive'
+          ref: ${{ env.CHECKOUT_REF }}
 
       - name: 💽 Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
 
-      - name: 📦 Restore Dependencies
-        run: dotnet restore
-
-      - name: 🐍 Setup Python
-        id: setup-python
-        uses: actions/setup-python@v5
+      - name: 🗃️ Cache NuGet packages
+        uses: actions/cache@v4
         with:
-          python-version: '3.11'
-          # Wheels (torch above all) come from the cache instead of PyPI on every run.
-          cache: 'pip'
-          cache-dependency-path: .github/workflows/xUnitTests.yaml
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.*', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
 
-      - name: 🔦 Install PhotonTorch (for Phase 3 export integration tests)
-        run: |
-          set -euo pipefail
-          python -m pip install --upgrade pip
-          # scipy is a transitive dep of photontorch 0.4.1 but missing from its
-          # published requirements — install it explicitly so `import photontorch`
-          # doesn't fail with ModuleNotFoundError on a fresh runner.
-          # CPU-only torch: the default wheel drags in ~2 GB of CUDA libraries the
-          # runner never uses — installing it took over two minutes per run.
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install photontorch matplotlib scipy
-          # Verify the import works with the exact probe the test uses.
-          python3 -c "import photontorch; print('photontorch', photontorch.__version__)"
+      - name: 📦 Restore Dependencies
+        run: dotnet restore UnitTests/UnitTests.csproj
 
-      - name: 🌊 Install sax (for PICWave export integration tests)
-        run: |
-          set -euo pipefail
-          # sax is the S-parameter library Simphony 0.7+ builds on. The PICWave
-          # exporter emits a sax-based script; the E2E tests execute it and
-          # inspect the returned transmission.
-          pip install sax
-          python3 -c "import sax, numpy, matplotlib; print('sax', sax.__version__)"
+      # Each shard builds for itself: a ~1.5 min build is cheaper than uploading
+      # and downloading the test output (Avalonia/Skia natives) as an artifact.
+      - name: 🔨 Build
+        run: dotnet build UnitTests/UnitTests.csproj --no-restore
 
-      - name: ⚡ Install OpenVAF (for Phase 4 Verilog-A export integration tests)
-        run: |
-          set -euo pipefail
-          # Dev build — no tagged release channel exists yet. Verify the binary
-          # runs before relying on it so a broken upload blocks CI loudly.
-          curl -fL https://openva.fra1.digitaloceanspaces.com/openvaf_devel-x86_64-unknown-linux-gnu.tar.gz -o /tmp/openvaf.tar.gz
-          mkdir -p /tmp/openvaf
-          tar xf /tmp/openvaf.tar.gz -C /tmp/openvaf
-          sudo install -m 755 /tmp/openvaf/openvaf /usr/local/bin/openvaf
-          openvaf --help > /dev/null
+      - name: 🧰 Setup test tools
+        id: tools
+        uses: ./.github/actions/setup-test-tools
+        with:
+          simulation-tools: ${{ matrix.simulationTools }}
 
-      - name: 🔌 Install NGSpice (for Verilog-A runtime simulation tests)
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y ngspice
-          ngspice --version | head -1
-
-      - name: 🎨 Install Nazca + KLayout + SiEPIC PDK (for PDK Offset Editor tests)
-        run: |
-          set -euo pipefail
-          # gdstk: GDS polygon reader for the demo-PDK render path.
-          # klayout / siepic_ebeam_pdk: required for the SiEPIC fixed-cell
-          # and PCell rendering paths exercised by NazcaComponentPreviewService.
-          # SiEPIC: SiEPIC-Tools layout_check for the openEBL functional-
-          # verification readiness test (OpenEblEBeamMziVerificationTests).
-          pip install gdstk klayout siepic_ebeam_pdk SiEPIC
-          # Nazca is AGPLv3+ but not published on PyPI (the PyPI 'nazca'
-          # package is an unrelated Logilab data-mining library). We mirror
-          # the upstream tarball as a Lunima release asset and install from
-          # there — Lunima only invokes Nazca as a subprocess, so no linking.
-          # Upstream source: https://nazca-design.org/download/
-          pip install "https://github.com/aignermax/Lunima/releases/download/vendor-cache-nazca-0.6.1/nazca-0.6.1.tar.gz"
-          python3 -c "import nazca, nazca.demofab, gdstk, klayout.db, siepic_ebeam_pdk, SiEPIC; print('PDK preview deps ok')"
-
-      - name: 🔬 Install KLayout CLI (for foundry-deck DRC tests)
-        run: |
-          set -euo pipefail
-          # The klayout pip wheel above ships only the Python module (klayout.db) —
-          # no executable on PATH. The foundry-deck DRC tests probe a `klayout`/
-          # `klayout_app` executable ($KLAYOUT or PATH), so the runner needs the
-          # app itself. Ubuntu universe ships 0.28.x, which runs the vendored
-          # CORNERSTONE pre-DRC deck headless (-b) just fine.
-          sudo apt-get update
-          sudo apt-get install -y klayout
-          klayout -v
-
-      - name: 🏃 Run xUnit Tests
+      - name: 🏃 Run xUnit Tests (${{ matrix.name }})
         working-directory: UnitTests
         env:
+          SHARD_NAME: ${{ matrix.name }}
+          SHARD_FILTER: ${{ matrix.filter }}
           # actions/setup-python installs into /opt/hostedtoolcache, not /usr/bin.
           # FindWorkingPython3 checks this env var first so the test subprocess
-          # uses the same interpreter we just pip-installed nazca/klayout into.
-          LUNIMA_TEST_PYTHON3: ${{ steps.setup-python.outputs.python-path }}
+          # uses the same interpreter nazca/klayout were pip-installed into.
+          LUNIMA_TEST_PYTHON3: ${{ steps.tools.outputs.python-path }}
           # Force matplotlib + Qt to non-interactive backends — Nazca's import
-          # chain pulls these in, and on a headless CI runner they otherwise
-          # block the render subprocess waiting for a display.
+          # chain pulls these in and would otherwise wait for a display.
           MPLBACKEND: Agg
           QT_QPA_PLATFORM: offscreen
         run: |
           set -euo pipefail
-          # The suite runs serially inside one process (xunit.runner.json disables
-          # collection parallelization because the Avalonia headless app is a
-          # process-wide singleton). Wall clock is cut by running disjoint,
-          # complementary filter shards as separate processes in parallel — the
-          # union of the filters is the whole suite, so coverage is unchanged.
-          dotnet build --no-restore
+          # Tests inside the process run serially (xunit.runner.json: the Avalonia
+          # headless app is a process-wide singleton). Slow UI classes keep their
+          # own shard: mixing them with other classes deadlocked on the Linux
+          # runner (xUnit runs a collection inline on whichever thread finishes a
+          # class fixture, and Avalonia's headless test case blocks that thread).
+          echo "Filter: $SHARD_FILTER"
           mkdir -p TestResults
-          run_shard() {
-            local name="$1" filter="$2"
-            # A test hanging past 5 min aborts its shard with the test's name in the log
-            # (instead of silently eating the 50-min job budget); no dump, to keep the
-            # artifact small.
-            dotnet test --no-build --filter "$filter" \
-              --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none \
-              --results-directory TestResults \
-              --logger "trx;LogFileName=${name}.trx" \
-              --logger "console;verbosity=minimal" \
-              > "TestResults/${name}.log" 2>&1
-          }
-          # Shard by Category, the composition that has run reliably for months.
-          # Mixing slow UI test classes into other shards (by namespace, or five
-          # shards) deadlocked on the Linux runner: xUnit runs a collection inline
-          # on whichever thread finishes a class fixture, and Avalonia's headless
-          # test case blocks that thread — reproduced in a Linux container, not on
-          # Windows. The test fixes shrank the formerly 16-min slow-core shard to ~5.
-          run_shard fast      'Category!=Slow' &
-          run_shard slow-ui   'Category=Slow&FullyQualifiedName~UnitTests.UI.' &
-          run_shard slow-core 'Category=Slow&FullyQualifiedName!~UnitTests.UI.' &
-          status=0
-          for pid in $(jobs -p); do wait "$pid" || status=1; done
-          for log in TestResults/*.log; do echo "===== $log ====="; cat "$log"; done
-          exit $status
+          # A test hanging past 5 min aborts the shard with the test's name in the
+          # log instead of eating the job budget; no dump, to keep the artifact small.
+          dotnet test --no-build --filter "$SHARD_FILTER" \
+            --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none \
+            --results-directory TestResults \
+            --logger "trx;LogFileName=${SHARD_NAME}.trx" \
+            --logger "console;verbosity=minimal" \
+            2>&1 | tee "TestResults/${SHARD_NAME}.log"
 
       - name: 📎 Upload TestResults (hang diagnostics)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: testresults
+          name: testresults-${{ matrix.name }}
           path: UnitTests/TestResults/
           if-no-files-found: ignore
           retention-days: 7
+
+  partition:
+    name: 🧮 Shard partition check
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 🧾 Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+
+      - name: 💽 Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: 🗃️ Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.*', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: 🔨 Build
+        run: |
+          dotnet restore UnitTests/UnitTests.csproj
+          dotnet build UnitTests/UnitTests.csproj --no-restore
+
+      - name: 🧮 Every test in exactly one shard
+        run: python3 scripts/ci/check_test_shards.py
+
+  xunit:
+    # The required status check (rulesets "PR only" and "dev integration") — keep
+    # this name. Shards skipped by the change selection count as success.
+    name: 🔍 xUnit Tests
+    needs: [changes, tests, partition]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: ✅ Aggregate shard results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          RUN: ${{ needs.changes.outputs.run }}
+          MODE: ${{ needs.changes.outputs.mode }}
+          TESTS: ${{ needs.tests.result }}
+          PARTITION: ${{ needs.partition.result }}
+        run: |
+          echo "changes=$CHANGES run=$RUN mode=$MODE tests=$TESTS partition=$PARTITION"
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::Shard selection did not succeed ($CHANGES)."; exit 1
+          fi
+          if [ "$RUN" != "true" ]; then
+            if [ "$TESTS" = "skipped" ] && [ "$PARTITION" = "skipped" ]; then
+              echo "Docs-only change — no test shard needed."; exit 0
+            fi
+            echo "::error::Shards ran although none were selected."; exit 1
+          fi
+          if [ "$TESTS" != "success" ]; then
+            echo "::error::At least one test shard failed or was cancelled ($TESTS)."; exit 1
+          fi
+          if [ "$PARTITION" != "success" ]; then
+            echo "::error::The shard filters no longer partition the suite ($PARTITION)."; exit 1
+          fi
+          echo "All selected shards passed ($MODE mode)."

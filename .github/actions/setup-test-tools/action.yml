@@ -1,0 +1,97 @@
+name: Setup test tools
+description: >
+  Installs the external tools the xUnit suite drives as subprocesses. Tests that
+  need a missing tool skip silently, so every shard whose tests use a tool must
+  install it. Python + Nazca/KLayout/gdstk/SiEPIC (pip) and the KLayout CLI are
+  used across most namespaces and are always installed. The simulation tools
+  (PhotonTorch, sax, OpenVAF, NGSpice) are only executed by UnitTests.Export.*
+  and are opt-in via `simulation-tools`.
+
+inputs:
+  simulation-tools:
+    description: Also install PhotonTorch, sax, OpenVAF and NGSpice.
+    required: false
+    default: 'false'
+
+outputs:
+  python-path:
+    description: Interpreter the tools were installed into (for LUNIMA_TEST_PYTHON3).
+    value: ${{ steps.python-base.outputs.python-path || steps.python-sim.outputs.python-path }}
+
+runs:
+  using: composite
+  steps:
+    # Wheels (torch above all) come from the pip cache instead of PyPI on every
+    # run. The two tool sets use different cache keys (different dependency
+    # paths) so a shard without torch never saves a torch-less cache for the others.
+    - name: 🐍 Setup Python
+      id: python-base
+      if: inputs.simulation-tools != 'true'
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        cache-dependency-path: .github/actions/setup-test-tools/action.yml
+
+    - name: 🐍 Setup Python (with simulation tools cache)
+      id: python-sim
+      if: inputs.simulation-tools == 'true'
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        cache-dependency-path: |
+          .github/actions/setup-test-tools/action.yml
+          scripts/ci/test-shards.json
+
+    - name: 📦 Install system packages (KLayout CLI${{ inputs.simulation-tools == 'true' && ', NGSpice' || '' }})
+      shell: bash
+      run: |
+        set -euo pipefail
+        # The klayout pip wheel ships only the Python module (klayout.db); the
+        # foundry-deck DRC tests probe a `klayout` executable ($KLAYOUT or PATH).
+        packages="klayout"
+        if [ "${{ inputs.simulation-tools }}" = "true" ]; then packages="$packages ngspice"; fi
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq $packages > /dev/null
+        klayout -v
+        if command -v ngspice > /dev/null; then ngspice --version | head -1; fi
+
+    - name: 🎨 Install Nazca + KLayout + SiEPIC PDK
+      shell: bash
+      run: |
+        set -euo pipefail
+        python -m pip install --upgrade pip
+        # gdstk: GDS polygon reader for the demo-PDK render path.
+        # klayout / siepic_ebeam_pdk: SiEPIC fixed-cell and PCell rendering.
+        # SiEPIC: SiEPIC-Tools layout_check for the openEBL verification tests.
+        # Nazca is AGPLv3+ but not on PyPI (the PyPI 'nazca' is an unrelated
+        # package); it is mirrored as a Lunima release asset and only invoked as a
+        # subprocess. Upstream source: https://nazca-design.org/download/
+        pip install gdstk klayout siepic_ebeam_pdk SiEPIC \
+          "https://github.com/aignermax/Lunima/releases/download/vendor-cache-nazca-0.6.1/nazca-0.6.1.tar.gz"
+        python3 -c "import nazca, nazca.demofab, gdstk, klayout.db, siepic_ebeam_pdk, SiEPIC; print('PDK preview deps ok')"
+
+    - name: 🔦 Install PhotonTorch + sax
+      if: inputs.simulation-tools == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        # CPU-only torch: the default wheel drags in ~2 GB of CUDA libraries.
+        # scipy is a transitive dep of photontorch 0.4.1 missing from its metadata.
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install photontorch matplotlib scipy sax
+        python3 -c "import photontorch, sax, numpy, matplotlib; print('photontorch', photontorch.__version__, 'sax', sax.__version__)"
+
+    - name: ⚡ Install OpenVAF
+      if: inputs.simulation-tools == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Dev build — no tagged release channel exists yet. Verify the binary runs
+        # so a broken upload blocks CI loudly.
+        curl -fsSL https://openva.fra1.digitaloceanspaces.com/openvaf_devel-x86_64-unknown-linux-gnu.tar.gz -o /tmp/openvaf.tar.gz
+        mkdir -p /tmp/openvaf
+        tar xf /tmp/openvaf.tar.gz -C /tmp/openvaf
+        sudo install -m 755 /tmp/openvaf/openvaf /usr/local/bin/openvaf
+        openvaf --help > /dev/null

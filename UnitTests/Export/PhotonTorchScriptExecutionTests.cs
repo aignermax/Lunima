@@ -74,22 +74,38 @@ public class PhotonTorchScriptExecutionTests
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// The interpreter probe runs once per test process: importing photontorch (and with it
+    /// torch) takes seconds, and the interpreters cannot change while the tests run.
+    /// </summary>
+    private static readonly Lazy<(string? Python, IReadOnlyList<string> Reasons)> PhotonTorchPython =
+        new(FindPhotonTorchPython);
+
     private void SkipIfPythonMissing(out string pythonExe)
+    {
+        var (python, reasons) = PhotonTorchPython.Value;
+        foreach (var reason in reasons)
+            _output.WriteLine($"probe failed: {reason}");
+        if (python != null)
+        {
+            pythonExe = python;
+            return;
+        }
+        pythonExe = "";  // unreachable after Skip
+        Skip.If(true,
+            "Python with photontorch not found on PATH. Probed:\n  " + string.Join("\n  ", reasons));
+    }
+
+    private static (string? Python, IReadOnlyList<string> Reasons) FindPhotonTorchPython()
     {
         var reasons = new List<string>();
         foreach (var candidate in new[] { "python3", "python" })
         {
             if (TryProbe(candidate, out var probeReason))
-            {
-                pythonExe = candidate;
-                return;
-            }
+                return (candidate, reasons);
             reasons.Add($"{candidate}: {probeReason}");
-            _output.WriteLine($"probe '{candidate}' failed: {probeReason}");
         }
-        pythonExe = "";  // unreachable after Skip
-        Skip.If(true,
-            "Python with photontorch not found on PATH. Probed:\n  " + string.Join("\n  ", reasons));
+        return (null, reasons);
     }
 
     private static bool TryProbe(string pythonExe, out string reason)

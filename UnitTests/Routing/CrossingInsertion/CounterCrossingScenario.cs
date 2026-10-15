@@ -29,9 +29,18 @@ internal sealed class CounterCrossingScenario
     public CrossingInsertionCanvasBinder Binder { get; }
     public WaveguideConnectionManager Manager => Canvas.ConnectionManager;
 
-    public static async Task<CounterCrossingScenario> LoadAsync(bool adaptive)
+    /// <summary>
+    /// An earlier bake of the counter, kept as a fixture: one wire (a splitter output into an
+    /// 8 µm MMI input pair) is sealed by its neighbours' routes and cannot be placed. The
+    /// shipped example routes every wire now, so tests of the unroutable-wire handling load this.
+    /// </summary>
+    public const string SealedPinFixtureFileName = "counter-sealed-pin.lun";
+
+    public static async Task<CounterCrossingScenario> LoadAsync(bool adaptive, bool sealedPinFixture = false)
     {
-        var (canvas, fileOps, _) = await MziFringeAnalysis.LoadExample(ExampleFileName);
+        var (canvas, fileOps, _) = sealedPinFixture
+            ? await MziFringeAnalysis.LoadDesignFromPath(Path.Combine(AppContext.BaseDirectory, "TestData", SealedPinFixtureFileName))
+            : await MziFringeAnalysis.LoadExample(ExampleFileName);
         await fileOps.PostLoadRouting;
         var templates = TestPdkLoader.LoadAllTemplates();
         var preferred = CrossingComponentInstance.PreferredPdksOf(canvas.Components.Select(c => c.Component), templates);

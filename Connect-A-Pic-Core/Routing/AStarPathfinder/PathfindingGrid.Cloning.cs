@@ -21,4 +21,30 @@ public partial class PathfindingGrid
             return _componentCells.Keys.ToArray();
         }
     }
+
+    /// <summary>
+    /// Makes every cell that no waveguide occupies in <paramref name="source"/> read exactly
+    /// as it does there. A grid rebuilt from the source's components only knows the
+    /// component-side state; cells a caller set by hand (fenced foreign wires, exit lanes,
+    /// opened gaps) live only in the source's cell array and would otherwise be lost.
+    /// Waveguide cells keep this grid's own state — the state a cleared waveguide falls back
+    /// to. Both grids must cover the same area with the same cell size.
+    /// </summary>
+    internal void CopyNonWaveguideCellStatesFrom(PathfindingGrid source)
+    {
+        if (source.Width != Width || source.Height != Height)
+            throw new ArgumentException("the source grid must have the same dimensions", nameof(source));
+        bool changed = false;
+        for (int x = 0; x < Width; x++)
+        for (int y = 0; y < Height; y++)
+        {
+            byte state = source._cells[x, y];
+            if (state == WaveguideCellState || _cells[x, y] == state)
+                continue;
+            _cells[x, y] = state;
+            changed = true;
+        }
+        if (changed)
+            WaveguideVersion++;
+    }
 }

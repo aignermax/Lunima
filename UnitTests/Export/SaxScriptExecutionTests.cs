@@ -41,6 +41,7 @@ public class SaxScriptExecutionTests
     public SaxScriptExecutionTests(ITestOutputHelper output) => _output = output;
 
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public void ExportedScript_WithMeasuredSMatrix_RunsAndReturnsExpectedTransmission()
     {
         SkipIfPythonMissing(out var python);
@@ -136,6 +137,7 @@ public class SaxScriptExecutionTests
     }
 
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public void ExportedScript_WavelengthSweep_PopulatesExpectedNumberOfPoints()
     {
         SkipIfPythonMissing(out var python);
@@ -175,7 +177,32 @@ public class SaxScriptExecutionTests
         return c;
     }
 
+    /// <summary>
+    /// The interpreter probe runs once per test process: importing sax (and with it jax)
+    /// takes seconds, and the interpreters cannot change while the tests run.
+    /// </summary>
+    private static readonly Lazy<(string? Python, IReadOnlyList<string> Reasons)> SaxPython = new(FindSaxPython);
+
     private void SkipIfPythonMissing(out string pythonExe)
+    {
+        var (python, reasons) = SaxPython.Value;
+        foreach (var reason in reasons)
+            _output.WriteLine($"probe failed: {reason}");
+        if (python != null)
+        {
+            pythonExe = python;
+            _output.WriteLine($"using python: {python}");
+            return;
+        }
+
+        pythonExe = "";
+        Skip.If(true,
+            "Python with sax + numpy + matplotlib not found. Set LUNIMA_PICWAVE_PYTHON " +
+            "or `pip install sax numpy matplotlib` into python3. Probed:\n  " +
+            string.Join("\n  ", reasons));
+    }
+
+    private static (string? Python, IReadOnlyList<string> Reasons) FindSaxPython()
     {
         // Allow explicit override (useful for `dotnet test` on dev machines
         // where sax lives in a non-default venv).
@@ -192,20 +219,10 @@ public class SaxScriptExecutionTests
         foreach (var candidate in candidates)
         {
             if (TryProbe(candidate, out var reason))
-            {
-                pythonExe = candidate;
-                _output.WriteLine($"using python: {candidate}");
-                return;
-            }
+                return (candidate, reasons);
             reasons.Add($"{candidate}: {reason}");
-            _output.WriteLine($"probe '{candidate}' failed: {reason}");
         }
-
-        pythonExe = "";
-        Skip.If(true,
-            "Python with sax + numpy + matplotlib not found. Set LUNIMA_PICWAVE_PYTHON " +
-            "or `pip install sax numpy matplotlib` into python3. Probed:\n  " +
-            string.Join("\n  ", reasons));
+        return (null, reasons);
     }
 
     private static bool TryProbe(string pythonExe, out string reason)

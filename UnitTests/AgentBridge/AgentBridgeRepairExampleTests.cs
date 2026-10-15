@@ -18,7 +18,8 @@ using static UnitTests.AgentBridge.RepairTestBench;
 namespace UnitTests.AgentBridge;
 
 /// <summary>
-/// The repair tools on the shipped <c>Logic Gate Counter 2-bit</c> example (loaded through the
+/// The repair tools on an earlier bake of the <c>Logic Gate Counter 2-bit</c> example with one
+/// sealed wire (<see cref="RepairTestBench.SealedCounterFixture"/>, loaded through the
 /// production load path, crossing undo journal attached): cut candidates, crossing insertion
 /// and undo, crossing slides, segment shifts, the suggest/apply loop on its blocked wire, and a
 /// save round trip. Full routing passes on a multi-gate design make these heavyweight.
@@ -29,7 +30,7 @@ public class AgentBridgeRepairExampleTests
     [Fact]
     public async Task ListCutCandidates_FindsFittingSpots_IncludingOneForTheBlockedWire()
     {
-        var bench = await LoadAsync();
+        var bench = await LoadAsync(SealedCounterFixture);
 
         var all = Body(await new ListCutCandidatesTool(bench.Session).ExecuteAsync(Args("""{"fits_only":true}""")));
         var forBlocked = Body(await new ListCutCandidatesTool(bench.Session).ExecuteAsync(
@@ -45,7 +46,7 @@ public class AgentBridgeRepairExampleTests
     [Fact]
     public async Task InsertCrossing_ThenUndo_RestoresComponentsAndConnections()
     {
-        var bench = await LoadAsync();
+        var bench = await LoadAsync(SealedCounterFixture);
         var (components, connections) = (bench.Canvas.Components.Count, bench.Canvas.Connections.Count);
         var spot = Body(await new ListCutCandidatesTool(bench.Session).ExecuteAsync(Args("""{"fits_only":true,"limit":500}""")))
             .GetProperty("spots").EnumerateArray().First(s => s.GetProperty("kind").GetString() == "pin_guide");
@@ -63,9 +64,10 @@ public class AgentBridgeRepairExampleTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task InsertCrossing_WithThroughWire_DocksTheBlockedWireOnTheCrossing()
     {
-        var bench = await LoadAsync();
+        var bench = await LoadAsync(SealedCounterFixture);
         var blocked = bench.FirstBlockedId();
         var spot = Body(await new ListCutCandidatesTool(bench.Session).ExecuteAsync(
                 Args($$"""{"connection_id":"{{blocked}}","fits_only":true}""")))
@@ -83,9 +85,10 @@ public class AgentBridgeRepairExampleTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task MoveCrossingAlongAxis_MovesAValidStep_AndExplainsARefusal()
     {
-        var bench = await LoadAsync();
+        var bench = await LoadAsync(SealedCounterFixture);
         var crossing = bench.Canvas.Components.First(c => CrossingComponentCatalog.IsCrossing(c.Component));
         var (x, y) = (crossing.X, crossing.Y);
         var step = new[] { ("horizontal", 10.0), ("horizontal", -10.0), ("vertical", 10.0), ("vertical", -10.0) }
@@ -109,7 +112,7 @@ public class AgentBridgeRepairExampleTests
     [Fact]
     public async Task ShiftSegment_RecordsTheOffset_AndUndoRestoresIt()
     {
-        var bench = await LoadAsync();
+        var bench = await LoadAsync(SealedCounterFixture);
         var (wire, handle) = bench.Canvas.Connections
             .Where(c => !c.Connection.IsBlockedFallback)
             .SelectMany(c => SegmentShiftGeometry.GetHandles(c.Connection.GetPathSegments()).Select(h => (c, h)))
@@ -125,9 +128,10 @@ public class AgentBridgeRepairExampleTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task SuggestFixes_RanksTriedCandidates_AndApplyingTheBestMatchesItsTrial()
     {
-        var bench = await LoadAsync();
+        var bench = await LoadAsync(SealedCounterFixture);
         var blocked = bench.FirstBlockedId();
         var before = bench.BlockedCount();
 
@@ -163,7 +167,7 @@ public class AgentBridgeRepairExampleTests
     [Fact]
     public async Task SaveDesign_RoundTripsThroughTheLoader_AndRefusesSilentOverwrite()
     {
-        var bench = await LoadAsync();
+        var bench = await LoadAsync(SealedCounterFixture);
         var directory = Path.Combine(Path.GetTempPath(), "lunima-save-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
@@ -191,7 +195,7 @@ public class AgentBridgeRepairExampleTests
     [Fact]
     public async Task Geometry_OfTheBlockedWire_ListsItsPinNeighbour()
     {
-        var bench = await LoadAsync();
+        var bench = await LoadAsync(SealedCounterFixture);
 
         var body = Body(await new GetConnectionGeometryTool(bench.Session).ExecuteAsync(
             Args($$"""{"id":"{{bench.FirstBlockedId()}}","radius_um":12}""")));

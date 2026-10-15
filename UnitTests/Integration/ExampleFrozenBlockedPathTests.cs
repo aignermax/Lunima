@@ -39,10 +39,10 @@ public class ExampleFrozenBlockedPathTests
     {
         ["Logic Gate ALU 1-bit.lun"] = 0,
         ["Logic Gate Register 2-bit.lun"] = 0,
-        ["Logic Gate Counter 2-bit.lun"] = 1,
+        ["Logic Gate Counter 2-bit.lun"] = 0,
         ["Logic Gate Full Adder.lun"] = 0,
-        ["Logic Gate PC 2-bit.lun"] = 2,
-        ["Logic Gate RAM 2x2.lun"] = 1,
+        ["Logic Gate PC 2-bit.lun"] = 0,
+        ["Logic Gate RAM 2x2.lun"] = 0,
         // 0 blocked top-level inter-cell wires + 1 blocked intra-cell wire (CELL1).
         ["Logic Gate RAM 2x4.lun"] = 1,
         // 17 blocked top-level wires + 11 blocked intra-cell wires across the four cells.

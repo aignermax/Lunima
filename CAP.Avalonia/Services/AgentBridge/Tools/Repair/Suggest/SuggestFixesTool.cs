@@ -31,8 +31,8 @@ public sealed class SuggestFixesTool : IAgentBridgeTool
     public string Description =>
         "For one blocked connection: try repair candidates on the live design — cut a wire in the way and route the " +
         "blocked wire through the crossing (cut_through), slide a nearby crossing ±10/20 µm (move_crossing), shift a " +
-        "straight of a pin-neighbour wire ±10/20 µm (shift_segment), move the component at either end ±10/20 µm " +
-        "(nudge_component). Each is executed, the design re-routed and measured, then undone. Returns suggestions " +
+        "straight of a pin-neighbour wire or of a wire running past the pins in 4 µm steps up to ±30 µm, widening the corridor first (shift_segment), move the component or gate group at either end in 4 µm steps up to ±30 µm, back from its pin first (nudge_component). " +
+        "Each is executed, the design re-routed and measured, then undone. Returns suggestions " +
         "ranked by blocked count, crossings added, geometry change; apply one with apply_suggestion. Takes long: " +
         "each trial is two full routing passes; time_budget_s (default 240) bounds it. Clears the redo history.";
 

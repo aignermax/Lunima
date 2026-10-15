@@ -128,12 +128,9 @@ internal static class GroupInternalRerouteBake
             Math.Min(chip.Height, children.Max(c => c.PhysicalY + c.HeightMicrometers) + GridMarginMicrometers),
             children);
         router.PathfindingGrid!.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
-        // Parallel cascade attempts route on grid clones rebuilt from components only — they
-        // would not see the exit lanes fenced below.
         var manager = new WaveguideConnectionManager(router)
         {
             WaveguideWidthMicrometers = waveguideWidthMicrometers,
-            UseParallelOrderingCascade = false,
         };
         foreach (var path in group.InternalPaths)
         {

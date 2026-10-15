@@ -34,6 +34,7 @@ public class OpenEblMziReadinessTests
     private const string ExampleFileName = "Mach-Zehnder Interferometer.lun";
 
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public async Task MziExample_OpenEblSubmissionChecks_PinCurrentGaps()
     {
         var python = await FindOpenEblCheckPythonAsync();
@@ -136,7 +137,17 @@ public class OpenEblMziReadinessTests
     internal static Task<string?> FindOpenEblVerificationPythonAsync() =>
         FindPythonWithImportsAsync("import klayout.db, siepic_ebeam_pdk, nazca, SiEPIC");
 
-    private static async Task<string?> FindPythonWithImportsAsync(string importStatement)
+    /// <summary>
+    /// One probe per import statement and test process: importing klayout + siepic_ebeam_pdk
+    /// takes seconds, and the interpreters cannot change while the tests run.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Lazy<Task<string?>>> ProbedPythons = new();
+
+    private static Task<string?> FindPythonWithImportsAsync(string importStatement) =>
+        ProbedPythons.GetOrAdd(importStatement,
+            statement => new Lazy<Task<string?>>(() => FindPythonWithImportsUncachedAsync(statement))).Value;
+
+    private static async Task<string?> FindPythonWithImportsUncachedAsync(string importStatement)
     {
         var envs = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lunima", "envs");

@@ -15,9 +15,10 @@ public class CrossingUndoTests
     [InlineData(false)]
     [InlineData(true)]
     [Trait("Category", "Slow")]
+    [Trait("Category", "Heavy")]
     public async Task MoveUndoRedo_RestoresTheExactCrossingState(bool adaptive)
     {
-        var scenario = await CounterCrossingScenario.LoadAsync(adaptive);
+        var scenario = await CounterCrossingScenario.LoadAsync(adaptive, sealedPinFixture: true);
         var group = scenario.GroupToMove();
         var loaded = scenario.State();
         var crossingsAtLoad = scenario.Crossings();

@@ -1,3 +1,4 @@
+using UnitTests.Helpers;
 using System.Diagnostics;
 using CAP_Core.Export;
 using CAP.Avalonia.Services;
@@ -255,45 +256,9 @@ public class DynamicGdsFilenameIntegrationTests
         return canvas;
     }
 
-    private static string? FindPython()
-    {
-        foreach (var cmd in new[] { "python", "python3" })
-        {
-            try
-            {
-                var psi = new ProcessStartInfo(cmd, "--version")
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                using var proc = Process.Start(psi);
-                proc?.WaitForExit(5000);
-                if (proc?.ExitCode == 0) return cmd;
-            }
-            catch { }
-        }
-        return null;
-    }
+    private static string? FindPython() => CachedPythonProbe.FindPythonOnPath();
 
-    private static bool IsNazcaInstalled(string python)
-    {
-        try
-        {
-            var psi = new ProcessStartInfo(python, "-c \"import nazca\"")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            using var proc = Process.Start(psi);
-            proc?.WaitForExit(10000);
-            return proc?.ExitCode == 0;
-        }
-        catch { return false; }
-    }
+    private static bool IsNazcaInstalled(string python) => CachedPythonProbe.IsNazcaInstalled(python);
 
     private static async Task<(int exitCode, string stdout, string stderr)> RunPythonAsync(
         string python, string args, int timeoutMs = 30000)

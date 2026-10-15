@@ -24,6 +24,7 @@ public class CrossingPieceEditingTests
     private static readonly double[] MoveDistances = { 5, -5, 10, -10, 20, -20 };
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task CuttingARouterCrossingPiece_KeepsItsChain_AndUndoRestoresThePiece()
     {
         var scenario = await LoadSettledAsync();
@@ -62,6 +63,7 @@ public class CrossingPieceEditingTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task ShiftingASegmentOfARouterCrossingPiece_KeepsItsChain()
     {
         var scenario = await LoadSettledAsync();

@@ -1,8 +1,9 @@
 build_cmd = "dotnet build"
 # Category=Slow (heavy UI renders / full-MainWindow flows / all-component previews) is
 # excluded locally — an unfiltered suite can destabilise the desktop session. CI runs
-# everything unfiltered; run slow tests explicitly with --filter "Category=Slow".
-test_cmd = 'dotnet test UnitTests/UnitTests.csproj --filter "Category!=Slow"'
+# everything; run slow tests explicitly with --filter "Category=Slow". Category=Heavy
+# (the ~25 s+ tests that CI only runs on dev/main pushes and nightly) is excluded too.
+test_cmd = 'dotnet test UnitTests/UnitTests.csproj --filter "Category!=Slow&Category!=Heavy"'
 ui_test_cmd = "dotnet test UnitTests/UnitTests.csproj --filter Category=UiScreenshots"
 tech_stack = ["csharp", "avalonia", "dotnet"]
 agents_enabled = ["coder", "reviewer", "qa", "pr-feedback"]
