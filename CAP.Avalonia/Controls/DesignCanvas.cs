@@ -28,7 +28,7 @@ namespace CAP.Avalonia.Controls;
 /// and input handling to <see cref="KeyboardHandler"/> and gesture recognizers.
 /// No partial classes; all behavior is composed via the Strategy pattern.
 /// </summary>
-public class DesignCanvas : Control
+public partial class DesignCanvas : Control
 {
     // ── Styled Properties ──────────────────────────────────────────────────
 
@@ -245,22 +245,6 @@ public class DesignCanvas : Control
     /// geometry; placement ghosts, the drag preview and the HUD stay, the waveguide
     /// handles and overlays do not (gate view edits whole gates only).
     /// </summary>
-    private void RenderGateView(DrawingContext context, CanvasRenderContext rc, DesignCanvasViewModel vm, ViewModels.Logic.GateView.GateViewViewModel gateView)
-    {
-        using (context.PushTransform(Matrix.CreateTranslation(vm.PanX, vm.PanY)))
-        using (context.PushTransform(Matrix.CreateScale(Zoom, Zoom)))
-        {
-            _gridRenderer.RenderWorld(context, rc);
-            _gateViewRenderer.Render(context, rc, gateView);
-            rc.Labels.Flush(context, Zoom);
-            _previewRenderer.Render(context, rc);
-        }
-
-        _overlayRenderer.Render(context, rc);
-        GateViewLegendRenderer.Render(context, Bounds, gateView);
-        Motion.EndFrame();
-    }
-
     // ── Mouse Input (delegates to gesture recognizers) ─────────────────────
 
     /// <inheritdoc/>

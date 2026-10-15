@@ -26,8 +26,13 @@ public partial class CanvasContextMenuViewModel : ObservableObject
     [ObservableProperty]
     private bool _isGateTarget;
 
+    /// <summary>True when the target is a die: dies are never made into gates.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsMakeGate))]
+    private bool _isDieTarget;
+
     /// <summary>True when the gate entry reads "Make gate…" (no gate under the cursor).</summary>
-    public bool ShowsMakeGate => !IsGateTarget;
+    public bool ShowsMakeGate => !IsGateTarget && !IsDieTarget;
 
     /// <summary>True when the gate entry reads "Edit gate…".</summary>
     public bool ShowsEditGate => IsGateTarget;
@@ -42,6 +47,7 @@ public partial class CanvasContextMenuViewModel : ObservableObject
         ShowsEditComponent = toolSet.AllowsComponentEditor && component is not null and not ComponentGroup;
         ShowsShowInLayout = workspace == Workspace.Logic && component is not null;
         IsGateTarget = component is ComponentGroup { TruthTablePinAssignment: not null };
+        IsDieTarget = component is ComponentGroup { IsDie: true };
     }
 
     partial void OnIsGateTargetChanged(bool value)
