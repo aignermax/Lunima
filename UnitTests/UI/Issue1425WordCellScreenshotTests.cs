@@ -31,7 +31,6 @@ public class Issue1425WordCellScreenshotTests
 {
     private const int MinDistinctSampledColors = 4;
     private const int SampleGridSize = 64;
-    private const int CaptureAttempts = 3;
     private const int CanvasWidthPixels = 2000;
     private const double GateExtentX = 1000;
     private const double GateExtentY = 400;
@@ -94,13 +93,7 @@ public class Issue1425WordCellScreenshotTests
         window.Show();
         try
         {
-            WriteableBitmap? bitmap = null;
-            for (var attempt = 0; attempt < CaptureAttempts && bitmap == null; attempt++)
-            {
-                Dispatcher.UIThread.RunJobs();
-                bitmap = window.CaptureRenderedFrame();
-            }
-            bitmap.ShouldNotBeNull($"CaptureRenderedFrame stayed null after {CaptureAttempts} attempts");
+            var bitmap = HeadlessFrameCapture.Capture(window);
             using (bitmap)
             {
                 CountDistinctSampledColors(bitmap).ShouldBeGreaterThan(MinDistinctSampledColors,

@@ -35,7 +35,6 @@ public class Issue1398Ram2x4BadgeScreenshotTests
     private const int MinDistinctSampledColors = 4;
     private const int SampleGridSize = 64;
     private const int CanvasWidthPixels = 1600;
-    private const int CaptureAttempts = 3;
 
     [AvaloniaFact]
     public async Task CaptureRam2x4Cell0Badges()
@@ -117,13 +116,7 @@ public class Issue1398Ram2x4BadgeScreenshotTests
         window.Show();
         try
         {
-            WriteableBitmap? bitmap = null;
-            for (var attempt = 0; attempt < CaptureAttempts && bitmap == null; attempt++)
-            {
-                Dispatcher.UIThread.RunJobs();
-                bitmap = window.CaptureRenderedFrame();
-            }
-            bitmap.ShouldNotBeNull($"CaptureRenderedFrame stayed null after {CaptureAttempts} attempts for {filename}");
+            var bitmap = HeadlessFrameCapture.Capture(window);
             using (bitmap)
             {
                 CountDistinctSampledColors(bitmap).ShouldBeGreaterThan(MinDistinctSampledColors,

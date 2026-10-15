@@ -151,10 +151,8 @@ public class WaveguideCompanionBandScreenshotTests
         var scene = new BandScene(canvas, renderer, visibility) { Width = WidthPx, Height = height };
         var window = new Window { Width = WidthPx, Height = height, Content = scene, Background = Brushes.Black };
         window.Show();
-        Dispatcher.UIThread.RunJobs();
-        using var bitmap = window.CaptureRenderedFrame();
+        using var bitmap = HeadlessFrameCapture.Capture(window);
         window.Close();
-        bitmap.ShouldNotBeNull();
         if (fileName == null)
             return;
         var directory = ScreenshotArtifacts.ResolvePrMediaDirectory("waveguide-companion-layers");
