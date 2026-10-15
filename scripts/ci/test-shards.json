@@ -14,8 +14,13 @@
     },
     {
       "name": "fast-rest",
-      "filter": "Category!=Slow&FullyQualifiedName!~UnitTests.Routing.&FullyQualifiedName!~UnitTests.Dies.&FullyQualifiedName!~UnitTests.Integration.",
+      "filter": "Category!=Slow&FullyQualifiedName!~UnitTests.Routing.&FullyQualifiedName!~UnitTests.Dies.&FullyQualifiedName!~UnitTests.Integration.&FullyQualifiedName!~UnitTests.UI.",
       "simulationTools": true
+    },
+    {
+      "name": "fast-ui",
+      "filter": "Category!=Slow&FullyQualifiedName~UnitTests.UI.",
+      "simulationTools": false
     },
     {
       "name": "slow-export",
