@@ -16,9 +16,17 @@ internal static class GdsAlignmentTestSetup
         // the workflow points at a python (CI sets LUNIMA_TEST_PYTHON3); a plain local run skips.
         if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LUNIMA_TEST_PYTHON3")))
             return (null, null);
-        var python = await new PythonDiscoveryService().FindFirstNazcaPythonPathAsync();
+        var python = await NazcaPython.Value;
         return (python, FindRealPreviewScript());
     }
+
+    /// <summary>
+    /// The interpreter discovery runs once per test process instead of once per test: it
+    /// launches every candidate python and imports nazca in each, and the installed
+    /// interpreters cannot change while the tests run.
+    /// </summary>
+    private static readonly Lazy<Task<string?>> NazcaPython =
+        new(() => new PythonDiscoveryService().FindFirstNazcaPythonPathAsync());
 
     /// <summary>
     /// Walks up from the test assembly to the repo root and returns the path to

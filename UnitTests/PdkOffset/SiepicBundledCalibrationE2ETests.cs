@@ -40,7 +40,18 @@ public class SiepicBundledCalibrationE2ETests
         return null;
     }
 
-    private static async Task<NazcaPreviewResult?> RenderOrSkip(PdkComponentDraft draft)
+    /// <summary>
+    /// Renders shared by the tests of this class: the adiabatic couplers are asserted by two
+    /// theories, and each real render launches python with the SiEPIC PDK (seconds per cell).
+    /// The tests only read the result.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Lazy<Task<NazcaPreviewResult?>>> Renders = new();
+
+    private static Task<NazcaPreviewResult?> RenderOrSkip(PdkComponentDraft draft) =>
+        Renders.GetOrAdd($"{draft.Name}\u001f{draft.NazcaFunction}\u001f{draft.NazcaParameters}",
+            _ => new Lazy<Task<NazcaPreviewResult?>>(() => RenderOrSkipUncached(draft))).Value;
+
+    private static async Task<NazcaPreviewResult?> RenderOrSkipUncached(PdkComponentDraft draft)
     {
         var (python, script) = await GdsAlignmentTestSetup.ResolveEnvironmentAsync();
         if (python == null || script == null) return null;   // env skip
