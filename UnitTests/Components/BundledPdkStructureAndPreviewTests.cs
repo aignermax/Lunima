@@ -132,6 +132,7 @@ public class BundledPdkStructureAndPreviewTests
     /// backend package is missing from that interpreter (env gap, not a Lunima bug).</summary>
     [Trait("Category", "Slow")]
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task BundledPdks_GeometryPreview_EveryPhysicalComponentRendersNonEmptyPolygons()
     {
         var (python, nazcaScript) = await GdsAlignmentTestSetup.ResolveEnvironmentAsync();

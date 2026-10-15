@@ -56,10 +56,12 @@ public class OpenEblDialogEndToEndTests
     }
 
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public Task EBeamMziExample_ExportAndCheckThroughDiWiredDialog_Passes() =>
         RunGatedJourneyAsync("EBeam Mach-Zehnder Interferometer.lun");
 
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public Task EBeamAddDropRingExample_ExportAndCheckThroughDiWiredDialog_Passes() =>
         RunGatedJourneyAsync("EBeam Add-Drop Ring.lun");
 

@@ -83,6 +83,7 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     // ── The full loop ────────────────────────────────────────────────────────
 
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public async Task FullLoop_UserDesign_ExportReimport_NetlistTopologyMatchesOriginal()
     {
         // ── 1+2. Export the user's design with the app's exporter and run it ──

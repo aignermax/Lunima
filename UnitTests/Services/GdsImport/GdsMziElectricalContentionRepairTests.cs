@@ -18,6 +18,7 @@ namespace UnitTests.Services.GdsImport;
 public class GdsMziElectricalContentionRepairTests
 {
     [Fact]
+    [Trait("Category", "Heavy")]
     public void MziElectricalFixture_ContentionRepair_AcceptsOneRepair()
     {
         var canvas = GdsMziElectricalFixture.SharedMziCanvas;

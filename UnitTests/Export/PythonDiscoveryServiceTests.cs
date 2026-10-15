@@ -145,6 +145,7 @@ public class PythonDiscoveryServiceTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task DiscoverPythonWithNazcaAsync_DoesNotReturnDuplicates()
     {
         // Act

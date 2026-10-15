@@ -21,6 +21,7 @@ public class AdaptiveCrossingRerouteTests
 
     [Fact]
     [Trait("Category", "Slow")]
+    [Trait("Category", "Heavy")]
     public async Task CounterMove_ReroutesOnlyTheDissolvedWires_WithoutAddingCrossings()
     {
         var scenario = await CounterCrossingScenario.LoadAsync(adaptive: true);

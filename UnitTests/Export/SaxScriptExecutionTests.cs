@@ -41,6 +41,7 @@ public class SaxScriptExecutionTests
     public SaxScriptExecutionTests(ITestOutputHelper output) => _output = output;
 
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public void ExportedScript_WithMeasuredSMatrix_RunsAndReturnsExpectedTransmission()
     {
         SkipIfPythonMissing(out var python);
@@ -136,6 +137,7 @@ public class SaxScriptExecutionTests
     }
 
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public void ExportedScript_WavelengthSweep_PopulatesExpectedNumberOfPoints()
     {
         SkipIfPythonMissing(out var python);

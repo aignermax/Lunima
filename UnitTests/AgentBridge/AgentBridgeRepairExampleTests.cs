@@ -63,6 +63,7 @@ public class AgentBridgeRepairExampleTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task InsertCrossing_WithThroughWire_DocksTheBlockedWireOnTheCrossing()
     {
         var bench = await LoadAsync();
@@ -83,6 +84,7 @@ public class AgentBridgeRepairExampleTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task MoveCrossingAlongAxis_MovesAValidStep_AndExplainsARefusal()
     {
         var bench = await LoadAsync();
@@ -125,6 +127,7 @@ public class AgentBridgeRepairExampleTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task SuggestFixes_RanksTriedCandidates_AndApplyingTheBestMatchesItsTrial()
     {
         var bench = await LoadAsync();
