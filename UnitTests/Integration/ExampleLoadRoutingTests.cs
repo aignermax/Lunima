@@ -31,10 +31,10 @@ public class ExampleLoadRoutingTests
         ["Logic Gate Zero Detect 4-bit.lun"] = 0,
         ["Logic Gate ALU 1-bit.lun"] = 0,
         ["Logic Gate Register 2-bit.lun"] = 0,
-        ["Logic Gate Counter 2-bit.lun"] = 1,
+        ["Logic Gate Counter 2-bit.lun"] = 0,
         ["Logic Gate Full Adder.lun"] = 0,
-        ["Logic Gate PC 2-bit.lun"] = 2,
-        ["Logic Gate RAM 2x2.lun"] = 1,
+        ["Logic Gate PC 2-bit.lun"] = 0,
+        ["Logic Gate RAM 2x2.lun"] = 0,
         // Top-level inter-cell wires only (see ExampleFrozenBlockedPathTests for the cells).
         ["Logic Gate RAM 2x4.lun"] = 0,
         // Top-level inter-cell wires only (see ExampleFrozenBlockedPathTests for the cells).
