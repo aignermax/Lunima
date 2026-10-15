@@ -75,6 +75,11 @@ public partial class MainViewModel
     /// <summary>Chiplets panel click: selects the chiplet's group and centers the canvas on it.</summary>
     private void SelectAndShowChiplet(ComponentGroup group)
     {
+        if (group.IsDie)
+        {
+            ZoomToDie(group);
+            return;
+        }
         var groupVm = Canvas.Components.FirstOrDefault(c => ReferenceEquals(c.Component, group));
         if (groupVm == null)
             return;

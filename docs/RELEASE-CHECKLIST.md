@@ -20,6 +20,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 1. Application startup & project lifecycle
 
+- [ ] System → New die → Create works through the actual flyout button, closes after creation, and can be undone. The Chiplets list contains real dies; a new or legacy single-chip design shows Die 1 rather than its logic groups. `(auto: NewDieButtonTests, WorkspaceContextTests)`
+
 - [ ] Start Lunima without a command-line file → Home screen appears with recent projects and example tiles. `(manual)`
 - [ ] Open an example project from the Home screen → design loads and canvas is usable; gate groups sit apart with their pins on their bodies. `(auto: HomeExamplesTests, LogicExamplesLayoutTests)`
 - [ ] Home guided tours: first steps (place → connect → simulate), "Watch it compute" (Counter), and "Run a program on your chip" (4-bit adder → ISA playground → photonic multiply) each start from the Home card and advance only on the real user actions. `(auto: TutorialViewModelTests, WatchComputeTourViewModelTests, RunProgramTourViewModelTests)`
