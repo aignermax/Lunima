@@ -7,6 +7,7 @@ using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Analysis;
 using CAP.Avalonia.ViewModels.Analysis.EyeDiagram;
 using CAP.Avalonia.ViewModels.Analysis.TimeTrace;
+using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.Views.Panels;
 using CAP_Core.Analysis.EyeDiagram;
 using CAP_Core.LightCalculation.TimeDomainSimulation;
@@ -17,10 +18,10 @@ using Xunit;
 namespace UnitTests.UI.Showcase;
 
 /// <summary>
-/// v0.12 feature-showcase: the analysis dock with a seeded multi-output transient result
+/// Feature showcase: the analysis dock with a seeded multi-output transient result
 /// (Transient tab) and a PRBS-driven eye/BER heat map (Eye tab). Deterministic synthetic
 /// data drives the real plot builders — no simulation run needed.
-/// Opt-in via <c>UI_SHOT_DIR</c>; PNGs land in <c>UI_SHOT_DIR/v0.12/</c>.
+/// Opt-in via <c>UI_SHOT_DIR</c>; PNGs land in <c>UI_SHOT_DIR/v0.17/</c>.
 /// </summary>
 [Trait("Category", "Showcase")]
 [Collection("LocalizationSingleton")]
@@ -33,6 +34,8 @@ public class ShowcaseAnalysisScreenshotTests
         await ShowcaseCapture.WithEnglishUiAsync(() =>
         {
             var vm = MainViewModelTestHelper.CreateMainViewModel();
+            // Transient and Eye/BER are Optics-workspace tabs.
+            vm.WorkspaceSwitch.Current = CAP.Avalonia.ViewModels.Workspaces.Workspace.Optics;
             var analysis = vm.BottomPanel.Analysis;
             SeedTransientResult(analysis.Transient);
             SeedEyeResult(analysis.Eye);
@@ -44,11 +47,13 @@ public class ShowcaseAnalysisScreenshotTests
             window.Show();
             Dispatcher.UIThread.RunJobs();
 
+            analysis.Open(AnalysisDockTab.Transient);
+            Dispatcher.UIThread.RunJobs();
             ScrollTabToPlot<TimeDomainPanel>(dock);
             ShowcaseCapture.CaptureWindow(window,
                 Path.Combine(ShowcaseCapture.OutputDirectory(), "transient-analysis.png"));
 
-            analysis.SelectedTabIndex = 1;
+            analysis.Open(AnalysisDockTab.EyeBer);
             Dispatcher.UIThread.RunJobs();
             ScrollTabToPlot<EyeDiagramPanel>(dock);
             ShowcaseCapture.CaptureWindow(window,

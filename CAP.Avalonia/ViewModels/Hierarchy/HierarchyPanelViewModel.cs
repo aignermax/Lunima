@@ -64,6 +64,10 @@ public partial class HierarchyPanelViewModel : ObservableObject
         // Subscribe to canvas changes
         _canvas.Components.CollectionChanged += (s, e) => RebuildTree();
 
+        // Parts placed on or removed from a die, and die process changes, leave the top-level
+        // collection untouched — the die's node must still follow.
+        _canvas.DiesChanged += OnDiesChanged;
+
         // Canvas → Hierarchy: mirror SelectedComponent changes into the hierarchy tree.
         _canvas.PropertyChanged += OnCanvasPropertyChanged;
 
@@ -93,6 +97,7 @@ public partial class HierarchyPanelViewModel : ObservableObject
     /// </summary>
     public void RebuildTree()
     {
+        _dieSignature = DieSignature();
         RootNodes.Clear();
 
         // Build tree from canvas components (only top-level components, not children of groups)
@@ -107,6 +112,25 @@ public partial class HierarchyPanelViewModel : ObservableObject
             RootNodes.Add(node);
         }
     }
+
+    private string _dieSignature = "";
+
+    /// <summary>
+    /// Rebuilds only when a die's content, name or process changed — a die move (which also
+    /// raises <see cref="DesignCanvasViewModel.DiesChanged"/>) leaves the tree as it is.
+    /// </summary>
+    private void OnDiesChanged()
+    {
+        if (DieSignature() != _dieSignature)
+            RebuildTree();
+    }
+
+    private string DieSignature() => string.Join("|", _canvas.Components
+        .Select(c => c.Component)
+        .OfType<ComponentGroup>()
+        .Where(g => g.IsDie)
+        .Select(d => $"{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(d)}:{d.GroupName}:{d.ProcessBinding?.DisplayName}:"
+                     + string.Join(",", d.ChildComponents.Select(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode))));
 
     /// <summary>
     /// Updates the <see cref="HierarchyNodeViewModel.HasSMatrixOverride"/> flag on every
@@ -147,7 +171,9 @@ public partial class HierarchyPanelViewModel : ObservableObject
             foreach (var childComp in group.ChildComponents)
             {
                 // Find the ComponentViewModel for this child
-                var childVm = _canvas.Components.FirstOrDefault(c => c.Component == childComp);
+                // Parts on a die have their own canvas view model (they are worked on in place).
+                var childVm = _canvas.Components.FirstOrDefault(c => c.Component == childComp)
+                              ?? (group.IsDie ? _canvas.ViewModelOf(childComp) : null);
                 var childNode = CreateNodeRecursive(childComp, childVm);
                 node.Children.Add(childNode);
             }

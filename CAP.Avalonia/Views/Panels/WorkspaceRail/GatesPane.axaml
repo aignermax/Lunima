@@ -6,6 +6,7 @@
              xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:behaviors="using:CAP.Avalonia.Behaviors"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:wsRail="using:CAP.Avalonia.Views.Panels.WorkspaceRail"
              x:Class="CAP.Avalonia.Views.Panels.WorkspaceRail.GatesPane"
              x:DataType="vm:MainViewModel">
 
@@ -19,6 +20,8 @@
             </Button>
             <TextBlock Classes="paneTitle" Text="{loc:Localize LeftRail.Gates}"/>
         </DockPanel>
+        <!-- Logic places gates only; raw parts are one click away in Layout. -->
+        <wsRail:PlaceInLayoutHint DockPanel.Dock="Top" IsVisible="{Binding !IsFullLibrary}"/>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,0,8" Spacing="2">
@@ -88,12 +91,6 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <Button Classes="link" Margin="16,8,16,0" HorizontalAlignment="Left"
-                        Command="{Binding GatesPanel.ShowLibraryCommand}"
-                        ToolTip.Tip="{loc:Localize LeftRail.Gates.ShowLibraryTip}">
-                    <TextBlock Classes="caption" Foreground="{DynamicResource Brush.Text.Link}"
-                               Text="{loc:Localize LeftRail.Gates.ShowLibrary}"/>
-                </Button>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>

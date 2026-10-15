@@ -59,7 +59,7 @@ public class ConnectChipletsTourViewModelTests : IDisposable
         tour.IsActive.ShouldBeFalse();
         tour.IsCompleted.ShouldBeFalse();
         tour.CurrentStepIndex.ShouldBe(0);
-        tour.Steps.Count.ShouldBe(6);
+        tour.Steps.Count.ShouldBe(7);
         tour.ShowMoveForMeButton.ShouldBeFalse();
     }
 
@@ -72,7 +72,7 @@ public class ConnectChipletsTourViewModelTests : IDisposable
 
         tour.IsActive.ShouldBeTrue();
         tour.CurrentStepIndex.ShouldBe(0);
-        tour.ProgressText.ShouldContain("1/6");
+        tour.ProgressText.ShouldContain("1/7");
         tour.CurrentTitle.ShouldNotBeNullOrWhiteSpace();
         tour.CurrentTitle.ShouldNotBe(tour.CurrentStep.TitleKey, "title must be localized, not the raw key");
         tour.CurrentBody.ShouldNotBe(tour.CurrentStep.BodyKey, "body must be localized, not the raw key");
@@ -114,7 +114,7 @@ public class ConnectChipletsTourViewModelTests : IDisposable
         var (_, _, _, tour) = CreateFixture();
         tour.Start();
 
-        for (var i = 0; i < 6; i++)
+        for (var i = 0; i < 7; i++)
             tour.NextCommand.Execute(null);
 
         tour.IsCompleted.ShouldBeTrue();

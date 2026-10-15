@@ -49,6 +49,15 @@ public class SelectionBoxGestureRecognizer : IGestureRecognizer
             return true;
         }
 
+        // System workspace, single-die design: a double-click on the chip frames Die 1.
+        if (canvas.Surface.IsContentLocked && canvas.ChipDie.Contains(canvasPoint.X, canvasPoint.Y) && IsDoubleClick())
+        {
+            mainVm.ZoomToDie(canvas.ChipDie.Die);
+            UpdateClickTime();
+            _invalidate();
+            return true;
+        }
+
         UpdateClickTime();
         _activeCanvas = canvas;
         canvas.Selection.IsBoxSelecting = true;
@@ -94,7 +103,7 @@ public class SelectionBoxGestureRecognizer : IGestureRecognizer
 
         bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         bool alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
-        canvas.Selection.SelectInRectangle(canvas.Components, minX, minY, maxX, maxY, addToSelection: ctrl, removeFromSelection: alt);
+        canvas.Selection.SelectInRectangle(canvas.InteractiveComponents, minX, minY, maxX, maxY, addToSelection: ctrl, removeFromSelection: alt);
         // Also collect optical connections crossing the box (issue #862) so the routing-style
         // control can restyle them all at once. The component pass above already cleared the
         // selection for a plain drag, so this pass only adds/removes.

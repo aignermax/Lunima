@@ -236,7 +236,7 @@ public class RouteSegmentCacheTests
             StartPin = CreateOutputPin(startComp),
             EndPin = CreateInputPin(endComp),
             PropagationLossDbPerCm = 2.0,
-            BendLossDbPer90Deg = 0.1
+            ExcessBendLossDbPer90Deg = 0.1
         };
         conn1.RecalculateTransmission(new WaveguideRouter());
         var routedPath = conn1.RoutedPath;
@@ -248,7 +248,7 @@ public class RouteSegmentCacheTests
             StartPin = CreateOutputPin(startComp),
             EndPin = CreateInputPin(endComp),
             PropagationLossDbPerCm = 2.0,
-            BendLossDbPer90Deg = 0.1
+            ExcessBendLossDbPer90Deg = 0.1
         };
         conn2.RestoreCachedPath(routedPath);
 
@@ -397,7 +397,7 @@ public class RouteSegmentCacheTests
             StartPin = CreateOutputPin(startComp),
             EndPin = CreateInputPin(endComp),
             PropagationLossDbPerCm = 2.0,
-            BendLossDbPer90Deg = 0.05
+            ExcessBendLossDbPer90Deg = 0.05
         };
     }
 

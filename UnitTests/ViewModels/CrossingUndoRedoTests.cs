@@ -28,7 +28,7 @@ public class CrossingUndoRedoTests
     {
         var canvas = new DesignCanvasViewModel();
         canvas.InitializeAStarRouting(0, 0, 400, 400);
-        canvas.ConnectionManager.DefaultBendLossDbPer90Deg = ExpensiveBendLossDb;
+        canvas.ConnectionManager.DefaultExcessBendLossDbPer90Deg = ExpensiveBendLossDb;
 
         var binder = new CrossingInsertionCanvasBinder(
             canvas,

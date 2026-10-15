@@ -143,11 +143,11 @@ public class ExampleCrossingBakeTests
         semicolonSeparatedParts.Split(';', StringSplitOptions.RemoveEmptyEntries)
             .Any(part => exampleFileName.Contains(part, StringComparison.OrdinalIgnoreCase));
 
-    private static List<ComponentGroup> TopLevelGroups(DesignCanvasViewModel canvas) =>
+    internal static List<ComponentGroup> TopLevelGroups(DesignCanvasViewModel canvas) =>
         canvas.Components.Select(c => c.Component).OfType<ComponentGroup>().ToList();
 
     /// <summary>Blocked paths of the whole design: top-level wires plus those frozen inside groups.</summary>
-    private static int TotalBlockedPaths(DesignCanvasViewModel canvas) =>
+    internal static int TotalBlockedPaths(DesignCanvasViewModel canvas) =>
         new DesignValidator()
             .Validate(canvas.Connections.Select(c => c.Connection).ToList(), TopLevelGroups(canvas))
             .Count(issue => issue.Type == DesignIssueType.BlockedPath);
@@ -156,7 +156,7 @@ public class ExampleCrossingBakeTests
     /// The baked JSON with the shipped file's active-process entry: loading in a test session
     /// activates the playground process, and saving would otherwise pin it into the example.
     /// </summary>
-    private static string KeepShippedProcess(string shippedPath, string bakedPath)
+    internal static string KeepShippedProcess(string shippedPath, string bakedPath)
     {
         const string ActiveProcessProperty = "ActiveProcess";
         var shipped = JsonNode.Parse(File.ReadAllText(shippedPath))!.AsObject();

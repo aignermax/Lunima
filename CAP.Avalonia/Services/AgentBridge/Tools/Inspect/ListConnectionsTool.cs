@@ -20,7 +20,10 @@ public sealed class ListConnectionsTool : IAgentBridgeTool
     public string Description =>
         "List waveguide connections: id, endpoints as component.pin (leaf component) plus the top-level " +
         "start/end component to act on, length in µm, blocked flag (red route), failure_reason and whether " +
-        "it is a piece of a waveguide crossing. Set blocked_only=true to list only failed routes.";
+        "it is a piece of a waveguide crossing, plus its insertion loss breakdown in dB (propagation, bends — " +
+        "radius dependent, tighter bends leak more light —, junctions, total; bend count and tightest radius). " +
+        "Set blocked_only=true to list only failed routes. Each wire names its owner — the group holding its two " +
+        "parts (null = design root); include_group_wires=true also lists wires stored inside groups (stored_in_group).";
 
     /// <inheritdoc/>
     public object InputSchema => new
@@ -30,6 +33,7 @@ public sealed class ListConnectionsTool : IAgentBridgeTool
         {
             blocked_only = new { type = "boolean", description = "Only list blocked (failed) connections. Default false." },
             component = new { type = "string", description = "Only list connections touching this top-level component id (optional)." },
+            include_group_wires = new { type = "boolean", description = "Also list wires stored inside groups. Default false." },
         },
     };
 
@@ -40,6 +44,8 @@ public sealed class ListConnectionsTool : IAgentBridgeTool
         var component = ToolArguments.GetString(arguments, "component");
 
         IEnumerable<ConnectionInfo> connections = ConnectionSnapshot.Describe(_session);
+        if (ToolArguments.GetBool(arguments, "include_group_wires"))
+            connections = connections.Concat(ConnectionSnapshot.DescribeGroupWires(_session));
         if (blockedOnly)
             connections = connections.Where(c => c.Blocked);
         if (!string.IsNullOrWhiteSpace(component))

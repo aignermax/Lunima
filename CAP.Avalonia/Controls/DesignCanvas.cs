@@ -7,10 +7,12 @@ using CAP.Avalonia.Controls.Canvas.AnalysisOutput;
 using CAP.Avalonia.Controls.Canvas.BendHandles;
 using CAP.Avalonia.Controls.Canvas.CrossingDrag;
 using CAP.Avalonia.Controls.Canvas.CutTool;
+using CAP.Avalonia.Controls.Canvas.GateView;
 using CAP.Avalonia.Controls.Canvas.LibraryDrop;
 using CAP.Avalonia.Controls.Canvas.SegmentShiftHandles;
 using CAP.Avalonia.Controls.Handlers;
 using CAP.Avalonia.Controls.Rendering;
+using CAP.Avalonia.Controls.Rendering.WorkspaceEmphasis;
 using CAP.Avalonia.Gestures;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels;
@@ -26,7 +28,7 @@ namespace CAP.Avalonia.Controls;
 /// and input handling to <see cref="KeyboardHandler"/> and gesture recognizers.
 /// No partial classes; all behavior is composed via the Strategy pattern.
 /// </summary>
-public class DesignCanvas : Control
+public partial class DesignCanvas : Control
 {
     // ── Styled Properties ──────────────────────────────────────────────────
 
@@ -80,6 +82,7 @@ public class DesignCanvas : Control
 
     private readonly GridRenderer _gridRenderer;
     private readonly PathfindingOverlayRenderer _pathfindingOverlayRenderer;
+    private readonly WaveguideCompanionBandRenderer _companionBandRenderer = new();
     private readonly WaveguideConnectionRenderer _waveguideConnectionRenderer;
     private readonly CanvasFrozenPathRenderer _canvasFrozenPathRenderer;
     private readonly BendHandleRenderer _bendHandleRenderer;
@@ -90,6 +93,7 @@ public class DesignCanvas : Control
     private readonly CutToolOverlayRenderer _cutToolOverlayRenderer;
     private readonly CrossingAxisDragOverlayRenderer _crossingAxisDragRenderer;
     private readonly CanvasOverlayRenderer _overlayRenderer;
+    private readonly GateViewRenderer _gateViewRenderer = new();
 
     // ── Input Handlers ─────────────────────────────────────────────────────
 
@@ -180,11 +184,20 @@ public class DesignCanvas : Control
         Motion.BeginFrame();
         _gridRenderer.RenderBackground(context, rc);
 
+        var gateView = MainViewModel?.GateView;
+        if (gateView is { IsShown: true })
+        {
+            RenderGateView(context, rc, vm, gateView);
+            return;
+        }
+
         using (context.PushTransform(Matrix.CreateTranslation(vm.PanX, vm.PanY)))
         using (context.PushTransform(Matrix.CreateScale(Zoom, Zoom)))
         {
             _gridRenderer.RenderWorld(context, rc);
             _pathfindingOverlayRenderer.Render(context, rc);
+            // Process companion bands (trench / cladding / keep-out) sit under the cores.
+            _companionBandRenderer.Render(context, rc);
             _waveguideConnectionRenderer.Render(context, rc);
             // Canvas-level pin-less frozen paths (#856) draw with the other waveguide
             // geometry, below components, exactly like group-internal frozen paths.
@@ -198,6 +211,7 @@ public class DesignCanvas : Control
             // Blocked-connection warnings sit above components and labels: a route the router
             // could not place must never hide under a body or a name.
             _waveguideConnectionRenderer.RenderBlockedMarkers(context, rc);
+            DesignCheckMarkerRenderer.Render(context, rc);
             // Analysis-output overlay (#754) sits on top of components so the candidate
             // glow and the designated "OUT" tag are never hidden by component fills.
             _analysisOutputRenderer.Render(context, rc);
@@ -212,6 +226,8 @@ public class DesignCanvas : Control
             // components and waveguides so the clickable markers are never obscured.
             _cutToolOverlayRenderer.Render(context, rc);
             _crossingAxisDragRenderer.Render(context, rc);
+            DieLinkGuideRenderer.Render(context, rc.InteractionState.DieLinkPreview, Zoom);
+        WireRefusalHintRenderer.Render(context, rc.InteractionState.WireRefusalHint, Zoom, DateTime.UtcNow);
             // Handles draw last so they sit on top of the routed path and components; segment
             // midpoint handles go under the bend handles, matching the gesture priority (#791).
             _segmentShiftHandleRenderer.Render(context, rc);
@@ -224,6 +240,11 @@ public class DesignCanvas : Control
             TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => InvalidateVisual());
     }
 
+    /// <summary>
+    /// The Logic workspace's gate view: gates and signal nets replace the physical
+    /// geometry; placement ghosts, the drag preview and the HUD stay, the waveguide
+    /// handles and overlays do not (gate view edits whole gates only).
+    /// </summary>
     // ── Mouse Input (delegates to gesture recognizers) ─────────────────────
 
     /// <inheritdoc/>
@@ -236,8 +257,11 @@ public class DesignCanvas : Control
         if (vm == null) return;
         var canvasPoint = ScreenToCanvas(point);
         _activeGesture = null;
+        var gateViewShown = MainViewModel?.GateView is { IsShown: true };
         foreach (var recognizer in _gestureRecognizers)
         {
+            if (gateViewShown && !GateViewGestures.Allows(recognizer))
+                continue;
             if (recognizer.TryRecognize(e, canvasPoint, vm, MainViewModel))
             {
                 _activeGesture = recognizer;
@@ -386,12 +410,14 @@ public class DesignCanvas : Control
             oldVm.CommandManager.StateChanged -= OnCommandStateChanged;
             oldVm.GdsPreviewRenderService.OnPreviewLoaded -= InvalidateVisual;
             oldVm.CanvasInteraction.PropertyChanged -= OnInteractionPropertyChanged;
+            oldVm.GateView.Changed -= InvalidateVisual;
         }
         if (e.NewValue is MainViewModel newVm)
         {
             newVm.CommandManager.StateChanged += OnCommandStateChanged;
             newVm.GdsPreviewRenderService.OnPreviewLoaded += InvalidateVisual;
             newVm.CanvasInteraction.PropertyChanged += OnInteractionPropertyChanged;
+            newVm.GateView.Changed += InvalidateVisual;
         }
     }
 
@@ -416,6 +442,7 @@ public class DesignCanvas : Control
             oldCanvas.Connections.CollectionChanged -= OnConnectionsCollectionChanged;
             oldCanvas.CanvasFrozenPaths.CollectionChanged -= OnConnectionsCollectionChanged;
             oldCanvas.AnalysisOutput.PropertyChanged -= OnAnalysisOutputChanged;
+            oldCanvas.ViewSettings.PropertyChanged -= OnAnalysisOutputChanged;
             oldCanvas.LogicGateStates.StatesChanged -= OnLogicGateStatesChanged;
         }
         if (e.NewValue is DesignCanvasViewModel newCanvas)
@@ -426,11 +453,12 @@ public class DesignCanvas : Control
             newCanvas.Connections.CollectionChanged += OnConnectionsCollectionChanged;
             newCanvas.CanvasFrozenPaths.CollectionChanged += OnConnectionsCollectionChanged;
             newCanvas.AnalysisOutput.PropertyChanged += OnAnalysisOutputChanged;
+            newCanvas.ViewSettings.PropertyChanged += OnAnalysisOutputChanged;
             newCanvas.LogicGateStates.StatesChanged += OnLogicGateStatesChanged;
         }
     }
 
-    /// <summary>Repaints when the designated analysis output changes (#754) so the "OUT" tag follows.</summary>
+    /// <summary>Repaints when the designated analysis output (the "OUT" tag) or the workspace view settings change.</summary>
     private void OnAnalysisOutputChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         => InvalidateVisual();
 

@@ -20,7 +20,7 @@ public static class ProcessDefinitionCloner
         {
             Name = x.Name, Kind = x.Kind, WidthUm = x.WidthUm, MinWidthUm = x.MinWidthUm, MinRadiusUm = x.MinRadiusUm,
             RecommendedRadiusUm = x.RecommendedRadiusUm, Layers = new List<string>(x.Layers), Description = x.Description,
-            DrcSource = x.DrcSource,
+            DrcSource = x.DrcSource, BendLoss = x.BendLoss?.Clone(),
         }).ToList(),
         Materials = source.Materials.Select(m => new ProcessMaterial
         {
@@ -30,5 +30,10 @@ public static class ProcessDefinitionCloner
         ElectricalBridgeRequired = source.ElectricalBridgeRequired,
         MinWaveguideSpacingUm = source.MinWaveguideSpacingUm,
         DrcSource = source.DrcSource,
+        WaveguideCompanionLayers = source.WaveguideCompanionLayers?.Select(c => new ProcessCompanionLayer
+        {
+            Name = c.Name, Layer = c.Layer, Datatype = c.Datatype, Role = c.Role,
+            OffsetUm = c.OffsetUm, WidthUm = c.WidthUm, Description = c.Description,
+        }).ToList(),
     };
 }

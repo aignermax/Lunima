@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.Controls.Rendering.LabelDeclutter;
+using CAP.Avalonia.Controls.Rendering.WorkspaceEmphasis;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
@@ -17,7 +18,7 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// body-only (see <see cref="RenderCulling"/>) so huge imported designs stay
 /// responsive. Implements <see cref="ICanvasRenderer"/> for world-space rendering.
 /// </summary>
-public sealed class ComponentRenderer : ICanvasRenderer
+public sealed partial class ComponentRenderer : ICanvasRenderer
 {
     private readonly PinRenderer _pinRenderer = new();
     private readonly ComponentOutlineRenderer _outlineRenderer = new();
@@ -42,7 +43,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
         var cullRect = RenderCulling.InflateForCulling(viewport, rc.Zoom);
         Guid? hoveredComponentId = rc.InteractionState.HoveredComponent?.Component.Id;
         var visibleNameIds = _nameLabels.GetVisibleLabelIds(
-            rc.ViewModel.Components, hoveredComponentId, viewport, rc.Zoom);
+            rc.ViewModel.InteractiveComponents, hoveredComponentId, viewport, rc.Zoom);
 
         foreach (var comp in rc.ViewModel.Components)
             DrawComponent(context, comp, rc, visibleNameIds, cullRect);
@@ -66,6 +67,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
 
         bool isHovered = ReferenceEquals(rc.InteractionState.HoveredComponent, comp);
         using (PushDim(context, isDimmed))
+        using (LightEmphasis.PushRecede(context, rc, comp.Component, comp.IsSelected || isHovered))
         {
             DrawComponentBody(context, comp, rc, rect, isHovered);
             DrawComponentDecorations(context, comp, rc, rect, visibleNameIds, isHovered, isDimmed);
@@ -88,7 +90,8 @@ public sealed class ComponentRenderer : ICanvasRenderer
         if (visibleNameIds.Contains(comp.Component.Id)
             && _nameLabels.TryGetLabelText(comp.Component.Id) is { } labelText
             && IsNameLegibleAtZoom(comp.Width, labelText.Width, rc.Zoom, comp.IsSelected || isHovered))
-            _pinRenderer.DrawComponentName(rc.Labels, comp, labelText, isDimmed, comp.IsSelected || isHovered);
+            _pinRenderer.DrawComponentName(rc.Labels, comp, labelText, isDimmed, comp.IsSelected || isHovered,
+                LightEmphasis.EndpointNameBrushFor(rc, comp.Component));
 
         if (comp.IsLocked)
             DrawLockIcon(context, comp, rc.Zoom);
@@ -141,6 +144,11 @@ public sealed class ComponentRenderer : ICanvasRenderer
         var vm = rc.ViewModel;
         bool isHovered = rc.InteractionState.HoveredGroup == group;
         bool isCurrentEditGroup = vm.CurrentEditGroup == group;
+        if (group.IsDie && !isCurrentEditGroup && vm.Surface.IsActive)
+        {
+            DrawDieSurface(context, group, isSelected, isHovered, rc, visibleNameIds, cullRect);
+            return;
+        }
 
         var bounds = ComponentGroupRenderer.CalculateGroupBounds(group);
         if (group.OutlinePolygons is { Count: > 0 } backgroundPolygons && cullRect.Intersects(bounds))
@@ -181,7 +189,11 @@ public sealed class ComponentRenderer : ICanvasRenderer
         if (!cullRect.Intersects(bounds))
             return;
 
-        if (!isCurrentEditGroup)
+        if (group.IsDie && !isCurrentEditGroup)
+        {
+            DieFrameRenderer.Render(context, group, isSelected, isHovered, rc.Zoom);
+        }
+        else if (!isCurrentEditGroup)
         {
             if (isSelected)
                 ComponentGroupRenderer.RenderGroupSelectionBorder(context, bounds, rc, group.Id);
@@ -220,8 +232,9 @@ public sealed class ComponentRenderer : ICanvasRenderer
         }
         else
         {
-            ComponentBodyRenderer.Draw(context, child, childRect, default, rc,
-                rc.GdsPreviewRenderService?.TryGetPreview(child));
+            using (LightEmphasis.PushRecede(context, rc, child, isGroupHovered))
+                ComponentBodyRenderer.Draw(context, child, childRect, default, rc,
+                    rc.GdsPreviewRenderService?.TryGetPreview(child));
         }
 
         if (isGroupHovered)

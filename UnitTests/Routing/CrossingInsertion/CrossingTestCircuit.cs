@@ -102,7 +102,8 @@ public static class CrossingTestCircuit
 
         var manager = new WaveguideConnectionManager(router)
         {
-            DefaultBendLossDbPer90Deg = bendLossDbPer90Deg,
+            DefaultBendLossModel = CAP_Core.LightCalculation.BendLoss.BendLossPresets.None,
+            DefaultExcessBendLossDbPer90Deg = bendLossDbPer90Deg,
             CrossingInsertion = service,
         };
 

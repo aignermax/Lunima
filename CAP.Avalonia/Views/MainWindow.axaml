@@ -15,6 +15,7 @@
         x:Class="CAP.Avalonia.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="{Binding WindowTitle}"
+        Icon="avares://CAP.Avalonia/Assets/LunimaIcon.png"
         Width="1800" Height="900">
 
     <Window.KeyBindings>
@@ -63,17 +64,46 @@
                                 ToolTip.Tip="{loc:Localize Toolbar.DeleteModeTip}">
                             <controls:Icon Data="{StaticResource Icon.Eraser}"/>
                         </Button>
-                        <!-- Probe belongs to the geometry/light workspaces (Layout, Optics); the edit tools stay everywhere. -->
+                        <!-- Probe and Cut are primary where the workspace's profile says so (WorkspacePresentation);
+                             elsewhere they sit one click away under "More tools". Select/Connect/Delete stay everywhere. -->
                         <Button x:Name="ProbeToolButton" Classes="toolbar" Command="{Binding SetProbeModeCommand}"
                                 IsVisible="{Binding WorkspaceSwitch.ShowsProbeTool}"
                                 Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Probe}"
                                 ToolTip.Tip="{loc:Localize Toolbar.ProbeModeTip}">
                             <controls:Icon Data="{StaticResource Icon.ScanSearch}"/>
                         </Button>
-                        <Button Classes="toolbar" Command="{Binding SetCutModeCommand}"
+                        <Button x:Name="CutToolButton" Classes="toolbar" Command="{Binding SetCutModeCommand}"
+                                IsVisible="{Binding WorkspaceSwitch.IsCutPrimary}"
                                 Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Cut}"
                                 ToolTip.Tip="{loc:Localize Toolbar.CutModeTip}">
                             <controls:Icon Data="{StaticResource Icon.Scissors}"/>
+                        </Button>
+                        <Button x:Name="MoreToolsButton" Classes="toolbar menu"
+                                IsVisible="{Binding WorkspaceSwitch.HasOverflowTools}"
+                                ToolTip.Tip="{loc:Localize Toolbar.MoreToolsTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <controls:Icon Data="{StaticResource Icon.Ellipsis}"/>
+                                <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
+                            </StackPanel>
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                    <MenuItem x:Name="MoreToolsProbeItem" Header="{loc:Localize Toolbar.ProbeMode}"
+                                              Command="{Binding SetProbeModeCommand}"
+                                              IsVisible="{Binding WorkspaceSwitch.IsProbeInOverflow}">
+                                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.ScanSearch}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem x:Name="MoreToolsCutItem" Header="{loc:Localize Toolbar.CutMode}"
+                                              Command="{Binding SetCutModeCommand}" InputGesture="X"
+                                              IsVisible="{Binding WorkspaceSwitch.IsCutInOverflow}">
+                                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Scissors}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{loc:Localize Toolbar.CleanUpCrossings}"
+                                              Command="{Binding Canvas.CleanUpCrossingsCommand}"
+                                              IsVisible="{Binding WorkspaceSwitch.IsCutInOverflow}">
+                                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Eraser}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
                         </Button>
 
                         <Border Classes="divider"/>
@@ -97,6 +127,30 @@
                                       ToolTip.Tip="{loc:Localize Toolbar.GridSnapTip}">
                             <controls:Icon Data="{StaticResource Icon.Grid3x3}"/>
                         </ToggleButton>
+                        <!-- Canvas overlays: each workspace sets the defaults and remembers what the user picks here. -->
+                        <Button x:Name="OverlaysButton" Classes="toolbar menu"
+                                ToolTip.Tip="{loc:Localize Toolbar.OverlaysTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <controls:Icon Data="{StaticResource Icon.Layers}"/>
+                                <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
+                            </StackPanel>
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                    <MenuItem x:Name="OverlayPowerFlowItem" Header="{loc:Localize Toolbar.OverlayPowerFlow}"
+                                              Command="{Binding TogglePowerOverlayCommand}" InputGesture="P">
+                                        <MenuItem.Icon>
+                                            <controls:Icon Data="{StaticResource Icon.Check}" IsVisible="{Binding Canvas.ShowPowerFlow}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem x:Name="OverlayDesignChecksItem" Header="{loc:Localize Toolbar.OverlayDesignChecks}"
+                                              Command="{Binding Canvas.ViewSettings.ToggleDesignCheckMarkersCommand}">
+                                        <MenuItem.Icon>
+                                            <controls:Icon Data="{StaticResource Icon.Check}" IsVisible="{Binding Canvas.ViewSettings.ShowDesignCheckMarkers}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
 
                         <Border Classes="divider"/>
 
@@ -149,6 +203,34 @@
                                 </Border>
                             </StackPanel>
                         </Button>
+                        <!-- Brief "L — <action>" hint under Run the first few times L is pressed. -->
+                        <Popup x:Name="RunShortcutHintPopup"
+                               PlacementTarget="{Binding #RunSimulationButton}"
+                               Placement="Bottom" VerticalOffset="6"
+                               IsLightDismissEnabled="False"
+                               IsOpen="{Binding RunHint.IsVisible}">
+                            <Border Classes="runHint">
+                                <TextBlock Text="{Binding RunHint.Text}"/>
+                            </Border>
+                        </Popup>
+                        <!-- Logic sub-choice: gate-level view or physical design (V). -->
+                        <Border x:Name="GateViewSwitchBar" Classes="segmented" Margin="4,0,0,0"
+                                IsVisible="{Binding GateView.IsAvailable}"
+                                ToolTip.Tip="{Binding GateView.ToggleTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <Button x:Name="GateViewGatesButton" Classes="toolbar segment"
+                                        Content="{loc:Localize GateView.Gates}"
+                                        Classes.active="{Binding GateView.IsShown}"
+                                        Command="{Binding GateView.ShowGatesCommand}"/>
+                                <Button x:Name="GateViewPhysicalButton" Classes="toolbar segment"
+                                        Content="{loc:Localize GateView.Physical}"
+                                        Classes.active="{Binding GateView.IsPhysicalShown}"
+                                        Command="{Binding GateView.ShowPhysicalCommand}"/>
+                                <Border Classes="keyHint" VerticalAlignment="Center" Margin="2,0,4,0">
+                                    <TextBlock Text="V"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
                         <ComboBox Classes="toolbar" Width="104" Margin="4,0,0,0"
                                   SelectedIndex="{Binding SimulationModeIndex}"
                                   IsVisible="{Binding WorkspaceSwitch.IsOptics}"
@@ -385,7 +467,7 @@
                         Classes="chip processChip" MinWidth="170" Margin="4,0"
                         Classes.playground="{Binding IsPlayground}"
                         Classes.none="{Binding FileOperations.ActiveProcess, Converter={x:Static ObjectConverters.IsNull}}"
-                        ToolTip.Tip="{loc:Localize StatusBar.ActiveProcessTip}">
+                        ToolTip.Tip="{Binding ActiveProcessTip}">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <Ellipse Classes="processDot" Width="6" Height="6" VerticalAlignment="Center"/>
                         <TextBlock Classes="statusText" Text="{Binding ActiveProcessLabel}"
@@ -514,12 +596,13 @@
             <Border Grid.Column="0" Name="LeftPanelBorder" Classes="sidePanel left"
                     MinWidth="248" MaxWidth="800">
                 <DockPanel>
-                    <!-- Contextual rail: every section in every workspace; the workspace only picks
-                         the order (Grid.Row) and the default section (WorkspaceRailLayout). -->
+                    <!-- Contextual rail: each workspace shows the sections of its tool set, in its
+                         order (Grid.Row), opening on the first (WorkspaceRailLayout). Layout shows all. -->
                     <Border DockPanel.Dock="Left" Classes="rail">
                         <Grid x:Name="LeftRailIcons" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                             <Button Classes="rail" Command="{Binding LeftRail.ShowGatesCommand}"
                                     Grid.Row="{Binding LeftRail.GatesOrder}" Margin="0,0,0,4"
+                                    IsVisible="{Binding LeftRail.IsGatesAvailable}"
                                     Classes.active="{Binding LeftRail.IsGatesActive}"
                                     ToolTip.Tip="{loc:Localize LeftRail.Gates}"
                                     ToolTip.Placement="Right">
@@ -527,6 +610,7 @@
                             </Button>
                             <Button Classes="rail" Command="{Binding LeftRail.ShowChipletsCommand}"
                                     Grid.Row="{Binding LeftRail.ChipletsOrder}" Margin="0,0,0,4"
+                                    IsVisible="{Binding LeftRail.IsChipletsAvailable}"
                                     Classes.active="{Binding LeftRail.IsChipletsActive}"
                                     ToolTip.Tip="{loc:Localize Workspace.System.Chiplets}"
                                     ToolTip.Placement="Right">
@@ -534,6 +618,7 @@
                             </Button>
                             <Button Classes="rail" Command="{Binding LeftRail.ShowLibraryCommand}"
                                     Grid.Row="{Binding LeftRail.LibraryOrder}" Margin="0,0,0,4"
+                                    IsVisible="{Binding LeftRail.IsLibraryAvailable}"
                                     Classes.active="{Binding LeftRail.IsLibraryActive}"
                                     ToolTip.Tip="{loc:Localize LeftPanel.ComponentLibrary}"
                                     ToolTip.Placement="Right">
@@ -541,6 +626,7 @@
                             </Button>
                             <Button Classes="rail" Command="{Binding LeftRail.ShowHierarchyCommand}"
                                     Grid.Row="{Binding LeftRail.HierarchyOrder}" Margin="0,0,0,4"
+                                    IsVisible="{Binding LeftRail.IsHierarchyAvailable}"
                                     Classes.active="{Binding LeftRail.IsHierarchyActive}"
                                     ToolTip.Tip="{loc:Localize Hierarchy.Title}"
                                     ToolTip.Placement="Right">
@@ -548,6 +634,7 @@
                             </Button>
                             <Button Classes="rail" Command="{Binding LeftRail.ShowPdksCommand}"
                                     Grid.Row="{Binding LeftRail.PdksOrder}" Margin="0,0,0,4"
+                                    IsVisible="{Binding LeftRail.IsPdksAvailable}"
                                     Classes.active="{Binding LeftRail.IsPdksActive}"
                                     ToolTip.Tip="{loc:Localize LeftRail.Pdks}"
                                     ToolTip.Placement="Right">
@@ -561,7 +648,8 @@
                         <DockPanel Classes="railPane" IsVisible="{Binding LeftRail.IsLibraryActive}"
                                    behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
                             <DockPanel DockPanel.Dock="Top" Classes="paneHeader">
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2"
+                                            IsVisible="{Binding IsFullLibrary}">
                                     <!-- Online, community-shared counterpart to this local library -->
                                     <Button Classes="headerIcon" Click="OpenRegistryBrowser_Click"
                                             ToolTip.Tip="{loc:Localize Registry.OpenTip}">
@@ -576,8 +664,25 @@
                                         <controls:Icon Data="{StaticResource Icon.Plus}"/>
                                     </Button>
                                 </StackPanel>
-                                <TextBlock Classes="paneTitle" Text="{loc:Localize LeftPanel.ComponentLibrary}"/>
+                                <TextBlock Classes="paneTitle" Text="{loc:Localize LeftPanel.ComponentLibrary}"
+                                           IsVisible="{Binding IsFullLibrary}"/>
+                                <TextBlock Classes="paneTitle" Text="{loc:Localize Workspace.ToolSet.InstrumentsTitle}"
+                                           IsVisible="{Binding IsInstrumentLibrary}"/>
+                                <TextBlock Classes="paneTitle" Text="{loc:Localize Workspace.ToolSet.DieFacetsTitle}"
+                                           IsVisible="{Binding IsDieFacetLibrary}"/>
                             </DockPanel>
+                            <!-- Optics places instruments only; circuit parts are one click away in Layout. -->
+                            <StackPanel DockPanel.Dock="Top" IsVisible="{Binding IsInstrumentLibrary}">
+                                <TextBlock Classes="caption" Margin="16,0,16,0" TextWrapping="Wrap"
+                                           Text="{loc:Localize Workspace.ToolSet.InstrumentsHint}"/>
+                                <wsPanels:PlaceInLayoutHint/>
+                            </StackPanel>
+                            <!-- System places the edge couplers that link dies; everything else is placed in Layout. -->
+                            <StackPanel DockPanel.Dock="Top" IsVisible="{Binding IsDieFacetLibrary}">
+                                <TextBlock Classes="caption" Margin="16,0,16,0" TextWrapping="Wrap"
+                                           Text="{loc:Localize Workspace.ToolSet.DieFacetsHint}"/>
+                                <wsPanels:PlaceInLayoutHint/>
+                            </StackPanel>
                             <TextBox DockPanel.Dock="Top" Classes="search" Margin="12,0,12,8"
                                      Watermark="{loc:Localize LeftPanel.SearchWatermark}"
                                      Text="{Binding LeftPanel.SearchText}">
@@ -608,10 +713,9 @@
                                           HorizontalScrollBarVisibility="Disabled"
                                           behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
                                 <StackPanel Margin="0,0,0,8">
-                                    <!-- Optics only: sources & detectors on top of the library -->
-                                    <wsPanels:SourcesQuickSection/>
-                                    <!-- Saved groups: a collapsible category of the library -->
+                                    <!-- Saved groups: a collapsible category of the library (Layout only) -->
                                     <ToggleButton x:Name="SavedGroupsToggle" Classes="sectionHeader" IsChecked="True"
+                                                  IsVisible="{Binding IsFullLibrary}"
                                                   AutomationProperties.Name="{loc:Localize LeftPanel.SavedGroups}"
                                                   ToolTip.Tip="{loc:Localize LeftPanel.SavedGroupsTip}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -620,7 +724,13 @@
                                             <TextBlock Classes="label" Text="{loc:Localize LeftPanel.SavedGroups}"/>
                                         </StackPanel>
                                     </ToggleButton>
-                                    <StackPanel IsVisible="{Binding #SavedGroupsToggle.IsChecked}" Margin="8,0,8,4">
+                                    <StackPanel Margin="8,0,8,4">
+                                        <StackPanel.IsVisible>
+                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                <Binding ElementName="SavedGroupsToggle" Path="IsChecked"/>
+                                                <Binding Path="IsFullLibrary"/>
+                                            </MultiBinding>
+                                        </StackPanel.IsVisible>
                                         <TextBlock Classes="caption" Margin="8,0,8,4" TextWrapping="Wrap"
                                                    Text="{Binding LeftPanel.ComponentLibrary.StatusText}"
                                                    IsVisible="{Binding LeftPanel.ComponentLibrary.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
@@ -717,8 +827,9 @@
                                         </ListBox>
                                     </StackPanel>
 
-                                    <Border Classes="divider" Height="1" Margin="12,4,12,4"/>
-                                    <TextBlock Classes="label" Margin="16,8,16,2" Text="{loc:Localize LeftPanel.Components}"/>
+                                    <Border Classes="divider" Height="1" Margin="12,4,12,4" IsVisible="{Binding IsFullLibrary}"/>
+                                    <TextBlock Classes="label" Margin="16,8,16,2" Text="{loc:Localize LeftPanel.Components}"
+                                               IsVisible="{Binding IsFullLibrary}"/>
                                     <TextBlock Classes="caption" Margin="16,0,16,6" TextWrapping="Wrap"
                                                Text="{loc:Localize LeftPanel.PlaceHint}"/>
                                     <ListBox x:Name="ComponentLibraryList"
@@ -792,7 +903,12 @@
                         <!-- ── Chiplets (System default) ── -->
                         <Border Classes="railPane" IsVisible="{Binding LeftRail.IsChipletsActive}"
                                 behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
-                            <wsPanels:ChipletsPane/>
+                            <DockPanel>
+                                <!-- System places no parts; circuit parts are one click away in Layout. -->
+                                <wsPanels:PlaceInLayoutHint DockPanel.Dock="Bottom" Margin="0,0,0,8"
+                                                            IsVisible="{Binding !IsFullLibrary}"/>
+                                <wsPanels:ChipletsPane/>
+                            </DockPanel>
                         </Border>
 
                         <!-- ── Hierarchy ── -->
@@ -914,12 +1030,16 @@
                         <StackPanel Margin="16,4,16,16">
                             <!-- Whole-design tools live on their own surfaces (analysis dock,
                                  AI Assistant window); this sidebar shows the selection only. -->
-                            <panels:SelectedComponentPropertiesPanel/>
-                            <panels:ConnectionRoutingPanel/>
-                            <panels:LengthMatchingPanel/>
+                            <panels:DiePropertiesPanel/>
+                            <!-- A die's own section replaces the generic group readouts. -->
+                            <panels:SelectedComponentPropertiesPanel IsVisible="{Binding !DieProperties.IsVisible}"/>
+                            <!-- A die-to-die link is free-space coupling: no routing style, no length. -->
+                            <panels:ConnectionRoutingPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
+                            <panels:ConnectionLossPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
+                            <panels:LengthMatchingPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
                             <panels:GdsLayerVisibilityPanel/>
                             <panels:RerouteImportedPanel/>
-                            <panels:TruthTablePanel/>
+                            <panels:TruthTablePanel IsVisible="{Binding !DieProperties.IsVisible}"/>
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>
@@ -1018,8 +1138,14 @@
                                    MainViewModel="{Binding}">
                 <controls:DesignCanvas.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Header="{loc:Localize Context.EditComponent}" Command="{Binding CanvasInteraction.OpenSelectedComponentSettingsCommand}">
+                    <MenuItem Header="{loc:Localize Context.EditComponent}" Command="{Binding CanvasInteraction.OpenSelectedComponentSettingsCommand}"
+                              IsVisible="{Binding CanvasContextMenu.ShowsEditComponent}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Settings}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{loc:Localize Context.ShowInLayout}" Command="{Binding ShowInLayoutCommand}"
+                              IsVisible="{Binding CanvasContextMenu.ShowsShowInLayout}"
+                              ToolTip.Tip="{loc:Localize Context.ShowInLayoutTip}">
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Shapes}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
                     <MenuItem Header="{loc:Localize Context.Copy}" Command="{Binding CopySelectedCommand}" InputGesture="Ctrl+C">
@@ -1029,21 +1155,41 @@
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.ClipboardPaste}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
-                    <MenuItem Header="{loc:Localize Context.CreateGroup}" Command="{Binding CreateGroupCommand}" InputGesture="Ctrl+G">
+                    <MenuItem Header="{loc:Localize Context.CreateGroup}" Command="{Binding CanvasInteraction.CreateGroupCommand}" InputGesture="Ctrl+G"
+                              ToolTip.Tip="{Binding CanvasInteraction.GroupBlockedReason}" ToolTip.ShowOnDisabled="True">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Group}"/></MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="{loc:Localize Context.MakeGate}" Command="{Binding MakeGateCommand}"
+                              IsVisible="{Binding CanvasContextMenu.ShowsMakeGate}"
                               ToolTip.Tip="{loc:Localize Context.MakeGateTip}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Binary}"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="{loc:Localize Context.Ungroup}" Command="{Binding UngroupCommand}" InputGesture="Ctrl+Shift+G">
+                    <MenuItem Header="{loc:Localize Context.EditGate}" Command="{Binding MakeGateCommand}"
+                              IsVisible="{Binding CanvasContextMenu.ShowsEditGate}"
+                              ToolTip.Tip="{loc:Localize Context.EditGateTip}">
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Binary}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{loc:Localize Context.Ungroup}" Command="{Binding UngroupCommand}" InputGesture="Ctrl+Shift+G"
+                              IsVisible="{Binding !CanvasInteraction.IsDieSelected}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Ungroup}"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="{loc:Localize Context.RenameGroup}" Command="{Binding CanvasInteraction.RenameGroupCommand}">
+                    <MenuItem Header="{loc:Localize Context.RenameGroup}" Command="{Binding CanvasInteraction.RenameGroupCommand}"
+                              IsVisible="{Binding !CanvasInteraction.IsDieSelected}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Pencil}"/></MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="{loc:Localize Context.SaveAsPrefab}" Command="{Binding CanvasInteraction.SaveGroupAsCommand}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Bookmark}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <Separator IsVisible="{Binding WorkspaceSwitch.IsSystem}"/>
+                    <MenuItem Header="{loc:Localize Dies.Context.NewDie}" Command="{Binding NewDieQuickCommand}"
+                              IsVisible="{Binding WorkspaceSwitch.IsSystem}"
+                              ToolTip.Tip="{loc:Localize Dies.NewDieTip}">
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Plus}"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{loc:Localize Dies.Properties.ZoomToDie}" Command="{Binding DieProperties.ZoomToDieCommand}"
+                              IsVisible="{Binding DieProperties.IsVisible}"
+                              ToolTip.Tip="{loc:Localize Dies.Properties.ZoomToDieTip}">
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.ZoomIn}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
                     <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteSelectedCommand}" InputGesture="Delete">

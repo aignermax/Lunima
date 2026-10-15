@@ -271,7 +271,8 @@ public class ComponentClipboard
         source.BendRadiusMicrometers,
         source.WidthMicrometers,
         source.PropagationLossDbPerCm,
-        source.BendLossDbPer90Deg,
+        source.ExcessBendLossDbPer90Deg,
+        source.BendLoss,
         source.DispersionModel,
         new Dictionary<int, double>(source.BendRadiusOverrides),
         new Dictionary<int, double>(source.StraightShiftOffsets),
@@ -312,7 +313,8 @@ public class ComponentClipboard
         target.BendRadiusMicrometers = source.BendRadiusMicrometers;
         target.WidthMicrometers = source.WidthMicrometers;
         target.PropagationLossDbPerCm = source.PropagationLossDbPerCm;
-        target.BendLossDbPer90Deg = source.BendLossDbPer90Deg;
+        target.ExcessBendLossDbPer90Deg = source.ExcessBendLossDbPer90Deg;
+        target.BendLoss = source.BendLoss;
         target.DispersionModel = source.DispersionModel;
 
         target.BendRadiusOverrides.Clear();
@@ -472,7 +474,8 @@ public class ComponentClipboard
         double BendRadiusMicrometers,
         double WidthMicrometers,
         double PropagationLossDbPerCm,
-        double BendLossDbPer90Deg,
+        double ExcessBendLossDbPer90Deg,
+        CAP_Core.LightCalculation.BendLoss.BendLossModel BendLoss,
         IDispersionModel? DispersionModel,
         Dictionary<int, double> BendRadiusOverrides,
         Dictionary<int, double> StraightShiftOffsets,

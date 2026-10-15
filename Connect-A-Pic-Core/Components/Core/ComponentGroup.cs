@@ -88,6 +88,33 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     [JsonIgnore]
     public ActiveProcessSelection? ProcessBinding { get; set; }
 
+    private Dies.DieDefinition? _die;
+
+    /// <summary>
+    /// Die definition when this top-level group is a die of a multi-die assembly: a fixed
+    /// outline (not the content bounding box), edge zone and enabled PDK subset. Null for
+    /// ordinary groups. Setting it re-derives the bounds, so a die's footprint is always
+    /// its outline — hit testing, collision, rendering and the chiplet-interface edge
+    /// check all read the outline through the regular group bounds.
+    /// </summary>
+    [JsonIgnore]
+    public Dies.DieDefinition? Die
+    {
+        get => _die;
+        set
+        {
+            if (Equals(_die, value))
+                return;
+            _die = value;
+            UpdateGroupBounds();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>True when this group is a die (see <see cref="Die"/>).</summary>
+    [JsonIgnore]
+    public bool IsDie => _die != null;
+
     /// <summary>
     /// Pin-role assignment the Truth Table panel last successfully extracted with for
     /// this group (issue #981). Null while the panel never extracted the group — nothing
@@ -310,6 +337,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
         if (removed)
         {
             UpdateGroupBounds();
+            InvalidateSMatrix();
         }
         return removed;
     }
@@ -325,6 +353,26 @@ public class ComponentGroup : Component, INotifyPropertyChanged
 
         ExternalPins.Add(pin);
         InvalidateSMatrix();
+    }
+
+    /// <summary>Re-inserts an external pin at <paramref name="index"/> (clamped), e.g. when undoing its removal.</summary>
+    /// <param name="index">Position in <see cref="ExternalPins"/>.</param>
+    /// <param name="pin">The group pin to restore.</param>
+    public void InsertExternalPin(int index, GroupPin pin)
+    {
+        ArgumentNullException.ThrowIfNull(pin);
+        ExternalPins.Insert(Math.Clamp(index, 0, ExternalPins.Count), pin);
+        InvalidateSMatrix();
+    }
+
+    /// <summary>Removes an external pin; returns false when it was not exposed by this group.</summary>
+    /// <param name="pin">The group pin to remove.</param>
+    public bool RemoveExternalPin(GroupPin pin)
+    {
+        bool removed = ExternalPins.Remove(pin);
+        if (removed)
+            InvalidateSMatrix();
+        return removed;
     }
 
     /// <summary>
@@ -468,6 +516,12 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// </summary>
     public void UpdateGroupBounds()
     {
+        if (_die != null)
+        {
+            ApplyDieOutlineBounds(_die);
+            return;
+        }
+
         if (ChildComponents.Count == 0 && InternalPaths.Count == 0)
         {
             WidthMicrometers = 0;
@@ -524,6 +578,16 @@ public class ComponentGroup : Component, INotifyPropertyChanged
 
         // Update label bounds (positioned at top-left with padding)
         UpdateLabelBounds(minX, minY);
+    }
+
+    /// <summary>A die's footprint is its fixed outline, whatever its content spans.</summary>
+    private void ApplyDieOutlineBounds(Dies.DieDefinition die)
+    {
+        WidthMicrometers = die.WidthMicrometers;
+        HeightMicrometers = die.HeightMicrometers;
+        MinChildOffsetX = die.OutlineOffsetXMicrometers;
+        MinChildOffsetY = die.OutlineOffsetYMicrometers;
+        UpdateLabelBounds(PhysicalX + MinChildOffsetX, PhysicalY + MinChildOffsetY);
     }
 
     /// <summary>
@@ -607,6 +671,8 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             TruthTablePinAssignment = TruthTablePinAssignment?.Copy(),
             // Immutable record — sharing the reference is safe.
             ProcessBinding = ProcessBinding,
+            // Immutable record — sharing the reference is safe.
+            Die = Die,
             // Immutable records — sharing the list is safe (same rule as Component.DeepCopy).
             OutlinePolygons = OutlinePolygons
         };

@@ -136,7 +136,7 @@ public class CoherentPropagationPhaseTests
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = 2.0,
-            BendLossDbPer90Deg = 0.05
+            ExcessBendLossDbPer90Deg = 0.05
         };
         connection.RecalculateTransmission(new WaveguideRouter());
         connection.PathLengthMicrometers.ShouldBeGreaterThan(0);

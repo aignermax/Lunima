@@ -63,7 +63,8 @@
                                     PointerPressed="TreeNode_PointerPressed">
                                 <Border.ContextMenu>
                                     <ContextMenu>
-                                        <MenuItem Header="{loc:Localize Hierarchy.ComponentSettings}" Command="{Binding OpenSettingsCommand}"/>
+                                        <MenuItem Header="{loc:Localize Hierarchy.ComponentSettings}" Command="{Binding OpenSettingsCommand}"
+                                                  IsVisible="{Binding !IsDie}"/>
                                         <MenuItem Header="{loc:Localize Common.Rename}" Command="{Binding StartRenameCommand}"/>
                                     </ContextMenu>
                                 </Border.ContextMenu>
@@ -71,15 +72,23 @@
                                     <Panel VerticalAlignment="Center">
                                         <controls:Icon Data="{StaticResource Icon.Group}" Size="14"
                                                        Foreground="{DynamicResource Brush.Text.Tertiary}"
-                                                       IsVisible="{Binding IsGroup}"/>
+                                                       IsVisible="{Binding IsPlainGroup}"/>
+                                        <!-- A die: chip icon in its process color. -->
+                                        <controls:Icon Data="{StaticResource Icon.Microchip}" Size="14"
+                                                       Foreground="{Binding DieBrush}"
+                                                       IsVisible="{Binding IsDie}"/>
                                         <controls:Icon Data="{StaticResource Icon.Box}" Size="14"
                                                        Foreground="{DynamicResource Brush.Text.Tertiary}"
                                                        IsVisible="{Binding !IsGroup}"/>
                                     </Panel>
 
                                     <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Classes="rowTitle" Text="{Binding DisplayName}"
-                                                   IsVisible="{Binding !IsRenaming}"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsRenaming}">
+                                            <!-- Process color dot of a die (same color as its canvas frame). -->
+                                            <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                                     Fill="{Binding DieBrush}" IsVisible="{Binding IsDie}"/>
+                                            <TextBlock Classes="rowTitle" Text="{Binding DisplayName}"/>
+                                        </StackPanel>
                                         <TextBox Classes="compact" Text="{Binding EditName, Mode=TwoWay}"
                                                  IsVisible="{Binding IsRenaming}"
                                                  MinWidth="120"

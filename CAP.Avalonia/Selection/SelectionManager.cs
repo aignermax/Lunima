@@ -239,6 +239,10 @@ public class SelectionManager
     /// <returns>True if the group can be moved by the given delta.</returns>
     public bool CanMoveGroup(DesignCanvasViewModel canvas, double deltaX, double deltaY)
     {
+        // Parts on dies move on their die, clear of the parts that stay put.
+        if (canvas.Surface.CanMoveTogether(SelectedComponents, deltaX, deltaY) is bool onDies)
+            return onDies;
+
         foreach (var comp in SelectedComponents)
         {
             double newX = comp.X + deltaX;
@@ -285,11 +289,21 @@ public class SelectionManager
             return detector.CanPlaceGroup(group, x, y, allComponents, excludeSet);
         }
 
-        // Regular component - check bounding box overlap with non-selected components
+        // Regular component - check bounding box overlap with non-selected components;
+        // groups block with their parts and waveguides only, never with their bounding box.
+        var footprintDetector = new CAP_Core.Grid.GroupCollisionDetector();
         foreach (var other in canvas.Components)
         {
             if (other == component) continue;
             if (SelectedComponents.Contains(other)) continue;
+
+            if (other.Component is CAP_Core.Components.Core.ComponentGroup otherGroup)
+            {
+                if (!footprintDetector.CanPlaceFootprint(x, y, component.Width, component.Height,
+                        new[] { otherGroup }, component.Component))
+                    return false;
+                continue;
+            }
 
             bool overlaps =
                 x - MinGap < other.X + other.Width &&

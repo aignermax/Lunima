@@ -143,6 +143,49 @@ public class RoutingOrchestrator
             _router.PathfindingGrid.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
     }
 
+    private int _gridRequest;
+
+    /// <summary>
+    /// Re-initializes the A* grid for new bounds and routing regions off the UI thread — the
+    /// grid of a large die carrier takes around a second to build, far beyond the 100 ms an
+    /// interaction may block. The component positions are captured now; the grid is swapped in
+    /// under the routing lock, so a routing pass started meanwhile waits for it, and a request
+    /// superseded by a newer one is skipped.
+    /// </summary>
+    public Task ReinitializeAStarRoutingInBackgroundAsync(double minX, double minY, double maxX, double maxY,
+        IReadOnlyList<(double X, double Y, double Width, double Height)>? regions)
+    {
+        var components = _components.Select(c => c.Component).ToList();
+        int request = Interlocked.Increment(ref _gridRequest);
+        return Task.Run(async () =>
+        {
+            await _routingSemaphore.WaitAsync();
+            try
+            {
+                if (request != Volatile.Read(ref _gridRequest))
+                    return;
+                // Lift the regions first so the outgoing grid is not re-blocked for nothing.
+                _router.AllowedRoutingRegions = null;
+                _router.InitializePathfindingGrid(minX, minY, maxX, maxY, components);
+                _router.AllowedRoutingRegions = regions;
+                if (_router.PathfindingGrid != null)
+                    _router.PathfindingGrid.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
+            }
+            finally
+            {
+                _routingSemaphore.Release();
+            }
+        });
+    }
+
+    /// <summary>
+    /// Confines routes to the given rectangles (the dies of an assembly: a waveguide never
+    /// runs across the carrier between dies), or lifts the restriction with null. Takes effect
+    /// with the next grid initialization or routing pass.
+    /// </summary>
+    public void SetAllowedRoutingRegions(IReadOnlyList<(double X, double Y, double Width, double Height)>? regions) =>
+        _router.AllowedRoutingRegions = regions;
+
     /// <summary>
     /// Cancels the currently running routing pass (status-bar Stop button). Already-routed
     /// connections keep their new routes; the pass reports how far it got.

@@ -84,7 +84,7 @@ public class GroupMoveCommand : IUndoableCommand
                 continue;
 
             // Find the current ComponentViewModel for this component
-            var componentViewModel = _canvas.Components.FirstOrDefault(c => c.Component == comp);
+            var componentViewModel = _canvas.ViewModelOf(comp);
             if (componentViewModel != null)
             {
                 _canvas.MoveComponent(componentViewModel, dx, dy);

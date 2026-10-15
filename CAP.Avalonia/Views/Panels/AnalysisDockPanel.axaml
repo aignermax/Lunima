@@ -319,10 +319,11 @@
                                 <panels:DesignChecksPanel/>
                             </ScrollViewer>
                         </TabItem>
-                        <!-- Logic: whole-design build, toggle, step/run clock, timeline. -->
+                        <!-- Logic: whole-design build, toggle, step/run clock, timeline. Its columns scroll
+                             on their own, so the page itself does not scroll vertically. -->
                         <TabItem Header="{loc:Localize AnalysisDock.TabLogic}"
                                  IsVisible="{Binding BottomPanel.Analysis.Tabs.Logic}">
-                            <ScrollViewer Classes="tabPage">
+                            <ScrollViewer Classes="tabPage" VerticalScrollBarVisibility="Disabled">
                                 <panels:LogicPanel/>
                             </ScrollViewer>
                         </TabItem>

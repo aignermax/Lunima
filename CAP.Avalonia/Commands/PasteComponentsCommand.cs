@@ -49,6 +49,8 @@ public class PasteComponentsCommand : IUndoableCommand
 
         // First execution: create new clones via clipboard
         _result = _clipboard.Paste(_canvas, _targetX, _targetY);
+        if (_result != null)
+            Dies.DiePasteCompletion.Complete(_canvas, _result);
     }
 
     /// <inheritdoc />

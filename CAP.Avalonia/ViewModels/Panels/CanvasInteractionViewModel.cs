@@ -155,6 +155,17 @@ public partial class CanvasInteractionViewModel : ObservableObject
     public PlacementPolicyContext PlacementContext { get; set; } = PlacementPolicyContext.Unrestricted;
 
     /// <summary>
+    /// The active workspace's placement rule for library components: the hint to show when the
+    /// workspace does not place the template, null when it does. Consulted when a template is
+    /// armed and again at every placement (click, drag &amp; drop), so no path bypasses it.
+    /// Wired by <c>MainViewModel</c>; unwired, every template is placeable.
+    /// </summary>
+    public Func<ComponentTemplate, string?>? ComponentPlacementRefusal { get; set; }
+
+    /// <summary>The group-template twin of <see cref="ComponentPlacementRefusal"/> (saved groups, PDK macros, gates).</summary>
+    public Func<GroupTemplate, string?>? GroupPlacementRefusal { get; set; }
+
+    /// <summary>
     /// Callback returning the minimum allowed waveguide bend radius (µm) of the design's active
     /// fabrication process, consulted by the in-canvas bend-handle drag so an edit cannot shrink
     /// a bend below what the process permits. Wired by <c>MainViewModel</c> to
@@ -195,6 +206,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
             (_, _) => OnPropertyChanged(nameof(IsConnectionSelected));
 
         RefreshModeShortcutHints();
+        InitializeDieRules();
     }
 
     /// <summary>
@@ -221,6 +233,11 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     partial void OnSelectedTemplateChanged(ComponentTemplate? value)
     {
+        if (value != null && IsRefused(ComponentPlacementRefusal?.Invoke(value)))
+        {
+            SelectedTemplate = null;
+            return;
+        }
         if (value != null)
         {
             CurrentMode = InteractionMode.PlaceComponent;
@@ -232,6 +249,12 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     partial void OnSelectedGroupTemplateChanged(GroupTemplate? value)
     {
+        if (value != null && IsRefused(GroupPlacementRefusal?.Invoke(value)))
+        {
+            SelectedGroupTemplate = null;
+            ClearLeftPanelGroupSelection?.Invoke();
+            return;
+        }
         if (value != null)
         {
             CurrentMode = InteractionMode.PlaceGroupTemplate;
@@ -433,6 +456,17 @@ public partial class CanvasInteractionViewModel : ObservableObject
                 // Cross-domain connection (optical ↔ electrical) is physically meaningless — reject.
                 UpdateStatus?.Invoke(PinKindHelper.DescribeIncompatibility(_connectionStartPin, pin));
             }
+            else if (CAP_Core.Components.Dies.DieWiringPolicy.Evaluate(_connectionStartPin, pin).Verdict
+                     != CAP_Core.Components.Dies.DieWiringVerdict.Waveguide)
+            {
+                // Across a die edge only facing edge couplers connect — as a die-to-die link.
+                var wire = Commands.Dies.FacetWireCommandFactory.Create(_canvas, _connectionStartPin, pin);
+                if (wire.Command != null)
+                    _commandManager.ExecuteCommand(wire.Command);
+                else
+                    UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate(
+                        wire.RefusalKey ?? "Dies.Wiring.CouplersOnly"));
+            }
             else
             {
                 var cmd = new CreateConnectionCommand(_canvas, _connectionStartPin, pin);
@@ -447,7 +481,13 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     private void PlaceComponentTemplateAt(ComponentTemplate? template, double x, double y)
     {
-        if (template == null) return;
+        if (template == null || IsRefused(ComponentPlacementRefusal?.Invoke(template))) return;
+
+        if (_canvas.Dies.IsAssemblyRoot)
+        {
+            PlaceComponentTemplateOnDie(template, x, y);
+            return;
+        }
 
         // Per-chiplet scope (issue #935): dropping onto a process-bound chiplet resolves
         // against that chiplet's process; everywhere else the canvas-level process applies.
@@ -468,9 +508,59 @@ public partial class CanvasInteractionViewModel : ObservableObject
             UpdateStatus?.Invoke("No space available on chip for this component");
             return;
         }
+        SnapToActiveDieEdge(cmd.PlacedComponent);
 
         _commandManager.ExecuteCommand(cmd);
         UpdateStatus?.Invoke($"Placed {template.Name} at ({x:F0}, {y:F0})µm");
+    }
+
+    /// <summary>
+    /// Placement while looking at a die assembly: a part always lands on a die (it belongs
+    /// to that die's process); dropping between dies places nothing and says why.
+    /// </summary>
+    private void PlaceComponentTemplateOnDie(ComponentTemplate template, double x, double y)
+    {
+        var die = CAP_Core.Components.Dies.DieAssembly.DieAt(_canvas.Components.Select(c => c.Component), x, y);
+        if (die == null)
+        {
+            UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Dies.Status.DropInsideDie"));
+            return;
+        }
+
+        var (isAllowed, blockReason) = PlacementContext.CheckPlacementOnDie(template.PdkSource, die);
+        if (!isAllowed)
+        {
+            UpdateStatus?.Invoke(blockReason ?? "Process mismatch — cannot place component.");
+            return;
+        }
+
+        var partProcess = PlacementContext.ProcessCatalog
+            .Where(g => g.MemberPdkNames.Contains(template.PdkSource ?? "", StringComparer.OrdinalIgnoreCase))
+            .Select(CAP_Core.Components.Process.ActiveProcessSelection.ForGroup)
+            .FirstOrDefault();
+        var cmd = Commands.Dies.PlaceComponentInDieCommand.TryCreate(_canvas, die, template, x, y, partProcess);
+        if (cmd == null)
+        {
+            UpdateStatus?.Invoke($"No free space on {die.GroupName} for {template.Name}");
+            return;
+        }
+        _commandManager.ExecuteCommand(cmd);
+        UpdateStatus?.Invoke($"Placed {template.Name} on {die.GroupName}");
+    }
+
+    /// <summary>
+    /// Inside a die, an edge coupler dropped within the edge zone lands on the die edge with
+    /// its facet facing out — before it is placed, so placement and snap are one undo step.
+    /// </summary>
+    private void SnapToActiveDieEdge(CAP_Core.Components.Core.Component? component)
+    {
+        if (component == null || _canvas.Dies.ActiveDie is not { Die: { } die } activeDie
+            || !CAP_Core.Components.Dies.EdgeCouplerFacet.IsEdgeCoupler(component))
+            return;
+        var snap = CAP_Core.Components.Dies.DieEdgeSnapper.Plan(
+            component, CAP_Core.Components.Dies.DieAssembly.OutlineOf(activeDie), die.EdgeZoneMicrometers);
+        if (snap != null)
+            CAP_Core.Components.Dies.DieEdgeSnapper.Apply(component, snap);
     }
 
     private void PlaceGroupTemplateAt(double x, double y) =>
@@ -479,6 +569,17 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private void PlaceGivenGroupTemplateAt(GroupTemplate? groupTemplate, double x, double y)
     {
         if (groupTemplate == null || _libraryViewModel == null) return;
+        if (IsRefused(GroupPlacementRefusal?.Invoke(groupTemplate))) return;
+
+        // On a die assembly a saved group lands on the die under the pointer, in place.
+        var targetDie = _canvas.Dies.IsAssemblyRoot
+            ? CAP_Core.Components.Dies.DieAssembly.DieAt(_canvas.Components.Select(c => c.Component), x, y)
+            : null;
+        if (_canvas.Dies.IsAssemblyRoot && targetDie == null)
+        {
+            UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Dies.Status.DropInsideDie"));
+            return;
+        }
 
         // Debug: Check if TemplateGroup is loaded
         if (groupTemplate.TemplateGroup == null)
@@ -524,14 +625,26 @@ public partial class CanvasInteractionViewModel : ObservableObject
             return;
         }
 
-        // Pin the chiplet process binding resolved by the policy check onto the instance.
-        if (derivedBinding != null)
+        // Pin the chiplet process binding resolved by the policy check onto the instance
+        // (on a die the die's process is the scope, the group needs no binding of its own).
+        if (derivedBinding != null && targetDie == null)
         {
             cmd.GroupToPlace.ProcessBinding = derivedBinding;
         }
 
-        _commandManager.ExecuteCommand(cmd);
+        _commandManager.ExecuteCommand(targetDie == null
+            ? cmd
+            : new Commands.Dies.DieSurfaceCommand(_canvas, () => cmd, Array.Empty<ComponentViewModel>(), targetDie, cmd.Description));
         UpdateStatus?.Invoke($"Placed group '{groupTemplate.Name}' at ({x:F0}, {y:F0})µm");
+    }
+
+    /// <summary>Shows a workspace refusal hint; true when there was one (the placement is refused).</summary>
+    private bool IsRefused(string? refusal)
+    {
+        if (refusal == null)
+            return false;
+        UpdateStatus?.Invoke(refusal);
+        return true;
     }
 
     /// <summary>
@@ -603,7 +716,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     /// (<see cref="BackgroundComponentAt"/>).
     /// </summary>
     private ComponentViewModel? ComponentAt(double x, double y) =>
-        _canvas.Components
+        _canvas.InteractiveComponents
             .Where(c => c.Component.IsRoutingObstacle && Contains(c, x, y))
             .LastOrDefault();
 
@@ -621,8 +734,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     private void SelectAt(double x, double y)
     {
-        // Deselect all
-        foreach (var comp in _canvas.Components)
+        // Deselect all (parts on dies included)
+        foreach (var comp in _canvas.Components.Concat(_canvas.InteractiveComponents))
         {
             comp.IsSelected = false;
         }
@@ -639,7 +752,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         var connectionHit = component is null ? FindConnectionAt(x, y) : null;
         var frozenHit = component is null && connectionHit is null ? FindCanvasFrozenPathAt(x, y) : null;
         if (component is null && connectionHit is null && frozenHit is null)
-            component = BackgroundComponentAt(x, y);
+            component = BackgroundComponentAt(x, y) ?? ChipDieAt(x, y);
 
         if (component != null)
         {
@@ -715,14 +828,14 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     private void DeleteAt(double x, double y)
     {
-        var component = _canvas.Components
+        var component = _canvas.InteractiveComponents
             .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
             .LastOrDefault();
 
         if (component != null)
         {
             var name = component.Name;
-            var cmd = new DeleteComponentCommand(_canvas, component);
+            var cmd = OnDieSurface(new[] { component }, () => new DeleteComponentCommand(_canvas, component), "Delete");
             _commandManager.ExecuteCommand(cmd);
             SelectedComponent = null;
             UpdateStatus?.Invoke($"Deleted: {name}");
@@ -965,18 +1078,20 @@ public partial class CanvasInteractionViewModel : ObservableObject
             return;
         }
 
-        var deletable = targets.Where(c => !c.Component.IsLocked).ToList();
+        var deletable = targets.Where(c => !c.Component.IsLocked && !IsUndeletableDie(c)).ToList();
         if (deletable.Count == 0)
         {
-            if (targets.Count > 0)
+            if (DieDeleteRefusal(targets) is { } refusal)
+                UpdateStatus?.Invoke(refusal);
+            else if (targets.Count > 0)
                 UpdateStatus?.Invoke("Selection is locked — unlock elements to delete them");
             return;
         }
 
         // One batch command for a multi-selection, so a single undo restores everything.
-        IUndoableCommand cmd = deletable.Count == 1
+        IUndoableCommand cmd = OnDieSurface(deletable, () => deletable.Count == 1
             ? new DeleteComponentCommand(_canvas, deletable[0])
-            : new GroupDeleteCommand(_canvas, deletable);
+            : new GroupDeleteCommand(_canvas, deletable), "Delete");
         _commandManager.ExecuteCommand(cmd);
 
         selection.ClearSelection();
@@ -986,15 +1101,36 @@ public partial class CanvasInteractionViewModel : ObservableObject
             : $"Deleted {deletable.Count} components");
     }
 
+    /// <summary>
+    /// The command built by <paramref name="build"/>, run so that parts sitting on a die are
+    /// handled in place (see <see cref="Commands.Dies.DieSurfaceCommand"/>); unchanged when
+    /// none of <paramref name="targets"/> is on a die.
+    /// </summary>
+    private IUndoableCommand OnDieSurface(IReadOnlyList<ComponentViewModel> targets, Func<IUndoableCommand> build, string description)
+    {
+        var onDies = targets.Where(_canvas.Surface.IsItem).ToList();
+        if (onDies.Count == 0)
+            return build();
+        return new Commands.Dies.DieSurfaceCommand(_canvas, build, onDies, _canvas.Surface.DieOf(onDies[0]), description);
+    }
+
+    /// <summary>The die under the center of <paramref name="part"/> (where a pasted part lands).</summary>
+    private CAP_Core.Components.Core.ComponentGroup? DieUnder(CAP_Core.Components.Core.Component part)
+    {
+        var (x, y, width, height) = CAP_Core.Components.Dies.DiePlacement.FootprintOf(part);
+        return CAP_Core.Components.Dies.DieAssembly.DieAt(
+            _canvas.Components.Select(c => c.Component), x + width / 2, y + height / 2);
+    }
+
     [RelayCommand]
     private void CopySelected()
     {
         var selection = _canvas.Selection;
         if (!selection.HasSelection) return;
 
-        _canvas.Clipboard.Copy(
-            selection.SelectedComponents.ToList(),
-            _canvas.Connections);
+        var copied = selection.SelectedComponents.Where(c => !_canvas.ChipDie.IsProxy(c.Component)).ToList();
+        if (copied.Count == 0) return;
+        _canvas.Clipboard.Copy(copied, _canvas.Connections);
 
         UpdateStatus?.Invoke($"Copied {selection.SelectedComponents.Count} component(s)");
     }
@@ -1023,8 +1159,11 @@ public partial class CanvasInteractionViewModel : ObservableObject
             return;
         }
 
-        var cmd = new PasteComponentsCommand(_canvas, _canvas.Clipboard, targetX, targetY);
-        _commandManager.ExecuteCommand(cmd);
+        var paste = new PasteComponentsCommand(_canvas, _canvas.Clipboard, targetX, targetY);
+        _commandManager.ExecuteCommand(_canvas.Surface.IsActive
+            ? new Commands.Dies.DieSurfaceCommand(_canvas, () => paste, Array.Empty<ComponentViewModel>(), DieUnder, "Paste")
+            : paste);
+        var cmd = paste;
 
         if (cmd.Result != null)
         {
@@ -1049,7 +1188,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     [RelayCommand]
     private void RotateSelected()
     {
-        if (SelectedComponent != null)
+        if (SelectedComponent != null && !_canvas.ChipDie.IsProxy(SelectedComponent.Component))
         {
             var cmd = new RotateComponentCommand(_canvas, SelectedComponent);
             _commandManager.ExecuteCommand(cmd);
@@ -1062,8 +1201,16 @@ public partial class CanvasInteractionViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanCreateGroup))]
     private void CreateGroup()
     {
+        if (RefuseGroupingDies())
+            return;
         var selectedComponents = _canvas.Selection.SelectedComponents.ToList();
-        var cmd = new CreateGroupCommand(_canvas, selectedComponents);
+        var dies = selectedComponents.Select(_canvas.Surface.DieOf).Distinct().ToList();
+        if (dies.Count > 1 && dies.Any(d => d != null))
+        {
+            UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Dies.Status.GroupOneDie"));
+            return;
+        }
+        var cmd = OnDieSurface(selectedComponents, () => new CreateGroupCommand(_canvas, selectedComponents), "Create group");
         _commandManager.ExecuteCommand(cmd);
         _canvas.Selection.ClearSelection();
 
@@ -1079,7 +1226,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     private bool CanCreateGroup()
     {
-        return _canvas.Selection.SelectedComponents.Count >= 2;
+        return _canvas.Selection.SelectedComponents.Count >= 2 && !SelectionHasDie;
     }
 
     [RelayCommand(CanExecute = nameof(CanUngroup))]
@@ -1090,9 +1237,12 @@ public partial class CanvasInteractionViewModel : ObservableObject
             .OfType<CAP_Core.Components.Core.ComponentGroup>()
             .FirstOrDefault();
 
+        if (RefuseOnDie(selectedGroup))
+            return;
         if (selectedGroup != null)
         {
-            var cmd = new UngroupCommand(_canvas, selectedGroup);
+            var cmd = OnDieSurface(_canvas.Selection.SelectedComponents.ToList(),
+                () => new UngroupCommand(_canvas, selectedGroup), "Ungroup");
             _commandManager.ExecuteCommand(cmd);
             _canvas.Selection.ClearSelection();
             UpdateStatus?.Invoke($"Ungrouped: {selectedGroup.GroupName}");
@@ -1102,7 +1252,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private bool CanUngroup()
     {
         return _canvas.Selection.SelectedComponents.Count == 1 &&
-               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup;
+               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup { IsDie: false };
     }
 
     [RelayCommand(CanExecute = nameof(CanRenameGroup))]
@@ -1119,7 +1269,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
             .OfType<CAP_Core.Components.Core.ComponentGroup>()
             .FirstOrDefault();
 
-        if (selectedGroup == null)
+        if (selectedGroup == null || RefuseOnDie(selectedGroup))
             return;
 
         var currentName = selectedGroup.GroupName;
@@ -1155,7 +1305,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private bool CanRenameGroup()
     {
         return _canvas.Selection.SelectedComponents.Count == 1 &&
-               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup &&
+               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup { IsDie: false } &&
                _libraryViewModel != null &&
                _inputDialogService != null;
     }
@@ -1225,10 +1375,10 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private void OpenSelectedComponentSettings()
     {
         var selected = SelectedComponent;
-        if (selected != null)
+        if (selected != null && !IsDie(selected))
             OpenComponentSettings?.Invoke(selected);
     }
 
     private bool CanOpenSelectedComponentSettings()
-        => SelectedComponent != null;
+        => SelectedComponent != null && !IsDie(SelectedComponent);
 }

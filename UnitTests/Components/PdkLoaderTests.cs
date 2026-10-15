@@ -162,6 +162,46 @@ namespace UnitTests.Components
         }
 
         [Fact]
+        public void LoadFromJson_PinlessComponentWithRawCodeOnly_LoadsAsGeometryOnly()
+        {
+            // Issue #829 field case: a GDS import persisted a pin-less component
+            // whose cell has NO polygons (text-only marker) — no outlinePolygons
+            // either. The raw code rebuilds the geometry, so the draft is valid
+            // render-only geometry and must not poison the whole PDK on reload.
+            var loader = new PdkLoader();
+            var json = @"{
+                ""name"": ""GDS Import - fab"",
+                ""components"": [
+                    {
+                        ""name"": ""logo"",
+                        ""category"": ""GDS Import"",
+                        ""widthMicrometers"": 5,
+                        ""heightMicrometers"": 5,
+                        ""rawCode"": ""import nazca as nd\ndef component():\n    return nd.Cell(name=\""logo\"")\n"",
+                        ""rawCodeBackend"": ""nazca"",
+                        ""pins"": []
+                    },
+                    {
+                        ""name"": ""valid"",
+                        ""nazcaFunction"": ""test.valid"",
+                        ""widthMicrometers"": 10,
+                        ""heightMicrometers"": 5,
+                        ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 2.5,
+                        ""pins"": [
+                            { ""name"": ""in"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 2.5, ""angleDegrees"": 180 }
+                        ]
+                    }
+                ]
+            }";
+
+            var pdk = loader.LoadFromJson(json);
+
+            pdk.Components.Count.ShouldBe(2);
+            pdk.Components[0].Pins.ShouldBeEmpty();
+            pdk.Components[0].OutlinePolygons.ShouldBeNull();
+        }
+
+        [Fact]
         public void LoadFromJson_ComponentWithInvalidDimensions_ThrowsException()
         {
             var loader = new PdkLoader();

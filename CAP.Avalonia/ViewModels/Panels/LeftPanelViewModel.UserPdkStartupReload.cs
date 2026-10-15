@@ -81,13 +81,24 @@ public partial class LeftPanelViewModel
     /// Loads and registers one user PDK file; returns false when the file could not be loaded
     /// or its name duplicates a loaded non-bundled PDK. A bundled entry is only deregistered
     /// AFTER the fork file parsed successfully, so a broken fork never removes the built-in PDK.
+    /// The load is tolerant at COMPONENT level: invalid components are dropped and reported
+    /// individually in the error console (PDK name, component name, reason) instead of
+    /// skipping the whole file — one broken component must not make its valid siblings
+    /// disappear from the library after a restart. Only file-level problems (unreadable
+    /// JSON, missing PDK name) still skip the file.
     /// </summary>
     private bool TryReloadUserPdk(string path)
     {
         PdkDraft pdk;
         try
         {
-            pdk = _pdkLoader.LoadFromFileForEditing(path);
+            var result = _pdkLoader.LoadFromFileTolerant(path);
+            pdk = result.Pdk;
+            foreach (var error in result.ComponentErrors)
+            {
+                _errorConsole?.LogError(
+                    $"Dropped invalid component of user PDK '{Path.GetFileName(path)}' at startup: {error}");
+            }
         }
         catch (FileNotFoundException)
         {

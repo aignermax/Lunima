@@ -9,8 +9,8 @@ namespace CAP.Avalonia.ViewModels;
 
 /// <summary>
 /// What the active workspace changes around the canvas besides Run and the dock: the left
-/// rail's default section and icon order (Gates in Logic, Chiplets in System, the
-/// "Sources &amp; detectors" quick section in Optics), the Truth Table / Make gate section
+/// rail's default section and icon order (Gates in Logic, Chiplets in System), the Truth
+/// Table / Make gate section
 /// of the properties panel (Logic and System only), and the Probe tool (Layout and Optics only).
 /// </summary>
 public partial class MainViewModel
@@ -18,17 +18,11 @@ public partial class MainViewModel
     /// <summary>The left rail's Gates panel (Logic workspace default).</summary>
     public GatesPanelViewModel GatesPanel { get; private set; } = null!;
 
-    /// <summary>The Optics workspace's "Sources &amp; detectors" quick section of the library.</summary>
-    public SourcesQuickSectionViewModel SourcesQuickSection { get; private set; } = null!;
-
     /// <summary>
     /// True while the properties panel shows the Truth Table / Make gate section: exactly one
     /// group is selected and the workspace is Logic or System.
     /// </summary>
     public bool IsGateSectionVisible => WorkspaceSwitch.ShowsGateTools && RightPanel.TruthTable.IsGroupSelected;
-
-    /// <summary>True in Optics while the library offers sources or detectors (shows the quick section).</summary>
-    public bool IsSourcesQuickSectionVisible => WorkspaceSwitch.IsOptics && SourcesQuickSection.HasItems;
 
     /// <summary>Builds the contextual panels and follows workspace switches; call after <see cref="InitializeWorkspaces"/>.</summary>
     private void InitializeWorkspaceContext()
@@ -38,12 +32,6 @@ public partial class MainViewModel
             OpenExampleRequested = FileOperations.OpenDesignAsCopyAsync,
             MakeGateRequested = () => MakeGateCommand.Execute(null),
             ShowLibraryRequested = () => LeftRail.ShowLibraryCommand.Execute(null),
-        };
-        SourcesQuickSection = new SourcesQuickSectionViewModel(LeftPanel.FilteredTemplates);
-        SourcesQuickSection.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(SourcesQuickSectionViewModel.HasItems))
-                OnPropertyChanged(nameof(IsSourcesQuickSectionVisible));
         };
         SystemOverview.ChipletActivated = SelectAndShowChiplet;
         RightPanel.TruthTable.PropertyChanged += OnTruthTablePropertyChanged;
@@ -60,7 +48,6 @@ public partial class MainViewModel
         if (!WorkspaceSwitch.ShowsProbeTool && CanvasInteraction.CurrentMode == InteractionMode.Probe)
             CanvasInteraction.SetSelectModeCommand.Execute(null);
         OnPropertyChanged(nameof(IsGateSectionVisible));
-        OnPropertyChanged(nameof(IsSourcesQuickSectionVisible));
     }
 
     private void OnTruthTablePropertyChanged(object? sender, PropertyChangedEventArgs e)

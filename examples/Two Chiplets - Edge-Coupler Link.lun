@@ -32,16 +32,16 @@
         "GroupName": "Transmitter Chiplet",
         "Description": "Group of 3 components",
         "Identifier": "group_42d0f807c1cb4aa687fdac68949ae7bd",
-        "IdGuid": "c1fef466-b149-4dde-8592-34ff16446fa0",
+        "IdGuid": "e4e15b17-6dd5-48be-a0c2-74379b2f5aad",
         "ChildComponentGuids": [
-          "ec685a1c-b839-45b9-b8f1-fa3cec38cc47",
-          "db203e7b-dec2-43a0-9c32-2ed68541a73a",
-          "36aad52f-f695-45c4-a8ba-e957dd0b0fee"
+          "ab33938c-9218-414b-bba5-390bd7085444",
+          "adb7ff67-c33a-45b0-9fda-095dd98e9223",
+          "a1307b08-67af-4efe-9270-cf5cbf8e08f0"
         ],
         "GridX": 0,
         "GridY": 0,
-        "PhysicalX": 0,
-        "PhysicalY": 0,
+        "PhysicalX": -25,
+        "PhysicalY": -25,
         "Rotation90CounterClock": 0,
         "ChildComponentIds": [
           "a_gc",
@@ -52,10 +52,10 @@
           {
             "PathId": "99616514-1b3d-4dbf-ae2d-c037914e9b4a",
             "StartComponentId": "a_gc",
-            "StartComponentGuid": "ec685a1c-b839-45b9-b8f1-fa3cec38cc47",
+            "StartComponentGuid": "ab33938c-9218-414b-bba5-390bd7085444",
             "StartPinName": "waveguide",
             "EndComponentId": "a_wg",
-            "EndComponentGuid": "db203e7b-dec2-43a0-9c32-2ed68541a73a",
+            "EndComponentGuid": "adb7ff67-c33a-45b0-9fda-095dd98e9223",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -76,16 +76,17 @@
             "WidthMicrometers": 0.5,
             "IsRouteFrozen": true,
             "PropagationLossDbPerCm": 0.5,
+            "BendLossDbPer90Deg": 0.05,
             "BendRadiusOverrides": {},
             "StraightShiftOffsets": {}
           },
           {
             "PathId": "52e26483-4a91-4541-adf1-8d83f67c65b7",
             "StartComponentId": "a_wg",
-            "StartComponentGuid": "db203e7b-dec2-43a0-9c32-2ed68541a73a",
+            "StartComponentGuid": "adb7ff67-c33a-45b0-9fda-095dd98e9223",
             "StartPinName": "b0",
             "EndComponentId": "a_ec",
-            "EndComponentGuid": "36aad52f-f695-45c4-a8ba-e957dd0b0fee",
+            "EndComponentGuid": "a1307b08-67af-4efe-9270-cf5cbf8e08f0",
             "EndPinName": "waveguide",
             "Segments": [
               {
@@ -106,6 +107,7 @@
             "WidthMicrometers": 0.5,
             "IsRouteFrozen": true,
             "PropagationLossDbPerCm": 0.5,
+            "BendLossDbPer90Deg": 0.05,
             "BendRadiusOverrides": {},
             "StraightShiftOffsets": {}
           }
@@ -115,20 +117,20 @@
             "PinId": "b9162f02-78a7-4502-90ab-ec21f97b60fd",
             "Name": "a_gc_fiber",
             "InternalComponentId": "a_gc",
-            "InternalComponentGuid": "ec685a1c-b839-45b9-b8f1-fa3cec38cc47",
+            "InternalComponentGuid": "ab33938c-9218-414b-bba5-390bd7085444",
             "InternalPinName": "fiber",
-            "RelativeX": 0,
-            "RelativeY": 9.5,
+            "RelativeX": 25,
+            "RelativeY": 34.5,
             "AngleDegrees": 180
           },
           {
             "PinId": "9575cb3b-a7dc-4ac7-97d0-f313668ab806",
             "Name": "a_ec_fiber",
             "InternalComponentId": "a_ec",
-            "InternalComponentGuid": "36aad52f-f695-45c4-a8ba-e957dd0b0fee",
+            "InternalComponentGuid": "a1307b08-67af-4efe-9270-cf5cbf8e08f0",
             "InternalPinName": "fiber",
-            "RelativeX": 310,
-            "RelativeY": 9.5,
+            "RelativeX": 335,
+            "RelativeY": 34.5,
             "AngleDegrees": 0
           }
         ]
@@ -136,7 +138,7 @@
       "ChildComponents": [
         {
           "Identifier": "a_gc",
-          "ComponentGuid": "ec685a1c-b839-45b9-b8f1-fa3cec38cc47",
+          "ComponentGuid": "ab33938c-9218-414b-bba5-390bd7085444",
           "TemplateName": "Grating Coupler",
           "PdkSource": "Demo PDK",
           "X": 0,
@@ -146,7 +148,7 @@
         },
         {
           "Identifier": "a_wg",
-          "ComponentGuid": "db203e7b-dec2-43a0-9c32-2ed68541a73a",
+          "ComponentGuid": "adb7ff67-c33a-45b0-9fda-095dd98e9223",
           "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 105,
@@ -160,7 +162,7 @@
         },
         {
           "Identifier": "a_ec",
-          "ComponentGuid": "36aad52f-f695-45c4-a8ba-e957dd0b0fee",
+          "ComponentGuid": "a1307b08-67af-4efe-9270-cf5cbf8e08f0",
           "TemplateName": "Edge Coupler",
           "PdkSource": "Demo PDK",
           "X": 210,
@@ -169,8 +171,8 @@
           "HumanReadableName": "Edge Coupler"
         }
       ],
-      "CanvasX": 0,
-      "CanvasY": 0,
+      "CanvasX": -25,
+      "CanvasY": -25,
       "ProcessBinding": {
         "DisplayName": "Demo SOI 220nm",
         "IsPlayground": false,
@@ -180,8 +182,16 @@
         "DesignWavelengthNm": 1550,
         "ProcessName": "Demo SOI 220nm",
         "MemberPdkNames": [
-          "Demo PDK"
+          "Demo PDK",
+          "SiEPIC EBeam PDK"
         ]
+      },
+      "Die": {
+        "WidthMicrometers": 335,
+        "HeightMicrometers": 69,
+        "OutlineOffsetXMicrometers": 0,
+        "OutlineOffsetYMicrometers": 0,
+        "EdgeZoneMicrometers": 50
       }
     },
     {
@@ -189,15 +199,15 @@
         "GroupName": "Receiver Chiplet",
         "Description": "Group of 2 components",
         "Identifier": "group_833611f7017949e5a630d9bf1394b09a",
-        "IdGuid": "e3783a50-c6b5-4c8e-b73c-dde1bc5ebbe2",
+        "IdGuid": "67379920-37d2-4300-89f4-dd689e48bcc8",
         "ChildComponentGuids": [
-          "f494d512-ac0f-4e88-a2e0-b064e856e82e",
-          "5ae5175a-bdeb-4141-9fa0-1836eba58f76"
+          "4583c60e-6bab-4a71-bfe7-b2a850d37e39",
+          "91d6471f-ff4f-4a83-9ec5-bedf6328eb32"
         ],
         "GridX": 0,
         "GridY": 0,
         "PhysicalX": 310,
-        "PhysicalY": 0,
+        "PhysicalY": -25,
         "Rotation90CounterClock": 0,
         "ChildComponentIds": [
           "b_ec",
@@ -207,10 +217,10 @@
           {
             "PathId": "356a7bdd-307a-440e-bee4-943cac3e871b",
             "StartComponentId": "b_ec",
-            "StartComponentGuid": "f494d512-ac0f-4e88-a2e0-b064e856e82e",
+            "StartComponentGuid": "4583c60e-6bab-4a71-bfe7-b2a850d37e39",
             "StartPinName": "waveguide",
             "EndComponentId": "b_wg",
-            "EndComponentGuid": "5ae5175a-bdeb-4141-9fa0-1836eba58f76",
+            "EndComponentGuid": "91d6471f-ff4f-4a83-9ec5-bedf6328eb32",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -231,6 +241,7 @@
             "WidthMicrometers": 0.5,
             "IsRouteFrozen": true,
             "PropagationLossDbPerCm": 0.5,
+            "BendLossDbPer90Deg": 0.05,
             "BendRadiusOverrides": {},
             "StraightShiftOffsets": {}
           }
@@ -240,20 +251,20 @@
             "PinId": "6a849882-d135-477b-995e-f6768024c473",
             "Name": "b_ec_fiber",
             "InternalComponentId": "b_ec",
-            "InternalComponentGuid": "f494d512-ac0f-4e88-a2e0-b064e856e82e",
+            "InternalComponentGuid": "4583c60e-6bab-4a71-bfe7-b2a850d37e39",
             "InternalPinName": "fiber",
             "RelativeX": 0,
-            "RelativeY": 9.5,
+            "RelativeY": 34.5,
             "AngleDegrees": 180
           },
           {
             "PinId": "ca849eba-7ed0-4084-9ab8-9a251cb28523",
             "Name": "b_wg_b0",
             "InternalComponentId": "b_wg",
-            "InternalComponentGuid": "5ae5175a-bdeb-4141-9fa0-1836eba58f76",
+            "InternalComponentGuid": "91d6471f-ff4f-4a83-9ec5-bedf6328eb32",
             "InternalPinName": "b0",
             "RelativeX": 205,
-            "RelativeY": 9.5,
+            "RelativeY": 34.5,
             "AngleDegrees": 0
           }
         ]
@@ -261,7 +272,7 @@
       "ChildComponents": [
         {
           "Identifier": "b_ec",
-          "ComponentGuid": "f494d512-ac0f-4e88-a2e0-b064e856e82e",
+          "ComponentGuid": "4583c60e-6bab-4a71-bfe7-b2a850d37e39",
           "TemplateName": "Edge Coupler",
           "PdkSource": "Demo PDK",
           "X": 310,
@@ -271,7 +282,7 @@
         },
         {
           "Identifier": "b_wg",
-          "ComponentGuid": "5ae5175a-bdeb-4141-9fa0-1836eba58f76",
+          "ComponentGuid": "91d6471f-ff4f-4a83-9ec5-bedf6328eb32",
           "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 415,
@@ -285,7 +296,7 @@
         }
       ],
       "CanvasX": 310,
-      "CanvasY": 0,
+      "CanvasY": -25,
       "ProcessBinding": {
         "DisplayName": "Demo SOI 220nm",
         "IsPlayground": false,
@@ -295,8 +306,16 @@
         "DesignWavelengthNm": 1550,
         "ProcessName": "Demo SOI 220nm",
         "MemberPdkNames": [
-          "Demo PDK"
+          "Demo PDK",
+          "SiEPIC EBeam PDK"
         ]
+      },
+      "Die": {
+        "WidthMicrometers": 230,
+        "HeightMicrometers": 69,
+        "OutlineOffsetXMicrometers": 0,
+        "OutlineOffsetYMicrometers": 0,
+        "EdgeZoneMicrometers": 50
       }
     }
   ],
@@ -304,9 +323,23 @@
     "PdkVersions": {},
     "Authorship": {
       "Created": "2026-09-30",
-      "Modified": "2026-09-30T19:27:35.7925106Z"
+      "Modified": "2026-10-13T14:22:06.4353428Z"
     }
   },
   "ChipWidthMicrometers": 5000,
-  "ChipHeightMicrometers": 5000
+  "ChipHeightMicrometers": 5000,
+  "ActiveProcess": {
+    "DisplayName": "Demo SOI 220nm",
+    "IsPlayground": false,
+    "CoreMaterial": "Si",
+    "CoreThicknessNm": 220,
+    "Cladding": "SiO2",
+    "DesignWavelengthNm": 1550,
+    "ProcessName": "Demo SOI 220nm",
+    "MemberPdkNames": [
+      "Demo PDK",
+      "SiEPIC EBeam PDK"
+    ]
+  },
+  "Workspace": "System"
 }

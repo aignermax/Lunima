@@ -152,6 +152,60 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Waveguide companion layers: cladding / trench / keep-out bands drawn
+                     along every routed waveguide (the non-core layers of a Nazca xsection). -->
+                <Border Classes="card">
+                    <StackPanel Spacing="8">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Command="{Binding AddCompanionLayerCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <controls:Icon Data="{StaticResource Icon.Plus}"/>
+                                    <TextBlock Text="{loc:Localize ProcessManagement.AddCompanionLayer}"/>
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Classes="subtitle" Text="{loc:Localize ProcessManagement.CompanionLayersTitle}"
+                                       VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Grid ColumnDefinitions="2*,1*,1*,1.4*,1.2*,1.2*,2*,Auto">
+                            <TextBlock Grid.Column="0" Classes="label" Text="{loc:Localize ProcessManagement.ColName}"/>
+                            <TextBlock Grid.Column="1" Classes="label" Text="{loc:Localize ProcessManagement.ColLayer}"/>
+                            <TextBlock Grid.Column="2" Classes="label" Text="{loc:Localize ProcessManagement.ColDatatype}"/>
+                            <TextBlock Grid.Column="3" Classes="label" Text="{loc:Localize ProcessManagement.ColRole}"/>
+                            <TextBlock Grid.Column="4" Classes="label" Text="{loc:Localize ProcessManagement.ColOffsetEachSide}"/>
+                            <TextBlock Grid.Column="5" Classes="label" Text="{loc:Localize ProcessManagement.ColTotalWidth}"/>
+                            <TextBlock Grid.Column="6" Classes="label" Text="{loc:Localize ProcessManagement.ColDescription}"/>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding CompanionLayers}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="2*,1*,1*,1.4*,1.2*,1.2*,2*,Auto" Margin="0,2">
+                                        <TextBox Grid.Column="0" Classes="compact" Text="{Binding Name}" Margin="0,0,4,0"/>
+                                        <TextBox Grid.Column="1" Classes="compact mono" Text="{Binding Layer}" Margin="0,0,4,0"/>
+                                        <TextBox Grid.Column="2" Classes="compact mono" Text="{Binding Datatype}" Margin="0,0,4,0"/>
+                                        <ComboBox Grid.Column="3" Classes="compact" Margin="0,0,4,0" HorizontalAlignment="Stretch"
+                                                  ItemsSource="{x:Static vm:ProcessManagementViewModel.CompanionRoles}"
+                                                  SelectedItem="{Binding Role}"
+                                                  ToolTip.Tip="{loc:Localize ProcessManagement.CompanionRoleTip}"/>
+                                        <TextBox Grid.Column="4" Classes="compact mono" Text="{Binding OffsetText}" Margin="0,0,4,0"
+                                                 ToolTip.Tip="{loc:Localize ProcessManagement.CompanionOffsetTip}"/>
+                                        <TextBox Grid.Column="5" Classes="compact mono" Text="{Binding WidthText}" Margin="0,0,4,0"
+                                                 ToolTip.Tip="{loc:Localize ProcessManagement.CompanionWidthTip}"/>
+                                        <TextBox Grid.Column="6" Classes="compact" Text="{Binding Description}" Margin="0,0,4,0"/>
+                                        <Button Grid.Column="7" Classes="icon"
+                                                Command="{Binding $parent[ItemsControl].DataContext.RemoveCompanionLayerCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="{loc:Localize ProcessManagement.RemoveCompanionLayerTip}">
+                                            <controls:Icon Data="{StaticResource Icon.X}"/>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Classes="caption" Text="{loc:Localize ProcessManagement.CompanionLayersNote}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- Materials -->
                 <Border Classes="card">
                     <StackPanel Spacing="8">

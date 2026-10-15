@@ -36,9 +36,13 @@ public partial class MainViewModel
         };
         workspaces.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(WorkspaceViewModel.Current) && workspaces.IsSystem)
+            if (e.PropertyName != nameof(WorkspaceViewModel.Current))
+                return;
+            ApplyDieSurfaceLock(workspaces.Profile.LocksDieContent);
+            if (workspaces.IsSystem)
                 RefreshSystemOverview();
         };
+        ApplyDieSurfaceLock(workspaces.Profile.LocksDieContent);
         BottomPanel.Analysis.Readiness.PlaceLightSourceRequested = ArmLightSourcePlacement;
         return workspaces;
     }
@@ -134,6 +138,8 @@ public partial class MainViewModel
     /// <summary>
     /// Fix for "no light source": arms placement of the first light-source coupler the
     /// library offers that the active process allows (the next canvas click places it).
+    /// A light source is an instrument: a workspace that does not place instruments hands
+    /// over to Optics first.
     /// </summary>
     private void ArmLightSourcePlacement()
     {
@@ -146,6 +152,8 @@ public partial class MainViewModel
             StatusText = LocalizationService.Instance.Translate("Readiness.NoLightSourceTemplate");
             return;
         }
+        if (!WorkspaceSwitch.Profile.ToolSet.CanPlace(template))
+            WorkspaceSwitch.Current = Workspace.Optics;
         CanvasInteraction.SelectedTemplate = template;
     }
 
@@ -156,6 +164,10 @@ public partial class MainViewModel
     [RelayCommand]
     public void RefreshSystemOverview()
     {
+        // Inside an open die the canvas shows only that die's content; the overview keeps
+        // the assembly's dies and links it last saw instead of going empty.
+        if (Canvas.IsInGroupEditMode && Canvas.Dies.ActiveDie != null)
+            return;
         var context = CanvasInteraction.PlacementContext;
         var wavelengthNm = Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm
                            ?? StandardWaveLengths.RedNM;

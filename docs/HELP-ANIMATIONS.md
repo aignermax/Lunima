@@ -33,7 +33,7 @@ otherwise describe a curve in words (laser line shape, RIN noise trace, MZI frin
     MarkerBrush="#FFD54F" PingPong="True" IsHitTestVisible="False"/>
 ```
 
-## Bespoke overlays (EyeStackAnimation, LayerStackAnimation, CarryRippleAnimation, ChipletLinkCouplingAnimation, LengthMatchArrivalAnimation, MonteCarloScatterAnimation)
+## Bespoke overlays (EyeStackAnimation, LayerStackAnimation, CarryRippleAnimation, ChipletLinkCouplingAnimation, LengthMatchArrivalAnimation, MonteCarloScatterAnimation, BendLeakAnimation)
 
 Panel-specific compositions (eye-diagram stacking, process layer stack) that live in the
 same folder but are not primitives — they draw in their flyout's fixed coordinate space and
@@ -88,6 +88,12 @@ the guide while a fainter reference crest in the dashed free-space lane above ou
 it (phase moves at c/n_eff, slower than c). The guided marker crosses the guide once
 per loop, the free-space crest three times, so the loop is seamless. The lane captions
 (`GuidedLabel`, `FreeSpaceLabel`, `SpotLabel`) are settable for localization.
+
+`BendLeakAnimation` (Insertion-loss help): two pulses enter a tight and a gentle 90°
+bend at once; at the tight bend red sparks leak straight out of the curve and the pulse
+leaves dimmer, the gentle bend guides its pulse around unharmed. The readouts under both
+bends are `BendLossPresets.Generic.CornerLossDb` at 5 µm and 20 µm — the real model, never
+hard-coded (see `docs/BEND-LOSS-MODEL.md`). Only the dimming is exaggerated for visibility.
 
 ## Rules
 

@@ -619,12 +619,14 @@ public partial class PathfindingGrid
             _componentPinZones.Clear();
         }
         ClearOwnership();
+        ResetBreakoutReservationBookkeeping();
         WaveguideVersion++;
 
         foreach (var component in components)
         {
             AddComponentObstacle(component);
         }
+        BlockCellsOutsideAllowedRegions();
     }
 
     /// <summary>
@@ -730,7 +732,7 @@ public partial class PathfindingGrid
         {
             if (IsInBounds(gx, gy) && _cells[gx, gy] == 2 && !stillCovered.Contains((gx, gy)))
             {
-                _cells[gx, gy] = 0;
+                _cells[gx, gy] = FreedCellState(gx, gy);
             }
         }
         WaveguideVersion++;
@@ -756,7 +758,7 @@ public partial class PathfindingGrid
         foreach (var (gx, gy) in cells)
         {
             if (IsInBounds(gx, gy) && _cells[gx, gy] == 2)
-                _cells[gx, gy] = 0;
+                _cells[gx, gy] = FreedCellState(gx, gy);
         }
         WaveguideVersion++;
         OnAllWaveguidesCleared?.Invoke();

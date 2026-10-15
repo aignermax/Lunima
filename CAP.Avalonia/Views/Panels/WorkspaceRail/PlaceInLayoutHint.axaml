@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.WorkspaceRail.PlaceInLayoutHint"
+             x:DataType="vm:MainViewModel">
+
+    <!-- The one-click way out of a workspace that does not place circuit parts:
+         switches to Layout with the full component library. -->
+    <Button x:Name="PlaceInLayoutButton" Classes="link" Margin="16,4,16,4"
+            HorizontalAlignment="Left"
+            Command="{Binding SwitchToLayoutCommand}"
+            AutomationProperties.Name="{loc:Localize Workspace.ToolSet.PlaceInLayout}"
+            ToolTip.Tip="{loc:Localize Workspace.ToolSet.PlaceInLayoutTip}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <controls:Icon Data="{StaticResource Icon.Shapes}" Size="12"
+                           Foreground="{DynamicResource Brush.Text.Link}"/>
+            <TextBlock Classes="caption" Foreground="{DynamicResource Brush.Text.Link}"
+                       Text="{loc:Localize Workspace.ToolSet.PlaceInLayout}"/>
+        </StackPanel>
+    </Button>
+</UserControl>

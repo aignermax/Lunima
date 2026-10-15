@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CAP.Avalonia.Services.GdsImport.LayerVisibility;
+using CAP.Avalonia.Services.WaveguideCompanions;
 using CAP.Avalonia.ViewModels.Canvas;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -31,6 +32,8 @@ public partial class GdsLayerVisibilityViewModel : ObservableObject
         _canvas = canvas;
         _canvas.Components.CollectionChanged += (_, _) => QueueRefresh();
         _canvas.CanvasFrozenPaths.CollectionChanged += (_, _) => QueueRefresh();
+        // Routed waveguides carry the process companion bands (trench / cladding / keep-out).
+        _canvas.Connections.CollectionChanged += (_, _) => QueueRefresh();
         State.Changed += () => _canvas.RepaintRequested?.Invoke();
     }
 
@@ -49,9 +52,11 @@ public partial class GdsLayerVisibilityViewModel : ObservableObject
     /// <summary>Rebuilds the rows from the canvas contents and the current state.</summary>
     public void Refresh()
     {
-        var usages = DesignLayerUsageCollector.Collect(
-            _canvas.Components.Select(vm => vm.Component),
-            _canvas.CanvasFrozenPaths);
+        var usages = WaveguideCompanionLayerUsage.Merge(
+            DesignLayerUsageCollector.Collect(
+                _canvas.Components.Select(vm => vm.Component),
+                _canvas.CanvasFrozenPaths),
+            WaveguideCompanionLayerUsage.Collect(_canvas));
         Rows.Clear();
         foreach (var usage in usages)
         {

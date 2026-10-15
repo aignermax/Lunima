@@ -43,12 +43,22 @@ internal static class ShowcaseCircuit
     /// <param name="afterStep">Optional hook awaited after every visual build step
     /// (all placements done, each routed connection, the manual restyles) — the
     /// hero-loop motif captures one animation frame per step.</param>
+    /// <param name="afterPlace">Optional hook awaited after every single component
+    /// placement — the hero loop shows the chip being populated part by part.</param>
     public static async Task<WaveguideConnectionViewModel> BuildChipAsync(
-        MainViewModel vm, Func<Task>? afterStep = null)
+        MainViewModel vm, Func<Task>? afterStep = null, Func<Task>? afterPlace = null)
     {
         async Task StepAsync()
         {
             if (afterStep != null) await afterStep();
+        }
+
+        async Task<Component> PlaceAsync(string templateName, double x, double y,
+            DiscreteRotation rotation = DiscreteRotation.R0, string pdkSource = PdkName)
+        {
+            var placed = Place(vm, templateName, x, y, rotation, pdkSource);
+            if (afterPlace != null) await afterPlace();
+            return placed;
         }
 
         var canvas = vm.Canvas;
@@ -56,14 +66,14 @@ internal static class ShowcaseCircuit
 
         // The MZI: input coupler → 1x2 splitter → phase-shifter arm / DBR-filter arm →
         // 2x2 combiner → photodetector (bar) + output coupler (cross).
-        var gcIn = Place(vm, "Grating Coupler", 30, 320);
-        var splitter = Place(vm, "1x2 MMI Splitter", 260, 302);
-        var shifter = Place(vm, "Phase Shifter", 420, 170);
-        var strt = Place(vm, "Straight Waveguide 100µm", 500, 585);
-        var dbr = Place(vm, "DBR Filter", 700, 420);
-        var combiner = Place(vm, "2x2 MMI Coupler", 990, 300);
-        var detector = Place(vm, "Photodetector", 1310, 170);
-        var gcOut = Place(vm, "Grating Coupler", 1280, 480, DiscreteRotation.R180);
+        var gcIn = await PlaceAsync("Grating Coupler", 30, 320);
+        var splitter = await PlaceAsync("1x2 MMI Splitter", 260, 302);
+        var shifter = await PlaceAsync("Phase Shifter", 420, 170);
+        var strt = await PlaceAsync("Straight Waveguide 100µm", 500, 585);
+        var dbr = await PlaceAsync("DBR Filter", 700, 420);
+        var combiner = await PlaceAsync("2x2 MMI Coupler", 990, 300);
+        var detector = await PlaceAsync("Photodetector", 1310, 170);
+        var gcOut = await PlaceAsync("Grating Coupler", 1280, 480, DiscreteRotation.R180);
 
         // Only the input coupler injects light; the output coupler listens (#690), which
         // also makes it the transient analysis output.
@@ -91,10 +101,10 @@ internal static class ShowcaseCircuit
         // bond pads contact the photodetector diode — all as thick metal traces.
         // Placed AFTER the optical routing on purpose: placement order feeds the A*
         // obstacle grid, and moving it would silently re-route the committed motifs.
-        var probe1 = Place(vm, "Probe Pad", 460, 25, DiscreteRotation.R180);
-        var probe2 = Place(vm, "Probe Pad", 640, 25, DiscreteRotation.R180);
-        var bond1 = Place(vm, "Bond Pad", 1120, 25, DiscreteRotation.R180, SiepicPdkName);
-        var bond2 = Place(vm, "Bond Pad", 1430, 25, DiscreteRotation.R180, SiepicPdkName);
+        var probe1 = await PlaceAsync("Probe Pad", 460, 25, DiscreteRotation.R180);
+        var probe2 = await PlaceAsync("Probe Pad", 640, 25, DiscreteRotation.R180);
+        var bond1 = await PlaceAsync("Bond Pad", 1120, 25, DiscreteRotation.R180, SiepicPdkName);
+        var bond2 = await PlaceAsync("Bond Pad", 1430, 25, DiscreteRotation.R180, SiepicPdkName);
         await StepAsync();
         await Connect(canvas, probe1, "pad", shifter, "elec1");
         await StepAsync();
@@ -146,12 +156,16 @@ internal static class ShowcaseCircuit
     /// <summary>Boots the real MainWindow around <paramref name="vm"/> (DataContext after
     /// Show, so Loaded's DI wiring no-ops) with a compact properties column. The canvas
     /// may still be empty — the hero-loop motif builds the chip live afterwards.</summary>
-    public static MainWindow BootMainWindow(MainViewModel vm)
+    /// <param name="vm">The view model to show.</param>
+    /// <param name="width">Window width in px (the stills use 1920).</param>
+    /// <param name="height">Window height in px (the stills use 950).</param>
+    public static MainWindow BootMainWindow(MainViewModel vm, int width = 1920, int height = 950)
     {
-        var window = new MainWindow { Width = 1920, Height = 950 };
+        var window = new MainWindow { Width = width, Height = height };
         window.Show();
         Dispatcher.UIThread.RunJobs();
         window.DataContext = vm;
+        vm.Home.IsHomeVisible = false;
         Dispatcher.UIThread.RunJobs();
 
         // Give the canvas the space a designer would: the properties column at a compact

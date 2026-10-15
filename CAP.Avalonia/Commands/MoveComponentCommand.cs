@@ -50,7 +50,7 @@ public class MoveComponentCommand : IMergeableCommand
             return;
 
         // Find the current ComponentViewModel for this component
-        var componentViewModel = _canvas.Components.FirstOrDefault(c => c.Component == _component);
+        var componentViewModel = _canvas.ViewModelOf(_component);
         if (componentViewModel == null)
             return; // Component no longer exists in canvas
 
@@ -76,7 +76,7 @@ public class MoveComponentCommand : IMergeableCommand
     public void Undo()
     {
         // Find the current ComponentViewModel for this component
-        var componentViewModel = _canvas.Components.FirstOrDefault(c => c.Component == _component);
+        var componentViewModel = _canvas.ViewModelOf(_component);
         if (componentViewModel == null)
             return; // Component no longer exists in canvas
 

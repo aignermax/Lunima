@@ -8,6 +8,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP_Core;
 using CAP_Core.Components.Creation;
 using CAP_Core.Components.Process;
 using CAP_DataAccess.Components.AddCustomComponent;
@@ -24,6 +25,7 @@ public class UserPdkStartupReloadTests : IDisposable
     private readonly string _userPdkRoot;
     private readonly string _externalDir;
     private readonly UserPreferencesService _preferencesService;
+    private readonly ErrorConsoleService _errorConsole;
     private readonly LeftPanelViewModel _leftPanel;
 
     public UserPdkStartupReloadTests()
@@ -33,13 +35,14 @@ public class UserPdkStartupReloadTests : IDisposable
         _externalDir = Path.Combine(Path.GetTempPath(), $"UserPdkStartupReloadExternal_{Guid.NewGuid():N}");
 
         _preferencesService = new UserPreferencesService(_testPrefsPath);
+        _errorConsole = new ErrorConsoleService();
         var canvas = new DesignCanvasViewModel();
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
 
         _leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
-            new ComponentLibraryViewModel(groupLibrary));
+            new ComponentLibraryViewModel(groupLibrary), _errorConsole);
     }
 
     public void Dispose()
@@ -180,6 +183,81 @@ public class UserPdkStartupReloadTests : IDisposable
         _leftPanel.PdkManager.LoadedPdks.ShouldNotContain(p => p.Name == "GDS Import - chip");
         _leftPanel.AllTemplates.ShouldNotContain(t => t.Name == "Legacy WG");
         File.Exists(legacyPath).ShouldBeTrue("skipped silently, never deleted");
+    }
+
+    [Fact]
+    public async Task ReloadUserPdksAtStartupAsync_oneInvalidComponent_keepsValidSiblings_andReportsPerComponent()
+    {
+        // Issue #1530: the startup load must be tolerant at COMPONENT level —
+        // one invalid component is dropped and reported, the file still loads.
+        Directory.CreateDirectory(_userPdkRoot);
+        File.WriteAllText(Path.Combine(_userPdkRoot, "mixed-pdk.json"), """
+            {
+              "name": "MixedPdk",
+              "components": [
+                {
+                  "name": "Good A", "category": "Test", "nazcaFunction": "test.a",
+                  "widthMicrometers": 10, "heightMicrometers": 2,
+                  "pins": [
+                    { "name": "a0", "offsetXMicrometers": 0, "offsetYMicrometers": 1, "angleDegrees": 180 },
+                    { "name": "b0", "offsetXMicrometers": 10, "offsetYMicrometers": 1, "angleDegrees": 0 }
+                  ]
+                },
+                {
+                  "name": "Broken", "category": "Test", "nazcaFunction": "test.broken",
+                  "widthMicrometers": 10, "heightMicrometers": 2,
+                  "pins": []
+                },
+                {
+                  "name": "Good B", "category": "Test", "nazcaFunction": "test.b",
+                  "widthMicrometers": 5, "heightMicrometers": 5,
+                  "pins": [
+                    { "name": "a0", "offsetXMicrometers": 0, "offsetYMicrometers": 2.5, "angleDegrees": 180 }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        await _leftPanel.ReloadUserPdksAtStartupAsync(_userPdkRoot);
+
+        _leftPanel.PdkManager.LoadedPdks.ShouldContain(
+            p => p.Name == "MixedPdk" && p.ComponentCount == 2,
+            "the file itself is not skipped — its valid components load");
+        _leftPanel.AllTemplates.ShouldContain(t => t.Name == "Good A" && t.PdkSource == "MixedPdk");
+        _leftPanel.AllTemplates.ShouldContain(t => t.Name == "Good B" && t.PdkSource == "MixedPdk");
+        _leftPanel.AllTemplates.ShouldNotContain(t => t.Name == "Broken");
+
+        var messages = _errorConsole.Entries.Select(e => e.Message).ToList();
+        messages.ShouldContain(
+            m => m.Contains("MixedPdk") && m.Contains("Broken") && m.Contains("pin"),
+            "the invalid component is reported per component: PDK name, component name, reason");
+        messages.ShouldNotContain(m => m.Contains("Skipped user PDK 'mixed-pdk.json'"));
+    }
+
+    [Fact]
+    public async Task ReloadUserPdksAtStartupAsync_allComponentsInvalid_fileStillNotSkipped_asEmptyPdk()
+    {
+        Directory.CreateDirectory(_userPdkRoot);
+        File.WriteAllText(Path.Combine(_userPdkRoot, "all-broken.json"), """
+            {
+              "name": "AllBrokenPdk",
+              "components": [
+                {
+                  "name": "Broken", "category": "Test", "nazcaFunction": "test.broken",
+                  "widthMicrometers": -1, "heightMicrometers": 2,
+                  "pins": []
+                }
+              ]
+            }
+            """);
+
+        await _leftPanel.ReloadUserPdksAtStartupAsync(_userPdkRoot);
+
+        _leftPanel.PdkManager.LoadedPdks.ShouldContain(p => p.Name == "AllBrokenPdk" && p.ComponentCount == 0);
+        _leftPanel.AllTemplates.ShouldNotContain(t => t.Name == "Broken");
+        _errorConsole.Entries.Select(e => e.Message).ShouldContain(m =>
+            m.Contains("AllBrokenPdk") && m.Contains("Broken"));
     }
 
     [Fact]

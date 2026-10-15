@@ -14,6 +14,7 @@
          detection turning them into satellite assemblies (which behaves differently
          per OS); they stay embedded in the main assembly. -->
     <EmbeddedResource Include="Assets/i18n/*.json" LogicalName="i18n.%(Filename)%(Extension)" />
+    <AvaloniaResource Include="Assets/LunimaIcon.png" />
   </ItemGroup>
 
   <ItemGroup>

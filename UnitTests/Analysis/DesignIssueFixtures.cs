@@ -45,8 +45,39 @@ internal static class DesignIssueFixtures
         DesignIssueType.ChipletInterfaceLateralOffset => ProduceChipletIssue(type),
         DesignIssueType.ChipletInterfaceOffEdge => ProduceChipletIssue(type),
         DesignIssueType.ChipletInterfaceGapLoss => ProduceChipletIssue(type),
+        DesignIssueType.DieOverlap or DesignIssueType.ComponentOffDie or DesignIssueType.EdgeCouplerOffDieEdge
+            or DesignIssueType.CrossDieWaveguide
+            => ProduceDieIssue(type),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "unhandled issue type"),
     };
+
+    /// <summary>One die-assembly finding via <see cref="DieAssemblyChecker"/>.</summary>
+    private static DesignIssue ProduceDieIssue(DesignIssueType type)
+    {
+        var dieA = UnitTests.Dies.DieTestFixtures.Die("Die A", 0, 0, 1000, 500);
+        var topLevel = new List<Component> { dieA };
+        var connections = new List<WaveguideConnection>();
+        switch (type)
+        {
+            case DesignIssueType.CrossDieWaveguide:
+                var a = UnitTests.Dies.DieTestFixtures.Part("pa", 100, 100);
+                var b = UnitTests.Dies.DieTestFixtures.Part("pb", 2100, 100);
+                dieA.AddChild(a);
+                topLevel.Add(UnitTests.Dies.DieTestFixtures.Die("Die B", 2000, 0, 1000, 500, null, b));
+                connections.Add(new WaveguideConnection { StartPin = a.PhysicalPins[1], EndPin = b.PhysicalPins[0] });
+                break;
+            case DesignIssueType.DieOverlap:
+                topLevel.Add(UnitTests.Dies.DieTestFixtures.Die("Die B", 900, 0, 1000, 500));
+                break;
+            case DesignIssueType.ComponentOffDie:
+                topLevel.Add(UnitTests.Dies.DieTestFixtures.Part("stray", 3000, 0));
+                break;
+            default:
+                dieA.AddChild(UnitTests.Dies.DieTestFixtures.EdgeCoupler("ec", 300, 200));
+                break;
+        }
+        return new DieAssemblyChecker().Check(topLevel, connections).Single(i => i.Type == type);
+    }
 
     /// <summary>Produces a blocked-path issue with the given router failure classification.</summary>
     public static DesignIssue ProduceBlockedPath(RoutingFailureReason reason) =>

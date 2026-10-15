@@ -27,6 +27,18 @@ public partial class ViewportControlViewModel : ObservableObject
     /// </summary>
     public Func<(double width, double height)>? GetViewportSize { get; set; }
 
+    /// <summary>
+    /// True when zoom-to-fit frames every die (System workspace); otherwise it frames the
+    /// content of the current die. Wired by <c>MainViewModel</c>.
+    /// </summary>
+    public Func<bool>? FitsWholeAssembly { get; set; }
+
+    /// <summary>Canvas position of the pointer, or null when it is not over the canvas (wired by the view).</summary>
+    public Func<(double X, double Y)?>? GetCursorCanvasPosition { get; set; }
+
+    /// <summary>Extent (µm) zoom-to-fit frames around content without area (a single point).</summary>
+    private const double MinFitExtentMicrometers = 200.0;
+
     public ViewportControlViewModel(DesignCanvasViewModel canvas)
     {
         _canvas = canvas;
@@ -81,7 +93,8 @@ public partial class ViewportControlViewModel : ObservableObject
     {
         if (viewportWidth <= 0 || viewportHeight <= 0) return;
 
-        var bounds = BoundingBoxCalculator.Calculate(_canvas.Components);
+        var bounds = Canvas.DieSurface.ZoomToFitTarget.Resolve(
+            _canvas, FitsWholeAssembly?.Invoke() ?? false, GetCursorCanvasPosition?.Invoke());
         if (bounds == null)
         {
             UpdateStatus?.Invoke("No components to fit");
@@ -89,7 +102,8 @@ public partial class ViewportControlViewModel : ObservableObject
         }
 
         var padded = BoundingBoxCalculator.WithPadding(
-            bounds.Value, BoundingBoxCalculator.DefaultPaddingFraction);
+            bounds.Value.IsEmpty ? AtLeast(bounds.Value, MinFitExtentMicrometers) : bounds.Value,
+            BoundingBoxCalculator.DefaultPaddingFraction);
 
         if (padded.IsEmpty) return;
 
@@ -102,5 +116,27 @@ public partial class ViewportControlViewModel : ObservableObject
         // No percentage here: the status bar shows the live zoom, and a number in the message
         // would go stale with the next zoom step.
         UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Status.ZoomedToFit"));
+    }
+
+    private static BoundingBox AtLeast(BoundingBox box, double extent)
+    {
+        double halfWidth = Math.Max(box.Width, extent) / 2, halfHeight = Math.Max(box.Height, extent) / 2;
+        return new BoundingBox(box.CenterX - halfWidth, box.CenterY - halfHeight, box.CenterX + halfWidth, box.CenterY + halfHeight);
+    }
+
+    /// <summary>
+    /// Fits the rectangle (µm) into the current viewport with the usual 10% padding — e.g. a
+    /// die on the assembly. Does nothing for an empty rectangle.
+    /// </summary>
+    public void ZoomToRect(double x, double y, double width, double height)
+    {
+        if (width <= 0 || height <= 0) return;
+        var (vpWidth, vpHeight) = GetViewportSize?.Invoke() ?? (900, 800);
+        var padded = BoundingBoxCalculator.WithPadding(
+            new BoundingBox(x, y, x + width, y + height), BoundingBoxCalculator.DefaultPaddingFraction);
+        var (zoom, panX, panY) = BoundingBoxCalculator.CalculateZoomToFit(padded, vpWidth, vpHeight);
+        ZoomLevel = zoom;
+        _canvas.PanX = panX;
+        _canvas.PanY = panY;
     }
 }

@@ -1,3 +1,4 @@
+using CAP_Core.LightCalculation.BendLoss;
 using CAP_Core.Routing;
 
 namespace CAP_Core.Routing.AStarPathfinder;
@@ -40,12 +41,20 @@ public class BendRadiusUpsizer
     }
 
     /// <summary>
-    /// Grows every straight-bend-straight corner of <paramref name="path"/> to the largest
+    /// Grows every straight-bend-straight corner of <paramref name="path"/> to the lowest-loss
     /// allowed radius whose extra tangent length fits both straights and whose arc clears
     /// the grid. The caller must have removed the path's own grid obstacle beforehand.
     /// </summary>
+    /// <param name="path">The route to edit in place.</param>
+    /// <param name="lossModel">
+    /// Bend-loss model of the route's waveguide. Each candidate radius is scored by the
+    /// corner's radiation + junction loss (<see cref="BendLossModel.CornerLossDb"/>); a corner
+    /// is only reshaped when the gain reaches <see cref="MinWorthwhileLossGainDb"/>, so routes
+    /// on platforms where the current radius is already lossless keep their compact geometry.
+    /// Null keeps the geometric rule: always the largest fitting radius.
+    /// </param>
     /// <returns>True when at least one bend was upsized.</returns>
-    public bool TryUpsize(RoutedPath path)
+    public bool TryUpsize(RoutedPath path, BendLossModel? lossModel = null)
     {
         bool changed = false;
         for (int i = 1; i < path.Segments.Count - 1; i++)
@@ -55,14 +64,23 @@ public class BendRadiusUpsizer
                 path.Segments[i + 1] is not StraightSegment outgoing)
                 continue;
 
-            changed |= TryUpsizeCorner(path, i, bend, incoming, outgoing);
+            changed |= TryUpsizeCorner(path, i, bend, incoming, outgoing, lossModel);
         }
         return changed;
     }
 
-    /// <summary>Tries candidate radii for one corner, largest first, applying the first fit.</summary>
+    /// <summary>
+    /// Smallest loss reduction (dB) per corner worth reshaping a route for. Below it the
+    /// change is unmeasurable, while the larger arc still consumes layout space.
+    /// </summary>
+    public const double MinWorthwhileLossGainDb = 1e-4;
+
+    /// <summary>
+    /// Tries candidate radii for one corner, largest (= lowest loss: radiation and junction
+    /// loss both fall monotonically with radius) first, applying the first that fits.
+    /// </summary>
     private bool TryUpsizeCorner(RoutedPath path, int bendIndex,
-        BendSegment bend, StraightSegment incoming, StraightSegment outgoing)
+        BendSegment bend, StraightSegment incoming, StraightSegment outgoing, BendLossModel? lossModel)
     {
         double sweep = Math.Abs(bend.SweepAngleDegrees);
         if (sweep < 2 || sweep > MaxTangentSweepDegrees + 0.5)
@@ -70,11 +88,15 @@ public class BendRadiusUpsizer
 
         double tanHalfSweep = Math.Tan(
             Math.Min(sweep, MaxTangentSweepDegrees) * Math.PI / 360.0);
+        double currentLossDb = lossModel?.CornerLossDb(bend.RadiusMicrometers, sweep) ?? 0;
 
         foreach (var radius in _allowedRadii)
         {
             if (radius <= bend.RadiusMicrometers)
                 return false; // descending order: nothing larger remains
+            if (lossModel != null &&
+                currentLossDb - lossModel.CornerLossDb(radius, sweep) < MinWorthwhileLossGainDb)
+                return false; // smaller candidates gain even less
 
             double tangentDelta = (radius - bend.RadiusMicrometers) * tanHalfSweep;
             if (incoming.LengthMicrometers - tangentDelta < MinRemainingStraightMicrometers ||

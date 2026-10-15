@@ -183,12 +183,9 @@ public partial class ChipSizeViewModel : ObservableObject
 
     private void ApplyToCanvas(double widthUm, double heightUm)
     {
-        _canvas.ChipMinX = 0;
-        _canvas.ChipMinY = 0;
-        _canvas.ChipMaxX = widthUm;
-        _canvas.ChipMaxY = heightUm;
-
-        _canvas.InitializeAStarRouting(0, 0, widthUm, heightUm);
+        // In a single-die design this is the chip rectangle placement and routing are
+        // bounded by; inside a die or at an assembly's root the die scope keeps its bounds.
+        _canvas.SetRootChipSize(widthUm, heightUm);
 
         // ChipMaxX/Y on DesignCanvasViewModel are plain forwarder properties without
         // PropertyChanged notifications, and DesignCanvas only invalidates on a small

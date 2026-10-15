@@ -28,6 +28,7 @@ public partial class LeftPanelViewModel : ObservableObject
     private readonly RegistryBrowserViewModel? _registryBrowser;
 
     private readonly List<PdkDraft> _loadedPdkDrafts = new();
+    private Func<ComponentTemplate, bool> _workspaceScope = _ => true;
 
     public HierarchyPanelViewModel HierarchyPanel { get; }
 
@@ -240,6 +241,17 @@ public partial class LeftPanelViewModel : ObservableObject
     internal static string? ResolveBundledPdkDirectory(string baseDir) =>
         CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkPaths.ResolveBundledPdkDirectory(baseDir);
 
+    /// <summary>
+    /// Restricts <see cref="FilteredTemplates"/> to the templates the active workspace places
+    /// (e.g. only instruments in Optics), on top of the PDK filter and the search.
+    /// </summary>
+    /// <param name="isInScope">True for templates the workspace's library offers.</param>
+    public void ApplyWorkspaceScope(Func<ComponentTemplate, bool> isInScope)
+    {
+        _workspaceScope = isInScope ?? throw new ArgumentNullException(nameof(isInScope));
+        FilterComponents();
+    }
+
     private void FilterComponents()
     {
         FilteredTemplates.Clear();
@@ -248,6 +260,7 @@ public partial class LeftPanelViewModel : ObservableObject
 
         var candidates = AllTemplates
             .Where(t => enabledPdks.Contains(t.PdkSource))
+            .Where(_workspaceScope)
             .Where(t => query.Length == 0 || MatchesSearch(t, query))
             .OrderBy(t => t.Category, StringComparer.OrdinalIgnoreCase)
             .ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase);

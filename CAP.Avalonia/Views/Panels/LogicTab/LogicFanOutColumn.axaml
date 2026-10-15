@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:logic="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis"
+             x:Class="CAP.Avalonia.Views.Panels.LogicTab.LogicFanOutColumn"
+             x:DataType="vm:MainViewModel">
+
+    <!-- Optical fan-out warnings (#996): non-blocking — the idealized logic result stays
+         available; the warning marks where a physical implementation would need
+         splitters and level restoration. Long reports scroll inside the column. -->
+    <Border Background="{DynamicResource Brush.Warning.Subtle}" CornerRadius="{DynamicResource Radius.M}" Padding="8,6">
+        <Grid RowDefinitions="Auto,*">
+            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+                <TextBlock Text="{loc:Localize LogicPanel.FanOutWarning.Title}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}" FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <!-- Why the adder examples duplicate their XOR ladders instead of splitting
+                     one output (#1216). -->
+                <controls:HelpFlyoutButton Grid.Column="1"
+                                           Title="{loc:Localize LogicPanelFanOutHelp.Title}"
+                                           VerticalAlignment="Center" Margin="4,0,0,0">
+                    <controls:HelpFlyoutButton.HelpContent>
+                        <panels:LogicFanOutHelpFlyout/>
+                    </controls:HelpFlyoutButton.HelpContent>
+                </controls:HelpFlyoutButton>
+            </Grid>
+            <ScrollViewer Grid.Row="1" Classes="logicColumnScroll" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="3">
+                    <ItemsControl ItemsSource="{Binding RightPanel.Logic.FanOutWarnings}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="logic:LogicFanOutWarningViewModel">
+                                <StackPanel Spacing="1" Margin="0,0,0,3">
+                                    <TextBlock Text="{Binding WarningText}" Foreground="{DynamicResource Brush.Warning}"
+                                               FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap"/>
+                                    <!-- Quantitative level report (#1011): the ideal-split arithmetic
+                                         and one verdict per receiving input. -->
+                                    <TextBlock Text="{Binding SplitLine}" Foreground="{DynamicResource Brush.Warning}"
+                                               FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap"/>
+                                    <ItemsControl ItemsSource="{Binding VerdictLines}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Text="{Binding}" Foreground="{DynamicResource Brush.Warning}"
+                                                           FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" Margin="10,0,0,0"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="{Binding LinkNote}" IsVisible="{Binding IsLinkWarning}"
+                                               Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" FontStyle="Italic"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{loc:Localize LogicPanel.FanOutWarning.PhysicsNote}"
+                               IsVisible="{Binding RightPanel.Logic.HasSplitFanOutWarnings}"
+                               Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" FontStyle="Italic"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</UserControl>

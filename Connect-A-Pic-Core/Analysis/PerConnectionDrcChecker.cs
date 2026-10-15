@@ -13,6 +13,8 @@ namespace CAP_Core.Analysis;
 /// and falls back to the canvas-wide values, the same rule as the router's
 /// per-connection bend floor (#937); a non-null but empty rule set means the endpoint
 /// PDKs are known and declare no minimum — the connection stays silent (#926).
+/// Keep-out companion layers of the endpoint processes (<see cref="ConnectionDrcRules.Companions"/>)
+/// join the spacing check: keep-out bands of two different wires must not overlap.
 /// </summary>
 public class PerConnectionDrcChecker
 {
@@ -57,7 +59,8 @@ public class PerConnectionDrcChecker
             connections,
             groups,
             canvasWideMinSpacingMicrometers,
-            connection => resolved[connection]?.MinSpacingMicrometers ?? canvasWideMinSpacingMicrometers));
+            connection => resolved[connection]?.MinSpacingMicrometers ?? canvasWideMinSpacingMicrometers,
+            connection => resolved[connection]?.Companions.KeepOutOffsetFor(connection.WidthMicrometers) ?? 0.0));
         issues.AddRange(_minWidthChecker.CheckConnections(
             connections,
             connection => resolved[connection]?.WidthRules ?? canvasWideWidthRules));

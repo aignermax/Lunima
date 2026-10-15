@@ -72,6 +72,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _activeProcessLabel = LocalizationService.Instance.Translate("Process.NoneSelected");
 
+    /// <summary>Tooltip of the process chip; in a die assembly it lists every die with its process.</summary>
+    [ObservableProperty]
+    private string _activeProcessTip = LocalizationService.Instance.Translate("StatusBar.ActiveProcessTip");
+
     /// <summary>
     /// True when the active process is Playground (mixing PDKs allowed, chip not
     /// manufacturable). Drives the warning styling on the toolbar indicator chip.
@@ -414,6 +418,10 @@ public partial class MainViewModel : ObservableObject
         Home.OpenExampleRequested = FileOperations.OpenDesignAsCopyAsync;
         WorkspaceSwitch = InitializeWorkspaces();
         InitializeWorkspaceContext();
+        InitializeWorkspacePresentation();
+        InitializeGateView();
+        InitializeRunHint();
+        InitializeWorkspaceToolSets();
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
@@ -468,7 +476,7 @@ public partial class MainViewModel : ObservableObject
         // Shared by the placement guards below AND the metal-spec providers, so placement and
         // export agree on membership.
         Func<IReadOnlyCollection<string>?> getLiveMemberPdkNames = () =>
-            FileOperations.ActiveProcess is { } activeProcess ? LeftPanel.ResolveLiveMemberPdkNames(activeProcess) : null;
+            CanvasScopeProcess is { } activeProcess ? LeftPanel.ResolveLiveMemberPdkNames(activeProcess) : null;
 
         // Electrical metal routing spec (#682): trace width / layers / crossing policy come
         // from the active process's metal cross-section; both exporters share one provider.
@@ -476,16 +484,24 @@ public partial class MainViewModel : ObservableObject
         // xsection / bridge policy reaches the export (review Finding 0).
         Func<CAP_Core.Routing.MetalRouting.MetalRoutingSpec> metalSpecProvider = () =>
             CAP_DataAccess.Components.ComponentDraftMapper.MetalRoutingSpecFactory.FromActiveProcess(
-                FileOperations.ActiveProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
+                CanvasScopeProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
         FileOperations.MetalRoutingSpecProvider = metalSpecProvider;
         GdsFactoryExport.MetalRoutingSpecProvider = metalSpecProvider;
+        // Process companion layers (cladding / trench / keep-out bands) of routed waveguides:
+        // the canvas renderer and the Nazca export both read this one per-connection source.
+        var companionLayers = new Services.WaveguideCompanions.WaveguideCompanionLayerProvider(
+            () => LeftPanel.AllTemplates,
+            () => LeftPanel.GetLoadedPdkDrafts(),
+            () => CAP_DataAccess.Components.ComponentDraftMapper.WaveguideCompanionSpecResolver.FromActiveProcess(
+                FileOperations.ActiveProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames()));
+        _canvas.WaveguideCompanionSpecProvider = companionLayers.Resolve;
         // Minimum waveguide bend radius (#574): an in-canvas bend-handle drag (and its undo/redo
         // command) must not shrink a bend below what the active process allows. Same
         // active-process + live-member lookup as the metal spec; falls back to the absolute
         // minimum when no process is resolvable (playground / no declared optical minimum).
         Func<double> resolveMinBendRadiusMicrometers = () =>
             CAP_DataAccess.Components.ComponentDraftMapper.WaveguideBendRadiusResolver.Resolve(
-                FileOperations.ActiveProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
+                CanvasScopeProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
         CanvasInteraction.GetMinBendRadiusMicrometers = resolveMinBendRadiusMicrometers;
         // The same process minimum floors the automatic routing and the styled curves:
         // the orchestrator refreshes the router before every routing pass, so AUTO cannot
@@ -522,6 +538,7 @@ public partial class MainViewModel : ObservableObject
         ExportMenu = new ExportMenuViewModel(new IExportFormat[]
         {
             new NazcaExportFormat(FileOperations.ExportNazcaCommand),
+            new DieFilesExportFormat(FileOperations.ExportDieFilesCommand),
             GdsFactoryExportFormat,
             new SaxExportFormat(FileOperations.ExportSaxCommand),
             PhotonTorchExportFormat,
@@ -563,19 +580,23 @@ public partial class MainViewModel : ObservableObject
         // library-based PDK-source resolver (groups/pasted copies carry no source of their
         // own, so children are resolved against the loaded library) can never diverge.
         var placementContext = new PlacementPolicyContext(
-            getActiveProcess: () => FileOperations.ActiveProcess,
+            // Inside a die its process and enabled PDKs decide; elsewhere the design's process.
+            getActiveProcess: () => Canvas.Dies.ActiveDie?.ProcessBinding ?? FileOperations.ActiveProcess,
             getProcessAgnosticPdkNames: () => LeftPanel.GetProcessAgnosticPdkNames(),
             resolveComponentPdkSource: component =>
                 ViewModels.Library.ComponentPdkSourceResolver.Resolve(component, LeftPanel.AllTemplates),
             resolveLiveMemberPdkNames: () =>
-                FileOperations.ActiveProcess is { } activeProcess
-                    ? LeftPanel.ResolveLiveMemberPdkNames(activeProcess)
-                    : null,
+                Canvas.Dies.ActiveDie is { ProcessBinding: { } dieProcess } activeDie
+                    ? LeftPanel.DieScopePdkNames(dieProcess, activeDie.Die?.EnabledPdkNames)
+                    : FileOperations.ActiveProcess is { } activeProcess
+                        ? LeftPanel.ResolveLiveMemberPdkNames(activeProcess)
+                        : null,
             // Per-chiplet scoping (issue #935): the live catalog lets the policy derive a
             // group's chiplet process binding from its children.
             getProcessCatalog: () => ProcessCatalog.BuildGroups(LeftPanel.GetLoadedPdkProcessEntries()));
 
         CanvasInteraction.PlacementContext = placementContext;
+        InitializeDies();
         _canvas.Clipboard.PdkSourceResolver = placementContext.ResolveComponentPdkSource;
 
         if (aiGridService is Services.AiGridService aiGrid)
@@ -623,7 +644,7 @@ public partial class MainViewModel : ObservableObject
 
         // Monte-Carlo fabrication variance: the sigma inputs pre-fill from the
         // tolerances declared by the active PDK process.
-        BottomPanel.Analysis.MonteCarlo.ActiveProcessProvider = () => FileOperations.ActiveProcess;
+        BottomPanel.Analysis.MonteCarlo.ActiveProcessProvider = () => ScopeDie?.ProcessBinding ?? FileOperations.ActiveProcess;
         BottomPanel.Analysis.MonteCarlo.RefreshTolerancesFromProcess();
         FileOperations.PropertyChanged += (s, e) =>
         {
@@ -646,7 +667,7 @@ public partial class MainViewModel : ObservableObject
         ModeProbe = modeProbe;
         if (ModeProbe != null)
         {
-            ModeProbe.GetActiveProcessFingerprint = () => FileOperations.ActiveProcess?.Fingerprint;
+            ModeProbe.GetActiveProcessFingerprint = () => (ScopeDie?.ProcessBinding ?? FileOperations.ActiveProcess)?.Fingerprint;
             ModeProbe.GetSimulationWavelengthNm = () =>
                 Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm;
             CanvasInteraction.ProbeRequested = (target, canvasX, canvasY) =>
@@ -712,6 +733,9 @@ public partial class MainViewModel : ObservableObject
                     CanvasInteraction.SelectedWaveguideConnection;
                 // ... and into the length-matching panel.
                 BottomPanel.LengthMatching.SelectedConnection =
+                    CanvasInteraction.SelectedWaveguideConnection;
+                // ... and into the insertion-loss breakdown.
+                BottomPanel.ConnectionLoss.SelectedConnection =
                     CanvasInteraction.SelectedWaveguideConnection;
             }
         };
@@ -988,6 +1012,9 @@ public partial class MainViewModel : ObservableObject
     {
         var loc = LocalizationService.Instance;
         IsPlayground = p?.IsPlayground == true;
+        ActiveProcessTip = loc.Translate("StatusBar.ActiveProcessTip");
+        if (TryDescribeDieProcesses())
+            return;
         ActiveProcessLabel = p == null ? loc.Translate("Process.NoneSelected")
             : p.IsPlayground ? loc.Translate("Process.PlaygroundBadge")
             : string.Format(CultureInfo.InvariantCulture, loc.Translate("Process.Prefix"), p.DisplayName);
@@ -1465,7 +1492,10 @@ public partial class MainViewModel : ObservableObject
             // trash-deleted while its placed instances were kept, as PdkDelete_Click promises) gets
             // flagged — with a "not loaded" wording instead of a process-mismatch message that would
             // reference a process that doesn't exist (PR #739 review, both directions).
-            var processLockActive = FileOperations.ActiveProcess is { IsPlayground: false };
+            // The design-level process governs single-die designs only; inside a die its own
+            // process does, and at an assembly's root each die checks its parts itself.
+            var scopeProcess = CanvasScopeProcess;
+            var processLockActive = scopeProcess is { IsPlayground: false };
             var compatiblePdkNames = LeftPanel.PdkManager.GetProcessCompatiblePdkNames();
 
             // DRC-lite per connection (issue #936): each connection's width and spacing
@@ -1495,7 +1525,7 @@ public partial class MainViewModel : ObservableObject
             IReadOnlyList<CAP_Core.Analysis.WaveguideMinWidthRule>? minWaveguideWidthRules = null;
             if (processLockActive)
             {
-                var memberProcess = LeftPanel.ResolveLiveMemberPdkNames(FileOperations.ActiveProcess!)
+                var memberProcess = LeftPanel.ResolveLiveMemberPdkNames(scopeProcess!)
                     .Select(name => drcDrafts.FirstOrDefault(
                         d => string.Equals(d.Name, name, StringComparison.OrdinalIgnoreCase))?.Process)
                     .FirstOrDefault(p => p is not null);
@@ -1503,12 +1533,15 @@ public partial class MainViewModel : ObservableObject
                 minWaveguideWidthRules = memberProcess.GetMinWaveguideWidthRules();
             }
 
+            bool usesDieBounds = Canvas.Dies.IsAssemblyRoot || Canvas.Dies.ActiveDie != null;
             await RightPanel.DesignValidation.RunValidationAsync(
                 connections,
                 groups,
                 allComponents,
-                ChipSize.CurrentWidthMicrometers,
-                ChipSize.CurrentHeightMicrometers,
+                // A die assembly (and the inside of one of its dies) is bounded per die by the
+                // die checks; the single-chip bounds check only applies to single-die designs.
+                usesDieBounds ? 0 : ChipSize.CurrentWidthMicrometers,
+                usesDieBounds ? 0 : ChipSize.CurrentHeightMicrometers,
                 pdkSourceByComponent,
                 LeftPanel.GetProcessAgnosticPdkNames(),
                 compatiblePdkNames,
@@ -1519,6 +1552,7 @@ public partial class MainViewModel : ObservableObject
                 wavelengthNm: Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm);
 
             StatusText = RightPanel.DesignValidation.StatusText;
+            Canvas.ViewSettings.SetDesignCheckFindings(RightPanel.DesignValidation.AllFindings);
         }
         finally
         {
@@ -1688,6 +1722,12 @@ public class DesignGroupData
     /// persistence existed — so legacy .lun files stay clean of unused blocks.
     /// </summary>
     public CAP_Core.Components.Core.TruthTablePinAssignment? TruthTablePinAssignment { get; set; }
+
+    /// <summary>
+    /// Die definition of a top-level group that is a die of a multi-die assembly
+    /// (outline, edge zone, enabled PDKs). Null for ordinary groups and single-die designs.
+    /// </summary>
+    public Dies.DieData? Die { get; set; }
 }
 
 /// <summary>
@@ -1879,6 +1919,9 @@ public class ConnectionData
 
     /// <summary>True when the routed path is frozen (manual bend edits); null = false.</summary>
     public bool? IsRouteFrozen { get; set; }
+
+    /// <summary>Refractive index of a die-to-die link's facet gap; null = air.</summary>
+    public double? FacetGapMediumIndex { get; set; }
 
     /// <summary>Manual per-bend radius overrides (bend index → radius µm); null = none.</summary>
     public Dictionary<int, double>? BendRadiusOverrides { get; set; }

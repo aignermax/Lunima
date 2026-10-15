@@ -1435,6 +1435,29 @@ public class GdsHierarchyImporterTests
             "the multi-line metadata blob must not become a black-box pin");
     }
 
+    [Fact]
+    public async Task BlackBox_LabelFloodExceedingPinSanityThreshold_Warns()
+    {
+        // Field observation (issue #829): a black-box import of a large top cell
+        // persisted ~9800 pins because every text label became a pin. Past the
+        // sanity threshold the import must warn (it still registers the pins).
+        var writer = GdsTestWriter.Create()
+            .StandardPrologue()
+            .BeginCell("TOP")
+                .Boundary(1, 0, (0, 0), (600000, 0), (600000, 1000), (0, 1000), (0, 0));
+        for (var i = 0; i < 600; i++)
+            writer.Text(1, 10, $"p{i}", i * 1000, 500);
+        var library = await ReadLibraryAsync(writer.EndCell().EndLibrary().ToArray());
+
+        var result = await GdsHierarchyImporter.ImportAsync(
+            library, "TOP", new GdsHierarchyImportOptions { Mode = GdsHierarchyImportMode.BlackBox });
+
+        var draft = result.ImportedCellDrafts.ShouldHaveSingleItem();
+        draft.Pins.Count.ShouldBeGreaterThan(512);
+        result.Warnings.ShouldContain(w =>
+            w.Contains("Black-box import of 'TOP'") && w.Contains("explode mode"));
+    }
+
     // ── Warning quality ──────────────────────────────────────────────────────
 
     [Fact]

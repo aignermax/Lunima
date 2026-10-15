@@ -50,8 +50,10 @@ public class LogicGateRam2x4ExampleTests
         _fixture.LoadDuration.ShouldBeLessThan(TimeSpan.FromSeconds(30),
             "the cached routes must keep the open under the loose CI bound of 30 s (target: 10 s)");
 
-        _fixture.Canvas.Components.Count.ShouldBe(TopLevelGroupNames.Length,
-            "top level: the address inverter, the four read-MUX combines and the two cell instances");
+        _fixture.Canvas.Components.Count(c => !CAP_Core.Routing.CrossingInsertion.CrossingComponentCatalog.IsCrossing(c.Component))
+            .ShouldBe(TopLevelGroupNames.Length,
+                "top level: the address inverter, the four read-MUX combines and the two cell instances " +
+                "(plus the crossing cells the cell-to-input wires run through)");
         ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(9,
             "only the nine inter-cell wires load as connections — the intra-cell wiring is frozen inside the cells");
 

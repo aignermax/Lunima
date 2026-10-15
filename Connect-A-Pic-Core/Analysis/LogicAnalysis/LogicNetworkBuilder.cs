@@ -1,7 +1,6 @@
 using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
-using CAP_Core.Routing.CrossingInsertion;
 
 namespace CAP_Core.Analysis.LogicAnalysis;
 
@@ -71,7 +70,7 @@ public sealed partial class LogicNetworkBuilder
         var contexts = gates.Select(GateContext.Create).ToList();
         ThrowOnDuplicateGateIds(contexts);
 
-        var adjacency = BuildPinAdjacency(connections);
+        var adjacency = LogicPinTracer.BuildPinAdjacency(connections);
         var drivers = new Dictionary<LogicPinRef, LogicPinRef>();
         var edgeConnections = new Dictionary<LogicPinRef, IReadOnlyList<WaveguideConnection>>();
         foreach (var connection in connections)
@@ -80,31 +79,6 @@ public sealed partial class LogicNetworkBuilder
         }
 
         return AssembleNetwork(contexts, drivers, edgeConnections, wavelengthNm ?? StandardWaveLengths.RedNM);
-    }
-
-    /// <summary>Indexes every connection by both endpoint pins, so a trace can hop pin to pin.</summary>
-    private static Dictionary<PhysicalPin, List<WaveguideConnection>> BuildPinAdjacency(
-        IEnumerable<WaveguideConnection> connections)
-    {
-        var adjacency = new Dictionary<PhysicalPin, List<WaveguideConnection>>(
-            ReferenceEqualityComparer.Instance);
-        foreach (var connection in connections)
-        {
-            AddAdjacency(adjacency, connection.StartPin, connection);
-            AddAdjacency(adjacency, connection.EndPin, connection);
-        }
-        return adjacency;
-    }
-
-    private static void AddAdjacency(
-        IDictionary<PhysicalPin, List<WaveguideConnection>> adjacency,
-        PhysicalPin? pin, WaveguideConnection connection)
-    {
-        if (pin == null)
-            return;
-        if (!adjacency.TryGetValue(pin, out var list))
-            adjacency[pin] = list = new List<WaveguideConnection>();
-        list.Add(connection);
     }
 
     /// <summary>
@@ -166,10 +140,9 @@ public sealed partial class LogicNetworkBuilder
 
     /// <summary>
     /// Follows the optical path away from a gate pin through pass-through elements
-    /// until it reaches another gate pin. Returns null with a diagnostic
-    /// <paramref name="failure"/> when the path loops, branches, or ends without
-    /// reaching a gate pin. The hopped connections are appended to
-    /// <paramref name="path"/> so the wire delay covers every crossed segment.
+    /// (see <see cref="LogicPinTracer"/>) until it reaches another gate pin. Returns
+    /// null with a diagnostic <paramref name="failure"/> when the path loops, branches,
+    /// or ends without reaching a gate pin.
     /// </summary>
     private static Endpoint? TracePassThrough(
         IReadOnlyList<GateContext> contexts,
@@ -180,88 +153,17 @@ public sealed partial class LogicNetworkBuilder
         List<WaveguideConnection> path,
         out string? failure)
     {
-        failure = null;
-        var visited = new HashSet<PhysicalPin>(ReferenceEqualityComparer.Instance);
-        var pin = startPin;
-        var arrival = arrivalConnection;
-        while (true)
-        {
-            if (!visited.Add(pin))
-            {
-                failure = UnresolvableMessage(gateEnd, startPin,
-                    $"loops back onto '{DescribePin(pin)}' without reaching a gate pin");
-                return null;
-            }
-            var endpoint = ResolveEndpoint(contexts, pin);
-            if (endpoint != null)
-                return endpoint;
-            var exit = PassThroughExit(pin);
-            // A source sitting right at the gate pin (a laser or grating coupler feeding
-            // the input) is not a logic wire: the input stays a network input, as before.
-            if (exit == null && ReferenceEquals(pin, startPin))
-                return null;
-            if (exit == null)
-            {
-                failure = UnresolvableMessage(gateEnd, startPin,
-                    $"ends at '{DescribePin(pin)}' — no gate pin is reachable through it");
-                return null;
-            }
-            // The pass-through's far side can itself be a gate pin: the load path
-            // binds a wire to either side of a two-pin component inside a gate
-            // group, while the group exposes only one of them.
-            var exitEndpoint = ResolveEndpoint(contexts, exit);
-            if (exitEndpoint != null)
-                return exitEndpoint;
-            var continuations = adjacency.TryGetValue(exit, out var incident)
-                ? incident.Where(c => !ReferenceEquals(c, arrival)).ToList()
-                : new List<WaveguideConnection>();
-            if (continuations.Count != 1)
-            {
-                failure = UnresolvableMessage(gateEnd, startPin, continuations.Count == 0
-                    ? $"ends at '{DescribePin(exit)}' without reaching a gate output"
-                    : $"branches at '{DescribePin(exit)}' ({continuations.Count} waveguides) — no unique driver");
-                return null;
-            }
-            arrival = continuations[0];
-            path.Add(arrival);
-            pin = ReferenceEquals(arrival.StartPin, exit) ? arrival.EndPin : arrival.StartPin;
-            if (pin == null)
-            {
-                failure = UnresolvableMessage(gateEnd, startPin,
-                    $"ends at '{DescribePin(exit)}' without reaching a gate output");
-                return null;
-            }
-        }
-    }
-
-    /// <summary>
-    /// The far-side pin of a passive pass-through element: a non-group component
-    /// with exactly two physical pins (a waveguide, an edge coupler) has exactly
-    /// one optical in→out path, and a waveguide crossing passes light straight on
-    /// to its opposite port. Anything else — a group shell, a splitter, a one-port
-    /// laser — has no unique continuation and stops the trace.
-    /// </summary>
-    private static PhysicalPin? PassThroughExit(PhysicalPin pin)
-    {
-        var parent = pin.ParentComponent;
-        if (parent == null || parent is ComponentGroup)
-            return null;
-        if (CrossingComponentCatalog.IsCrossing(parent))
-            return CrossingComponentCatalog.StraightThroughExit(pin);
-        if (parent.PhysicalPins.Count != 2 || !parent.PhysicalPins.Contains(pin))
-            return null;
-        return parent.PhysicalPins.First(p => !ReferenceEquals(p, pin));
+        var traced = LogicPinTracer.Trace(
+            pin => ResolveEndpoint(contexts, pin), adjacency, startPin, arrivalConnection, path, out var reason);
+        failure = reason == null ? null : UnresolvableMessage(gateEnd, startPin, reason);
+        return traced;
     }
 
     /// <summary>Builds the diagnostic for a gate pin whose optical path resolves no unique driver.</summary>
     private static string UnresolvableMessage(Endpoint gateEnd, PhysicalPin startPin, string reason) =>
-        $"Gate input '{Format(gateEnd.Pin)}' is wired towards '{DescribePin(startPin)}', but the optical path {reason}. " +
+        $"Gate input '{Format(gateEnd.Pin)}' is wired towards '{LogicPinTracer.DescribePin(startPin)}', but the optical path {reason}. " +
         "The input would silently become a network input — connect it to exactly one gate output " +
         "through a single optical path, or remove the wire.";
-
-    /// <summary>Renders a physical pin as <c>component.pin</c> for diagnostics.</summary>
-    private static string DescribePin(PhysicalPin pin) =>
-        $"{pin.ParentComponent?.Identifier ?? "?"}.{pin.Name}";
 
     /// <summary>Determines which endpoint drives which, rejecting logically invalid pairings.</summary>
     private static (LogicPinRef Source, LogicPinRef Load) Classify(Endpoint first, Endpoint second)

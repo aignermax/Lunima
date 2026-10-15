@@ -123,6 +123,7 @@ public partial class ProcessManagementViewModel
         Layers.Clear();
         Xsections.Clear();
         Materials.Clear();
+        CompanionLayers.Clear();
         _memberDrafts = new List<PdkDraft>();
         MarkAllRowsOwned();
     }

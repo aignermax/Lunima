@@ -2,16 +2,30 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels"
              xmlns:ws="using:CAP.Avalonia.ViewModels.Workspaces"
+             xmlns:dies="using:CAP.Avalonia.ViewModels.Dies"
              xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.WorkspaceRail.ChipletsPane"
              x:DataType="vm:MainViewModel">
 
-    <!-- System workspace's left pane: the chiplets (top-level groups) and their process.
-         A click selects the chiplet and centers the canvas on it. -->
+    <!-- System workspace's left pane: the dies of the assembly (process color, size, PDKs)
+         and their die-to-die links. A click selects the die (its properties appear on the
+         right and the library follows its process); a double-click opens it. -->
     <DockPanel>
         <DockPanel DockPanel.Dock="Top" Classes="paneHeader">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                <!-- Animated explainer: light crossing the die-to-die gap, loss growing with gap and offset. -->
+                <controls:HelpFlyoutButton Title="{loc:Localize Dies.Help.Title}" VerticalAlignment="Center">
+                    <controls:HelpFlyoutButton.HelpContent>
+                        <StackPanel Spacing="8" MaxWidth="360">
+                            <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize Dies.Help.DiesBody}"/>
+                            <ha:ChipletLinkCouplingAnimation Width="336" Height="88" IsHitTestVisible="False"/>
+                            <TextBlock Classes="strong" Text="{loc:Localize Dies.Help.LinkTitle}"/>
+                            <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize Dies.Help.LinkBody}"/>
+                        </StackPanel>
+                    </controls:HelpFlyoutButton.HelpContent>
+                </controls:HelpFlyoutButton>
                 <Button Classes="headerIcon" Command="{Binding RefreshSystemOverviewCommand}"
                         ToolTip.Tip="{loc:Localize LeftRail.Chiplets.RefreshTip}">
                     <controls:Icon Data="{StaticResource Icon.RefreshCw}"/>
@@ -24,29 +38,100 @@
             <TextBlock Classes="paneTitle" Text="{loc:Localize Workspace.System.Chiplets}"/>
         </DockPanel>
 
+        <!-- New die: process + size preset in a small flyout, placed right of the existing dies. -->
+        <Button x:Name="NewDieButton" DockPanel.Dock="Top" Margin="16,0,16,8" HorizontalAlignment="Stretch"
+                ToolTip.Tip="{loc:Localize Dies.NewDieTip}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <controls:Icon Data="{StaticResource Icon.Plus}"/>
+                <TextBlock Text="{loc:Localize Dies.NewDie}"/>
+            </StackPanel>
+            <Button.Flyout>
+                <Flyout Placement="RightEdgeAlignedTop" Opening="NewDieFlyout_Opening">
+                    <StackPanel Spacing="8" Width="260" Margin="4" x:DataType="vm:MainViewModel">
+                        <TextBlock Classes="strong" Text="{loc:Localize Dies.NewDie}"/>
+                        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:Localize Dies.NewDieHint}"/>
+                        <TextBlock Classes="label" Text="{loc:Localize Dies.Properties.Process}"/>
+                        <ComboBox x:Name="NewDieProcess" HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding NewDie.ProcessOptions}"
+                                  SelectedItem="{Binding NewDie.SelectedProcess}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="dies:DieProcessOption">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Border Width="10" Height="10" CornerRadius="2" Background="{Binding Brush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock Classes="label" Text="{loc:Localize Dies.Properties.Size}"/>
+                        <ComboBox x:Name="NewDieSize" HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding NewDie.SizeOptions}"
+                                  SelectedItem="{Binding NewDie.SelectedSize}"/>
+                        <Grid ColumnDefinitions="*,Auto,*" IsVisible="{Binding NewDie.IsCustomSize}">
+                            <NumericUpDown Value="{Binding NewDie.CustomWidthMillimeters}" Minimum="0.05" Maximum="100"
+                                           Increment="0.5" FormatString="0.##" ShowButtonSpinner="False"/>
+                            <TextBlock Grid.Column="1" Text=" × " VerticalAlignment="Center"/>
+                            <NumericUpDown Grid.Column="2" Value="{Binding NewDie.CustomHeightMillimeters}" Minimum="0.05" Maximum="100"
+                                           Increment="0.5" FormatString="0.##" ShowButtonSpinner="False"/>
+                        </Grid>
+                        <Button x:Name="CreateDieButton" Classes="primary" HorizontalAlignment="Stretch"
+                                Content="{loc:Localize Dies.Create}"
+                                Command="{Binding NewDie.CreateCommand}"
+                                Click="CreateDie_Click"/>
+                    </StackPanel>
+                </Flyout>
+            </Button.Flyout>
+        </Button>
+
         <TextBlock DockPanel.Dock="Top" Classes="caption" Margin="16,0,16,8" TextWrapping="Wrap"
-                   IsVisible="{Binding !SystemOverview.HasChiplets}"
-                   Text="{loc:Localize Workspace.System.NoChiplets}"/>
+                   IsVisible="{Binding !SystemOverview.IsAssembly}"
+                   Text="{loc:Localize Dies.SingleDieHint}"/>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl x:Name="ChipletsList" Margin="8,0,8,8" ItemsSource="{Binding SystemOverview.Chiplets}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="ws:ChipletSummaryRow">
-                        <Button Classes="menuItem"
-                                Command="{Binding $parent[ItemsControl].DataContext.SystemOverview.ActivateChipletCommand}"
-                                CommandParameter="{Binding}"
-                                ToolTip.Tip="{loc:Localize LeftRail.Chiplets.SelectTip}">
-                            <Grid ColumnDefinitions="Auto,*">
-                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Microchip}"/>
-                                <StackPanel Grid.Column="1" Spacing="1">
-                                    <TextBlock Classes="strong" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Classes="caption" Text="{Binding ProcessName}" TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                            </Grid>
-                        </Button>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <StackPanel Margin="8,0,8,8" Spacing="12">
+                <ItemsControl x:Name="ChipletsList" ItemsSource="{Binding SystemOverview.Chiplets}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="ws:ChipletSummaryRow">
+                            <Button Classes="menuItem"
+                                    Command="{Binding $parent[ItemsControl].DataContext.SystemOverview.ActivateChipletCommand}"
+                                    CommandParameter="{Binding}"
+                                    DoubleTapped="ChipletRow_DoubleTapped"
+                                    ToolTip.Tip="{loc:Localize LeftRail.Chiplets.SelectTip}">
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <Panel Width="16" Margin="0,2,10,0" VerticalAlignment="Top">
+                                        <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Microchip}" IsVisible="{Binding !IsDie}"/>
+                                        <Border Width="12" Height="12" CornerRadius="3" IsVisible="{Binding IsDie}"
+                                                Background="{Binding ProcessBrush}" VerticalAlignment="Center"/>
+                                    </Panel>
+                                    <StackPanel Grid.Column="1" Spacing="1">
+                                        <TextBlock Classes="strong" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Classes="caption" Text="{Binding ProcessName}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Classes="caption" Text="{Binding DetailText}" IsVisible="{Binding IsDie}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel Spacing="4" IsVisible="{Binding SystemOverview.HasLinks}" Margin="8,0">
+                    <TextBlock Classes="label" Text="{loc:Localize Workspace.System.Links}"/>
+                    <ItemsControl x:Name="LinksList" ItemsSource="{Binding SystemOverview.Links}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="ws:ChipletLinkRow">
+                                <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,3">
+                                    <controls:Icon Data="{StaticResource Icon.Link}" Size="12" Margin="0,0,8,0"
+                                                   Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                                    <TextBlock Grid.Column="1" Classes="caption" Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="2" Classes="mono" Text="{Binding LossText}" Margin="8,0,0,0"
+                                               Classes.warning="{Binding IsOverBudget}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
         </ScrollViewer>
     </DockPanel>
 </UserControl>

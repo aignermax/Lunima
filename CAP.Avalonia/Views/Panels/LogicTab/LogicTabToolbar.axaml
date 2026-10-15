@@ -1,0 +1,127 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.LogicTab.LogicTabToolbar"
+             x:DataType="vm:MainViewModel">
+
+    <UserControl.Styles>
+        <!-- Icon + label without replacing the string Content: the icon geometry rides on
+             Tag, so the button's Content stays the localized label (tests and automation
+             peers read it). -->
+        <Style Selector="Button.logicAction">
+            <Setter Property="ContentTemplate">
+                <DataTemplate x:DataType="x:String">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:Icon Data="{Binding $parent[Button].Tag}" Size="12"
+                                       IsVisible="{Binding $parent[Button].Tag, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="WrapPanel.logicToolbar > :is(Control)">
+            <Setter Property="Margin" Value="0,2,10,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Border.logicDivider">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Border.Subtle}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- One action row for the whole tab: build | clock | replay, then the status line.
+         Groups wrap as units on a narrow dock; the tab help stays pinned to the right. -->
+    <Grid ColumnDefinitions="*,Auto">
+        <!-- Plain-language help (#1196): short sections + the light → 0/1 threshold animation.
+             Declared first so it stays the panel's first help button in the visual tree. -->
+        <controls:HelpFlyoutButton Grid.Column="1" VerticalAlignment="Top" Margin="0,4,0,0"
+                                   Title="{loc:Localize LogicPanelHelp.Title}">
+            <controls:HelpFlyoutButton.HelpContent>
+                <panels:LogicHelpFlyout/>
+            </controls:HelpFlyoutButton.HelpContent>
+        </controls:HelpFlyoutButton>
+
+        <WrapPanel Classes="logicToolbar" Orientation="Horizontal">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button x:Name="LogicBuildButton" Classes="compact primary logicAction"
+                        Tag="{StaticResource Icon.Binary}"
+                        Content="{loc:Localize LogicPanel.Build}"
+                        Command="{Binding RightPanel.Logic.BuildNetworkCommand}"
+                        IsEnabled="{Binding RightPanel.Logic.IsProcessing, Converter={x:Static BoolConverters.Not}}"/>
+                <Button Classes="compact logicAction" Tag="{StaticResource Icon.X}"
+                        Content="{loc:Localize Common.Cancel}"
+                        Command="{Binding RightPanel.Logic.CancelCommand}"
+                        IsVisible="{Binding RightPanel.Logic.IsProcessing}"/>
+            </StackPanel>
+
+            <!-- Register clock (#1099/#1111/#1127): Step advances every register by one
+                 clock, Run clocks on its own at the chosen cadence, Reset returns the
+                 power-up state. Only for networks that contain a register. -->
+            <StackPanel Orientation="Horizontal" Spacing="6"
+                        IsVisible="{Binding RightPanel.Logic.HasRegisters}">
+                <Border Classes="logicDivider"/>
+                <Button x:Name="LogicStepClockButton" Classes="compact logicAction"
+                        Tag="{StaticResource Icon.StepForward}"
+                        Content="{loc:Localize LogicPanel.StepClock}"
+                        Command="{Binding RightPanel.Logic.StepClockCommand}"/>
+                <Button x:Name="LogicRunStopButton" Classes="compact logicAction"
+                        Tag="{StaticResource Icon.Clock}"
+                        Content="{Binding RightPanel.Logic.RunStopText}"
+                        Command="{Binding RightPanel.Logic.ToggleRunCommand}"/>
+                <ComboBox Classes="compact"
+                          ItemsSource="{Binding RightPanel.Logic.RunIntervalOptions}"
+                          SelectedItem="{Binding RightPanel.Logic.SelectedRunInterval}"
+                          DisplayMemberBinding="{Binding Label}"
+                          FontSize="{DynamicResource FontSize.Caption}" VerticalAlignment="Center"/>
+                <Button Classes="compact logicAction" Tag="{StaticResource Icon.RotateCcw}"
+                        Content="{loc:Localize LogicPanel.ResetRegisters}"
+                        Command="{Binding RightPanel.Logic.ResetRegistersCommand}"/>
+            </StackPanel>
+
+            <!-- Replay (#1058/#1069): step through the switch events — the canvas badges
+                 show the network state at that instant; pure lookup, nothing re-simulated. -->
+            <StackPanel Orientation="Horizontal" Spacing="6"
+                        IsVisible="{Binding RightPanel.Logic.HasTimelineEvents}">
+                <Border Classes="logicDivider"/>
+                <Button Classes="compact" Content="{Binding RightPanel.Logic.PlayPauseText}"
+                        Command="{Binding RightPanel.Logic.TogglePlaybackCommand}"/>
+                <Button Classes="compact" Content="{loc:Localize LogicPanel.ReplayPrev}"
+                        Command="{Binding RightPanel.Logic.PreviousTimelineEventCommand}"/>
+                <Button Classes="compact" Content="{loc:Localize LogicPanel.ReplayNext}"
+                        Command="{Binding RightPanel.Logic.NextTimelineEventCommand}"/>
+                <TextBlock Text="{Binding RightPanel.Logic.ReplayTimeText}" Foreground="{DynamicResource Brush.Warning}"
+                           FontSize="{DynamicResource FontSize.Caption}" VerticalAlignment="Center"
+                           IsVisible="{Binding RightPanel.Logic.IsReplayActive}"/>
+                <Button Classes="compact logicAction" Tag="{StaticResource Icon.Activity}"
+                        Content="{loc:Localize LogicPanel.ReplayExit}"
+                        Command="{Binding RightPanel.Logic.ExitReplayCommand}"
+                        IsVisible="{Binding RightPanel.Logic.IsReplayActive}"/>
+            </StackPanel>
+
+            <TextBlock Classes="caption" Text="{loc:Localize LogicPanel.Hint}" TextWrapping="Wrap"
+                       IsVisible="{Binding RightPanel.Logic.HasNetwork, Converter={x:Static BoolConverters.Not}}"/>
+            <TextBlock Classes="caption" Text="{Binding RightPanel.Logic.WavelengthText}"
+                       IsVisible="{Binding RightPanel.Logic.WavelengthText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            <TextBlock Classes="caption" Text="{Binding RightPanel.Logic.StatusText}" TextWrapping="Wrap"
+                       IsVisible="{Binding RightPanel.Logic.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            <!-- Propagation delays (#1002): the slowest gate chain from a network input to
+                 an output limits how fast the circuit can clock. -->
+            <StackPanel Orientation="Horizontal" Spacing="4"
+                        IsVisible="{Binding RightPanel.Logic.CriticalPathText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Text="{Binding RightPanel.Logic.CriticalPathText}" Foreground="{DynamicResource Brush.Text.Primary}"
+                           FontSize="{DynamicResource FontSize.Caption}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <controls:HelpFlyoutButton Title="{loc:Localize LogicPanelTimingHelp.Title}" VerticalAlignment="Center">
+                    <controls:HelpFlyoutButton.HelpContent>
+                        <panels:LogicTimingHelpFlyout/>
+                    </controls:HelpFlyoutButton.HelpContent>
+                </controls:HelpFlyoutButton>
+            </StackPanel>
+        </WrapPanel>
+    </Grid>
+</UserControl>
