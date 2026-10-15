@@ -160,6 +160,10 @@ public class GdsExportAlignmentTests
         DesignCanvasViewModel canvas, ComponentViewModel dutVm, Component dut,
         string python, int maxSteps = 4)
     {
+        // One service for the whole matrix, like the app's singleton: it probes the python
+        // environment once instead of before every rotation's export.
+        var gdsService = new GdsExportService();
+        gdsService.SetCustomPythonPath(python);
         for (int rotationSteps = 0; rotationSteps < maxSteps; rotationSteps++)
         {
             if (rotationSteps > 0)
@@ -172,7 +176,7 @@ public class GdsExportAlignmentTests
 
             var script = new SimpleNazcaExporter().Export(
                 canvas, emitVerification: true);
-            var (pins, scriptPath, tempDir) = await RunScriptAsync(script, python, rotationSteps);
+            var (pins, scriptPath, tempDir) = await RunScriptAsync(script, gdsService, rotationSteps);
 
             AssertDutPinsAlign(dut, pins["comp_0"], rotationSteps, scriptPath);
             // Connection-less designs (single-DUT placement checks) skip the
@@ -189,14 +193,12 @@ public class GdsExportAlignmentTests
     /// <summary>Writes the script to a temp dir, executes it and parses .pins.json.</summary>
     private static async Task<(Dictionary<string, Dictionary<string, double[]>> Pins,
         string ScriptPath, string TempDir)> RunScriptAsync(
-        string script, string python, int rotationSteps)
+        string script, GdsExportService gdsService, int rotationSteps)
     {
         var tempDir = Directory.CreateTempSubdirectory("lunima_align_").FullName;
         var scriptPath = Path.Combine(tempDir, $"alignment_rot{rotationSteps}.py");
         await File.WriteAllTextAsync(scriptPath, script);
 
-        var gdsService = new GdsExportService();
-        gdsService.SetCustomPythonPath(python);
         var result = await gdsService.ExportToGdsAsync(scriptPath, generateGds: true);
 
         result.Success.ShouldBeTrue(

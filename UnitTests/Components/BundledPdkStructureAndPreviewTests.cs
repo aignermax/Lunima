@@ -143,39 +143,56 @@ public class BundledPdkStructureAndPreviewTests
         var nazca = new NazcaComponentPreviewService(python, nazcaScript);
         var gdsFactory = new GdsFactoryComponentPreviewService(python, gdsFactoryScript);
 
+        var components = LoadAllBundledPdks(out _)
+            .SelectMany(pdk => pdk.Components.Where(comp => !IsAnalyzer(comp)).Select(comp => (pdk, comp)))
+            .ToList();
+
+        // Each render is an independent python process; running a few at once keeps the
+        // sweep over every bundled component from serialising on interpreter start-up.
+        using var throttle = new SemaphoreSlim(Math.Clamp(Environment.ProcessorCount, 1, MaxParallelRenders));
+        var results = await Task.WhenAll(components.Select(async entry =>
+        {
+            await throttle.WaitAsync();
+            try { return await RenderAsync(nazca, gdsFactory, entry.pdk, entry.comp); }
+            finally { throttle.Release(); }
+        }));
+
         var failures = new List<string>();
         int renderedCount = 0;
-        foreach (var pdk in LoadAllBundledPdks(out _))
+        for (int i = 0; i < components.Count; i++)
         {
-            foreach (var comp in pdk.Components)
-            {
-                if (IsAnalyzer(comp))
-                    continue;
+            var (pdk, comp) = components[i];
+            var result = results[i];
+            if (!result.Success && IsEnvironmentGap(result.Error))
+                continue; // backend package missing in this interpreter — not a Lunima bug
 
-                NazcaPreviewResult result;
-                if (!string.IsNullOrWhiteSpace(comp.GdsFactoryFunction)
-                    && GdsFactoryPreviewCode.For(comp.GdsFactoryFunction) is { } code)
-                    result = await gdsFactory.RenderRawCodeAsync(code);
-                else if (HasInlineNazcaCode(comp))
-                    result = await nazca.RenderRawCodeAsync(comp.RawCode!);
-                else
-                    result = await nazca.RenderAsync(pdk.NazcaModuleName, comp.NazcaFunction!, comp.NazcaParameters);
-
-                if (!result.Success && IsEnvironmentGap(result.Error))
-                    continue; // backend package missing in this interpreter — not a Lunima bug
-
-                if (!result.Success)
-                    failures.Add($"{pdk.Name}/{comp.Name}: render failed — {result.Error}");
-                else if (result.Polygons.Count == 0)
-                    failures.Add($"{pdk.Name}/{comp.Name}: rendered 0 polygons (empty geometry)");
-                else
-                    renderedCount++;
-            }
+            if (!result.Success)
+                failures.Add($"{pdk.Name}/{comp.Name}: render failed — {result.Error}");
+            else if (result.Polygons.Count == 0)
+                failures.Add($"{pdk.Name}/{comp.Name}: rendered 0 polygons (empty geometry)");
+            else
+                renderedCount++;
         }
 
         failures.ShouldBeEmpty(
             $"every bundled component must render a non-empty preview ({renderedCount} rendered OK)." +
             $"\n{string.Join("\n", failures)}");
+    }
+
+    /// <summary>Upper bound on concurrent preview renders (python processes) in the sweep.</summary>
+    private const int MaxParallelRenders = 4;
+
+    /// <summary>Renders one component through the backend the app's preview would pick for it.</summary>
+    private static Task<NazcaPreviewResult> RenderAsync(
+        NazcaComponentPreviewService nazca, GdsFactoryComponentPreviewService gdsFactory,
+        PdkDraft pdk, PdkComponentDraft comp)
+    {
+        if (!string.IsNullOrWhiteSpace(comp.GdsFactoryFunction)
+            && GdsFactoryPreviewCode.For(comp.GdsFactoryFunction) is { } code)
+            return gdsFactory.RenderRawCodeAsync(code);
+        if (HasInlineNazcaCode(comp))
+            return nazca.RenderRawCodeAsync(comp.RawCode!);
+        return nazca.RenderAsync(pdk.NazcaModuleName, comp.NazcaFunction!, comp.NazcaParameters);
     }
 
     /// <summary>Mirrors the app's preview: a component written as Nazca code in its PDK renders that code.</summary>
