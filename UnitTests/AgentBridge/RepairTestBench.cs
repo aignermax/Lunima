@@ -32,9 +32,17 @@ internal sealed class RepairTestBench
     public DesignCanvasViewModel Canvas => Session.Canvas;
     public CommandManager Commands => Session.Commands;
 
+    /// <summary>
+    /// An earlier bake of the counter with one wire sealed in by its neighbours (the shipped
+    /// counter routes every wire now), for the repair tools to work on. Loaded from TestData.
+    /// </summary>
+    public const string SealedCounterFixture = "counter-sealed-pin.lun";
+
     public static async Task<RepairTestBench> LoadAsync(string example = CounterExample)
     {
-        var (canvas, fileOps, _) = await MziFringeAnalysis.LoadExample(example);
+        var (canvas, fileOps, _) = example == SealedCounterFixture
+            ? await MziFringeAnalysis.LoadDesignFromPath(System.IO.Path.Combine(System.AppContext.BaseDirectory, "TestData", example))
+            : await MziFringeAnalysis.LoadExample(example);
         await fileOps.PostLoadRouting;
         var templates = TestPdkLoader.LoadAllTemplates();
         var preferred = CrossingComponentInstance.PreferredPdksOf(canvas.Components.Select(c => c.Component), templates);

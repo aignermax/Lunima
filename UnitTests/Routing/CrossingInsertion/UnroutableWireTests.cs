@@ -7,8 +7,8 @@ using Xunit;
 namespace UnitTests.Routing.CrossingInsertion;
 
 /// <summary>
-/// A wire the router cannot place with its current pins (the counter's splitter output into
-/// an 8 µm MMI input pair) is remembered after it failed again with unchanged pins: later
+/// A wire the router cannot place with its current pins (in an earlier bake of the counter,
+/// a splitter output into an 8 µm MMI input pair) is remembered after it failed again with unchanged pins: later
 /// passes keep its blocked placeholder instead of searching it again or starting the
 /// ordering cascade for it, until a pin moves or the user re-routes it.
 /// </summary>
@@ -17,7 +17,7 @@ public class UnroutableWireTests
     [Fact]
     public async Task Counter_UnroutableWire_IsRememberedAndNotRetried()
     {
-        var scenario = await CounterCrossingScenario.LoadAsync(adaptive: false);
+        var scenario = await CounterCrossingScenario.LoadAsync(adaptive: false, sealedPinFixture: true);
         var unroutable = scenario.Manager.Connections.Single(c => c.IsBlockedFallback);
 
         await scenario.Canvas.RecalculateRoutesAsync();
@@ -36,7 +36,7 @@ public class UnroutableWireTests
     [Fact]
     public async Task Counter_ExplicitReroute_ForgetsTheWire()
     {
-        var scenario = await CounterCrossingScenario.LoadAsync(adaptive: false);
+        var scenario = await CounterCrossingScenario.LoadAsync(adaptive: false, sealedPinFixture: true);
         var unroutable = scenario.Manager.Connections.Single(c => c.IsBlockedFallback);
         await scenario.Canvas.RecalculateRoutesAsync();
 
