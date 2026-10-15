@@ -2,7 +2,7 @@ namespace CAP_Core.Routing;
 
 /// <summary>
 /// Isolated-clone support for <see cref="WaveguideRouter"/>: a fully independent router whose
-/// pathfinding grid reproduces this router's component-side obstacle state, for routing
+/// pathfinding grid reproduces this router's non-waveguide obstacle state, for routing
 /// attempts that must not share mutable state (split out to keep the router below the
 /// file-size limit).
 /// </summary>
@@ -13,7 +13,9 @@ public partial class WaveguideRouter
     /// grid rebuilt from the components registered on this router's grid. A route computed on
     /// the clone sees exactly the obstacle state this router's grid would present with no
     /// waveguides registered, so the clone produces the same path a fresh full re-route on
-    /// this router would — while this router and its grid stay untouched.
+    /// this router would — while this router and its grid stay untouched. Cells set directly
+    /// on the source grid (hand fences, exit lanes) are copied as well, so a clone never
+    /// routes through blocking state the source grid holds.
     /// Hierarchical pathfinding is not cloned (the sector graph is expensive to build and
     /// binds to the source grid); callers that need HPA must route on the original router.
     /// </summary>
@@ -43,6 +45,7 @@ public partial class WaveguideRouter
             grid.SnapshotObstacleComponents(), grid.CellSizeMicrometers);
         clone.UsePinBreakouts = UsePinBreakouts;
         clone.AdoptPinBreakouts(_pinBreakouts, _breakoutBandWidthMicrometers);
+        clone.PathfindingGrid!.CopyNonWaveguideCellStatesFrom(grid);
         return clone;
     }
 }
