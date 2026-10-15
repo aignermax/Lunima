@@ -1,5 +1,6 @@
 using Avalonia.Threading;
 using CAP.Avalonia.Services.Localization;
+using CAP_Core.Components.Connections;
 
 namespace CAP.Avalonia.ViewModels.Canvas.Services;
 
@@ -12,6 +13,7 @@ internal sealed class RoutingProgressHeartbeat : IDisposable
     private readonly Action<string> _publish;
     private readonly DispatcherTimer _timer;
     private bool _complex;
+    private RoutingPhase _phase;
     private bool _disposed;
     private string? _lastText;
 
@@ -29,13 +31,21 @@ internal sealed class RoutingProgressHeartbeat : IDisposable
     /// <summary>Adds the complex-search phase while retaining counts and elapsed time.</summary>
     public void ComplexRouteStarted()
     {
-        _complex = true;
+        _complex = _phase == RoutingPhase.Initial;
         Refresh();
     }
 
     /// <summary>Clears the complex phase when a connection finishes.</summary>
     public void ConnectionCompleted()
     {
+        _complex = false;
+        Refresh();
+    }
+
+    /// <summary>Switches stages and clears any completed initial-search subphase.</summary>
+    public void PhaseChanged(RoutingPhase phase)
+    {
+        _phase = phase;
         _complex = false;
         Refresh();
     }
@@ -53,6 +63,8 @@ internal sealed class RoutingProgressHeartbeat : IDisposable
         var text = _progressText();
         if (_complex)
             text += " · " + LocalizationService.Instance.Translate("Routing.Status.ComplexPath");
+        else if (_phase != RoutingPhase.Initial)
+            text += " · " + LocalizationService.Instance.Translate("Routing.Status." + _phase);
         if (text == _lastText) return;
         _lastText = text;
         _publish(text);

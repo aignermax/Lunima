@@ -250,6 +250,9 @@ public class RoutingOrchestrator
                 });
 
             // Wire Phase 2 callback: update status text when a complex route is being computed.
+            _connectionManager.OnRoutingPhaseChanged = phase =>
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => heartbeat.PhaseChanged(phase),
+                    global::Avalonia.Threading.DispatcherPriority.Normal);
             // Called on the background routing thread — must post to UI thread.
             _connectionManager.OnComplexRouteStarted = () =>
             {
@@ -319,6 +322,7 @@ public class RoutingOrchestrator
         finally
         {
             _connectionManager.OnComplexRouteStarted = null;
+            _connectionManager.OnRoutingPhaseChanged = null;
             _routingSemaphore.Release();
             IsRouting = false;
             StateChanged?.Invoke();

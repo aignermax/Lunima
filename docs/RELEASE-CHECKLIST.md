@@ -21,6 +21,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 ## 1. Application startup & project lifecycle
 
 - [ ] System → New die → Create works through the actual flyout button, closes after creation, and can be undone. The Chiplets list contains real dies; a new or legacy single-chip design shows Die 1 rather than its logic groups. `(auto: NewDieButtonTests, WorkspaceContextTests)`
+- [ ] Routing status identifies crossing insertion, route refinement, and conflict repair while elapsed time continues; speculative repair searches do not increment completed connections or retain the initial complex-search label. Cancelled/finished passes ignore late phase updates. `(auto: RoutingPhaseProgressTests, RoutingOrchestratorProgressTests)`
 
 - [ ] Start Lunima without a command-line file → Home screen appears with recent projects and example tiles. `(manual)`
 - [ ] Open an example project from the Home screen → design loads and canvas is usable; gate groups sit apart with their pins on their bodies. `(auto: HomeExamplesTests, LogicExamplesLayoutTests)`

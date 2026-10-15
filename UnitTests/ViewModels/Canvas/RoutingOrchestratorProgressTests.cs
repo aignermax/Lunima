@@ -18,7 +18,7 @@ namespace UnitTests.ViewModels.Canvas;
 /// The assertions on "n/m" substrings are locale-independent; English is pinned so the
 /// exact wording checks stay stable regardless of the CI/dev OS language.
 /// </summary>
-public class RoutingOrchestratorProgressTests
+public partial class RoutingOrchestratorProgressTests
 {
     public RoutingOrchestratorProgressTests()
     {

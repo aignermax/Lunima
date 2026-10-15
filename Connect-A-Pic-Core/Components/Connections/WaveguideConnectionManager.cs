@@ -417,6 +417,9 @@ public partial class WaveguideConnectionManager
     /// </summary>
     public Action? OnComplexRouteStarted { get; set; }
 
+    /// <summary>Reports pass stages without treating speculative searches as completed connections.</summary>
+    public Action<RoutingPhase>? OnRoutingPhaseChanged { get; set; }
+
     /// <summary>
     /// Recalculates transmission for all connections using incremental routing.
     /// Existing valid routes are preserved; only broken or new connections are re-routed.
@@ -430,6 +433,7 @@ public partial class WaveguideConnectionManager
     {
         var totalWatch = System.Diagnostics.Stopwatch.StartNew();
         var timings = new RoutingPassTimingsBuilder();
+        OnRoutingPhaseChanged?.Invoke(RoutingPhase.Initial);
         BeginUnroutablePass();
 
         if (!_isCrossingPassRunning)
@@ -447,12 +451,14 @@ public partial class WaveguideConnectionManager
             // bends to the gentlest radius the remaining free space permits, then flag any
             // crossing that even the collapse could not keep clear (there should be none). The
             // crossing scan must not run on a half-collapsed state if cancellation interrupted it.
+            OnRoutingPhaseChanged?.Invoke(RoutingPhase.Finishing);
             timings.PinLeadCollapse = MeasurePass(() => CollapseAutoRoutePinLeads(cancellationToken));
             timings.BendUpsizing = MeasurePass(() => UpsizeAutoRouteBendRadii(cancellationToken));
             if (!cancellationToken.IsCancellationRequested)
                 timings.CrossingScan = MeasurePass(MarkUnresolvedSiblingCrossings);
             if (!cancellationToken.IsCancellationRequested)
             {
+                OnRoutingPhaseChanged?.Invoke(RoutingPhase.ContentionRepair);
                 timings.ContentionRepair = MeasurePass(() => RepairContentionBlockedWires(cancellationToken));
                 timings.ContentionRepairAttempts = LastContentionRepairAttemptCount;
                 timings.ContentionRepairAccepts = LastContentionRepairAcceptCount;
@@ -478,6 +484,7 @@ public partial class WaveguideConnectionManager
         _isCrossingPassRunning = true;
         try
         {
+            OnRoutingPhaseChanged?.Invoke(RoutingPhase.CrossingInsertion);
             CrossingInsertion.InsertBeneficialCrossings(this, _router, cancellationToken);
         }
         finally
