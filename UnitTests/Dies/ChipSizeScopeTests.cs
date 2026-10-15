@@ -9,6 +9,27 @@ namespace UnitTests.Dies;
 public class ChipSizeScopeTests
 {
     [Fact]
+    public void EditingLooseGroupBesideExplicitDie_KeepsRootSizeLocked()
+    {
+        var preferences = new UserPreferencesService(Path.Combine(Path.GetTempPath(), $"chip-size-{Guid.NewGuid()}.json"));
+        var canvas = new DesignCanvasViewModel();
+        var settings = new ChipSizeViewModel(preferences, canvas);
+        var nested = new ComponentGroup("Nested");
+        nested.AddChild(DieTestFixtures.Part("part", 200, 200));
+        var looseGroup = new ComponentGroup("Loose group");
+        looseGroup.AddChild(nested);
+        canvas.Components.Add(new ComponentViewModel(looseGroup));
+        canvas.Components.Add(new ComponentViewModel(DieTestFixtures.Die("Die", 3000, 0, 1000, 1000)));
+
+        canvas.EnterGroupEditMode(looseGroup);
+        settings.ApplyCommand.CanExecute(null).ShouldBeFalse();
+        canvas.EnterGroupEditMode(nested);
+        settings.ApplyCommand.CanExecute(null).ShouldBeFalse();
+        canvas.ExitToRoot();
+        settings.ApplyCommand.CanExecute(null).ShouldBeFalse();
+    }
+
+    [Fact]
     public void RemovingExplicitDie_ReenablesLegacyApply_AndNotifiesTheButton()
     {
         var preferences = new UserPreferencesService(Path.Combine(Path.GetTempPath(), $"chip-size-{Guid.NewGuid()}.json"));

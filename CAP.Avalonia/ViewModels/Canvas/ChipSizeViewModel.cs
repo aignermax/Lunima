@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core;
 using CAP_Core.Grid;
+using CAP_Core.Components.Dies;
 using CAP.Avalonia.Services;
 
 namespace CAP.Avalonia.ViewModels.Canvas;
@@ -40,8 +41,8 @@ public partial class ChipSizeViewModel : ObservableObject
     public ObservableCollection<ChipSizePreset> Presets { get; }
         = new(ChipSizeConfiguration.Presets);
 
-    /// <summary>Root dimensions are editable only while no explicit die owns the active scope.</summary>
-    public bool CanEditRootChipSize => _canvas.Dies.ActiveDie == null && !_canvas.Dies.IsAssemblyRoot;
+    /// <summary>Root dimensions are editable only in designs without explicit dies.</summary>
+    public bool CanEditRootChipSize => !DieAssembly.IsAssembly(_canvas.Groups.RootComponents.Select(c => c.Component));
 
     // ── Constructor ───────────────────────────────────────────────────────
 
