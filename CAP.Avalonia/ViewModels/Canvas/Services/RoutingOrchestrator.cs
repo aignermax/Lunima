@@ -240,17 +240,22 @@ public class RoutingOrchestrator
             RoutingStatusText = BuildProgressText();
             StateChanged?.Invoke();
 
+            using var heartbeat = new RoutingProgressHeartbeat(
+                () => passId == _passId && !token.IsCancellationRequested && IsRouting,
+                BuildProgressText,
+                text =>
+                {
+                    RoutingStatusText = text;
+                    StateChanged?.Invoke();
+                });
+
             // Wire Phase 2 callback: update status text when a complex route is being computed.
             // Called on the background routing thread — must post to UI thread.
             _connectionManager.OnComplexRouteStarted = () =>
             {
                 global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
-                    if (passId == _passId && !token.IsCancellationRequested)
-                    {
-                        RoutingStatusText = LocalizationService.Instance.Translate("Routing.Status.ComplexPath");
-                        StateChanged?.Invoke();
-                    }
+                    heartbeat.ComplexRouteStarted();
                 }, global::Avalonia.Threading.DispatcherPriority.Normal);
             };
 
@@ -276,8 +281,7 @@ public class RoutingOrchestrator
                         if (passId != _passId || token.IsCancellationRequested || !IsRouting)
                             return;
 
-                        RoutingStatusText = BuildProgressText();
-                        StateChanged?.Invoke();
+                        heartbeat.ConnectionCompleted();
                         foreach (var conn in _connections)
                             conn.NotifyPathChanged();
                         RepaintRequested?.Invoke();

@@ -106,6 +106,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 - [ ] Unchanged automatic routes tolerate neighbouring padding only inside their own pin corridors, avoiding redundant searches; component bodies and frozen group paths still force rerouting. `(auto: PinCorridorOwnershipTests)`
 - [ ] Enabling adaptive crossings in Settings starts one routing pass on the open design without another edit; restoring the preference, opening Settings, or enabling it on an empty canvas does not start a pass. `(auto: AdaptiveCrossingToggleTests)`
+- [ ] While a complex route is computing, the status keeps the connection count and advances elapsed seconds; cancellation and completion stop periodic updates and ignore late phase callbacks. `(auto: RoutingOrchestratorProgressTests)`
 
 - [ ] Connect mode draws a waveguide between two pins. `(auto: ViewModels/Canvas/ConnectModeAutoSwitchTests)`
 - [ ] A* routing finds a path around obstacles and respects grid ownership. `(manual)`
