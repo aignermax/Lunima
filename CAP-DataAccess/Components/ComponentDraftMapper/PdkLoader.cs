@@ -4,7 +4,7 @@ using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 
 namespace CAP_DataAccess.Components.ComponentDraftMapper
 {
-    public class PdkLoader
+    public partial class PdkLoader
     {
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
