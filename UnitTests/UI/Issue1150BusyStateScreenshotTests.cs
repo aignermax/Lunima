@@ -82,7 +82,7 @@ public class Issue1150BusyStateScreenshotTests
             window.Show();
             Dispatcher.UIThread.RunJobs();
 
-            var bitmap = window.CaptureRenderedFrame();
+            using var bitmap = window.CaptureRenderedFrame();
             bitmap.ShouldNotBeNull("MainView must render while the busy state is active");
             vm.StatusText.ShouldBe("Running design checks...");
         }
