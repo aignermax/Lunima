@@ -106,6 +106,7 @@ internal static class TimeTracePlotBuilder
 
             var series = new XTrackingLineSeries
             {
+                Tag = item.PinId,
                 Title = item.Label,
                 Color = item.Color,
                 StrokeThickness = SeriesStrokeThickness,

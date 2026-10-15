@@ -60,8 +60,8 @@ public partial class TimeDomainViewModel : ObservableObject
 
     /// <summary>
     /// Legend / per-pin visibility toggles. Each entry maps to one output-pin
-    /// trace; toggling <see cref="TimeTraceSeriesViewModel.IsVisible"/> rebuilds
-    /// the plot.
+    /// trace; toggling <see cref="TimeTraceSeriesViewModel.IsVisible"/> updates
+    /// the existing plot without replacing its data or viewport.
     /// </summary>
     public ObservableCollection<TimeTraceSeriesViewModel> Series { get; } = new();
 
@@ -320,7 +320,7 @@ public partial class TimeDomainViewModel : ObservableObject
 
     /// <summary>
     /// Builds the legend items and plot model from a completed result, and subscribes to
-    /// each series so toggling its visibility rebuilds the plot.
+    /// each series so toggling its visibility updates the existing plot.
     /// </summary>
     private void BuildPlot(TimeDomainResult result)
     {
@@ -355,7 +355,13 @@ public partial class TimeDomainViewModel : ObservableObject
 
     private void OnSeriesVisibilityChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(TimeTraceSeriesViewModel.IsVisible) && _lastResult != null)
-            PlotModel = TimeTracePlotBuilder.BuildPlotModel(_lastResult, Series);
+        if (e.PropertyName != nameof(TimeTraceSeriesViewModel.IsVisible)
+            || sender is not TimeTraceSeriesViewModel item || _lastResult == null)
+            return;
+
+        var series = PlotModel.Series.FirstOrDefault(series => Equals(series.Tag, item.PinId));
+        if (series == null) return;
+        series.IsVisible = item.IsVisible;
+        PlotModel.InvalidatePlot(false);
     }
 }

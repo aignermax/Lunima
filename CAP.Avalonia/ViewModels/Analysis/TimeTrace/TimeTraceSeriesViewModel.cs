@@ -7,7 +7,7 @@ namespace CAP.Avalonia.ViewModels.Analysis.TimeTrace;
 /// One entry in the transient-plot legend: a single output-pin trace.
 /// Carries the pin identity, its display label, the colour used to draw it,
 /// and a user-toggleable visibility flag. The owning ViewModel observes
-/// <see cref="ObservableObject.PropertyChanged"/> to rebuild the plot when
+/// <see cref="ObservableObject.PropertyChanged"/> to update the plot when
 /// <see cref="IsVisible"/> changes.
 /// </summary>
 public partial class TimeTraceSeriesViewModel : ObservableObject
@@ -25,7 +25,7 @@ public partial class TimeTraceSeriesViewModel : ObservableObject
     public string ColorHex => Color.ToString();
 
     /// <summary>
-    /// Whether this trace is drawn. Toggling it triggers a plot rebuild in the
+    /// Whether this trace is drawn. Toggling it updates the existing series in the
     /// owning ViewModel via property-changed notification.
     /// </summary>
     [ObservableProperty]
