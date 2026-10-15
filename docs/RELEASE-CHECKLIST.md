@@ -41,6 +41,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 - [ ] Switch UI language in Settings → all menus, tooltips, and status text update without restart. `(auto: LocalizeExtensionLiveSwitchTests)`
 - [ ] Status-bar messages re-translate after a live language switch. `(auto: MainViewModelLocalizationTests)`
+- [ ] Discarded shell ViewModels and their canvases remain collectible despite process-wide localization subscriptions; live instances still update when the language changes. `(auto: LocalizationViewModelLifetimeTests, MainViewModelLocalizationTests)`
 - [ ] Export outputs (scripts, GDS params) use invariant culture for numeric formatting. `(auto: NazcaExportCultureInvarianceTests)`
 
 ## 3. Design canvas

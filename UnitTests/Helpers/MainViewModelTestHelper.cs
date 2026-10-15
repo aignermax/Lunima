@@ -45,7 +45,8 @@ public static class MainViewModelTestHelper
         GroupLibraryManager? libraryManager = null,
         DesignCanvasViewModel? canvas = null,
         LeftPanelViewModel? leftPanel = null,
-        CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null)
+        CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null,
+        UpdateViewModel? updateViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -68,7 +69,7 @@ public static class MainViewModelTestHelper
 
         var errorConsoleService = new CAP_Core.ErrorConsoleService();
         var gdsExportVm = new GdsExportViewModel(new GdsExportService(), errorConsoleService);
-        var updateVm = new UpdateViewModel(
+        var updateVm = updateViewModel ?? new UpdateViewModel(
             new UpdateChecker(new HttpClient(), "aignermax", "Connect-A-PIC-Pro"),
             new UpdateDownloader(new HttpClient()),
             preferencesService,
