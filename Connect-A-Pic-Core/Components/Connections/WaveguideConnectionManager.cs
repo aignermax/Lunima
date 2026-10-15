@@ -709,7 +709,8 @@ public partial class WaveguideConnectionManager
             return false;
 
         // Check path doesn't pass through component obstacles
-        return !router.IsPathBlocked(connection.RoutedPath.Segments);
+        return !router.IsPathBlockedByComponents(connection.RoutedPath.Segments,
+            new[] { connection.StartPin, connection.EndPin });
     }
 
     private static double Distance(double x1, double y1, double x2, double y2)

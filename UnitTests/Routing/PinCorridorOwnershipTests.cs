@@ -25,6 +25,45 @@ public class PinCorridorOwnershipTests
     private const double CollapsedTolerance = 1e-3;
 
     [Fact]
+    public void ForeignPaddingOverPinCorridor_DoesNotRerouteUnchangedAutoRoute()
+    {
+        var (manager, router, connection, startPin, endPin) = RouteUTurn();
+        var original = connection.RoutedPath!;
+        router.AddComponentObstacle(TestComponentFactory.CreatePinlessComponent(50, 16, width: 4, height: 4));
+        router.IsPathBlocked(original.Segments).ShouldBeTrue("fixture must reproduce the plain-grid rejection");
+        router.IsPathBlockedByComponents(original.Segments, new[] { startPin, endPin }).ShouldBeFalse();
+        int rerouted = 0;
+
+        manager.RecalculateAllTransmissions(() => rerouted++);
+
+        rerouted.ShouldBe(0, "padding at this route's own pins must not trigger another search");
+        connection.RoutedPath.ShouldBeSameAs(original);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ObstacleInsidePinCorridor_StillReroutesAutoRoute(bool frozenPath)
+    {
+        var (manager, router, connection, _, _) = RouteUTurn();
+        var original = connection.RoutedPath!;
+        if (frozenPath)
+        {
+            var grid = router.PathfindingGrid!;
+            foreach (var cell in grid.GetPinCorridorCells(new[] { connection.StartPin }))
+                grid.SetCellState(cell.x, cell.y, 3);
+        }
+        else
+            router.AddComponentObstacle(TestComponentFactory.CreatePinlessComponent(53, 23, width: 17, height: 4));
+        int rerouted = 0;
+
+        manager.RecalculateAllTransmissions(() => rerouted++);
+
+        rerouted.ShouldBeGreaterThan(0, "component bodies and frozen paths remain obstacles at own pins");
+        connection.RoutedPath.ShouldNotBeSameAs(original);
+    }
+
+    [Fact]
     public void ForeignPaddingOverPinCorridor_DoesNotUnfreezeCollapsedFrozenRoute()
     {
         var (manager, router, connection, startPin, _) = RouteUTurn();
