@@ -64,6 +64,7 @@ public class ChainCrossingMaintenanceTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task MovingAWireEnd_TakesItsChainOut()
     {
         var canvas = await LoadAsync();

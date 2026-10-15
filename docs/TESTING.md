@@ -136,6 +136,49 @@ dotnet run --project UnitTests -- \
   -trx results.trx
 ```
 
+## CI test pipeline
+
+`.github/workflows/xUnitTests.yaml` runs the suite on GitHub Actions in four parts:
+
+| Job | What it does |
+|-----|--------------|
+| `🧭 Select test shards` | Decides which shards this run needs (`scripts/ci/select_test_shards.py`). |
+| `🧪 <shard>` | One job per shard on its own runner: build, install the tools the shard needs, one `dotnet test --filter` process. |
+| `🧮 Shard partition check` | Lists the tests each filter selects and fails unless every test is in exactly one shard (`scripts/ci/check_test_shards.py`). |
+| `🔍 xUnit Tests` | The required status check. Green when every selected shard and the partition check passed, or when the change needed no tests. |
+
+**Shards** are defined once in `scripts/ci/test-shards.json`: `fast-*` (`Category!=Slow`) and
+`slow-*` (`Category=Slow`), split by namespace. A new top-level namespace automatically falls
+into `fast-rest` / `slow-rest`. Slow UI classes (`UnitTests.UI.*` with `Category=Slow`) always
+run alone in `slow-ui` — mixing them with other classes in one process deadlocked the Linux
+runner. Inside a shard, tests run serially (`xunit.runner.json`). To check the partition
+locally after a build: `python3 scripts/ci/check_test_shards.py` (it only lists tests, it does
+not run them).
+
+**Heavy tests.** Tests that take ~25 s or more carry `[Trait("Category", "Heavy")]` in addition
+to their other traits. Pull requests skip them (`&Category!=Heavy` is appended to every
+filter). Pushes to `dev` and `main`, release tags (also `Build_Exe.yaml`), the nightly
+schedule (02:30 UTC, on `dev`) and manual `workflow_dispatch` runs execute the full suite.
+Tag a new test Heavy when its TRX duration is ≥ ~25 s (`scripts/report_slowest_tests.py`).
+
+**Test impact selection on PRs.** The changed paths (`git diff HEAD^1 HEAD` of the PR merge
+commit) decide what runs:
+
+- *Docs-only* paths (`docs/**`, root `*.md`, `.claude/**`, `.github/*.md`, issue templates,
+  `Makefile`, `.agent.toml`, `run.sh`, `LICENSE`, `.gitignore`) need no tests, unless a test
+  source names the file as a string literal, in which case everything runs. A PR that only
+  touches docs-only paths gets a green check without running any shard.
+- *Narrow rules* (`narrowRules` in `test-shards.json`) run a subset. Today there is one: other
+  workflow files (e.g. `Build_Exe.yaml`) run only `fast-rest`, where the tests that read
+  workflow files live. The partition check fails if that stops being true.
+- *Everything else* runs every shard. That includes all code, `UnitTests/**`, `*.csproj`,
+  `Directory.Build.*`, `examples/**`, PDK JSON files, localization JSON, `scripts/**` and
+  this workflow. All test code sits in one assembly that references every production
+  project, so a code change can affect any shard.
+
+When in doubt the selection runs everything. Each push to `dev` runs the full suite
+including Heavy, so anything a PR run skipped is caught right after merge.
+
 ## CI/CD Integration
 
 ### For AI Agents (Claude Code)

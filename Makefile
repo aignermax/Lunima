@@ -8,9 +8,9 @@ run:
 build:
 	dotnet build
 
-# Run tests (excludes Category=Slow — heavy UI renders run in CI; see test-all)
+# Run tests (excludes Category=Slow and Category=Heavy — they run in CI; see test-all)
 test:
-	scripts/throttle.sh dotnet test UnitTests/UnitTests.csproj --filter "Category!=Slow"
+	scripts/throttle.sh dotnet test UnitTests/UnitTests.csproj --filter "Category!=Slow&Category!=Heavy"
 
 # Run ALL tests including the slow ones (CI parity — can destabilise a local desktop session)
 test-all:

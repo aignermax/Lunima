@@ -18,6 +18,7 @@ public class GdsUserDesignProbeTests
     public GdsUserDesignProbeTests(ITestOutputHelper output) => _output = output;
 
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public async Task Probe()
     {
         var python = await GdsUserDesignFixture.FindNazcaPythonAsync();

@@ -78,6 +78,7 @@ public class FourBitAdderManufacturingJourneyTests
 
     [Trait("Category", "Slow")]
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public async Task Step4_GdsExportAndFoundryDeck_EmptyViolationBaselineHoldsAtScale()
     {
         var python = await GdsUserDesignFixture.FindNazcaPythonAsync();

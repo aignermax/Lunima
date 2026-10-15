@@ -13,6 +13,7 @@ namespace UnitTests.Routing.CrossingInsertion;
 public class CleanUpCrossingsCommandTests
 {
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task CleanUp_RemovesRouterCrossings_KeepsUserCrossings_AndUndoRestoresThem()
     {
         var scenario = await CounterCrossingScenario.LoadAsync(adaptive: false);
@@ -46,6 +47,7 @@ public class CleanUpCrossingsCommandTests
     }
 
     [Fact]
+    [Trait("Category", "Heavy")]
     public async Task CleanUp_WithAdaptiveInsertionOff_LeavesNoRouterCrossingAfterRouting()
     {
         var scenario = await CounterCrossingScenario.LoadAsync(adaptive: false);

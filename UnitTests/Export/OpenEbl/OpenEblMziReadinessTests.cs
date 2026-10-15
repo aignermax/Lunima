@@ -34,6 +34,7 @@ public class OpenEblMziReadinessTests
     private const string ExampleFileName = "Mach-Zehnder Interferometer.lun";
 
     [SkippableFact]
+    [Trait("Category", "Heavy")]
     public async Task MziExample_OpenEblSubmissionChecks_PinCurrentGaps()
     {
         var python = await FindOpenEblCheckPythonAsync();
