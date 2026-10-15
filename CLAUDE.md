@@ -268,11 +268,19 @@ python3 tools/smart_test.py --file MyTests.cs   # Specific file
 **Slow tests are CI-only locally:** heavyweight tests (full-MainWindow flows, all-component
 renders, Skia screenshot walkthroughs) carry `[Trait("Category", "Slow")]`. Never run the
 unfiltered suite on a local desktop session — parallel test hosts fill RAM and the machine
-freezes (global OOM). `make test` and `.agent.toml` already exclude `Category!=Slow`; with
+freezes (global OOM). `make test` and `.agent.toml` already exclude `Category=Slow` and
+`Category=Heavy`; with
 `smart_test.py` set `SMART_TEST_EXCLUDE_CATEGORY=Slow` (the `safe_test.sh` wrapper does
 this). Run local tests through `scripts/throttle.sh <cmd>` (`make test` does): one shared
 systemd slice caps CPU and memory (10 GB) across all concurrent runs, so a runaway run is
-killed instead of the desktop. CI runs everything unfiltered, so nothing loses coverage.
+killed instead of the desktop.
+
+**CI test pipeline:** `.github/workflows/xUnitTests.yaml` runs the suite as parallel shards
+on separate runners (filters in `scripts/ci/test-shards.json`; a new top-level test namespace
+lands in a `*-rest` shard automatically). Tests taking ~25 s or more additionally carry
+`[Trait("Category", "Heavy")]`: pull requests skip them, pushes to `dev`/`main`, tags, the
+nightly and manual runs execute everything. Docs-only PRs skip the tests entirely. Details:
+`docs/TESTING.md` → "CI test pipeline".
 
 ---
 

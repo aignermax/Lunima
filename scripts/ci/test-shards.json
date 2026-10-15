@@ -1,0 +1,54 @@
+{
+  "_comment": "CI test shards for .github/workflows/xUnitTests.yaml. Each shard is one dotnet test process on its own runner. The filters must partition the suite (every test in exactly one shard) — scripts/ci/check_test_shards.py proves it on every CI run. Slow UI classes (Category=Slow in UnitTests.UI.) stay alone in slow-ui: mixing them with other classes deadlocks the Linux runner. 'simulationTools' installs PhotonTorch/sax/OpenVAF/NGSpice (only UnitTests.Export.* executes them). On pull requests every filter gets '&Category!=Heavy' appended.",
+  "heavyExclusion": "Category!=Heavy",
+  "shards": [
+    {
+      "name": "fast-routing-dies",
+      "filter": "Category!=Slow&(FullyQualifiedName~UnitTests.Routing.|FullyQualifiedName~UnitTests.Dies.)",
+      "simulationTools": false
+    },
+    {
+      "name": "fast-integration",
+      "filter": "Category!=Slow&FullyQualifiedName~UnitTests.Integration.",
+      "simulationTools": false
+    },
+    {
+      "name": "fast-rest",
+      "filter": "Category!=Slow&FullyQualifiedName!~UnitTests.Routing.&FullyQualifiedName!~UnitTests.Dies.&FullyQualifiedName!~UnitTests.Integration.",
+      "simulationTools": true
+    },
+    {
+      "name": "slow-export",
+      "filter": "Category=Slow&FullyQualifiedName~UnitTests.Export.",
+      "simulationTools": true
+    },
+    {
+      "name": "slow-agentbridge-routing-components",
+      "filter": "Category=Slow&(FullyQualifiedName~UnitTests.AgentBridge.|FullyQualifiedName~UnitTests.Routing.|FullyQualifiedName~UnitTests.Components.)",
+      "simulationTools": false
+    },
+    {
+      "name": "slow-integration",
+      "filter": "Category=Slow&FullyQualifiedName~UnitTests.Integration.",
+      "simulationTools": false
+    },
+    {
+      "name": "slow-rest",
+      "filter": "Category=Slow&FullyQualifiedName!~UnitTests.UI.&FullyQualifiedName!~UnitTests.Export.&FullyQualifiedName!~UnitTests.AgentBridge.&FullyQualifiedName!~UnitTests.Routing.&FullyQualifiedName!~UnitTests.Components.&FullyQualifiedName!~UnitTests.Integration.",
+      "simulationTools": false
+    },
+    {
+      "name": "slow-ui",
+      "filter": "Category=Slow&FullyQualifiedName~UnitTests.UI.",
+      "simulationTools": false
+    }
+  ],
+  "narrowRules": [
+    {
+      "pattern": "^\\.github/workflows/(?!xUnitTests\\.yaml$)[^/]+$",
+      "shards": ["fast-rest"],
+      "readerPattern": "\"(\\.github|workflows)[\"/]",
+      "why": "Other workflows only matter to tests that read them (ExamplesPackagingTests reads Build_Exe.yaml); the partition check verifies every such reader runs in the listed shards."
+    }
+  ]
+}
