@@ -1390,6 +1390,7 @@
   "Settings.Ai.Description": "Configure the Anthropic Claude API key used by the AI Design Assistant in the right panel. The key is stored locally and never transmitted elsewhere.",
   "Settings.Ai.Title": "AI Assistant",
   "Settings.ChipSize.Description": "Sets the physical footprint of the PIC chip. Components placed outside the boundary are flagged in Design Checks but not moved. Range: 0.25–100 mm per dimension.",
+  "Settings.ChipSize.DieScopeDescription": "Each die has its own dimensions. Select a die in the System workspace to edit its size in Properties. These root chip settings do not resize dies or the assembly.",
   "Settings.ChipSize.GridPrefix": "Grid: ",
   "Settings.ChipSize.Height": "Height (mm):",
   "Settings.ChipSize.Preset": "Preset:",

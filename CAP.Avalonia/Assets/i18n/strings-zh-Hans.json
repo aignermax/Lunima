@@ -1390,6 +1390,7 @@
   "Settings.Ai.Description": "配置右侧面板 AI 设计助手使用的 Anthropic Claude API 密钥。密钥仅存储在本地，绝不会传输到其他地方。",
   "Settings.Ai.Title": "AI 助手",
   "Settings.ChipSize.Description": "设置 PIC 芯片的物理尺寸。放置在边界之外的元件会在设计检查中被标记，但不会被移动。范围：每个方向 0.25–100 mm。",
+  "Settings.ChipSize.DieScopeDescription": "每个裸片都有独立的尺寸。在 System 工作区中选择裸片，即可在属性中修改其尺寸。此处的根芯片设置不会调整裸片或组件的尺寸。",
   "Settings.ChipSize.GridPrefix": "网格：",
   "Settings.ChipSize.Height": "高度 (mm)：",
   "Settings.ChipSize.Preset": "预设：",

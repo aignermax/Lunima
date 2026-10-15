@@ -1390,6 +1390,7 @@
   "Settings.Ai.Description": "右パネルの AI 設計アシスタントが使用する Anthropic Claude API キーを設定します。キーはローカルに保存され、他の場所には送信されません。",
   "Settings.Ai.Title": "AI アシスタント",
   "Settings.ChipSize.Description": "PIC チップの物理的なフットプリントを設定します。境界の外に配置されたコンポーネントはデザインチェックでフラグが付きますが、移動はされません。範囲: 各寸法 0.25～100 mm。",
+  "Settings.ChipSize.DieScopeDescription": "各ダイには独自の寸法があります。System ワークスペースでダイを選択し、プロパティでサイズを編集してください。このチップ設定ではダイやアセンブリのサイズは変更されません。",
   "Settings.ChipSize.GridPrefix": "グリッド: ",
   "Settings.ChipSize.Height": "高さ (mm):",
   "Settings.ChipSize.Preset": "プリセット:",

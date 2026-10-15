@@ -1390,6 +1390,7 @@
   "Settings.Ai.Description": "Configure la clave API de Anthropic Claude usada por el asistente de diseño de IA del panel derecho. La clave se guarda localmente y nunca se transmite a otro lugar.",
   "Settings.Ai.Title": "Asistente de IA",
   "Settings.ChipSize.Description": "Define la huella física del chip PIC. Los componentes colocados fuera del límite se marcan en las comprobaciones de diseño, pero no se mueven. Rango: 0,25–100 mm por dimensión.",
+  "Settings.ChipSize.DieScopeDescription": "Cada die tiene sus propias dimensiones. Selecciona un die en el espacio System para editar su tamaño en Propiedades. Estos ajustes del chip raíz no cambian el tamaño de los dies ni del conjunto.",
   "Settings.ChipSize.GridPrefix": "Cuadrícula: ",
   "Settings.ChipSize.Height": "Altura (mm):",
   "Settings.ChipSize.Preset": "Preajuste:",

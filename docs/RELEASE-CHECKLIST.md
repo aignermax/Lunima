@@ -34,6 +34,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Dirty-state marker (`*`) appears in title bar after an edit and clears on save. `(auto: WindowTitleTests)`
 - [ ] Check for update banner appears when a newer release is available. `(manual)`
 - [ ] Settings window opens from toolbar and shows all settings pages. `(manual)`
+- [ ] Settings → Chip Size: legacy single-chip designs can still apply root dimensions; designs with explicit dies disable the root editor and Apply, directing users to System die properties. Entering a group on a die keeps Apply disabled; returning to a legacy design restores it. Loading saved root dimensions never resizes explicit dies. `(auto: ChipSizeScopeTests; manual: disabled controls and localized explanation)`
 - [ ] All main-toolbar buttons have the same height (Import / Export / Tools / AI / Settings match New / Open / Save). `(auto: ToolbarButtonHeightTests)`
 
 ## 2. Localization & accessibility

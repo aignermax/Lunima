@@ -40,6 +40,9 @@ public partial class ChipSizeViewModel : ObservableObject
     public ObservableCollection<ChipSizePreset> Presets { get; }
         = new(ChipSizeConfiguration.Presets);
 
+    /// <summary>Root dimensions are editable only while no explicit die owns the active scope.</summary>
+    public bool CanEditRootChipSize => _canvas.Dies.ActiveDie == null && !_canvas.Dies.IsAssemblyRoot;
+
     // ── Constructor ───────────────────────────────────────────────────────
 
     /// <summary>
@@ -61,6 +64,16 @@ public partial class ChipSizeViewModel : ObservableObject
         _selectedPreset    = FindMatchingPreset(_widthMillimeters, _heightMillimeters);
 
         ApplyToCanvas(_widthMillimeters * UmPerMm, _heightMillimeters * UmPerMm);
+        _canvas.Components.CollectionChanged += (_, _) => RefreshScope();
+        _canvas.Groups.EditStateChanged += RefreshScope;
+        _canvas.DiesChanged += RefreshScope;
+    }
+
+    private void RefreshScope()
+    {
+        OnPropertyChanged(nameof(CanEditRootChipSize));
+        ApplyCommand.NotifyCanExecuteChanged();
+        StatusText = string.Empty;
     }
 
     // ── Property change handlers ──────────────────────────────────────────
@@ -96,9 +109,12 @@ public partial class ChipSizeViewModel : ObservableObject
     /// Applies the current width × height to the canvas and saves the user default.
     /// Reports a count of out-of-bounds components in the StatusText.
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanEditRootChipSize))]
     private void Apply()
     {
+        if (!CanEditRootChipSize)
+            return;
+
         double widthUm  = _widthMillimeters  * UmPerMm;
         double heightUm = _heightMillimeters * UmPerMm;
 
