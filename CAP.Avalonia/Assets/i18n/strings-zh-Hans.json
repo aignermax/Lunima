@@ -2106,6 +2106,8 @@
   "Status.DieProcess": "裸片“{0}”：{1}",
   "Workspace.ToolSet.InstrumentsTitle": "仪器",
   "Workspace.ToolSet.InstrumentsHint": "光源、探测器和分析仪 — 光学工作区可放置的部件。",
+  "Workspace.ToolSet.DieFacetsTitle": "裸片端面耦合器",
+  "Workspace.ToolSet.DieFacetsHint": "吸附到裸片边缘的端面耦合器 — 在系统工作区中连接裸片的部件。",
   "Workspace.ToolSet.PlaceInLayout": "在版图中放置电路元件 ›",
   "Workspace.ToolSet.PlaceInLayoutTip": "切换到带完整元件库的版图工作区 (Ctrl+1)",
   "Workspace.ToolSet.PlacementRefused": "{0} 应在版图中放置，而不是在{1}中 — 切换到版图 (Ctrl+1) 以放置电路元件。",

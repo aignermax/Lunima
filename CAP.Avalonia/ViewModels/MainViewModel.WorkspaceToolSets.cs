@@ -25,6 +25,9 @@ public partial class MainViewModel
     /// <summary>True where the library pane lists only instruments (Optics): shows the "place circuit parts in Layout" hint.</summary>
     public bool IsInstrumentLibrary => ToolSet.Library == LibraryScope.Instruments;
 
+    /// <summary>True where the library pane lists only the edge couplers that link dies (System).</summary>
+    public bool IsDieFacetLibrary => ToolSet.Library == LibraryScope.DieFacets;
+
     /// <summary>True where the library pane shows saved groups, PDK macros and its import / new-component tools (Layout).</summary>
     public bool IsFullLibrary => ToolSet.Library == LibraryScope.AllComponents;
 
@@ -57,6 +60,7 @@ public partial class MainViewModel
         RefreshCanvasContextMenu();
         OnPropertyChanged(nameof(ToolSet));
         OnPropertyChanged(nameof(IsInstrumentLibrary));
+        OnPropertyChanged(nameof(IsDieFacetLibrary));
         OnPropertyChanged(nameof(IsFullLibrary));
     }
 

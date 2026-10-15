@@ -2106,6 +2106,8 @@
   "Status.DieProcess": "Die '{0}': {1}",
   "Workspace.ToolSet.InstrumentsTitle": "Instruments",
   "Workspace.ToolSet.InstrumentsHint": "Sources, detectors and analyzers — what Optics places.",
+  "Workspace.ToolSet.DieFacetsTitle": "Die-edge couplers",
+  "Workspace.ToolSet.DieFacetsHint": "Edge couplers that snap onto a die edge — what links dies in System.",
   "Workspace.ToolSet.PlaceInLayout": "Place circuit parts in Layout ›",
   "Workspace.ToolSet.PlaceInLayoutTip": "Switch to the Layout workspace (Ctrl+1) with the full component library",
   "Workspace.ToolSet.PlacementRefused": "{0} is placed in Layout, not in {1} — switch to Layout (Ctrl+1) to place circuit parts.",

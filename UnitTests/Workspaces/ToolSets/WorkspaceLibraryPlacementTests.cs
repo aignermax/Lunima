@@ -117,9 +117,28 @@ public class WorkspaceLibraryPlacementTests
         vm.CanvasInteraction.CurrentMode.ShouldBe(InteractionMode.Select);
     }
 
+    [Fact]
+    public void System_PlacesTheEdgeCouplersThatLinkDies_AndNothingElse()
+    {
+        var vm = CreateWithLibrary("Edge Coupler", "Grating Coupler TE 1550", "MMI 2x2");
+        vm.WorkspaceSwitch.Current = Workspace.System;
+
+        vm.IsDieFacetLibrary.ShouldBeTrue();
+        vm.LeftRail.IsLibraryAvailable.ShouldBeTrue("the die-edge couplers are reachable from System's rail");
+        Library(vm).ShouldContain("Edge Coupler");
+        Library(vm).ShouldAllBe(name => name.Contains("Edge Coupler", StringComparison.OrdinalIgnoreCase));
+
+        vm.CanvasInteraction.SelectedTemplate = T("MMI 2x2");
+        vm.CanvasInteraction.SelectedTemplate.ShouldBeNull();
+        vm.StatusText.ShouldContain("Layout");
+
+        vm.CanvasInteraction.SelectedTemplate = T("Edge Coupler");
+        vm.CanvasInteraction.SelectedTemplate.ShouldNotBeNull("an edge coupler on a die edge is what links two dies");
+        vm.CanvasInteraction.CurrentMode.ShouldBe(InteractionMode.PlaceComponent);
+    }
+
     [Theory]
     [InlineData(Workspace.Logic)]
-    [InlineData(Workspace.System)]
     public void ShowLibrary_FromAWorkspaceWithoutIt_SwitchesToLayout(Workspace workspace)
     {
         var vm = CreateWithLibrary();

@@ -2106,6 +2106,8 @@
   "Status.DieProcess": "ダイ '{0}': {1}",
   "Workspace.ToolSet.InstrumentsTitle": "計測器",
   "Workspace.ToolSet.InstrumentsHint": "光源・検出器・アナライザー — 光学で配置できる部品です。",
+  "Workspace.ToolSet.DieFacetsTitle": "ダイ端カプラ",
+  "Workspace.ToolSet.DieFacetsHint": "ダイ端にスナップするエッジカプラ — システムでダイ同士をつなぐ部品です。",
   "Workspace.ToolSet.PlaceInLayout": "回路部品はレイアウトで配置 ›",
   "Workspace.ToolSet.PlaceInLayoutTip": "コンポーネントライブラリ全体があるレイアウト ワークスペース (Ctrl+1) に切り替えます",
   "Workspace.ToolSet.PlacementRefused": "{0} は {1} ではなくレイアウトで配置します — 回路部品を配置するにはレイアウト (Ctrl+1) に切り替えてください。",

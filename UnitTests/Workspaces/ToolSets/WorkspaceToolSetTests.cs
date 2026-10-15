@@ -84,7 +84,7 @@ public class WorkspaceToolSetTests
     [InlineData(Workspace.Layout, LibraryScope.AllComponents, true)]
     [InlineData(Workspace.Optics, LibraryScope.Instruments, true)]
     [InlineData(Workspace.Logic, LibraryScope.Gates, false)]
-    [InlineData(Workspace.System, LibraryScope.None, false)]
+    [InlineData(Workspace.System, LibraryScope.DieFacets, false)]
     public void EachProfile_CarriesItsToolSet(Workspace workspace, LibraryScope scope, bool componentEditor)
     {
         var toolSet = WorkspaceProfile.For(workspace).ToolSet;

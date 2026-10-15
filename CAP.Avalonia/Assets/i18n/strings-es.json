@@ -2106,6 +2106,8 @@
   "Status.DieProcess": "Die '{0}': {1}",
   "Workspace.ToolSet.InstrumentsTitle": "Instrumentos",
   "Workspace.ToolSet.InstrumentsHint": "Fuentes, detectores y analizadores: lo que coloca Óptica.",
+  "Workspace.ToolSet.DieFacetsTitle": "Acopladores de borde de die",
+  "Workspace.ToolSet.DieFacetsHint": "Acopladores de borde que se ajustan al borde de un die: lo que enlaza dies en Sistema.",
   "Workspace.ToolSet.PlaceInLayout": "Colocar piezas del circuito en Diseño ›",
   "Workspace.ToolSet.PlaceInLayoutTip": "Cambia al espacio de trabajo Diseño (Ctrl+1) con la biblioteca completa de componentes",
   "Workspace.ToolSet.PlacementRefused": "{0} se coloca en Diseño, no en {1}: cambia a Diseño (Ctrl+1) para colocar piezas del circuito.",

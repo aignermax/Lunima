@@ -18,7 +18,11 @@ public static class EdgeCouplerFacet
     /// <summary>True when <paramref name="component"/> is an edge coupler.</summary>
     public static bool IsEdgeCoupler(Component component) =>
         component is not ComponentGroup
-        && component.TemplateName?.Contains(EdgeCouplerTemplateToken, StringComparison.OrdinalIgnoreCase) == true;
+        && IsEdgeCouplerTemplate(component.TemplateName);
+
+    /// <summary>True when a template named <paramref name="templateName"/> places an edge coupler.</summary>
+    public static bool IsEdgeCouplerTemplate(string? templateName) =>
+        templateName?.Contains(EdgeCouplerTemplateToken, StringComparison.OrdinalIgnoreCase) == true;
 
     /// <summary>The facet pin of an edge coupler, or null when the component has no pins.</summary>
     public static PhysicalPin? FacetPinOf(Component component) =>

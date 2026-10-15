@@ -2106,6 +2106,8 @@
   "Status.DieProcess": "Die „{0}“: {1}",
   "Workspace.ToolSet.InstrumentsTitle": "Instrumente",
   "Workspace.ToolSet.InstrumentsHint": "Quellen, Detektoren und Analysatoren — das platziert Optik.",
+  "Workspace.ToolSet.DieFacetsTitle": "Die-Kantenkoppler",
+  "Workspace.ToolSet.DieFacetsHint": "Kantenkoppler, die an einer Die-Kante einrasten — sie verbinden Dies in System.",
   "Workspace.ToolSet.PlaceInLayout": "Schaltungsteile im Layout platzieren ›",
   "Workspace.ToolSet.PlaceInLayoutTip": "Wechselt in den Arbeitsbereich Layout (Strg+1) mit der vollständigen Bauteilbibliothek",
   "Workspace.ToolSet.PlacementRefused": "{0} wird im Layout platziert, nicht in {1} — für Schaltungsteile ins Layout wechseln (Strg+1).",

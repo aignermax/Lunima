@@ -12,6 +12,9 @@ public enum LibraryScope
     /// <summary>Only saved groups that are logic gates; placing one places its physical group (Logic).</summary>
     Gates,
 
-    /// <summary>Nothing — the workspace works on what exists (System: dies and their links).</summary>
+    /// <summary>Only edge couplers — the die-edge facets that link dies (System).</summary>
+    DieFacets,
+
+    /// <summary>Nothing — the workspace works on what exists.</summary>
     None,
 }

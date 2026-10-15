@@ -668,11 +668,19 @@
                                            IsVisible="{Binding IsFullLibrary}"/>
                                 <TextBlock Classes="paneTitle" Text="{loc:Localize Workspace.ToolSet.InstrumentsTitle}"
                                            IsVisible="{Binding IsInstrumentLibrary}"/>
+                                <TextBlock Classes="paneTitle" Text="{loc:Localize Workspace.ToolSet.DieFacetsTitle}"
+                                           IsVisible="{Binding IsDieFacetLibrary}"/>
                             </DockPanel>
                             <!-- Optics places instruments only; circuit parts are one click away in Layout. -->
                             <StackPanel DockPanel.Dock="Top" IsVisible="{Binding IsInstrumentLibrary}">
                                 <TextBlock Classes="caption" Margin="16,0,16,0" TextWrapping="Wrap"
                                            Text="{loc:Localize Workspace.ToolSet.InstrumentsHint}"/>
+                                <wsPanels:PlaceInLayoutHint/>
+                            </StackPanel>
+                            <!-- System places the edge couplers that link dies; everything else is placed in Layout. -->
+                            <StackPanel DockPanel.Dock="Top" IsVisible="{Binding IsDieFacetLibrary}">
+                                <TextBlock Classes="caption" Margin="16,0,16,0" TextWrapping="Wrap"
+                                           Text="{loc:Localize Workspace.ToolSet.DieFacetsHint}"/>
                                 <wsPanels:PlaceInLayoutHint/>
                             </StackPanel>
                             <TextBox DockPanel.Dock="Top" Classes="search" Margin="12,0,12,8"

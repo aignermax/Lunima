@@ -37,7 +37,7 @@ public class WorkspaceLeftRailTests
     [Theory]
     [InlineData(Workspace.Optics, new[] { LeftRailSection.Library, LeftRailSection.Hierarchy, LeftRailSection.Pdks })]
     [InlineData(Workspace.Logic, new[] { LeftRailSection.Gates, LeftRailSection.Hierarchy })]
-    [InlineData(Workspace.System, new[] { LeftRailSection.Chiplets, LeftRailSection.Hierarchy, LeftRailSection.Pdks })]
+    [InlineData(Workspace.System, new[] { LeftRailSection.Chiplets, LeftRailSection.Library, LeftRailSection.Hierarchy, LeftRailSection.Pdks })]
     public void OtherWorkspaces_ShowOnlyTheirToolSetSections(Workspace workspace, LeftRailSection[] expected)
     {
         var rail = new LeftRailViewModel();
@@ -89,7 +89,8 @@ public class WorkspaceLeftRailTests
 
         rail.ApplyWorkspace(Workspace.System);
         rail.ChipletsOrder.ShouldBe(0);
-        rail.HierarchyOrder.ShouldBe(1);
+        rail.LibraryOrder.ShouldBe(1, "System's library holds the edge couplers that link dies");
+        rail.HierarchyOrder.ShouldBe(2);
 
         rail.ApplyWorkspace(Workspace.Layout);
         new[] { rail.LibraryOrder, rail.PdksOrder, rail.HierarchyOrder, rail.GatesOrder, rail.ChipletsOrder }

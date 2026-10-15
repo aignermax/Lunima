@@ -2,6 +2,7 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Shell;
 using CAP.Avalonia.ViewModels.Workspaces.ContextPanels;
 using CAP_Core.Components.Creation;
+using CAP_Core.Components.Dies;
 
 namespace CAP.Avalonia.ViewModels.Workspaces.ToolSets;
 
@@ -38,10 +39,10 @@ public sealed record WorkspaceToolSet(
         [LeftRailSection.Gates, LeftRailSection.Hierarchy],
         AllowsComponentEditor: false);
 
-    /// <summary>System: no library — the Chiplets panel is the left pane.</summary>
+    /// <summary>System: the Chiplets panel first, plus the edge couplers that link dies.</summary>
     public static readonly WorkspaceToolSet System = new(
-        LibraryScope.None,
-        [LeftRailSection.Chiplets, LeftRailSection.Hierarchy, LeftRailSection.Pdks],
+        LibraryScope.DieFacets,
+        [LeftRailSection.Chiplets, LeftRailSection.Library, LeftRailSection.Hierarchy, LeftRailSection.Pdks],
         AllowsComponentEditor: false);
 
     /// <summary>True when the rail shows <paramref name="section"/>.</summary>
@@ -52,6 +53,7 @@ public sealed record WorkspaceToolSet(
     {
         LibraryScope.AllComponents => true,
         LibraryScope.Instruments => InstrumentTemplates.IsInstrument(template),
+        LibraryScope.DieFacets => EdgeCouplerFacet.IsEdgeCouplerTemplate(template.Name),
         _ => false,
     };
 
