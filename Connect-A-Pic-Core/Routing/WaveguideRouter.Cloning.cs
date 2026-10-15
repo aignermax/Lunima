@@ -41,6 +41,8 @@ public partial class WaveguideRouter
         clone.Obstacles.AddRange(Obstacles);
         clone.InitializePathfindingGrid(grid.MinX, grid.MinY, grid.MaxX, grid.MaxY,
             grid.SnapshotObstacleComponents(), grid.CellSizeMicrometers);
+        clone.UsePinBreakouts = UsePinBreakouts;
+        clone.AdoptPinBreakouts(_pinBreakouts, _breakoutBandWidthMicrometers);
         return clone;
     }
 }

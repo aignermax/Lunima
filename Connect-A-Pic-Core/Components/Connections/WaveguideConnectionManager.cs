@@ -434,6 +434,8 @@ public partial class WaveguideConnectionManager
 
         if (!_isCrossingPassRunning)
             timings.CrossingDissolution = MeasurePass(DissolveStaleCrossings);
+        if (UseSequentialRouting)
+            PlanPinBreakouts();
 
         RouteAllConnections(timings, progressCallback, cancellationToken);
         timings.CrossingInsertion = MeasurePass(() => RunCrossingInsertionPass(cancellationToken));

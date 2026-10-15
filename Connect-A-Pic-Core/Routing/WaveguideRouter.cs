@@ -274,8 +274,6 @@ public partial class WaveguideRouter
     {
         var (startX, startY) = startPin.GetAbsolutePosition();
         var (endX, endY) = endPin.GetAbsolutePosition();
-        double startAngle = startPin.GetAbsoluteAngle();
-        double endAngle = endPin.GetAbsoluteAngle();
 
         double abutmentDx = endX - startX;
         double abutmentDy = endY - startY;
@@ -285,14 +283,38 @@ public partial class WaveguideRouter
             return BuildAbutmentRoute(startX, startY, endX, endY);
         }
 
-        double endInputAngle = AngleUtilities.NormalizeAngle(endAngle + 180);
-
         double connectionRadius = MinBendRadiusMicrometers;
         double processFloor = ResolveProcessFloorFor(startPin, endPin);
+
+        var startPlan = ActiveBreakoutFor(startPin);
+        var endPlan = ActiveBreakoutFor(endPin);
+        if (startPlan != null || endPlan != null)
+        {
+            return RouteWithBreakouts(startPin, endPin, startPlan, endPlan,
+                connectionRadius, processFloor, cancellationToken);
+        }
+        return RoutePinPair(startPin, endPin, connectionRadius, processFloor,
+            PreferDirectStyledRoutes, cancellationToken);
+    }
+
+    /// <summary>
+    /// The plain pin-to-pin routing cascade: direct styled route (when
+    /// <paramref name="tryDirect"/>), A* at the process floor and at the connection radius,
+    /// coarse-grid retry, and the Manhattan fallback.
+    /// </summary>
+    private RoutedPath RoutePinPair(PhysicalPin startPin, PhysicalPin endPin,
+                                    double connectionRadius, double processFloor, bool tryDirect,
+                                    CancellationToken cancellationToken)
+    {
+        var (startX, startY) = startPin.GetAbsolutePosition();
+        var (endX, endY) = endPin.GetAbsolutePosition();
+        double startAngle = startPin.GetAbsoluteAngle();
+        double endInputAngle = AngleUtilities.NormalizeAngle(endPin.GetAbsoluteAngle() + 180);
+
         double effectiveRadius = Math.Max(connectionRadius, processFloor);
         bool floorRaisesRadius = effectiveRadius > connectionRadius + RadiusToleranceMicrometers;
 
-        if (PreferDirectStyledRoutes)
+        if (tryDirect)
         {
             var direct = TryRouteDirect(startPin, endPin, effectiveRadius);
             if (direct != null)

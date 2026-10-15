@@ -15,12 +15,8 @@ namespace UnitTests.Integration;
 /// </summary>
 public class ExampleGroupWireCrossingTests
 {
-    /// <summary>Known crossings per example (defaults to 0) — both predate the crossing bakes.</summary>
-    private static readonly Dictionary<string, int> KnownCrossings = new()
-    {
-        ["Logic Gate Counter 2-bit.lun"] = 1,
-        ["Logic Gate RAM 2x2.lun"] = 1,
-    };
+    /// <summary>Known crossings per example (defaults to 0; the group re-route bake removed the last two).</summary>
+    private static readonly Dictionary<string, int> KnownCrossings = new();
 
     /// <summary>File names of every example listed in the manifest.</summary>
     public static TheoryData<string> ExampleFiles => ExampleRouteBakeTests.ExampleFiles;
