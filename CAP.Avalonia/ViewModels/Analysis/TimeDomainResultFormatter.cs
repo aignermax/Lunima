@@ -1,6 +1,7 @@
 using System.Text;
 using CAP_Core.LightCalculation.TimeDomainSimulation;
 using CAP.Avalonia.Services.Localization;
+using CAP.Avalonia.ViewModels.Analysis.TimeTrace;
 
 namespace CAP.Avalonia.ViewModels.Analysis;
 
@@ -13,7 +14,7 @@ internal static class TimeDomainResultFormatter
     /// <summary>
     /// Formats a result as a human-readable ASCII table (peak power + peak time per output pin).
     /// </summary>
-    internal static string FormatResult(TimeDomainResult result)
+    internal static string FormatResult(TimeDomainResult result, IReadOnlyList<TimeTracePeak>? peaks = null)
     {
         if (result.PinTraces.Count == 0)
             return LocalizationService.Instance.Translate("Analysis.TimeDomain.NoSignalOutput");
@@ -22,13 +23,13 @@ internal static class TimeDomainResultFormatter
         sb.AppendLine($"{"Pin (short)",-20} {"Peak Power",12} {"Peak Time (ps)",14}");
         sb.AppendLine(new string('-', 48));
 
-        foreach (var (pinId, trace) in result.PinTraces)
+        foreach (var peak in peaks ?? TimeTracePeak.Build(result))
         {
-            if (trace.Max() < 1e-12) continue;
-            int peakIdx = trace.Select((v, i) => (v, i)).MaxBy(x => x.v).i;
-            double peakPs = result.TimeAxis[peakIdx] * 1e12;
-            string shortId = pinId.ToString()[..6];
-            sb.AppendLine($"{shortId,-20} {trace[peakIdx],12:F6} {peakPs,14:F2}");
+            if (peak.Index < 0) throw new InvalidOperationException("Sequence contains no elements");
+            if (peak.Power < 1e-12) continue;
+            double peakPs = result.TimeAxis[peak.Index] * 1e12;
+            string shortId = peak.PinId.ToString()[..6];
+            sb.AppendLine($"{shortId,-20} {peak.Power,12:F6} {peakPs,14:F2}");
         }
         return sb.ToString();
     }

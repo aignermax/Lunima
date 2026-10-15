@@ -146,8 +146,9 @@ public partial class TimeDomainViewModel : ObservableObject
                 return;
             }
             _lastResult = displayed;
-            ResultText = TimeDomainResultFormatter.FormatResult(displayed);
-            BuildPlot(displayed);
+            var peaks = TimeTracePeak.Build(displayed);
+            ResultText = TimeDomainResultFormatter.FormatResult(displayed, peaks);
+            BuildPlot(displayed, peaks);
             OnPropertyChanged(nameof(HasResult));
             StatusText = statusOverride ?? string.Format(
                 LocalizationService.Instance.Translate("Analysis.TimeDomain.DonePins"), displayed.PinTraces.Count);
@@ -322,13 +323,13 @@ public partial class TimeDomainViewModel : ObservableObject
     /// Builds the legend items and plot model from a completed result, and subscribes to
     /// each series so toggling its visibility updates the existing plot.
     /// </summary>
-    private void BuildPlot(TimeDomainResult result)
+    private void BuildPlot(TimeDomainResult result, IReadOnlyList<TimeTracePeak> peaks)
     {
         DetachSeries();
         Series.Clear();
 
         var items = TimeTracePlotBuilder.BuildSeriesItems(
-            result, pinId => _pinNameMap.TryGetValue(pinId, out var name) ? name : null);
+            result, pinId => _pinNameMap.TryGetValue(pinId, out var name) ? name : null, peaks);
         foreach (var item in items)
         {
             item.PropertyChanged += OnSeriesVisibilityChanged;

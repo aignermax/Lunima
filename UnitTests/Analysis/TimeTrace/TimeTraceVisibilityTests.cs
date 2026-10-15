@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.TimeTrace;
 using CAP_Core.LightCalculation.TimeDomainSimulation;
 using OxyPlot;
 using OxyPlot.Series;
@@ -28,7 +29,7 @@ public class TimeTraceVisibilityTests
         typeof(TimeDomainViewModel).GetField("_lastResult", BindingFlags.Instance | BindingFlags.NonPublic)!
             .SetValue(vm, result);
         typeof(TimeDomainViewModel).GetMethod("BuildPlot", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(vm, new object[] { result });
+            .Invoke(vm, new object[] { result, TimeTracePeak.Build(result) });
         var model = vm.PlotModel;
         var traces = model.Series.Cast<LineSeries>().ToArray();
         model.Axes[0].Zoom(0.25, 1.25);

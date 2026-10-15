@@ -55,18 +55,20 @@ internal static class TimeTracePlotBuilder
     /// </summary>
     /// <param name="result">The transient result to map.</param>
     /// <param name="resolveLabel">Maps a pin Guid to a display label; may return null.</param>
+    /// <param name="peaks">Precomputed peaks shared with the result table, or null to compute them.</param>
     public static IReadOnlyList<TimeTraceSeriesViewModel> BuildSeriesItems(
-        TimeDomainResult result, Func<Guid, string?> resolveLabel)
+        TimeDomainResult result, Func<Guid, string?> resolveLabel,
+        IReadOnlyList<TimeTracePeak>? peaks = null)
     {
-        var ordered = result.PinTraces
-            .Where(kv => kv.Value.Length > 0 && kv.Value.Max() >= SignalFloor)
-            .OrderByDescending(kv => kv.Value.Max())
+        var ordered = (peaks ?? TimeTracePeak.Build(result))
+            .Where(peak => peak.Index >= 0 && peak.Power >= SignalFloor)
+            .OrderByDescending(peak => peak.Power)
             .ToList();
 
         var items = new List<TimeTraceSeriesViewModel>(ordered.Count);
         for (int i = 0; i < ordered.Count; i++)
         {
-            var pinId = ordered[i].Key;
+            var pinId = ordered[i].PinId;
             var label = resolveLabel(pinId) ?? $"Pin {pinId.ToString("N")[..6]}";
             items.Add(new TimeTraceSeriesViewModel(pinId, label, Palette[i % Palette.Length]));
         }
@@ -115,6 +117,7 @@ internal static class TimeTracePlotBuilder
             };
 
             int count = Math.Min(scaledTime.Length, trace.Length);
+            series.Points.Capacity = count;
             for (int n = 0; n < count; n++)
                 series.Points.Add(new DataPoint(scaledTime[n], trace[n]));
 
