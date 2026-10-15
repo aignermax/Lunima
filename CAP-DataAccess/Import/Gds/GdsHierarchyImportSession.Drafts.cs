@@ -10,6 +10,14 @@ namespace CAP_DataAccess.Import.Gds;
 /// </summary>
 internal sealed partial class GdsHierarchyImportSession
 {
+    /// <summary>
+    /// Pin count above which a black-box draft almost certainly mistook every
+    /// text label in the flattened hierarchy for a port (seen in the field:
+    /// ~9800 "pins" on one large top cell). Warning only — the pins still
+    /// register, because a genuinely large circuit can legitimately exceed it.
+    /// </summary>
+    internal const int BlackBoxPinCountWarningThreshold = 512;
+
     public GdsCellDraft BuildDraft(string cellName)
     {
         var bbox = GetCellBBox(cellName);
@@ -113,7 +121,15 @@ internal sealed partial class GdsHierarchyImportSession
             DetectWithAnyLayerFallback(detectionCell, bbox, cellName),
             $"Cell '{cellName}'",
             Warnings);
-        return FilterExcludedGuessedPins(cellName, pins);
+        pins = FilterExcludedGuessedPins(cellName, pins);
+        if (pins.Count > BlackBoxPinCountWarningThreshold)
+        {
+            Warnings.Add(
+                $"Black-box import of '{cellName}' detected {pins.Count} pins — every text label in the " +
+                "flattened hierarchy became a pin. If the cell is not a circuit with that many ports, " +
+                "import in explode mode instead so only real port labels become pins.");
+        }
+        return pins;
     }
 
     private IReadOnlyList<GdsOutlinePolygon> BuildOutlines(string cellName, GdsBoundingBox bbox)

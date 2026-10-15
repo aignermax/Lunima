@@ -123,11 +123,17 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 errors.Add($"[{pdkName}/{compLabel}] Height must be positive");
             }
 
+            // Pin-less components are legitimate render-only geometry: imported
+            // GDS cells (logos, markers, DC pads) carry their shape as outline
+            // polygons or as the raw-code snippet that rebuilds the cell — a
+            // polygon-less cell (e.g. text-only marker) has raw code only. Only
+            // a draft with NEITHER pins nor any geometry source is an error.
             if ((comp.Pins == null || comp.Pins.Count == 0)
-                && (comp.OutlinePolygons == null || comp.OutlinePolygons.Count == 0))
+                && (comp.OutlinePolygons == null || comp.OutlinePolygons.Count == 0)
+                && !hasRawCode)
             {
                 errors.Add($"[{pdkName}/{compLabel}] Must have at least one pin " +
-                           "(or outline polygons for a geometry-only component)");
+                           "(or outline polygons / raw code for a geometry-only component)");
             }
 
             if (requireNazcaOffset && !isAnalysisTool && !isGdsFactoryComponent && !hasRawCode)

@@ -3,6 +3,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components.Core;
 using CAP_DataAccess.Components.ComponentDraftMapper;
+using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 using Shouldly;
 using UnitTests.Import.Gds;
 using Xunit;
@@ -164,6 +165,48 @@ public class GdsGeometryOnlyComponentTests : IDisposable
         var frozen = group.InternalPaths.ShouldHaveSingleItem(
             "the frozen route stub attaches to the all-pin-less group");
         frozen.StartPin.ShouldBeNull();
+    }
+
+    // ── Round-trip: import → persist → reload (issue #829) ──────────────────
+
+    [Fact]
+    public async Task ImportAsync_GeometryOnlyCell_PersistedDraft_ReloadsThroughPdkLoader()
+    {
+        // The contract that broke in the field: an imported 0-pin component must
+        // survive being written to a PDK JSON and loaded back — otherwise the
+        // whole PDK (including its valid components) is skipped on reload.
+        var service = _host.CreateService();
+        await service.ImportAsync(WriteGds(PinlessOnlyLibrary()), "TOP", null, null);
+        var drafts = _host.Scope.Sets.ShouldHaveSingleItem().Drafts;
+
+        var pdkDraft = new PdkDraft { Name = "GDS Import - circuit", Components = drafts.ToList() };
+        var json = System.Text.Json.JsonSerializer.Serialize(pdkDraft);
+
+        var reloaded = new PdkLoader().LoadFromJson(json);
+        var component = reloaded.Components.ShouldHaveSingleItem();
+        component.Pins.ShouldBeEmpty();
+        component.OutlinePolygons.ShouldNotBeNull().ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public async Task ImportAsync_GeometryOnlyCellWithoutOutlines_PersistedDraft_ReloadsThroughPdkLoader()
+    {
+        // The exact field shape: a pin-less cell whose geometry never became
+        // outline polygons (text-only marker content). The raw code is the only
+        // geometry source left, and the loader must accept that.
+        var service = _host.CreateService();
+        await service.ImportAsync(WriteGds(PinlessOnlyLibrary()), "TOP", null, null);
+        var drafts = _host.Scope.Sets.ShouldHaveSingleItem().Drafts;
+        foreach (var draft in drafts)
+            draft.OutlinePolygons = null;
+
+        var pdkDraft = new PdkDraft { Name = "GDS Import - circuit", Components = drafts.ToList() };
+        var json = System.Text.Json.JsonSerializer.Serialize(pdkDraft);
+
+        var reloaded = new PdkLoader().LoadFromJson(json);
+        var component = reloaded.Components.ShouldHaveSingleItem();
+        component.Pins.ShouldBeEmpty();
+        component.RawCode.ShouldNotBeNullOrWhiteSpace();
     }
 
     // ── PDK loader rule: pins OR outlines ────────────────────────────────────
