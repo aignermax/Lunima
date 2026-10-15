@@ -9,7 +9,7 @@ public static class ConnectionSnapshot
     /// <summary>Upper bound on blocked connections listed inline in an edit tool's result.</summary>
     public const int MaxBlockedListed = 50;
 
-    /// <summary>Describes every connection on the canvas.</summary>
+    /// <summary>Describes every connection on the canvas, each with the group that owns it.</summary>
     public static IReadOnlyList<ConnectionInfo> Describe(AgentDesignSession session)
     {
         var crossing = session.Canvas.ConnectionManager.CrossingInsertion;
@@ -18,6 +18,17 @@ public static class ConnectionSnapshot
                 vm.Connection, crossing?.IsCrossingConnection(vm.Connection) == true))
             .ToList();
     }
+
+    /// <summary>
+    /// Describes the wires stored inside groups (frozen geometry with both pins, at any depth):
+    /// a wire between two parts of a group belongs to that group, wherever it was drawn.
+    /// </summary>
+    public static IReadOnlyList<ConnectionInfo> DescribeGroupWires(AgentDesignSession session) =>
+        CAP_Core.Analysis.Hierarchy.DesignHierarchy.From(session.Canvas.Components.Select(c => c.Component))
+            .FrozenPaths
+            .Where(p => p.Frozen.StartPin != null && p.Frozen.EndPin != null)
+            .Select(p => DesignDescriber.Describe(p.Frozen, p.Owner))
+            .ToList();
 
     /// <summary>
     /// Compact post-edit routing report: total and blocked counts plus the first

@@ -65,16 +65,32 @@ public class CreateGroupCommand : IUndoableCommand
 
     public string Description => $"Create group from {_components.Count} components";
 
+    /// <summary>
+    /// When set, the group is created as a die with this definition — also from zero or
+    /// one component (an empty new die, or a die around a single part). The group origin
+    /// is then <see cref="DieOriginX"/>/<see cref="DieOriginY"/>, the outline's top-left.
+    /// </summary>
+    public CAP_Core.Components.Dies.DieDefinition? Die { get; init; }
+
+    /// <summary>Top-left corner of the die outline (used with <see cref="Die"/>).</summary>
+    public double DieOriginX { get; init; }
+
+    /// <summary>Top-left corner of the die outline (used with <see cref="Die"/>).</summary>
+    public double DieOriginY { get; init; }
+
+    /// <summary>Process binding the created group (die) is fabricated in; null keeps it unbound.</summary>
+    public CAP_Core.Components.Process.ActiveProcessSelection? ProcessBinding { get; init; }
+
     /// <summary>The group created by <see cref="Execute"/> (null until the first execution).</summary>
     public ComponentGroup? CreatedGroup => _createdGroup;
 
     public void Execute()
     {
-        if (_components.Count < 2)
+        if (_components.Count < 2 && Die == null)
             return;
 
         // Don't group locked components
-        if (_components.Any(c => c.IsLocked))
+        if (Die == null && _components.Any(c => c.IsLocked))
             return;
 
         // If group already exists (Redo scenario), just re-add it to canvas
@@ -136,10 +152,8 @@ public class CreateGroupCommand : IUndoableCommand
 
         // First execution: create new group
         // 1. Calculate bounding box for selected components
-        double minX = _components.Min(c => c.PhysicalX);
-        double minY = _components.Min(c => c.PhysicalY);
-        double maxX = _components.Max(c => c.PhysicalX + c.WidthMicrometers);
-        double maxY = _components.Max(c => c.PhysicalY + c.HeightMicrometers);
+        double minX = Die != null ? DieOriginX : _components.Min(c => c.PhysicalX);
+        double minY = Die != null ? DieOriginY : _components.Min(c => c.PhysicalY);
 
         // 2. Identify internal vs external waveguide connections
         var componentSet = new HashSet<Component>(_components);
@@ -161,14 +175,22 @@ public class CreateGroupCommand : IUndoableCommand
             }
         }
 
+        // A die is a work surface: the wires between its parts stay live on the assembly
+        // canvas (editable in place) instead of being frozen into the die.
+        if (Die != null)
+            _internalConnections.Clear();
+
         // 3. Create ComponentGroup (with the requested final name when given —
         // the group is selected below, so the name must be correct by then)
         _createdGroup = new ComponentGroup(_requestedGroupName ?? $"Group_{DateTime.Now:HHmmss}")
         {
             PhysicalX = minX,
             PhysicalY = minY,
-            Description = $"Group of {_components.Count} components"
+            Description = $"Group of {_components.Count} components",
+            ProcessBinding = ProcessBinding
         };
+        if (Die != null)
+            _createdGroup.Die = Die with { OutlineOffsetXMicrometers = 0, OutlineOffsetYMicrometers = 0 };
 
         // 4. Add child components to group in one batch — per-item adds rescan
         // all children and path segments each time (quadratic at import scale).
@@ -205,6 +227,12 @@ public class CreateGroupCommand : IUndoableCommand
             occupiedPins.Add(conn.StartPin);
             occupiedPins.Add(conn.EndPin);
         }
+
+        // A child group offers its boundary pins as its own pins only once they are
+        // materialized (the S-matrix does it lazily) — without them a group of groups
+        // would expose nothing and K1 ↔ K2 could not be wired from outside the new group.
+        foreach (var childGroup in _components.OfType<ComponentGroup>().Where(g => g.PhysicalPins.Count == 0))
+            childGroup.SyncPhysicalPinsFromExternalPins();
 
         // Expose all unoccupied pins as external pins, named by where they point
         // (IN1/IN2… west, OUT1… east, see GroupPinNamer) so a gate's interface reads

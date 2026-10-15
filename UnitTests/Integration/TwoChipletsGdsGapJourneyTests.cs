@@ -61,8 +61,8 @@ public class TwoChipletsGdsGapJourneyTests : IDisposable
 
         // 1. Open the shipped example through the real Home example path.
         var canvas = await OpenExampleCanvasAsync();
-        var link = canvas.ConnectionManager.Connections.ShouldHaveSingleItem(
-            "the example's only connection is the cross-chiplet facet link");
+        var link = canvas.ConnectionManager.Connections.Where(c => c.IsCrossChipletFacetLink).ShouldHaveSingleItem(
+            "the example's only die-to-die connection is the cross-chiplet facet link");
 
         // 2. Drag chiplet B 5 µm to the right via the canvas move command (as a drag ends).
         var chipletB = Chiplet(canvas, ChipletEdgeCouplerJourneyDesign.ChipletBName);
@@ -107,7 +107,7 @@ public class TwoChipletsGdsGapJourneyTests : IDisposable
 
         // Gap 0: the shipped example abuts the two edge-coupler facets exactly.
         var canvas = await OpenExampleCanvasAsync();
-        var link = canvas.ConnectionManager.Connections.ShouldHaveSingleItem();
+        var link = canvas.ConnectionManager.Connections.Where(c => c.IsCrossChipletFacetLink).ShouldHaveSingleItem();
 
         var gdsPath = await ExportToRealGdsAsync(python, canvas, "aligned");
         var polygons = await FlattenedTopCellPolygonsAsync(python, gdsPath);

@@ -19,6 +19,8 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
     private readonly Action _invalidate;
     private readonly Func<double> _getZoom;
     private readonly Action<Cursor> _setCursor;
+    private bool _snapSuppressed;
+    private readonly DieLinkDragSnap _dieSnap = new();
 
     /// <summary>Initializes a new instance of <see cref="ComponentDragGestureRecognizer"/>.</summary>
     public ComponentDragGestureRecognizer(CanvasInteractionState state, Action invalidate, Func<double> getZoom, Action<Cursor> setCursor)
@@ -35,7 +37,8 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
         if (mainVm?.CanvasInteraction.CurrentMode != InteractionMode.Select) return false;
         if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed) return false;
 
-        var laserComp = DesignCanvasHitTesting.HitTestLaserIcon(canvasPoint, canvas);
+        var gateView = mainVm.GateView.IsShown;
+        var laserComp = gateView ? null : DesignCanvasHitTesting.HitTestLaserIcon(canvasPoint, canvas);
         if (laserComp?.LaserConfig != null)
         {
             // Single-click direct manipulation (#690): toggle this coupler's laser.
@@ -48,7 +51,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
             return true;
         }
 
-        var lockGroup = DesignCanvasHitTesting.HitTestGroupLockIcon(canvasPoint, canvas);
+        var lockGroup = gateView ? null : DesignCanvasHitTesting.HitTestGroupLockIcon(canvasPoint, canvas);
         if (lockGroup != null)
         {
             var cmd = new ToggleGroupLockCommand(lockGroup);
@@ -58,7 +61,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
             return true;
         }
 
-        var labelGroup = DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, canvas);
+        var labelGroup = gateView ? null : DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, canvas);
         var hit = labelGroup != null
             ? canvas.Components.FirstOrDefault(c => c.Component == labelGroup)
             : DesignCanvasHitTesting.HitTestComponent(canvasPoint, canvas);
@@ -67,7 +70,28 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
 
         if (_state.DraggingComponent == null) return false;
 
-        if (IsDoubleClick(_state.DraggingComponent) && _state.DraggingComponent.Component is ComponentGroup group)
+        // The platform's click count is measured on the input events themselves, so a slow
+        // first click (selecting a die re-scopes the library) cannot break the double-click.
+        bool sameAsLastClick = _state.LastClickedComponent == _state.DraggingComponent;
+        bool isDoubleClick = IsDoubleClick(_state.DraggingComponent, e.Timestamp) | (e.ClickCount >= 2 && sameAsLastClick);
+        if (isDoubleClick && mainVm.GateView.IsShown)
+        {
+            // Gate view: a double-click opens the gate's physical layout, not its internals.
+            mainVm.GateView.ShowInLayoutCommand.Execute(_state.DraggingComponent);
+            _state.DraggingComponent = null;
+            _invalidate();
+            return true;
+        }
+        if (isDoubleClick && _state.DraggingComponent.Component is ComponentGroup { IsDie: true } die)
+        {
+            // A die is a work surface, never entered: double-click frames it instead.
+            mainVm.ZoomToDie(die);
+            _state.DraggingComponent = null;
+            _invalidate();
+            return true;
+        }
+
+        if (isDoubleClick && _state.DraggingComponent.Component is ComponentGroup group)
         {
             EnterGroupEditMode(canvas, mainVm, group);
             _state.DraggingComponent = null;
@@ -82,7 +106,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
     private ComponentViewModel? ResolveTarget(ComponentViewModel? hit, DesignCanvasViewModel canvas)
     {
         if (hit == null) return null;
-        if (canvas.IsInGroupEditMode) return hit;
+        if (canvas.IsInGroupEditMode || canvas.Surface.IsItem(hit)) return hit;
         if (hit.Component is ComponentGroup) return hit;
         if (hit.Component.ParentGroup == null) return hit;
         var top = GetTopLevelGroup(hit.Component);
@@ -127,6 +151,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
 
         _state.DragStartX = target.X;
         _state.DragStartY = target.Y;
+        if (canvas.Selection.SelectedComponents.Count <= 1) _dieSnap.Begin(canvas, target);
         _state.GroupDragStartPositions.Clear();
         foreach (var c in canvas.Selection.SelectedComponents) _state.GroupDragStartPositions[c] = (c.X, c.Y);
         _invalidate();
@@ -192,7 +217,8 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
             else
             {
                 var comp = DesignCanvasHitTesting.HitTestComponent(canvasPoint, canvas);
-                _state.HoveredGroup = comp?.Component.ParentGroup != null
+                _state.HoveredGroup = canvas.Surface.IsItem(comp) ? comp!.Component as ComponentGroup
+                    : comp?.Component.ParentGroup != null
                     ? GetTopLevelGroup(comp.Component)
                     : comp?.Component as ComponentGroup;
                 // Only a plain (non-group) component claims name-label hover priority; a group
@@ -212,6 +238,7 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
     public void OnPointerMoved(PointerEventArgs e, Point delta, Point canvasPoint, DesignCanvasViewModel canvas, MainViewModel? mainVm)
     {
         if (_state.DraggingComponent == null) return;
+        _snapSuppressed = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
         double dx = delta.X / _getZoom(), dy = delta.Y / _getZoom();
         bool isGroup = canvas.Selection.SelectedComponents.Count > 1;
         if (isGroup)
@@ -221,7 +248,9 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
             // components so they follow the pointer instead of snapping back only on drop.
             canvas.TranslateInternalConnectionRoutes(canvas.Selection.SelectedComponents, dx, dy);
         }
-        else canvas.MoveComponent(_state.DraggingComponent!, dx, dy);
+        else if (!_dieSnap.TryMove(canvas, _state.DraggingComponent!, dx, dy, _snapSuppressed))
+            canvas.MoveComponent(_state.DraggingComponent!, dx, dy);
+        _state.DieLinkPreview = _dieSnap.Current;
         if (canvas.AlignmentGuide.IsEnabled) canvas.AlignmentGuide.UpdateAlignments(_state.DraggingComponent!, canvas.Components);
         UpdateDragPreview(canvas, isGroup);
         _invalidate();
@@ -240,6 +269,12 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
             ? canvas.Selection.CanMoveGroup(canvas, sdx, sdy)
             : canvas.CanMoveComponentTo(_state.DraggingComponent, px, py);
         _state.ShowDragPreview = canvas.GridSnap.IsEnabled || !_state.DragPreviewValid;
+        if (!isGroup && !_snapSuppressed && EdgeCouplerDragSnap.PreviewPosition(canvas, _state.DraggingComponent) is { } edge)
+        {
+            _state.DragPreviewPosition = new Point(edge.X, edge.Y);
+            _state.DragPreviewValid = true;
+            _state.ShowDragPreview = true;
+        }
     }
 
     /// <inheritdoc/>
@@ -255,14 +290,22 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
         _state.ShowDragPreview = false;
         canvas.AlignmentGuide.ClearAlignments();
         canvas.AlignmentGuide.ResetSnapState();
+        var dropped = _state.DraggingComponent;
         if (isGroup) { mainVm?.EndGroupMove(canvas.Selection.SelectedComponents); foreach (var c in canvas.Selection.SelectedComponents) c.IsSelected = true; }
         else mainVm?.EndMoveComponent();
+        if (ok && !isGroup && !e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+            EdgeCouplerDragSnap.SnapAfterDrop(canvas, mainVm, dropped);
+        _dieSnap.End(canvas, mainVm, ok && !isGroup);
+        _state.DieLinkPreview = null;
         _invalidate();
     }
 
     private (double x, double y) ComputeFinalPosition(DesignCanvasViewModel canvas)
     {
         double fx = _state.DraggingComponent!.X, fy = _state.DraggingComponent.Y;
+        // A die locked onto its neighbour stays exactly there — grid or guide snapping would
+        // pull its facets off the link axis.
+        if (_dieSnap.IsSnapped) return (fx, fy);
         if (canvas.AlignmentGuide?.IsEnabled == true && canvas.AlignmentGuide.SnapEnabled)
         {
             var (sdx, sdy) = canvas.AlignmentGuide.CalculateSnapOnRelease(_state.DraggingComponent, canvas.Components);
@@ -322,15 +365,24 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
     {
         _state.DraggingComponent = null;
         _state.ShowDragPreview = false;
+        _state.DieLinkPreview = null;
         _state.GroupDragStartPositions.Clear();
         _invalidate();
     }
 
-    private bool IsDoubleClick(ComponentViewModel? component)
+    /// <summary>
+    /// A second press on the same item within the double-click time, measured on the input
+    /// events' own timestamps: a slow first click (selecting a die re-scopes the library) must
+    /// not turn a real double-click into two single clicks.
+    /// </summary>
+    private bool IsDoubleClick(ComponentViewModel? component, ulong timestamp)
     {
         var now = DateTime.UtcNow;
-        bool isDouble = (now - _state.LastClickTime).TotalMilliseconds < CanvasInteractionState.DoubleClickMilliseconds
-                        && _state.LastClickedComponent == component;
+        bool withinWindow = timestamp > 0 && _state.LastClickTimestamp > 0
+            ? timestamp - _state.LastClickTimestamp < CanvasInteractionState.DoubleClickMilliseconds
+            : (now - _state.LastClickTime).TotalMilliseconds < CanvasInteractionState.DoubleClickMilliseconds;
+        bool isDouble = withinWindow && _state.LastClickedComponent == component;
+        _state.LastClickTimestamp = timestamp;
         _state.LastClickTime = now;
         _state.LastClickedComponent = component;
         return isDouble;

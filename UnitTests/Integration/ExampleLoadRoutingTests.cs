@@ -36,16 +36,16 @@ public class ExampleLoadRoutingTests
         ["Logic Gate PC 2-bit.lun"] = 2,
         ["Logic Gate RAM 2x2.lun"] = 1,
         // Top-level inter-cell wires only (see ExampleFrozenBlockedPathTests for the cells).
-        ["Logic Gate RAM 2x4.lun"] = 2,
+        ["Logic Gate RAM 2x4.lun"] = 0,
         // Top-level inter-cell wires only (see ExampleFrozenBlockedPathTests for the cells).
-        ["Logic Gate RAM 4x4.lun"] = 18,
-        ["Logic Gate 4-Bit Adder.lun"] = 5,
+        ["Logic Gate RAM 4x4.lun"] = 17,
+        ["Logic Gate 4-Bit Adder.lun"] = 2,
         // Same blocked top-level wires as the 4-bit adder — the RAM block's wires
         // are frozen inside the RAM group (#1463), so the top level is the adder's alone.
-        ["Logic Gate ALU + RAM.lun"] = 5,
+        ["Logic Gate ALU + RAM.lun"] = 2,
         // Same again — the ACC register's intra-bit wires are frozen inside the
         // ACC group, so the top level is still the adder's alone.
-        ["Logic Gate ALU + RAM + ACC.lun"] = 5,
+        ["Logic Gate ALU + RAM + ACC.lun"] = 2,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>

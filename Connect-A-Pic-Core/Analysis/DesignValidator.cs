@@ -21,6 +21,7 @@ public class DesignValidator
     private readonly WaveguideMinWidthChecker _minWidthChecker = new();
     private readonly PerConnectionDrcChecker _perConnectionDrcChecker = new();
     private readonly ChipletInterfaceChecker _chipletInterfaceChecker = new();
+    private readonly DieAssemblyChecker _dieAssemblyChecker = new();
     private readonly ComponentPdkCompatibilityChecker _pdkCompatibilityChecker = new();
     private readonly ComponentFootprintOverlapChecker _footprintOverlapChecker = new();
     private readonly FrozenBlockedPathChecker _frozenBlockedPathChecker = new();
@@ -211,8 +212,10 @@ public class DesignValidator
         ArgumentNullException.ThrowIfNull(components);
 
         var connectionList = connections.ToList();
-        var issues = Validate(connectionList, groups, components, externalPortPins);
+        var componentList = components as IReadOnlyCollection<Component> ?? components.ToList();
+        var issues = Validate(connectionList, groups, componentList, externalPortPins);
         issues.AddRange(_chipletInterfaceChecker.Check(connectionList, wavelengthNm));
+        issues.AddRange(_dieAssemblyChecker.Check(componentList, connectionList));
 
         issues.AddRange(_frozenPathMinWidthChecker.Check(
             groups, minWaveguideWidthRules, connectionDrcRuleProvider));

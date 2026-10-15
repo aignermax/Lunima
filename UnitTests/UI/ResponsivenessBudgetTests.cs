@@ -46,6 +46,7 @@ public class ResponsivenessBudgetTests
             ["ExportNazcaCommand"] = "opens a save-file picker",
             ["ExportSaxCommand"] = "opens a save-file picker",
             ["LoadPdkCommand"] = "opens an open-file picker",
+            ["NewDieQuickCommand"] = "adds a die through the same command as the New die flyout — timed by DieViewModelTests",
             // Window / tab openers — trivially fast, but they launch windows the
             // headless session cannot close cleanly.
             ["OpenSettingsWindowCommand"] = "opens the Settings window",
@@ -83,11 +84,14 @@ public class ResponsivenessBudgetTests
         "RedoCommand",
         "RunSimulationCommand",
         "RunWorkspaceCommand",
+        "RunWorkspaceFromShortcutCommand",
         "TogglePowerOverlayCommand",
         "RunDesignChecksCommand",
         "ShowHomeCommand",
         "MakeGateCommand",
         "RefreshSystemOverviewCommand",
+        "SwitchToLayoutCommand",
+        "ShowInLayoutCommand",
     };
 
     /// <summary>

@@ -121,6 +121,33 @@ public class BendRadiusUpsizerTests
             .RadiusMicrometers.ShouldBe(10);
     }
 
+    [Fact]
+    public void TryUpsize_LossAware_GrowsWhenTheGainIsMeasurable()
+    {
+        var upsizer = new BendRadiusUpsizer(CreateGrid(), FoundryRadii);
+        var path = CreateCornerPath(radius: 10);
+        var model = CAP_Core.LightCalculation.BendLoss.BendLossPresets.Generic;
+        double before = model.CornerLossDb(10, 90);
+
+        upsizer.TryUpsize(path, model).ShouldBeTrue();
+
+        var bend = path.Segments.OfType<BendSegment>().ShouldHaveSingleItem();
+        bend.RadiusMicrometers.ShouldBe(50, "the lowest-loss radius that fits is the largest one");
+        model.CornerLossDb(bend.RadiusMicrometers, 90).ShouldBeLessThan(before);
+    }
+
+    [Fact]
+    public void TryUpsize_LossAware_KeepsCompactGeometryWhenTheGainIsNegligible()
+    {
+        var upsizer = new BendRadiusUpsizer(CreateGrid(), FoundryRadii);
+        var path = CreateCornerPath(radius: 20);
+
+        upsizer.TryUpsize(path, CAP_Core.LightCalculation.BendLoss.BendLossPresets.None).ShouldBeFalse();
+
+        path.Segments.OfType<BendSegment>().ShouldHaveSingleItem().RadiusMicrometers.ShouldBe(20,
+            "a lossless platform gains nothing from a wider arc, so the route keeps its footprint");
+    }
+
     /// <summary>
     /// L-shaped route with its corner apex at (250,250): a straight running East along
     /// y=250, a 90° East→North bend of <paramref name="radius"/>, then a straight running

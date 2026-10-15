@@ -40,7 +40,10 @@ public class BundledPdkProcessTests
 
         draft.IsGdsFactoryBackend.ShouldBeTrue();
         draft.Components.ShouldNotBeEmpty();
-        draft.Components.ShouldAllBe(c => !string.IsNullOrEmpty(c.GdsFactoryFunction));
+        // Every gdsfactory cell names its factory; the edge coupler is the one Nazca raw-code
+        // cell (an inverse-taper spot-size converter cspdk does not ship).
+        draft.Components.ShouldAllBe(c => !string.IsNullOrEmpty(c.GdsFactoryFunction) || !string.IsNullOrEmpty(c.RawCode));
+        draft.Components.Count(c => !string.IsNullOrEmpty(c.RawCode)).ShouldBe(1);
         ProcessFingerprintFactory.From(draft).IsSpecified.ShouldBeTrue();
     }
 

@@ -84,13 +84,20 @@ public class FrozenWaveguidePathCoherentPhaseTests
         path.Segments.Add(new BendSegment(centerX: 50, centerY: 10, radius: 10, startAngle: 180, sweepAngle: 90));
         var frozenPath = new FrozenWaveguidePath { Path = path };
 
+        // Radius model: radiation of one 90° arc at R = 10 µm plus its two junctions
+        // (straight→arc, arc→the end component's straight port).
         double expectedLossDb = frozenPath.PropagationLossDbPerCm
             * (path.TotalLengthMicrometers / 10_000.0)
-            + path.TotalEquivalent90DegreeBends * frozenPath.BendLossDbPer90Deg;
+            + CAP_Core.LightCalculation.BendLoss.BendLossPresets.Generic.CornerLossDb(10, 90);
         double expectedAmplitude = Math.Pow(10.0, -expectedLossDb / 20.0);
 
         frozenPath.TransmissionCoefficient.Real.ShouldBe(expectedAmplitude, Tolerance);
         frozenPath.TransmissionCoefficient.Imaginary.ShouldBe(0.0);
+
+        var connection = new CAP_Core.Components.Connections.WaveguideConnection();
+        connection.RestoreCachedPath(path);
+        frozenPath.TransmissionCoefficient.Real.ShouldBe(connection.TransmissionCoefficient.Real, Tolerance,
+            "freezing a connection must not change its loss model");
     }
 
     private static FrozenWaveguidePath CreateFrozenPath()

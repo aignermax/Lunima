@@ -109,7 +109,7 @@ public sealed class LogicNetworkAssembler
     /// keep distinct gate identities (both contain a gate of the same name) without
     /// mutating any <c>GroupName</c>; a top-level gate keeps its plain group name.
     /// </summary>
-    private static void CollectGates(
+    internal static void CollectGates(
         IEnumerable<Component> components,
         string? ancestorPath,
         ICollection<(ComponentGroup Group, string GateId)> gates,
@@ -137,7 +137,14 @@ public sealed class LogicNetworkAssembler
     /// <summary>Wraps one frozen group-internal path as a connection between its endpoint pins.</summary>
     private static WaveguideConnection ToVirtualConnection(FrozenWaveguidePath path)
     {
-        var connection = new WaveguideConnection { StartPin = path.StartPin!, EndPin = path.EndPin! };
+        var connection = new WaveguideConnection
+        {
+            StartPin = path.StartPin!,
+            EndPin = path.EndPin!,
+            PropagationLossDbPerCm = path.PropagationLossDbPerCm,
+            ExcessBendLossDbPer90Deg = path.ExcessBendLossDbPer90Deg,
+            BendLoss = path.ResolveBendLoss(),
+        };
         connection.RestoreCachedPath(path.Path);
         return connection;
     }

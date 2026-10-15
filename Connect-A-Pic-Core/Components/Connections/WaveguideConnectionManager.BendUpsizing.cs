@@ -49,7 +49,7 @@ public partial class WaveguideConnectionManager
             var working = original.DeepCopy();
             grid.RemoveWaveguideObstacle(connection.Id);
 
-            if (upsizer.TryUpsize(working) &&
+            if (upsizer.TryUpsize(working, connection.BendLoss) &&
                 IsUpsizeAcceptable(working, nearSiblings, clearanceBefore, degenerateGuards))
             {
                 connection.ReplaceRoutedPath(working);

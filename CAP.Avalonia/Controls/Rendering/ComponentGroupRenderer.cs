@@ -39,6 +39,11 @@ public static class ComponentGroupRenderer
     /// </summary>
     public static Rect CalculateGroupBounds(ComponentGroup group)
     {
+        if (group.IsDie)
+        {
+            var outline = CAP_Core.Components.Dies.DieAssembly.OutlineOf(group);
+            return new Rect(outline.X, outline.Y, outline.Width, outline.Height);
+        }
         if (group.ChildComponents.Count == 0)
         {
             return new Rect(group.PhysicalX, group.PhysicalY, 0, 0);

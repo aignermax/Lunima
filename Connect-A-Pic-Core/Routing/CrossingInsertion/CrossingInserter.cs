@@ -1,4 +1,5 @@
 using CAP_Core.Components.Connections;
+using CAP_Core.LightCalculation.BendLoss;
 using CAP_Core.Components.Core;
 using CAP_Core.Routing.AStarPathfinder;
 
@@ -63,16 +64,16 @@ public class CrossingInserter
         CrossingPlacement.FindPinByAngle(crossingComponent, angleDegrees)?.LogicalPin != null;
 
     /// <summary>
-    /// Computes the insertion loss (dB) of a path using the connection's loss parameters
-    /// (mirrors <see cref="WaveguideConnection.RecalculateTransmission"/>).
+    /// Computes the insertion loss (dB) of a path using the connection's loss parameters —
+    /// the same <see cref="ConnectionLossCalculator"/> the connection itself applies, so the
+    /// detour-vs-crossing decision weighs radius-dependent bend and junction loss.
     /// </summary>
     public static double ComputePathLossDb(RoutedPath path, WaveguideConnection connection)
     {
         double lossDbPerCm = connection.DispersionModel?.LossDbPerCmAt(ReferenceWavelengthNm)
                              ?? connection.PropagationLossDbPerCm;
-        double propagationLoss = path.TotalLengthMicrometers / 10000.0 * lossDbPerCm;
-        double bendLoss = path.TotalEquivalent90DegreeBends * connection.BendLossDbPer90Deg;
-        return propagationLoss + bendLoss;
+        return ConnectionLossCalculator.Compute(
+            path, connection.BendLoss, lossDbPerCm, connection.ExcessBendLossDbPer90Deg).TotalLossDb;
     }
 
     /// <summary>

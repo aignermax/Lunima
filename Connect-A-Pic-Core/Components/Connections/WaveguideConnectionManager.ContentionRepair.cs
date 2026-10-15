@@ -89,7 +89,11 @@ public partial class WaveguideConnectionManager
             if (!IsContentionRepairCandidate(blocked))
                 continue;
 
-            var siblings = FindConflictingSiblings(blocked, SnapshotConnections());
+            var siblings = BreakoutClusterSiblings(blocked, SnapshotConnections())
+                .Concat(FindConflictingSiblings(blocked, SnapshotConnections()))
+                .Distinct()
+                .Take(MaxContentionRipUpSiblings)
+                .ToList();
             if (siblings.Count == 0)
                 continue; // No wire conflict to rip up — nothing this pass can try.
 

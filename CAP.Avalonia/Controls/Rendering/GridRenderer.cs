@@ -30,7 +30,10 @@ public sealed class GridRenderer
     {
         var vm = rc.ViewModel;
         context.FillRectangle(CanvasPalette.BackgroundBrush, rc.Bounds);
-        context.FillRectangle(CanvasPalette.ChipFillBrush, ChipScreenRect(vm, rc.Zoom));
+        if (vm.Dies.IsAssemblyRoot)
+            DieFrameRenderer.RenderFills(context, vm.Dies.RootDies, rc.Zoom, vm.PanX, vm.PanY);
+        else
+            context.FillRectangle(CanvasPalette.ChipFillBrush, ChipScreenRect(vm, rc.Zoom));
         DrawGrid(context, rc.Bounds, vm.PanX, vm.PanY, rc.Zoom);
     }
 
@@ -41,7 +44,9 @@ public sealed class GridRenderer
     public void RenderWorld(DrawingContext context, CanvasRenderContext rc)
     {
         var vm = rc.ViewModel;
-        DrawChipFrame(context, vm, rc.Pens, rc.Zoom);
+        // An assembly's dies draw their own frames (ComponentRenderer); the carrier has none.
+        if (!vm.Dies.IsAssemblyRoot)
+            DrawChipFrame(context, vm, rc.Pens, rc.Zoom);
 
         if (vm.GridSnap.IsEnabled)
             DrawSnapGridOverlay(context, vm, rc.Zoom, rc.Bounds);
@@ -100,6 +105,12 @@ public sealed class GridRenderer
 
     private static void DrawChipFrame(DrawingContext context, DesignCanvasViewModel vm, CanvasPens pens, double zoom)
     {
+        // Every design is an assembly of at least one die: the chip of a single-die design is Die 1.
+        if (vm.ChipDie.IsShown && vm.ChipDie.Die.IsDie)
+        {
+            DieFrameRenderer.Render(context, vm.ChipDie.Die, vm.ChipDie.IsSelected, false, zoom, showEdgeZone: false);
+            return;
+        }
         var chipRect = ChipWorldRect(vm);
         context.DrawRectangle(null, pens.ChipBorder, chipRect);
         DrawCornerTicks(context, chipRect, pens.ChipCorner, CornerTickPx / zoom);
@@ -112,6 +123,21 @@ public sealed class GridRenderer
             DimensionFontPx / zoom,
             CanvasPalette.TextTertiaryBrush);
         context.DrawText(dimText, new Point(chipRect.Left, chipRect.Bottom + DimensionGapPx / zoom));
+
+        if (vm.Dies.ActiveDie is { } die)
+            DrawActiveDieName(context, die, chipRect, zoom);
+    }
+
+    /// <summary>Inside a die the chip frame is that die's outline: name it, in the process color.</summary>
+    private static void DrawActiveDieName(DrawingContext context, CAP_Core.Components.Core.ComponentGroup die, Rect chipRect, double zoom)
+    {
+        var label = string.IsNullOrWhiteSpace(die.ProcessBinding?.DisplayName)
+            ? die.GroupName
+            : $"{die.GroupName}  ·  {die.ProcessBinding!.DisplayName}";
+        var text = new FormattedText(label, System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight, CanvasTypography.UiSemiBold, DimensionFontPx / zoom,
+            DieProcessColors.BrushFor(die.ProcessBinding));
+        context.DrawText(text, new Point(chipRect.Left, chipRect.Top - DimensionGapPx / zoom - text.Height));
     }
 
     private static void DrawCornerTicks(DrawingContext context, Rect r, IPen pen, double len)

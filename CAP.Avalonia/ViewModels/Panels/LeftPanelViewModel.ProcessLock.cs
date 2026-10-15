@@ -36,6 +36,34 @@ public partial class LeftPanelViewModel
         }
     }
 
+    /// <summary>
+    /// Scopes the library to one die of an assembly: its process, narrowed to the PDKs
+    /// enabled on that die (<paramref name="enabledPdkNames"/>; null = all process PDKs).
+    /// Process-agnostic tool PDKs stay available. An unbound die falls back to
+    /// <see cref="ApplyActiveProcess"/> semantics.
+    /// </summary>
+    public void ApplyDieScope(ActiveProcessSelection? process, IReadOnlyList<string>? enabledPdkNames)
+    {
+        if (process is not { IsPlayground: false })
+        {
+            ApplyActiveProcess(process);
+            return;
+        }
+        _lastAppliedProcess = process;
+        PdkManager.ManualTogglesEnabled = false;
+        PdkManager.ApplyProcessLock(DieScopePdkNames(process, enabledPdkNames).Concat(GetProcessAgnosticPdkNames()));
+        FilterComponents();
+    }
+
+    /// <summary>The PDKs a die may use: its process's live members, narrowed to the die's enabled subset.</summary>
+    internal IReadOnlyList<string> DieScopePdkNames(ActiveProcessSelection process, IReadOnlyList<string>? enabledPdkNames)
+    {
+        var members = ResolveLiveMemberPdkNames(process);
+        if (enabledPdkNames is not { Count: > 0 })
+            return members;
+        return members.Where(m => enabledPdkNames.Contains(m, StringComparer.OrdinalIgnoreCase)).ToList();
+    }
+
     internal IReadOnlyList<string> ResolveLiveMemberPdkNames(ActiveProcessSelection active)
     {
         if (active.Fingerprint is not { IsSpecified: true } fingerprint)

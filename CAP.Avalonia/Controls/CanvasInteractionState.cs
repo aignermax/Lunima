@@ -22,6 +22,12 @@ public class CanvasInteractionState
     public Point DragPreviewPosition { get; set; }
     public bool DragPreviewValid { get; set; }
 
+    /// <summary>The die-to-die snap shown while a die is dragged toward a neighbour (guide + loss), or null.</summary>
+    public CAP_Core.Components.Dies.DieLinkSnap? DieLinkPreview { get; set; }
+
+    /// <summary>The hint shown where a wire across a die edge was refused, or null.</summary>
+    public Rendering.WireRefusalHint? WireRefusalHint { get; set; }
+
     /// <summary>The axis-constrained crossing drag in progress, or null.</summary>
     public Canvas.CrossingDrag.CrossingAxisDragPreview? CrossingAxisDrag { get; set; }
 
@@ -91,6 +97,9 @@ public class CanvasInteractionState
 
     // Double-click detection state
     public DateTime LastClickTime { get; set; } = DateTime.MinValue;
+
+    /// <summary>Input-event timestamp (ms) of the last component press — immune to slow handlers.</summary>
+    public ulong LastClickTimestamp { get; set; }
     public ComponentViewModel? LastClickedComponent { get; set; }
     public const int DoubleClickMilliseconds = 300;
 

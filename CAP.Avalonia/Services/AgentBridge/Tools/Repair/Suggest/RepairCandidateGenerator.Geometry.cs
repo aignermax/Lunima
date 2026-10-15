@@ -77,6 +77,31 @@ public sealed partial class RepairCandidateGenerator
             }
     }
 
+    /// <summary>
+    /// Moves the component at either end along its pin's axis — towards or away from the
+    /// wire. Moving a gate a pitch away from a crowded channel widens the channel in front of
+    /// its pins, which an across-pin nudge cannot do.
+    /// </summary>
+    private IEnumerable<RepairCandidate> AxisNudges()
+    {
+        var ends = new[] { _blocked.EndPin, _blocked.StartPin }
+            .Select(pin => (Pin: pin, Vm: TopLevelViewModel(pin.ParentComponent)))
+            .Where(x => x.Vm != null && !x.Vm.Component.IsLocked
+                        && !CrossingComponentCatalog.IsCrossing(x.Vm.Component))
+            .GroupBy(x => x.Vm)
+            .Select(g => g.First())
+            .ToList();
+
+        foreach (var step in NudgeSteps)
+            foreach (var (pin, vm) in ends)
+            {
+                var (dx, dy) = AlongPin(pin, step);
+                if (!_session.Canvas.CanMoveComponentTo(vm!, vm!.X + dx, vm.Y + dy))
+                    continue;
+                yield return NudgeCandidate(vm, dx, dy);
+            }
+    }
+
     private RepairCandidate NudgeCandidate(ComponentViewModel vm, double dx, double dy)
     {
         var id = vm.Component.Identifier;
@@ -94,6 +119,12 @@ public sealed partial class RepairCandidateGenerator
     }
 
     /// <summary>A move perpendicular to the pin's facing direction — it changes the order wires arrive in.</summary>
+    private static (double Dx, double Dy) AlongPin(PhysicalPin pin, double step)
+    {
+        var radians = pin.GetAbsoluteAngle() * Math.PI / 180.0;
+        return Math.Abs(Math.Cos(radians)) >= Math.Abs(Math.Sin(radians)) ? (step, 0) : (0, step);
+    }
+
     private static (double Dx, double Dy) AcrossPin(PhysicalPin pin, double step)
     {
         var radians = pin.GetAbsoluteAngle() * Math.PI / 180.0;

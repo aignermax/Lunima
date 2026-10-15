@@ -208,6 +208,7 @@ public partial class WaveguideRouter
         // the same component-cell and sibling-geometry verdicts the direct candidate gets.
         if (!IsCleanAStarResult(smoothedPath)) return (null, false);
         if (IsDirectCandidateBlockedByComponents(smoothedPath.Segments, startPin, endPin, bendRadius)
+            || RunsThroughBreakoutReservation(smoothedPath.Segments)
             || DirectCandidateConflictsWithSibling(smoothedPath, startPin, endPin, bendRadius))
         {
             return (null, false);

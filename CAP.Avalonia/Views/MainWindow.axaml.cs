@@ -111,6 +111,8 @@ public partial class MainWindow : Window
                 vm.BottomPanel.Analysis.Spectrum.Overlay.FileDialogService = vm.FileDialogService;
                 ExportDialogWiring.Wire(vm, this, vm.ErrorConsole);
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
+        vm.ViewportControl.GetCursorCanvasPosition = () => DesignCanvasControl.IsPointerOver
+            ? (DesignCanvasControl.LastCanvasPosition.X, DesignCanvasControl.LastCanvasPosition.Y) : null;
 
                 // Wire up rename dialog for group templates
                 vm.LeftPanel.ComponentLibrary.ShowRenameDialogAsync = async (currentName) =>
@@ -544,6 +546,10 @@ public partial class MainWindow : Window
                     var canvasPos = DesignCanvasControl.LastCanvasPosition;
                     mainVm.PasteSelected(canvasPos.X, canvasPos.Y);
                 }
+                else
+                {
+                    mainVm.GateView.ToggleCommand.Execute(null);
+                }
                 break;
             case Key.D:
                 if (!ctrlPressed)
@@ -616,7 +622,7 @@ public partial class MainWindow : Window
                 break;
             case Key.L:
                 if (!ctrlPressed)
-                    mainVm.RunWorkspaceCommand.Execute(null);
+                    mainVm.RunWorkspaceFromShortcutCommand.Execute(null);
                 break;
             default:
                 return; // Don't mark as handled for unrecognized keys

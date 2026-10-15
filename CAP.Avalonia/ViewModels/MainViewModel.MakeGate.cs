@@ -33,6 +33,11 @@ public partial class MainViewModel
     private void MakeGate()
     {
         var selection = Canvas.Selection.SelectedComponents;
+        if (CanvasInteraction.SelectionHasDie)
+        {
+            UpdateStatusText(CanvasInteraction.GroupBlockedReason!);
+            return;
+        }
         var isSingleGroup = selection.Count <= 1 && Canvas.SelectedComponent?.Component is ComponentGroup;
         if (!isSingleGroup && selection.Count >= 2)
             CanvasInteraction.CreateGroupCommand.Execute(null);

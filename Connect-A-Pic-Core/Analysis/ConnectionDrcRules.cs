@@ -39,4 +39,12 @@ public sealed class ConnectionDrcRules
 
     /// <summary>Governing minimum edge-to-edge spacing in µm; ≤0 means no declared limit.</summary>
     public double MinSpacingMicrometers { get; }
+
+    /// <summary>
+    /// Companion layers the endpoint processes draw along this connection; its keep-out
+    /// bands extend the spacing rule (two keep-out bands of different wires must not
+    /// overlap). Empty when the processes declare none.
+    /// </summary>
+    public Routing.WaveguideCompanions.WaveguideCompanionSpec Companions { get; init; } =
+        Routing.WaveguideCompanions.WaveguideCompanionSpec.Empty;
 }

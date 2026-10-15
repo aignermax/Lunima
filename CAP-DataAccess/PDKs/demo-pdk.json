@@ -17,6 +17,12 @@
         "description": "Waveguide core layer"
       },
       {
+        "name": "SHALLOW_TRENCH",
+        "layer": 2,
+        "datatype": 0,
+        "description": "Shallow-etch trench drawn around the waveguide core"
+      },
+      {
         "name": "METAL1",
         "layer": 11,
         "datatype": 0,
@@ -49,7 +55,17 @@
       }
     ],
     "allowedAngles": [],
-    "electricalBridgeRequired": false
+    "electricalBridgeRequired": false,
+    "waveguideCompanionLayers": [
+      {
+        "name": "SHALLOW_TRENCH",
+        "layer": 2,
+        "datatype": 0,
+        "role": "Trench",
+        "offsetUm": 8,
+        "description": "Shallow-etch trench, 8 um beyond each core edge: the Nazca demofab Shallow xsection (layer ShallowTrench, growx=8) the demo components are drawn with."
+      }
+    ]
   },
   "components": [
     {
@@ -655,6 +671,7 @@
           "angleDegrees": 0
         }
       ],
+      "modeFieldDiameterMicrometers": 3,
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [

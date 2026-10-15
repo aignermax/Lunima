@@ -20,7 +20,7 @@ namespace CAP.Avalonia.Services;
 /// Simple Nazca exporter for the physical coordinate system.
 /// Exports components and waveguide connections to Python/Nazca code.
 /// </summary>
-public class SimpleNazcaExporter
+public partial class SimpleNazcaExporter
 {
     /// <summary>
     /// GDS (layer, datatype) pair for pin/port labels (TEXT elements), emitted as a
@@ -113,6 +113,11 @@ public class SimpleNazcaExporter
         List<string>? exportWarnings = null,
         string? designName = null)
     {
+        // A die assembly exports one cell per die under an assembly top cell; single-die
+        // designs continue below unchanged.
+        if (canvas.Dies.IsAssemblyRoot)
+            return ExportAssembly(canvas, onlyDie: null, metalSpec, skippedConnections, library, exportWarnings);
+
         var sb = new StringBuilder();
         var metal = metalSpec ?? MetalRoutingSpec.Default;
         var interconnectSettings = SettingsSource?.Invoke() ?? new InterconnectSettings();
@@ -125,6 +130,7 @@ public class SimpleNazcaExporter
 
         AppendHeader(sb, interconnectSettings, metal);
         interconnectPlan.AppendTo(sb);
+        interconnectPlan.Companions.AppendDefinitions(sb);
         AppendPdkComponentStubs(sb, canvas, include: null, rawCodePlan, wrapperPlan, ebeamProfile != null);
         NazcaRawCodeCellWriter.AppendCells(sb, rawCodePlan, CultureInfo.InvariantCulture);
         NazcaPinLabelWrapperWriter.AppendCells(sb, wrapperPlan);
@@ -489,9 +495,10 @@ public class SimpleNazcaExporter
     private static Dictionary<Component, string> AppendComponents(
         StringBuilder sb, DesignCanvasViewModel canvas, bool emitVerification = false,
         Func<Component, bool>? include = null, string topCellName = "ConnectAPIC_Design",
-        RawCodeExportPlan? rawCodePlan = null, PinLabelWrapperPlan? wrapperPlan = null)
+        RawCodeExportPlan? rawCodePlan = null, PinLabelWrapperPlan? wrapperPlan = null,
+        string functionName = "create_design")
     {
-        sb.AppendLine("def create_design():");
+        sb.AppendLine($"def {functionName}():");
         sb.AppendLine($"    with nd.Cell(name='{topCellName}') as design:");
         sb.AppendLine();
         sb.AppendLine("        # Components");
@@ -791,6 +798,12 @@ public class SimpleNazcaExporter
                 ? ConnectionCrossSectionResolver.Resolve(conn.StartPin, conn.EndPin)
                 : default;
 
+            // Process companion layers (cladding / trench / keep-out bands) follow every
+            // routed optical waveguide; imported geometry carries its own and metal has none.
+            var companionXs = metal == null && sourceLayer == null
+                ? interconnectPlan?.Companions.XsectionFor(conn.StartPin, conn.EndPin, conn.WidthMicrometers)
+                : null;
+
             // Explicit routing style (issue #574) applies to OPTICAL waveguides only:
             // point-to-point styles export a single Nazca primitive (strt/sinebend/cobra)
             // on the waveguide layer instead of the routed segments; Bend and Euler return
@@ -805,6 +818,8 @@ public class SimpleNazcaExporter
                 if (styledLine != null)
                 {
                     sb.AppendLine(styledLine);
+                    if (companionXs != null)
+                        sb.AppendLine(NazcaConnectionStyleWriter.Format(conn, xsectionName: companionXs));
                     continue;
                 }
             }
@@ -820,12 +835,12 @@ public class SimpleNazcaExporter
                 if (metal == null && waveguideCells != null)
                 {
                     var cellContent = new StringBuilder();
-                    AppendSegmentExport(cellContent, segments, conn.StartPin, conn.EndPin, metal, sourceLayer, crossSection);
+                    AppendSegmentExport(cellContent, segments, conn.StartPin, conn.EndPin, metal, sourceLayer, crossSection, companionXs);
                     waveguideCells.AppendWaveguideCell(sb, cellContent, segments, conn.StartPin, conn.EndPin);
                 }
                 else
                 {
-                    AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin, metal, sourceLayer, crossSection);
+                    AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin, metal, sourceLayer, crossSection, companionXs);
                 }
             }
             else
@@ -1064,6 +1079,9 @@ public class SimpleNazcaExporter
         var crossSection = interconnectPlan?.UsesPerProcessCrossSections == true || forceProcessCrossSections
             ? ConnectionCrossSectionResolver.Resolve(frozenPath.StartPin, frozenPath.EndPin)
             : default;
+        var companionXs = metal == null && sourceLayer == null
+            ? interconnectPlan?.Companions.XsectionFor(frozenPath.StartPin, frozenPath.EndPin, frozenPath.WidthMicrometers)
+            : null;
         // An EBeam-only export wraps the optical frozen path in its own SiEPIC
         // waveguide cell — the same treatment routed connections get — so a grouped
         // design passes openEBL verification instead of flattening the frozen route
@@ -1071,11 +1089,11 @@ public class SimpleNazcaExporter
         if (metal == null && waveguideCells != null)
         {
             var cellContent = new StringBuilder();
-            AppendSegmentExport(cellContent, segments, frozenPath.StartPin, frozenPath.EndPin, metal, sourceLayer, crossSection);
+            AppendSegmentExport(cellContent, segments, frozenPath.StartPin, frozenPath.EndPin, metal, sourceLayer, crossSection, companionXs);
             waveguideCells.AppendWaveguideCell(sb, cellContent, segments, frozenPath.StartPin, frozenPath.EndPin);
             return;
         }
-        AppendSegmentExport(sb, segments, frozenPath.StartPin, frozenPath.EndPin, metal, sourceLayer, crossSection);
+        AppendSegmentExport(sb, segments, frozenPath.StartPin, frozenPath.EndPin, metal, sourceLayer, crossSection, companionXs);
     }
 
     /// <summary>
@@ -1153,17 +1171,29 @@ public class SimpleNazcaExporter
     /// keeps the historical bare calls. The import source-layer tag wins over it
     /// (verbatim round-trip); the metal style ignores it.
     /// </param>
+    /// <param name="companionXsection">
+    /// Optional Nazca xsection carrying the process companion layers
+    /// (<see cref="WaveguideCompanions.NazcaCompanionXsectionPlan"/>): every segment is
+    /// emitted a second time through it, at the core's width, so the bands grow beyond the
+    /// core along straights and arcs. Null emits the core only.
+    /// </param>
     internal static void AppendSegmentExport(
         StringBuilder sb, IReadOnlyList<PathSegment> segments,
         PhysicalPin? startPin = null, PhysicalPin? endPin = null,
         MetalTraceStyle? metal = null, (int Layer, int DataType)? sourceLayer = null,
-        ProcessCrossSection crossSection = default)
+        ProcessCrossSection crossSection = default, string? companionXsection = null)
     {
+        var companionKwargs = companionXsection == null || metal != null
+            ? null
+            : CompanionKwargs(companionXsection, crossSection);
+
         // Single straight segment: compute geometry directly from both pin positions
         // so the waveguide hits both pins exactly even if the stored segment drifts.
         if (segments.Count == 1 && segments[0] is StraightSegment && startPin != null && endPin != null)
         {
             sb.AppendLine(FormatStraightSegmentFromPins(startPin, endPin, metal, sourceLayer, crossSection));
+            if (companionKwargs != null)
+                sb.AppendLine(FormatStraightSegmentFromPins(startPin, endPin, kwargsOverride: companionKwargs));
             return;
         }
 
@@ -1173,7 +1203,21 @@ public class SimpleNazcaExporter
             var (nEndX, nEndY) = NazcaCoordinateMapper.ToNazca(segment.EndPoint.X, segment.EndPoint.Y);
 
             sb.AppendLine(FormatSegmentAbsolute(segment, nStartX, nStartY, nEndX, nEndY, metal, sourceLayer, crossSection));
+            if (companionKwargs != null)
+                sb.AppendLine(FormatSegmentAbsolute(segment, nStartX, nStartY, nEndX, nEndY, kwargsOverride: companionKwargs));
         }
+    }
+
+    /// <summary>
+    /// The kwargs drawing a segment through a companion xsection: the core's own width (when
+    /// the core call names one — otherwise both share Nazca's default) plus <c>xs=…</c>.
+    /// </summary>
+    private static string CompanionKwargs(string xsection, ProcessCrossSection crossSection)
+    {
+        var width = crossSection.WidthMicrometers is double w
+            ? $", width={w.ToString("0.0###", CultureInfo.InvariantCulture)}"
+            : string.Empty;
+        return $"{width}, xs='{xsection}'";
     }
 
     /// <summary>
@@ -1231,14 +1275,16 @@ public class SimpleNazcaExporter
     private static string FormatSegmentAbsolute(
         PathSegment segment, double nazcaStartX, double nazcaStartY,
         double nazcaEndX, double nazcaEndY, MetalTraceStyle? metal = null,
-        (int Layer, int DataType)? sourceLayer = null, ProcessCrossSection crossSection = default)
+        (int Layer, int DataType)? sourceLayer = null, ProcessCrossSection crossSection = default,
+        string? kwargsOverride = null)
     {
         var ci = CultureInfo.InvariantCulture;
+        var kwargs = kwargsOverride ?? SegmentKwargs(metal, sourceLayer, crossSection);
         return segment switch
         {
             StraightSegment => FormatStraightAbsolute(
-                nazcaStartX, nazcaStartY, nazcaEndX, nazcaEndY, ci, metal, sourceLayer, crossSection),
-            BendSegment bend => FormatBendAbsolute(bend, nazcaStartX, nazcaStartY, ci, metal, sourceLayer, crossSection),
+                nazcaStartX, nazcaStartY, nazcaEndX, nazcaEndY, ci, kwargs),
+            BendSegment bend => FormatBendAbsolute(bend, nazcaStartX, nazcaStartY, ci, kwargs),
             _ => $"        # Unknown segment type: {segment.GetType().Name}"
         };
     }
@@ -1250,8 +1296,7 @@ public class SimpleNazcaExporter
     /// </summary>
     private static string FormatStraightAbsolute(
         double nazcaStartX, double nazcaStartY,
-        double nazcaEndX, double nazcaEndY, CultureInfo ci, MetalTraceStyle? metal = null,
-        (int Layer, int DataType)? sourceLayer = null, ProcessCrossSection crossSection = default)
+        double nazcaEndX, double nazcaEndY, CultureInfo ci, string kwargs)
     {
         double dx = nazcaEndX - nazcaStartX;
         double dy = nazcaEndY - nazcaStartY;
@@ -1262,7 +1307,7 @@ public class SimpleNazcaExporter
         var x = NazcaCoordinateMapper.NormalizeZero(nazcaStartX).ToString("F2", ci);
         var y = NazcaCoordinateMapper.NormalizeZero(nazcaStartY).ToString("F2", ci);
         var a = NazcaCoordinateMapper.NormalizeZero(angleDeg).ToString("F2", ci);
-        return $"        nd.strt(length={l}{SegmentKwargs(metal, sourceLayer, crossSection)}).put({x}, {y}, {a})";
+        return $"        nd.strt(length={l}{kwargs}).put({x}, {y}, {a})";
     }
 
     /// <summary>
@@ -1270,15 +1315,14 @@ public class SimpleNazcaExporter
     /// The radius is invariant under Y-flip; the sweep angle and start angle are negated.
     /// </summary>
     private static string FormatBendAbsolute(
-        BendSegment bend, double nazcaX, double nazcaY, CultureInfo ci, MetalTraceStyle? metal = null,
-        (int Layer, int DataType)? sourceLayer = null, ProcessCrossSection crossSection = default)
+        BendSegment bend, double nazcaX, double nazcaY, CultureInfo ci, string kwargs)
     {
         var radius = bend.RadiusMicrometers.ToString("F2", ci);
         var sweepAngle = NazcaCoordinateMapper.NormalizeZero(-bend.SweepAngleDegrees).ToString("F2", ci);
         var x = NazcaCoordinateMapper.NormalizeZero(nazcaX).ToString("F2", ci);
         var y = NazcaCoordinateMapper.NormalizeZero(nazcaY).ToString("F2", ci);
         var angle = NazcaCoordinateMapper.NormalizeZero(-bend.StartAngleDegrees).ToString("F2", ci);
-        return $"        nd.bend(radius={radius}, angle={sweepAngle}{SegmentKwargs(metal, sourceLayer, crossSection)}).put({x}, {y}, {angle})";
+        return $"        nd.bend(radius={radius}, angle={sweepAngle}{kwargs}).put({x}, {y}, {angle})";
     }
 
     /// <summary>
@@ -1288,7 +1332,8 @@ public class SimpleNazcaExporter
     /// </summary>
     private static string FormatStraightSegmentFromPins(
         PhysicalPin startPin, PhysicalPin endPin, MetalTraceStyle? metal = null,
-        (int Layer, int DataType)? sourceLayer = null, ProcessCrossSection crossSection = default)
+        (int Layer, int DataType)? sourceLayer = null, ProcessCrossSection crossSection = default,
+        string? kwargsOverride = null)
     {
         var ci = CultureInfo.InvariantCulture;
         var (sx, sy) = NazcaCoordinateMapper.GetPinNazcaPosition(startPin);
@@ -1303,8 +1348,9 @@ public class SimpleNazcaExporter
         var y = NazcaCoordinateMapper.NormalizeZero(sy).ToString("F2", ci);
         var a = NazcaCoordinateMapper.NormalizeZero(angleDeg).ToString("F2", ci);
         var l = length.ToString("F2", ci);
+        var kwargs = kwargsOverride ?? SegmentKwargs(metal, sourceLayer, crossSection);
 
-        return $"        nd.strt(length={l}{SegmentKwargs(metal, sourceLayer, crossSection)}).put({x}, {y}, {a})";
+        return $"        nd.strt(length={l}{kwargs}).put({x}, {y}, {a})";
     }
 
     /// <summary>

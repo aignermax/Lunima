@@ -140,4 +140,32 @@ public class KeyboardHandlerTests
         // Either triggered simulation or toggled — should not throw
         canvasVm.ShouldNotBeNull();
     }
+
+    [Fact]
+    public void OnKeyDown_VKey_InLogic_TogglesGateAndPhysicalView()
+    {
+        var mainVm = MainViewModelTestHelper.CreateMainViewModel();
+        mainVm.WorkspaceSwitch.Current = CAP.Avalonia.ViewModels.Workspaces.Workspace.Logic;
+        var (handler, _) = CreateHandler(mainVm);
+        mainVm.GateView.IsShown.ShouldBeTrue();
+
+        var e = MakeKey(Key.V);
+        handler.OnKeyDown(e);
+
+        e.Handled.ShouldBeTrue();
+        mainVm.GateView.IsPhysicalShown.ShouldBeTrue();
+        handler.OnKeyDown(MakeKey(Key.V));
+        mainVm.GateView.IsShown.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void OnKeyDown_LKey_RunsTheWorkspaceAction_AndAnnouncesIt()
+    {
+        var mainVm = MainViewModelTestHelper.CreateMainViewModel();
+        var (handler, _) = CreateHandler(mainVm);
+
+        handler.OnKeyDown(MakeKey(Key.L));
+
+        mainVm.RunHint.IsVisible.ShouldBeTrue();
+    }
 }

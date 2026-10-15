@@ -60,15 +60,17 @@ public partial class MultiProcessChipletJourneyTests
             .ShouldNotBeNull("Step 6: chiplet A identity survives");
         var loadedB = loadedGroups.SingleOrDefault(g => g.Identifier == design.ChipletB.Identifier)
             .ShouldNotBeNull("Step 6: chiplet B identity survives");
-        loadedA.ExternalPins.Select(GroupPinLookup.ExposedId).OrderBy(n => n).ShouldBe(
-            MultiProcessChipletJourneyDesign.ChipletAPinNames.OrderBy(n => n),
-            "Step 6: chiplet A keeps its exposed pins");
-        loadedB.ExternalPins.Select(GroupPinLookup.ExposedId).OrderBy(n => n).ShouldBe(
-            MultiProcessChipletJourneyDesign.ChipletBPinNames.OrderBy(n => n),
-            "Step 6: chiplet B keeps its exposed pins");
+        // The chiplets load as dies — work surfaces whose wires live on the assembly canvas —
+        // so every pin a die wire uses stays exposed next to the original interface pins.
+        MultiProcessChipletJourneyDesign.ChipletAPinNames.Except(loadedA.ExternalPins.Select(GroupPinLookup.ExposedId))
+            .ShouldBeEmpty("Step 6: chiplet A keeps its exposed pins");
+        MultiProcessChipletJourneyDesign.ChipletBPinNames.Except(loadedB.ExternalPins.Select(GroupPinLookup.ExposedId))
+            .ShouldBeEmpty("Step 6: chiplet B keeps its exposed pins");
 
-        loadedCanvas.Connections.Count.ShouldBe(1, "Step 6: the inter-chiplet abutment survives");
-        var abutment = loadedCanvas.Connections.Single();
+        var crossDie = loadedCanvas.Connections
+            .Where(c => !CAP.Avalonia.ViewModels.Canvas.DieSurface.DieWireStyle.IsOnOneDie(c.Connection)).ToList();
+        crossDie.Count.ShouldBe(1, "Step 6: the inter-chiplet abutment survives");
+        var abutment = crossDie.Single();
         var startGroup = abutment.Connection.StartPin.ParentComponent?.ParentGroup;
         var endGroup = abutment.Connection.EndPin.ParentComponent?.ParentGroup;
         startGroup.ShouldNotBeNull("Step 6: the abutment start pin must stay inside chiplet A");

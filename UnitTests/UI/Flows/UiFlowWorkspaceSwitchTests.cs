@@ -48,7 +48,7 @@ public class UiFlowWorkspaceSwitchTests
 
         vm.WorkspaceSwitch.Current.ShouldBe(Workspace.Logic);
         var run = win.FindControl<Button>("RunSimulationButton").ShouldNotBeNull();
-        UiInput.Descendants<TextBlock>(run).Any(t => t.Text == "Run logic").ShouldBeTrue();
+        UiInput.Descendants<TextBlock>(run).Any(t => t.Text == "Build logic").ShouldBeTrue();
         vm.BottomPanel.Analysis.Tabs.IsShown(AnalysisDockTab.Logic).ShouldBeTrue();
         vm.BottomPanel.Analysis.Tabs.IsShown(AnalysisDockTab.Spectrum).ShouldBeFalse();
     }

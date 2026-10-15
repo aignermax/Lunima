@@ -79,6 +79,22 @@ public class AgentBridgeEditToolsTests
     }
 
     [Fact]
+    public async Task ListConnections_ReportsTheInsertionLossBreakdown()
+    {
+        await _canvas.RecalculateRoutesAsync();
+        var body = Body(await new ListConnectionsTool(_session).ExecuteAsync(Args("{}")));
+
+        var loss = body.GetProperty("connections")[0].GetProperty("loss");
+        double total = loss.GetProperty("total_db").GetDouble();
+        total.ShouldBeGreaterThan(0);
+        total.ShouldBe(loss.GetProperty("propagation_db").GetDouble()
+            + loss.GetProperty("bends_db").GetDouble()
+            + loss.GetProperty("junctions_db").GetDouble(), 1e-5);
+        loss.GetProperty("bend_count").GetInt32().ShouldBeGreaterThanOrEqualTo(0);
+        loss.GetProperty("waveguide_family").GetString().ShouldBe("Generic");
+    }
+
+    [Fact]
     public async Task ListConnections_BlockedOnly_MatchesSummaryBlockedCount()
     {
         var blocked = Body(await new ListConnectionsTool(_session).ExecuteAsync(Args("""{"blocked_only":true}""")));

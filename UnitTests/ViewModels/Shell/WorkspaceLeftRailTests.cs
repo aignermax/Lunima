@@ -6,8 +6,9 @@ using Xunit;
 namespace UnitTests.ViewModels.Shell;
 
 /// <summary>
-/// The contextual left rail: each workspace opens on its own section, orders the icons for
-/// it, never drops a section, and remembers the user's last choice per workspace.
+/// The contextual left rail: each workspace opens on its own section, shows the sections of
+/// its tool set in its order (Layout shows all), and remembers the user's last choice per
+/// workspace. A section the workspace leaves out is requested through a switch to Layout.
 /// </summary>
 public class WorkspaceLeftRailTests
 {
@@ -26,15 +27,55 @@ public class WorkspaceLeftRailTests
         WorkspaceRailLayout.DefaultSection(workspace).ShouldBe(expected);
     }
 
-    [Theory]
-    [InlineData(Workspace.Layout)]
-    [InlineData(Workspace.Optics)]
-    [InlineData(Workspace.Logic)]
-    [InlineData(Workspace.System)]
-    public void EveryWorkspace_ListsEverySection_ExactlyOnce(Workspace workspace)
+    [Fact]
+    public void Layout_ListsEverySection_ExactlyOnce()
     {
-        WorkspaceRailLayout.Order(workspace).OrderBy(s => s)
-            .ShouldBe(Enum.GetValues<LeftRailSection>().OrderBy(s => s), "no panel may become unreachable");
+        WorkspaceRailLayout.Order(Workspace.Layout).OrderBy(s => s)
+            .ShouldBe(Enum.GetValues<LeftRailSection>().OrderBy(s => s), "Layout is the one-click way to every panel");
+    }
+
+    [Theory]
+    [InlineData(Workspace.Optics, new[] { LeftRailSection.Library, LeftRailSection.Hierarchy, LeftRailSection.Pdks })]
+    [InlineData(Workspace.Logic, new[] { LeftRailSection.Gates, LeftRailSection.Hierarchy })]
+    [InlineData(Workspace.System, new[] { LeftRailSection.Chiplets, LeftRailSection.Library, LeftRailSection.Hierarchy, LeftRailSection.Pdks })]
+    public void OtherWorkspaces_ShowOnlyTheirToolSetSections(Workspace workspace, LeftRailSection[] expected)
+    {
+        var rail = new LeftRailViewModel();
+        rail.ApplyWorkspace(workspace);
+
+        WorkspaceRailLayout.Order(workspace).ShouldBe(expected);
+        rail.IsLibraryAvailable.ShouldBe(expected.Contains(LeftRailSection.Library));
+        rail.IsGatesAvailable.ShouldBe(expected.Contains(LeftRailSection.Gates));
+        rail.IsChipletsAvailable.ShouldBe(expected.Contains(LeftRailSection.Chiplets));
+    }
+
+    [Fact]
+    public void RequestingAHiddenSection_AsksForAWorkspaceThatShowsIt()
+    {
+        var rail = new LeftRailViewModel();
+        rail.ApplyWorkspace(Workspace.Logic);
+        LeftRailSection? requested = null;
+        rail.SectionUnavailable += section =>
+        {
+            requested = section;
+            rail.ApplyWorkspace(Workspace.Layout);
+        };
+
+        rail.ShowLibraryCommand.Execute(null);
+
+        requested.ShouldBe(LeftRailSection.Library);
+        rail.IsLibraryActive.ShouldBeTrue("the library opens once the host switched to Layout");
+    }
+
+    [Fact]
+    public void RequestingAHiddenSection_WithoutAHandler_LeavesThePaneUnchanged()
+    {
+        var rail = new LeftRailViewModel();
+        rail.ApplyWorkspace(Workspace.System);
+
+        rail.ShowGatesCommand.Execute(null);
+
+        rail.IsChipletsActive.ShouldBeTrue();
     }
 
     [Fact]
@@ -44,15 +85,19 @@ public class WorkspaceLeftRailTests
 
         rail.ApplyWorkspace(Workspace.Logic);
         rail.GatesOrder.ShouldBe(0);
-        rail.LibraryOrder.ShouldBe(1);
+        rail.HierarchyOrder.ShouldBe(1);
 
         rail.ApplyWorkspace(Workspace.System);
         rail.ChipletsOrder.ShouldBe(0);
-        rail.LibraryOrder.ShouldBe(1);
+        rail.LibraryOrder.ShouldBe(1, "System's library holds the edge couplers that link dies");
+        rail.HierarchyOrder.ShouldBe(2);
 
         rail.ApplyWorkspace(Workspace.Layout);
-        new[] { rail.LibraryOrder, rail.HierarchyOrder, rail.PdksOrder, rail.GatesOrder, rail.ChipletsOrder }
-            .ShouldBe(new[] { 0, 1, 2, 3, 4 });
+        new[] { rail.LibraryOrder, rail.PdksOrder, rail.HierarchyOrder, rail.GatesOrder, rail.ChipletsOrder }
+            .ShouldBe(new[] { 0, 1, 2, 3, 4 }, "Layout keeps the fabrication context (PDKs) under the library");
+
+        rail.ApplyWorkspace(Workspace.Optics);
+        new[] { rail.LibraryOrder, rail.HierarchyOrder, rail.PdksOrder }.ShouldBe(new[] { 0, 1, 2 });
     }
 
     [Fact]

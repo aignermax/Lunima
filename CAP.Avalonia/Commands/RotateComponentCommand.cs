@@ -73,6 +73,8 @@ public class RotateComponentCommand : IUndoableCommand
 
         // Update obstacle in pathfinding grid
         _canvas.Router.UpdateComponentObstacle(comp);
+        if (_canvas.Surface.DieOf(_component) is { } die)
+            _canvas.RealignDiePins(die);
 
         // Recalculate paths asynchronously (pin angles change with rotation)
         _ = _canvas.RecalculateRoutesAsync();
