@@ -19,7 +19,7 @@ namespace CAP.Avalonia.Services.AgentBridge.Tools.Repair.Suggest;
 public sealed partial class RepairCandidateGenerator
 {
     /// <summary>Most candidates taken from each category.</summary>
-    public const int PerCategory = 4;
+    public const int PerCategory = 16;
 
     /// <summary>Crossings this close (µm) to a pin of the blocked wire are slid.</summary>
     public const double CrossingSearchRadiusMicrometers = 80;

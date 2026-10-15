@@ -16,27 +16,30 @@ public sealed partial class RepairCandidateGenerator
     public const double NeighbourRadiusMicrometers = PinPairRerouter.NeighbourPinRadiusMicrometers;
 
     /// <summary>Shiftable straights (nearest the blocked wire's pins) whose shifts are tried.</summary>
-    private const int NearestHandles = 2;
+    private const int NearestHandles = 3;
 
-    private static readonly double[] ShiftSteps = { 10, -10, 20, -20 };
-    private static readonly double[] NudgeSteps = { 10, -10, 20, -20 };
-
+    /// <summary>
+    /// Straights of pin-neighbour wires and of wires running past the blocked wire's pins
+    /// (within <see cref="CorridorRadiusMicrometers"/>), nearest first, each shifted in fine
+    /// steps — away from the nearest pin first, which widens the corridor in front of it.
+    /// </summary>
     private IEnumerable<RepairCandidate> SegmentShifts()
     {
-        var neighbours = _session.Canvas.Connections
+        var handles = _session.Canvas.Connections
             .Where(vm => vm.Connection != _blocked && !vm.Connection.IsBlockedFallback && !vm.Connection.IsElectrical)
-            .Where(vm => IsPinNeighbour(vm.Connection.StartPin) || IsPinNeighbour(vm.Connection.EndPin))
-            .ToList();
-
-        var handles = neighbours
-            .SelectMany(vm => SegmentShiftGeometry.GetHandles(vm.Connection.GetPathSegments()).Select(h => (Wire: vm, Handle: h)))
-            .OrderBy(x => DistanceToPins(x.Handle.Midpoint))
+            .SelectMany(vm => SegmentShiftGeometry.GetHandles(vm.Connection.GetPathSegments())
+                .Select(h => (Wire: vm, Handle: h, Distance: HandleDistanceToPins(vm.Connection, h))))
+            .Where(x => x.Distance <= CorridorRadiusMicrometers
+                        || IsPinNeighbour(x.Wire.Connection.StartPin) || IsPinNeighbour(x.Wire.Connection.EndPin))
+            .OrderBy(x => x.Distance)
             .Take(NearestHandles)
+            .Select(x => (x.Wire, x.Handle, Steps: CorridorSteps.WideningFirst(WideningSign(x.Wire.Connection, x.Handle))))
             .ToList();
 
-        foreach (var step in ShiftSteps)
-            foreach (var (wire, handle) in handles)
-                yield return ShiftCandidate(wire, handle.StraightIndex, step);
+        int longest = handles.Count == 0 ? 0 : handles.Max(h => h.Steps.Count);
+        for (int i = 0; i < longest; i++)
+            foreach (var (wire, handle, steps) in handles.Where(h => i < h.Steps.Count))
+                yield return ShiftCandidate(wire, handle.StraightIndex, steps[i]);
     }
 
     private RepairCandidate ShiftCandidate(WaveguideConnectionViewModel wire, int straightIndex, double step)
@@ -67,7 +70,7 @@ public sealed partial class RepairCandidateGenerator
             .Select(g => g.First())
             .ToList();
 
-        foreach (var step in NudgeSteps)
+        foreach (var step in CorridorSteps.Alternating())
             foreach (var (pin, vm) in ends)
             {
                 var (dx, dy) = AcrossPin(pin, step);
@@ -92,8 +95,7 @@ public sealed partial class RepairCandidateGenerator
             .Select(g => g.First())
             .ToList();
 
-        foreach (var step in NudgeSteps)
-            foreach (var (pin, vm) in ends)
+        foreach (var (pin, vm, step) in WideningAxisSteps(ends))
             {
                 var (dx, dy) = AlongPin(pin, step);
                 if (!_session.Canvas.CanMoveComponentTo(vm!, vm!.X + dx, vm.Y + dy))
