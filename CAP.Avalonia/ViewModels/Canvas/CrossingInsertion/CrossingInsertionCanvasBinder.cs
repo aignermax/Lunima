@@ -63,16 +63,16 @@ public class CrossingInsertionCanvasBinder : System.ComponentModel.INotifyProper
             ComponentRemoved = OnCrossingRemoved,
         };
         // Crossings routing placed stay temporary even with insertion off: the service is
-        // attached for maintenance right away, but places crossings only once the user
-        // enables crossing insertion (Settings → Routing → Crossings).
+        // attached for maintenance right away; the composition root then restores the
+        // user's insertion preference (enabled by default) without starting a routing pass.
         canvas.ConnectionManager.CrossingMaintenance = Service;
         UndoJournal = new CrossingUndoJournal(canvas, OnCrossingAdded, OnCrossingRemoved);
         Service.ChangeRecorded = UndoJournal.Record;
     }
 
     /// <summary>
-    /// Whether adaptive crossing insertion runs after routing (Issue #553). Off by
-    /// default. Toggling on attaches the service to the connection manager; toggling
+    /// Whether adaptive crossing insertion runs after routing (Issue #553). The composition
+    /// root restores the user's preference. Toggling on attaches the service; toggling
     /// off detaches it, so routing immediately reverts to classic avoid-only behavior
     /// (no extra post-routing pass). Crossings routing already placed stay until their
     /// wires go stale — the maintenance attachment then takes them out either way.

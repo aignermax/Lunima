@@ -62,7 +62,7 @@ public partial class HierarchyPanelViewModel : ObservableObject
         _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
 
         // Subscribe to canvas changes
-        _canvas.Components.CollectionChanged += (s, e) => RebuildTree();
+        _canvas.Components.CollectionChanged += OnComponentsChanged;
 
         // Parts placed on or removed from a die, and die process changes, leave the top-level
         // collection untouched — the die's node must still follow.
@@ -73,6 +73,10 @@ public partial class HierarchyPanelViewModel : ObservableObject
 
         // Canvas → Hierarchy: mirror the multi-selection set (box selection, Ctrl+click).
         _canvas.Selection.SelectedComponents.CollectionChanged += OnCanvasSelectionSetChanged;
+
+        // The editor may attach after a design has already loaded. Incremental updates
+        // must start from the existing roots, not an empty tree with canvas-sized indexes.
+        RebuildTree();
     }
 
     /// <summary>
@@ -98,6 +102,8 @@ public partial class HierarchyPanelViewModel : ObservableObject
     public void RebuildTree()
     {
         _dieSignature = DieSignature();
+        foreach (var node in RootNodes)
+            node.Dispose();
         RootNodes.Clear();
 
         // Build tree from canvas components (only top-level components, not children of groups)

@@ -10,7 +10,7 @@ namespace CAP.Avalonia.ViewModels.Hierarchy;
 /// Represents a single node in the hierarchy tree (component or group).
 /// Used in the Figma-style hierarchy panel for visualizing component structure.
 /// </summary>
-public partial class HierarchyNodeViewModel : ObservableObject
+public partial class HierarchyNodeViewModel : ObservableObject, IDisposable
 {
     /// <summary>
     /// The underlying component (Component or ComponentGroup).
@@ -145,6 +145,15 @@ public partial class HierarchyNodeViewModel : ObservableObject
         {
             group.PropertyChanged += OnComponentGroupPropertyChanged;
         }
+    }
+
+    /// <summary>Releases model subscriptions when this subtree is replaced or removed.</summary>
+    public void Dispose()
+    {
+        if (Component is ComponentGroup group)
+            group.PropertyChanged -= OnComponentGroupPropertyChanged;
+        foreach (var child in Children)
+            child.Dispose();
     }
 
     /// <summary>

@@ -27,27 +27,56 @@ public class RoutingSettingsPersistenceTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    [Fact]
-    public void CrossingInsertionEnabled_PersistedTrue_BinderStartsEnabled()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CrossingInsertionEnabled_PersistedChoice_BinderHonorsIt(bool enabled)
     {
-        new UserPreferencesService(_preferencesPath).SetCrossingInsertionEnabled(true);
+        new UserPreferencesService(_preferencesPath).SetCrossingInsertionEnabled(enabled);
 
         using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
         var binder = sp.GetRequiredService<CrossingInsertionCanvasBinder>();
 
-        binder.IsEnabled.ShouldBeTrue();
+        binder.IsEnabled.ShouldBe(enabled);
     }
 
     [Fact]
     public void CrossingInsertionEnabled_ToggledOn_PersistsToPreferences()
     {
+        new UserPreferencesService(_preferencesPath).SetCrossingInsertionEnabled(false);
         using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
         var binder = sp.GetRequiredService<CrossingInsertionCanvasBinder>();
-        binder.IsEnabled.ShouldBeFalse("crossing insertion is opt-in");
+        binder.IsEnabled.ShouldBeFalse("an explicit disabled preference must be retained");
 
         binder.IsEnabled = true;
 
         new UserPreferencesService(_preferencesPath).GetCrossingInsertionEnabled().ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("true", true)]
+    [InlineData("false", false)]
+    public void Startup_RestoresCrossingPolicy_WithoutStartingRouting(string? storedValue, bool expected)
+    {
+        File.WriteAllText(_preferencesPath, storedValue == null ? "{}"
+            : "{\"CrossingInsertionEnabled\":" + storedValue + "}");
+        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
+        var canvas = sp.GetRequiredService<DesignCanvasViewModel>();
+        var start = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        var end = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        end.PhysicalX = 400;
+        canvas.ConnectionManager.AddConnectionDeferred(
+            start.PhysicalPins.First(p => p.Name == "out"), end.PhysicalPins.First(p => p.Name == "in"));
+        int routingUpdates = 0;
+        canvas.Routing.StateChanged += () => routingUpdates++;
+
+        App.ActivateStartupSingletons(sp);
+
+        (canvas.ConnectionManager.CrossingInsertion != null).ShouldBe(expected);
+        routingUpdates.ShouldBe(0);
+        canvas.IsRouting.ShouldBeFalse();
+        canvas.ConnectionManager.Connections.Single().RoutedPath.ShouldBeNull();
     }
 
     /// <summary>

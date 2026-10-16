@@ -1,4 +1,7 @@
 {
+  "Preview.Unavailable": "Einige Bauteilvorschauen sind nicht verfügbar.",
+  "Preview.ErrorDetails": "Fehlerdetails",
+
   "AgentBridge.Prompt.Body": "Claude Code ist installiert. Ein Klick schaltet Lunimas lokale Agenten-Brücke ein und registriert sie, damit Claude dein geöffnetes Design untersuchen und bearbeiten kann — jede Änderung lässt sich rückgängig machen.",
   "AgentBridge.Prompt.Close": "Schließen",
   "AgentBridge.Prompt.Connect": "Claude Code verbinden",
@@ -679,7 +682,7 @@
   "IsaPlayground.PhotonicAdderDataMemoryToggle": "ADD berechnen und das Daten-RAM auf dem photonischen Chip halten",
   "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle": "ADD, Daten-RAM und Akkumulator auf dem photonischen Chip",
   "IsaPlayground.PhotonicAccumulatorToggle": "Akkumulator auf dem photonischen Chip halten",
-  "IsaPlayground.PhotonicAdderHint": "Öffne das Beispiel ALU + RAM + ACC (alle Einheiten auf einmal) oder ein 4-Bit-Beispiel (Addierer, NOT 4-Bit, AND 4-Bit, Logic Unit 4-Bit, Zero Detect 4-Bit, RAM 4x4) und drücke im Logik-Tab auf „Logiknetzwerk aufbauen“.",
+  "IsaPlayground.PhotonicAdderHint": "Ein passendes Beispiel öffnen und anschließend sein Logiknetz aufbauen. Auch eigene kompatible Schaltungen können unter Logik aufgebaut werden.",
   "IsaPlayground.StatusPhotonicAdd": "Photonisches ADD {0} + {1} = {2} — das Licht brauchte {3:0.##} ps ({4} Gatter)",
   "IsaPlayground.StatusPhotonicNot": "Photonisches NOT {0} = {1} ({2} Gatter)",
   "IsaPlayground.StatusPhotonicAnd": "Photonisches AND {0} & {1} = {2} ({3} Gatter)",
@@ -2122,5 +2125,11 @@
   "Dies.ProcessChange.Title": "Die-Prozess ändern?",
   "Dies.ProcessChange.Preview": "Zu {0} wechseln? Dabei werden {1} inkompatible Bauteile und {2} verbundene Leitungen entfernt. Kompatible Bauteile bleiben erhalten. Mit Rückgängig wird alles wiederhergestellt.",
   "Dies.ProcessChange.Cancel": "Abbrechen",
-  "Dies.ProcessChange.Confirm": "Prozess ändern"
+  "Dies.ProcessChange.Confirm": "Prozess ändern",
+  "IsaPlayground.OpenSuitableExample": "Passendes Beispiel öffnen",
+  "IsaPlayground.BuildExampleNetwork": "Logiknetz aufbauen",
+  "IsaPlayground.ExampleMissing": "In dieser Installation ist kein passendes Beispiel verfügbar.",
+  "IsaPlayground.ExampleReady": "Beispiel geöffnet. Als Nächstes das Logiknetz aufbauen.",
+  "IsaPlayground.ExampleActionFailed": "Das Beispiel konnte nicht geöffnet werden.",
+  "IsaPlayground.ExampleBuildFailed": "Das Logiknetz konnte nicht aufgebaut werden. Bitte die Meldungen der Logikanalyse prüfen und erneut versuchen."
 }

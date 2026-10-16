@@ -735,6 +735,8 @@ public partial class MainWindow : Window
         if (vm == null) return;
 
         var window = new IsaPlaygroundWindow { DataContext = vm };
+        if (DataContext is ViewModels.MainViewModel main)
+            Services.IsaPlaygroundNavigation.Attach(vm, main);
         // The "Run a program on your chip" tour (#1267) hosts its card here for
         // the playground steps and tracks the window's open state.
         window.Tour = App.Services.GetService(

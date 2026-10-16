@@ -113,9 +113,9 @@ public class UserPreferences
 
     /// <summary>
     /// Whether adaptive crossing insertion is enabled for routing.
-    /// Off by default — a design that inserts crossings changes insertion loss.
+    /// On for new/unset preferences; an explicitly saved false remains off.
     /// </summary>
-    public bool CrossingInsertionEnabled { get; set; }
+    public bool CrossingInsertionEnabled { get; set; } = true;
 
     /// <summary>
     /// Whether diagonal (45°) waveguide routing is enabled. Off by default —

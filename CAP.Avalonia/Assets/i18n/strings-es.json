@@ -1,4 +1,7 @@
 {
+  "Preview.Unavailable": "Algunas vistas previas de componentes no están disponibles.",
+  "Preview.ErrorDetails": "Detalles del error",
+
   "AgentBridge.Prompt.Body": "Claude Code está instalado. Un clic activa el puente de agentes local de Lunima y lo registra, para que Claude pueda inspeccionar y editar tu diseño abierto; cada edición se puede deshacer.",
   "AgentBridge.Prompt.Close": "Cerrar",
   "AgentBridge.Prompt.Connect": "Conectar Claude Code",
@@ -679,7 +682,7 @@
   "IsaPlayground.PhotonicAdderDataMemoryToggle": "Calcular ADD y mantener la RAM de datos en el chip fotónico",
   "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle": "Calcular ADD y mantener la RAM de datos y el acumulador en el chip fotónico",
   "IsaPlayground.PhotonicAccumulatorToggle": "Mantener el acumulador en el chip fotónico",
-  "IsaPlayground.PhotonicAdderHint": "Abre el ejemplo ALU + RAM + ACC (todas las unidades a la vez) o un ejemplo de 4 bits (sumador, NOT de 4 bits, AND de 4 bits, unidad lógica de 4 bits, detección de cero de 4 bits, RAM 4x4) y pulsa «Construir red lógica» en la pestaña Lógica.",
+  "IsaPlayground.PhotonicAdderHint": "Abre un ejemplo compatible y construye su red lógica. También puedes construir tu propio circuito compatible en Lógica.",
   "IsaPlayground.StatusPhotonicAdd": "ADD fotónico {0} + {1} = {2} — la luz tardó {3:0.##} ps ({4} puertas)",
   "IsaPlayground.StatusPhotonicNot": "NOT fotónico {0} = {1} ({2} puertas)",
   "IsaPlayground.StatusPhotonicAnd": "AND fotónico {0} & {1} = {2} ({3} puertas)",
@@ -2122,5 +2125,11 @@
   "Dies.ProcessChange.Title": "¿Cambiar el proceso del chip?",
   "Dies.ProcessChange.Preview": "¿Cambiar a {0}? Se eliminarán {1} componentes incompatibles y {2} conexiones asociadas. Los componentes compatibles se conservarán. Deshacer restaura todo en un solo paso.",
   "Dies.ProcessChange.Cancel": "Cancelar",
-  "Dies.ProcessChange.Confirm": "Cambiar proceso"
+  "Dies.ProcessChange.Confirm": "Cambiar proceso",
+  "IsaPlayground.OpenSuitableExample": "Abrir ejemplo compatible",
+  "IsaPlayground.BuildExampleNetwork": "Construir red lógica",
+  "IsaPlayground.ExampleMissing": "No hay un ejemplo compatible en esta instalación.",
+  "IsaPlayground.ExampleReady": "Ejemplo abierto. Ahora construye su red lógica.",
+  "IsaPlayground.ExampleActionFailed": "No se pudo abrir el ejemplo.",
+  "IsaPlayground.ExampleBuildFailed": "No se pudo construir la red. Revisa los mensajes del análisis lógico e inténtalo de nuevo."
 }

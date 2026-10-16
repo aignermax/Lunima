@@ -23,21 +23,25 @@ public class RoutingSettingsPreferencesTests : IDisposable
     }
 
     [Fact]
-    public void GetCrossingInsertionEnabled_NotConfigured_DefaultsToFalse()
+    public void GetCrossingInsertionEnabled_NotConfigured_DefaultsToTrue()
     {
         var service = new UserPreferencesService(_tempFile);
 
-        service.GetCrossingInsertionEnabled().ShouldBeFalse();
+        service.GetCrossingInsertionEnabled().ShouldBeTrue();
+        service.Save();
+        new UserPreferencesService(_tempFile).GetCrossingInsertionEnabled().ShouldBeTrue();
     }
 
-    [Fact]
-    public void SetCrossingInsertionEnabled_RoundTripsThroughFile()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SetCrossingInsertionEnabled_RoundTripsThroughFile(bool enabled)
     {
         var service = new UserPreferencesService(_tempFile);
 
-        service.SetCrossingInsertionEnabled(true);
+        service.SetCrossingInsertionEnabled(enabled);
 
-        new UserPreferencesService(_tempFile).GetCrossingInsertionEnabled().ShouldBeTrue();
+        new UserPreferencesService(_tempFile).GetCrossingInsertionEnabled().ShouldBe(enabled);
     }
 
     [Fact]
@@ -59,7 +63,7 @@ public class RoutingSettingsPreferencesTests : IDisposable
     }
 
     [Fact]
-    public void LoadingPreExistingPreferencesFile_WithoutRoutingKeys_DefaultsBothFlagsToFalse()
+    public void LoadingPreExistingPreferencesFile_WithoutRoutingKeys_DefaultsCrossingsOnAndDiagonalOff()
     {
         // Simulates a prefs.json written before this feature existed — the Routing
         // settings keys are entirely absent, not just false.
@@ -67,7 +71,7 @@ public class RoutingSettingsPreferencesTests : IDisposable
 
         var service = new UserPreferencesService(_tempFile);
 
-        service.GetCrossingInsertionEnabled().ShouldBeFalse();
+        service.GetCrossingInsertionEnabled().ShouldBeTrue();
         service.GetUseDiagonalRouting().ShouldBeFalse();
     }
 }

@@ -20,6 +20,11 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 1. Application startup & project lifecycle
 
+- [ ] **auto** Adaptive crossings default to enabled for fresh/unset preferences; saved true/false values survive restart. Restoring the policy on startup does not start routing or repair (`RoutingSettingsPreferencesTests`, `RoutingSettingsPersistenceTests`, `AdaptiveCrossingToggleTests`).
+
+- [ ] Reopen the 4-bit adder over an existing design, then switch Logic/System repeatedly: unchanged hierarchy subtrees stay intact, replaced nodes release model subscriptions, and removed die surfaces release cached parts even when old model parent links remain. `(auto: HierarchyLifecycleTests, DieSurfaceLifetimeTests, RepeatedExampleLoadTests [Slow])`
+- [ ] **auto** Component previews recover after activating a working Python environment without restarting. A shared localized library hint opens Python settings and shows failure details; it clears on recovery. Old in-flight failures cannot block retries, and disk-cache reads retain no completed work (`PreviewEnvironmentRecoveryTests`, `PreviewRecoveryHintTests`).
+
 - [ ] Two rotated SiN Edge Couplers connected at their left-facing o2 ports route around the target's left side, entering opposite its outward normal. Bend and Auto reject wrong-way S primitives; ordinary recalculation repairs unedited cached generated arcs, while manual edits and valid quantized A* fallbacks remain preserved. `(auto: SiNEdgeCouplerDirectionTests)`
 
 - [ ] System → New die → Create works through the actual flyout button, closes after creation, and can be undone. The Chiplets list contains real dies; a new or legacy single-chip design shows Die 1 rather than its logic groups. `(auto: NewDieButtonTests, WorkspaceContextTests)`
@@ -271,6 +276,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Monte Carlo tab (?) help explains fabrication variance and yield; the scatter/histogram animation loops. `(manual)`
 - [ ] PDK JSON help page opens from the Tools flyout. `(manual)`
 - [ ] ISA playground opens from the Tools flyout; Assemble + Step runs count-to-5 to ACC = 5; Reset restores PC = 0. `(manual)`
+- [ ] ISA playground hint offers Open suitable example, preserves unsaved-design Save/Discard/Cancel, then offers Build logic network as an explicit next step. Missing examples report a readable message; English/German buttons fit the default window. `(auto: IsaExampleActionTests, IsaPlaygroundExampleActionTests, LocalizationCompletenessTests)`
 - [ ] ISA playground editor shows line numbers and highlights the current step in place (green bar follows Step); no second program listing beside the machine state. `(auto: IsaProgramEditorTests)`
 - [ ] ISA playground Run auto-steps count-to-5 to "halted after N steps" with ACC = 5; Stop mid-run freezes PC and re-enables Step. `(manual)`
 - [ ] ISA playground "Compute ADD on the photonic chip" toggle: disabled with a hint before a build; after building the 4-bit adder example in the Logic tab it runs count-to-5 to ACC = 5 and the status names the photonic adder. `(manual)`

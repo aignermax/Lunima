@@ -51,6 +51,7 @@ public class ResponsivenessBudgetTests
             // headless session cannot close cleanly.
             ["OpenSettingsWindowCommand"] = "opens the Settings window",
             ["OpenAiSettingsCommand"] = "opens the Settings window on the AI page",
+            ["OpenPreviewPythonSettingsCommand"] = "opens the Settings window on the Python environments page; navigation covered by PreviewRecoveryHintTests",
             ["OpenPdkOffsetEditorCommand"] = "opens the PDK offset editor window",
             ["OpenPdkHelpCommand"] = "launches the browser via IUrlLauncher",
             // Requires external state this fixture does not set up.
