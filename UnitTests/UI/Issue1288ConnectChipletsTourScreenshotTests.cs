@@ -104,6 +104,7 @@ public class Issue1288ConnectChipletsTourScreenshotTests
             Dispatcher.UIThread.RunJobs();
             FitDesign(window, vm);
 
+            vm.WorkspaceSwitch.Current = CAP.Avalonia.ViewModels.Workspaces.Workspace.System;
             var tour = vm.ConnectChipletsTour;
             tour.Start();
             tour.IsActive.ShouldBeTrue();
