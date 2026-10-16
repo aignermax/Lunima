@@ -178,8 +178,11 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         IReadOnlyList<(ComponentGroup Group, List<FrozenWaveguidePath> Paths)> groupTargets)
     {
         IsRerouting = true;
+        var expectedScope = _canvas.CurrentEditGroup;
         try
         {
+            var originalScopePaths = expectedScope != null && canvasTargets.Count > 0
+                ? CaptureScopePaths(expectedScope) : null;
             var allConnectionTargets = canvasTargets.Select(t => t.Connection).ToList();
             var allGroupPaths = groupTargets.SelectMany(g => g.Paths).ToList();
             var before = RouteMetricsSnapshot.Capture(allConnectionTargets, allGroupPaths);
@@ -213,8 +216,33 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
             }
 
             // Group-internal targets are routed inside a temporary group-edit sub-canvas.
+            var completedGroups = new HashSet<ComponentGroup>();
             foreach (var (group, paths) in groupTargets)
-                await RerouteGroupInternalAsync(group, paths);
+            {
+                if (!ReferenceEquals(_canvas.CurrentEditGroup, expectedScope)) break;
+                if (await RerouteGroupInternalAsync(group, paths, expectedScope))
+                    completedGroups.Add(group);
+            }
+            groupStates.RemoveAll(state => !completedGroups.Contains(state.Group));
+            if (originalScopePaths != null && !ReferenceEquals(_canvas.CurrentEditGroup, expectedScope))
+            {
+                // Leaving an edited group serializes its wires and discards the live objects.
+                // Preserve that completed work through the existing group-path undo snapshot.
+                groupStates.Add(new RerouteImportedRoutesStateCommand.GroupState
+                {
+                    Group = expectedScope!, OldPaths = originalScopePaths
+                });
+            }
+
+            // A target may have been deleted, or the document replaced, while routing awaited.
+            // Keep successful work on surviving objects, never old-document undo snapshots.
+            var liveConnections = (expectedScope == null ? _canvas.Groups.RootConnections : _canvas.Connections)
+                .Select(vm => vm.Connection).ToHashSet(ReferenceEqualityComparer.Instance);
+            connectionStates.RemoveAll(state => !liveConnections.Contains(state.Connection));
+            groupStates.RemoveAll(state => !_canvas.Groups.RootComponents
+                .Select(vm => vm.Component).OfType<ComponentGroup>()
+                .Any(group => ContainsGroup(group, state.Group)));
+            if (connectionStates.Count == 0 && groupStates.Count == 0) return;
 
             foreach (var state in connectionStates)
             {
@@ -247,10 +275,17 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         }
     }
 
-    private async Task RerouteGroupInternalAsync(
-        ComponentGroup group, IReadOnlyList<FrozenWaveguidePath> paths)
+    private async Task<bool> RerouteGroupInternalAsync(
+        ComponentGroup group, IReadOnlyList<FrozenWaveguidePath> paths, ComponentGroup? expectedScope)
     {
-        _canvas.EnterGroupEditMode(group);
+        // Drain the previous canvas worker before replacing its live connection list.
+        // The gate also rejects queued crossing callbacks from the old scope.
+        bool entered = await _canvas.Routing.ExecuteHistoryChangeAsync(() =>
+        {
+            _canvas.EnterGroupEditMode(group);
+            return true;
+        }, () => ReferenceEquals(_canvas.CurrentEditGroup, expectedScope) && ContainsCurrentGroup(group));
+        if (!entered) return false;
         try
         {
             var targets = _canvas.Connections
@@ -268,6 +303,7 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         {
             _canvas.ExitGroupEditMode();
         }
+        return true;
     }
 
     /// <summary>
@@ -286,6 +322,33 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
             count,
             before.LengthMicrometers, after.LengthMicrometers,
             before.EquivalentBends, after.EquivalentBends);
+
+    private List<FrozenWaveguidePath> CaptureScopePaths(ComponentGroup scope)
+    {
+        var paths = scope.InternalPaths.Where(path => path.StartPin == null || path.EndPin == null)
+            .Select(RerouteImportedRoutesStateCommand.CloneWithPins).ToList();
+        foreach (var vm in _canvas.Connections)
+        {
+            var connection = vm.Connection;
+            if (connection.RoutedPath == null) continue;
+            var path = new FrozenWaveguidePath
+            {
+                StartPin = connection.StartPin, EndPin = connection.EndPin,
+                Path = connection.RoutedPath.DeepCopy()
+            };
+            path.CaptureSettingsFrom(connection);
+            paths.Add(path);
+        }
+        return paths;
+    }
+
+    private bool ContainsCurrentGroup(ComponentGroup target) =>
+        _canvas.Components.Select(vm => vm.Component).OfType<ComponentGroup>()
+            .Any(group => ContainsGroup(group, target));
+
+    private static bool ContainsGroup(ComponentGroup group, ComponentGroup target) =>
+        ReferenceEquals(group, target) || group.ChildComponents.OfType<ComponentGroup>()
+            .Any(child => ContainsGroup(child, target));
 
     private static IEnumerable<(ComponentGroup Group, List<FrozenWaveguidePath> Paths)> CollectGroupTargets(
         DesignCanvasViewModel canvas)
