@@ -11,6 +11,13 @@ public class HeadlessDispatcherBootstrapTests
 
     [Fact]
     public async Task SharedApplication_AfterOrdinaryFactTouchesDispatcher_SupportsAsyncDispatch()
+        => await RunProbeAsync(false);
+
+    [Fact]
+    public async Task SharedApplication_WhenDispatcherIsTouchedDuringPlatformInitialization_SupportsAsyncDispatch()
+        => await RunProbeAsync(true);
+
+    private static async Task RunProbeAsync(bool duringInitialization)
     {
         if (Environment.GetEnvironmentVariable(ProbeEnvironment) == "1")
         {
@@ -18,7 +25,8 @@ public class HeadlessDispatcherBootstrapTests
             var fallback = Dispatcher.UIThread; // Ordinary routing/view-model facts do this first.
             Assert.False(fallback.SupportsRunLoops);
             using var session = HeadlessUnitTestSession.StartNew(
-                typeof(ScreenshotTestAppBuilder), AvaloniaTestIsolationLevel.PerAssembly);
+                duringInitialization ? typeof(LateFallbackTestAppBuilder) : typeof(ScreenshotTestAppBuilder),
+                AvaloniaTestIsolationLevel.PerAssembly);
             await session.Dispatch(async () =>
             {
                 await Task.Yield(); // Requires a real nested dispatcher loop, like AvaloniaFact.
@@ -43,7 +51,9 @@ public class HeadlessDispatcherBootstrapTests
         start.ArgumentList.Add(typeof(HeadlessDispatcherBootstrapTests).Assembly.Location);
         start.ArgumentList.Add("--TestCaseFilter:FullyQualifiedName=" +
             typeof(HeadlessDispatcherBootstrapTests).FullName + "." +
-            nameof(SharedApplication_AfterOrdinaryFactTouchesDispatcher_SupportsAsyncDispatch));
+            (duringInitialization
+                ? nameof(SharedApplication_WhenDispatcherIsTouchedDuringPlatformInitialization_SupportsAsyncDispatch)
+                : nameof(SharedApplication_AfterOrdinaryFactTouchesDispatcher_SupportsAsyncDispatch)));
         start.Environment[ProbeEnvironment] = "1";
         using var process = Process.Start(start)!;
         var stdout = process.StandardOutput.ReadToEndAsync();
@@ -58,5 +68,24 @@ public class HeadlessDispatcherBootstrapTests
         {
             if (!process.HasExited) process.Kill(entireProcessTree: true);
         }
+    }
+}
+
+/// <summary>Reproduces a plain Fact timer touching UIThread in the platform setup gap.</summary>
+public class LateFallbackTestAppBuilder
+{
+    public static AppBuilder BuildAvaloniaApp()
+    {
+        var builder = AppBuilder.Configure<ScreenshotTestApp>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+        var initialize = builder.WindowingSubsystemInitializer!;
+        builder.UseWindowingSubsystem(() =>
+        {
+            Assert.Null(Application.Current);
+            Assert.False(Dispatcher.UIThread.SupportsRunLoops);
+            initialize();
+        }, builder.WindowingSubsystemName!);
+        return builder.WithFallbackDispatcherReset();
     }
 }

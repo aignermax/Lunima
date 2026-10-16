@@ -13,8 +13,11 @@ internal static class HeadlessDispatcherBootstrap
             ?? throw new InvalidOperationException("Configure UseHeadless before the dispatcher bootstrap.");
         return builder.UseWindowingSubsystem(() =>
         {
-            ResetPrePlatformFallback();
             initialize();
+            // A plain Fact's background timer can recreate the fallback during
+            // platform initialization. Clear it only after headless services are
+            // registered, so the next dispatcher lookup uses the controlled impl.
+            ResetPrePlatformFallback();
             if (!Dispatcher.UIThread.SupportsRunLoops)
                 throw new InvalidOperationException("Headless setup did not install a controlled UI dispatcher.");
         }, builder.WindowingSubsystemName!);
