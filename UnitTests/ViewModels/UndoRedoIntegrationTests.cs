@@ -61,7 +61,7 @@ public class UndoRedoIntegrationTests
     }
 
     [Fact]
-    public void UndoCommand_Execute_UndoesLastAction()
+    public async Task UndoCommand_Execute_UndoesLastAction()
     {
         // Arrange
         var mainVm = CreateMainViewModel();
@@ -71,7 +71,7 @@ public class UndoRedoIntegrationTests
         mainVm.CommandManager.ExecuteCommand(cmd);
 
         // Act - Execute Undo
-        mainVm.UndoCommand.Execute(null);
+        await mainVm.UndoCommand.ExecuteAsync(null);
 
         // Assert
         mainVm.Canvas.Components.Count.ShouldBe(1, "Component should be restored after undo");
@@ -80,7 +80,7 @@ public class UndoRedoIntegrationTests
     }
 
     [Fact]
-    public void RedoCommand_AfterUndo_BecomesEnabled()
+    public async Task RedoCommand_AfterUndo_BecomesEnabled()
     {
         // Arrange
         var mainVm = CreateMainViewModel();
@@ -90,7 +90,7 @@ public class UndoRedoIntegrationTests
         mainVm.CommandManager.ExecuteCommand(cmd);
 
         // Act - Undo the action
-        mainVm.UndoCommand.Execute(null);
+        await mainVm.UndoCommand.ExecuteAsync(null);
 
         // Assert
         mainVm.RedoCommand.CanExecute(null).ShouldBeTrue("Redo command should be enabled after undo");
@@ -99,7 +99,7 @@ public class UndoRedoIntegrationTests
     }
 
     [Fact]
-    public void RedoCommand_Execute_RedoesLastUndoneAction()
+    public async Task RedoCommand_Execute_RedoesLastUndoneAction()
     {
         // Arrange
         var mainVm = CreateMainViewModel();
@@ -107,10 +107,10 @@ public class UndoRedoIntegrationTests
         var vm = mainVm.Canvas.AddComponent(component, "TestTemplate");
         var cmd = new DeleteComponentCommand(mainVm.Canvas, vm);
         mainVm.CommandManager.ExecuteCommand(cmd);
-        mainVm.UndoCommand.Execute(null);
+        await mainVm.UndoCommand.ExecuteAsync(null);
 
         // Act - Execute Redo
-        mainVm.RedoCommand.Execute(null);
+        await mainVm.RedoCommand.ExecuteAsync(null);
 
         // Assert
         mainVm.Canvas.Components.Count.ShouldBe(0, "Component should be deleted again after redo");
@@ -119,7 +119,7 @@ public class UndoRedoIntegrationTests
     }
 
     [Fact]
-    public void UndoRedo_MultipleDeletes_WorksCorrectly()
+    public async Task UndoRedo_MultipleDeletes_WorksCorrectly()
     {
         // Arrange
         var mainVm = CreateMainViewModel();
@@ -145,8 +145,8 @@ public class UndoRedoIntegrationTests
         mainVm.CommandManager.UndoCount.ShouldBe(3);
 
         // Act - Undo twice
-        mainVm.UndoCommand.Execute(null);
-        mainVm.UndoCommand.Execute(null);
+        await mainVm.UndoCommand.ExecuteAsync(null);
+        await mainVm.UndoCommand.ExecuteAsync(null);
 
         // Assert after 2 undos
         mainVm.Canvas.Components.Count.ShouldBe(2, "Should have 2 components after 2 undos");
@@ -156,7 +156,7 @@ public class UndoRedoIntegrationTests
         mainVm.RedoCommand.CanExecute(null).ShouldBeTrue("Can redo");
 
         // Act - Redo once
-        mainVm.RedoCommand.Execute(null);
+        await mainVm.RedoCommand.ExecuteAsync(null);
 
         // Assert after 1 redo
         mainVm.Canvas.Components.Count.ShouldBe(1, "Should have 1 component after 1 redo");
@@ -165,7 +165,7 @@ public class UndoRedoIntegrationTests
     }
 
     [Fact]
-    public void CommandManager_AfterNewAction_ClearsRedoStack()
+    public async Task CommandManager_AfterNewAction_ClearsRedoStack()
     {
         // Arrange
         var mainVm = CreateMainViewModel();
@@ -175,7 +175,7 @@ public class UndoRedoIntegrationTests
         mainVm.CommandManager.ExecuteCommand(cmd1);
 
         // Undo the action
-        mainVm.UndoCommand.Execute(null);
+        await mainVm.UndoCommand.ExecuteAsync(null);
         mainVm.RedoCommand.CanExecute(null).ShouldBeTrue("Should be able to redo");
 
         // Act - Execute a new action (should clear redo stack)
@@ -191,7 +191,7 @@ public class UndoRedoIntegrationTests
     }
 
     [Fact]
-    public void MoveComponent_CreatesCommandInHistory()
+    public async Task MoveComponent_CreatesCommandInHistory()
     {
         // Arrange
         var mainVm = CreateMainViewModel();
@@ -214,7 +214,7 @@ public class UndoRedoIntegrationTests
         mainVm.UndoCommand.CanExecute(null).ShouldBeTrue();
 
         // Act - Undo the move
-        mainVm.UndoCommand.Execute(null);
+        await mainVm.UndoCommand.ExecuteAsync(null);
 
         // Assert - Component should be back at original position
         vm.X.ShouldBe(initialX, "Component should be back at original X position");
@@ -222,7 +222,7 @@ public class UndoRedoIntegrationTests
     }
 
     [Fact]
-    public void DeleteComponent_UndoRestoresComponent()
+    public async Task DeleteComponent_UndoRestoresComponent()
     {
         // Arrange
         var mainVm = CreateMainViewModel();
@@ -238,7 +238,7 @@ public class UndoRedoIntegrationTests
         mainVm.Canvas.Components.Count.ShouldBe(0, "Component should be deleted");
 
         // Act - Undo the delete
-        mainVm.UndoCommand.Execute(null);
+        await mainVm.UndoCommand.ExecuteAsync(null);
 
         // Assert
         mainVm.Canvas.Components.Count.ShouldBe(1, "Component should be restored");

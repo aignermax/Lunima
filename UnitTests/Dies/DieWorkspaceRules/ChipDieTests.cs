@@ -63,7 +63,7 @@ public class ChipDieTests
     }
 
     [Fact]
-    public void FirstEditOfDie1_MakesItARealDie_InOneUndoStep()
+    public async Task FirstEditOfDie1_MakesItARealDie_InOneUndoStep()
     {
         var vm = SingleDie(out var part);
         vm.WorkspaceSwitch.Current = Workspace.System;
@@ -77,7 +77,7 @@ public class ChipDieTests
         die.Die!.WidthMicrometers.ShouldBe(2000, 1e-6);
         vm.Canvas.SelectedComponent!.Component.ShouldBe(die, "the new die stays selected");
 
-        vm.UndoCommand.Execute(null);
+        await vm.UndoCommand.ExecuteAsync(null);
 
         vm.Canvas.Dies.IsAssemblyRoot.ShouldBeFalse();
         part.ParentGroup.ShouldBeNull("undo restores the single-die design exactly");
