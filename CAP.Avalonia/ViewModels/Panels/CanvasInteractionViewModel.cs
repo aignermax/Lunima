@@ -732,6 +732,9 @@ public partial class CanvasInteractionViewModel : ObservableObject
             || Controls.OutlineHitTester.Hits(c.Component, new global::Avalonia.Point(x, y),
                 Controls.OutlineHitTester.ToleranceAt(_canvas.ViewZoom)));
 
+    /// <summary>Activates the work surface under an explicit selection click, independently of object selection.</summary>
+    public Action<double, double>? SelectionPointChanged { get; set; }
+
     private void SelectAt(double x, double y)
     {
         // Deselect all (parts on dies included)
@@ -795,6 +798,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         SyncSelectionSetToClickResult();
+        SelectionPointChanged?.Invoke(x, y);
     }
 
     /// <summary>

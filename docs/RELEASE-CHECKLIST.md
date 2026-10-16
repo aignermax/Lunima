@@ -91,6 +91,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ### Dies (multi-die assemblies)
 
+- [ ] In Layout, click an empty area of each of two dies with different processes: the library follows that die without selecting or moving its frame. Hover does not switch it. Arming and repeatedly placing a component retains that die's library. `(auto: DieLibraryContextTests)`
+- [ ] Arm a Layout-only component, then switch to System: Select mode is active and dies can be moved. A permitted edge coupler stays armed and placeable. `(auto: WorkspaceLibraryPlacementTests)`
+
 - [ ] A single-chip design (every older file) shows its chip as "Die 1": a die frame with its size and the design process. In System a click on the chip selects Die 1 (die properties), double-click and F frame it; the first edit makes it a real die (one Ctrl+Z restores the single chip). The model, file and exports stay single-die until then. `(auto: ChipDieTests, DieCommandTests, DiePersistenceTests, UiFlowDieWorkspaceRulesTests)`
 - [ ] System workspace → Chiplets → "New die": pick a process + size preset; the chip becomes "Die 1" and the new die appears to the right with its own process-coloured frame, name, size label and edge zone; one Ctrl+Z restores the single chip. `(auto: DieCommandTests, DieViewModelTests, ChipletAssemblyScreenshotTests)`
 - [ ] Selecting a die (Chiplets row or its frame) shows its properties on the right — name, size presets per process + custom, process, PDK checkboxes, edge zone, Zoom to die/Delete — every edit undoable; the library and PDK list only offer what the die's process and PDKs allow. `(auto: DieViewModelTests)`
