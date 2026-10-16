@@ -140,6 +140,10 @@ internal sealed class UiFlowTestHost : IDisposable
     {
         foreach (var owned in Window.OwnedWindows.ToList())
             owned.Close();
+        // This temporary fixture is being discarded, not asking the user to save.
+        // The real headless save-prompt service returns Cancel, which would leave
+        // this window alive and leak focus/input state into the shared UI session.
+        Vm.FileOperations.HasUnsavedChanges = false;
         Window.Close();
         Dispatcher.UIThread.RunJobs();
 
