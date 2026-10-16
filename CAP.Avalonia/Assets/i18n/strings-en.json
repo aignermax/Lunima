@@ -1933,6 +1933,7 @@
   "Workspace.Action.BuildLogic": "Build logic network",
   "Workspace.Action.LogicStep": "Logic step",
   "Workspace.Action.RunSystem": "Run system",
+  "GateView.ConnectDirection": "Connect a gate output to a gate input.",
   "GateView.Gates": "Gates",
   "GateView.Physical": "Physical",
   "GateView.ShowPhysicalTip": "Showing gates and signals. Switch to the physical MMIs and waveguides to edit waveguides (V).",
