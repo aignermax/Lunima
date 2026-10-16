@@ -7,6 +7,29 @@ namespace UnitTests.Update;
 public class WindowsInstallerWorkflowTests
 {
     [Fact]
+    public void Msi_RuntimePrerequisiteMatchesDesktopTarget_AndRequiresSuccessfulCheck()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root != null && !File.Exists(Path.Combine(root.FullName, "Installer", "Product.wxs")))
+            root = root.Parent;
+        root.ShouldNotBeNull();
+        var installer = XDocument.Load(Path.Combine(root!.FullName, "Installer", "Product.wxs"));
+        var desktop = XDocument.Load(Path.Combine(root.FullName, "CAP.Desktop", "CAP.Desktop.csproj"));
+        var target = desktop.Descendants("TargetFramework").Single().Value;
+        var check = installer.Descendants().Single(e => e.Name.LocalName == "DotNetCompatibilityCheck");
+        ((string?)check.Attribute("Version")).ShouldBe(target[3..] + ".0");
+        ((string?)check.Attribute("RuntimeType")).ShouldBe("core",
+            "Avalonia requires Microsoft.NETCore.App, not Microsoft.WindowsDesktop.App");
+        ((string?)check.Attribute("RollForward")).ShouldBe("minor",
+            "runtimeconfig has the default minor policy, not major roll-forward");
+        var property = (string)check.Attribute("Property")!;
+        var launch = installer.Descendants().Single(e => e.Name.LocalName == "Launch");
+        ((string?)launch.Attribute("Condition")).ShouldBe($"Installed OR {property} = \"0\"",
+            "WiX compatibility checks return 0 on success and nonzero failure codes");
+        ((string?)launch.Attribute("Message")).ShouldContain(".NET " + target[3..].Split('.')[0] + " Runtime");
+    }
+
+    [Fact]
     public void Msi_RecordsMachineInstallRootInRequiredFeature()
     {
         var root = new DirectoryInfo(AppContext.BaseDirectory);
