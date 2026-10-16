@@ -2,12 +2,70 @@ using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using CAP.Avalonia.Controls.TourAnchor;
+using CAP.Avalonia.Behaviors;
 
 namespace UnitTests.UI;
 
 public class VisualGuideOverlayTests
 {
+    [AvaloniaFact]
+    public void Demonstration_PointsAtRealControl_WithoutInterceptingInput()
+    {
+        var target = new Button { Name = "ActualAction", Content = "Action", Width = 90, Height = 40 };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = target.Name };
+        var window = new Window { Width = 800, Height = 600, Content = new Avalonia.Controls.Grid { Children = { target, overlay } } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            // Trigger target resolution after layout, independently of wall-clock ticks.
+            overlay.TargetName = null;
+            overlay.TargetName = target.Name;
+            var pointer = overlay.GetVisualDescendants().OfType<Control>().SingleOrDefault(c => c.Name == "GuidePointer");
+            Assert.NotNull(pointer);
+            Assert.True(pointer.IsVisible);
+            Assert.False(pointer.IsHitTestVisible);
+            var timer = (DispatcherTimer?)typeof(TourAnchorOverlay)
+                .GetField("_pointerTimer", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(overlay);
+            overlay.IsVisible = false;
+            Assert.True(timer == null || !timer.IsEnabled);
+            Assert.False(pointer.IsVisible);
+            overlay.IsVisible = true;
+            overlay.TargetName = "DoesNotExist";
+            Assert.False(pointer.IsVisible);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void ReducedMotion_DemonstrationHasNoAnimationTimer()
+    {
+        var previous = RevealOnShowBehavior.AnimationsEnabled;
+        RevealOnShowBehavior.AnimationsEnabled = false;
+        var target = new Button { Name = "Action", Width = 90, Height = 40 };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = "Action" };
+        var window = new Window { Width = 800, Height = 600, Content = new Avalonia.Controls.Grid { Children = { target, overlay } } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            overlay.TargetName = null;
+            overlay.TargetName = target.Name;
+            var pointer = overlay.GetVisualDescendants().OfType<Control>().Single(c => c.Name == "GuidePointer");
+            Assert.True(pointer.IsVisible);
+            var timer = (DispatcherTimer?)typeof(TourAnchorOverlay)
+                .GetField("_pointerTimer", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(overlay);
+            Assert.True(timer == null || !timer.IsEnabled);
+        }
+        finally
+        {
+            window.Close();
+            RevealOnShowBehavior.AnimationsEnabled = previous;
+        }
+    }
+
     [AvaloniaFact]
     public void HiddenGuidance_StopsPolling_AndResumesWhenShown()
     {

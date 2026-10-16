@@ -71,6 +71,10 @@ public partial class TourAnchorOverlay : UserControl
         }
         else if (change.Property == IsVisibleProperty)
             UpdatePolling();
+        else if (change.Property == DemonstrateProperty || change.Property == TargetItemProperty ||
+                 change.Property == TargetCanvasPointProperty || change.Property == TargetPinProperty ||
+                 change.Property == ConnectionTargetPinProperty)
+            RefreshAnchor();
     }
 
     /// <inheritdoc/>
@@ -91,6 +95,7 @@ public partial class TourAnchorOverlay : UserControl
     {
         _attached = false;
         _poll.Stop();
+        StopDemonstration();
         foreach (var ancestor in _visibilityAncestors)
             ancestor.PropertyChanged -= OnAncestorPropertyChanged;
         _visibilityAncestors.Clear();
@@ -118,6 +123,7 @@ public partial class TourAnchorOverlay : UserControl
         else
         {
             _poll.Stop();
+            StopDemonstration();
             _cachedTarget = null;
         }
     }
@@ -129,7 +135,10 @@ public partial class TourAnchorOverlay : UserControl
 
         var viewport = RootCanvas.Bounds.Size;
         var target = FindTarget();
+        target = ResolveItemTarget(target);
         var targetRect = target == null ? default : TargetRectInOverlay(target);
+        if (Demonstrate && target != null)
+            targetRect = ResolveDemonstrationRect(target, targetRect);
 
         if (target != null && _broughtIntoView != TargetName)
         {
@@ -148,6 +157,12 @@ public partial class TourAnchorOverlay : UserControl
 
         UpdateSpotlight(targetRect, hasSpotlight);
         UpdateArrow(targetRect, side, hasSpotlight);
+        UpdateDemonstration(hasSpotlight ? targetRect.Center : null);
+        if (Demonstrate)
+        {
+            ApplyDim(viewport, default);
+            Arrow.IsVisible = false;
+        }
     }
 
     private Control? FindTarget()
