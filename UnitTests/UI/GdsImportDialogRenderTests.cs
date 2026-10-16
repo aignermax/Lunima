@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Avalonia.VisualTree;
+using System.ComponentModel;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using CAP.Avalonia.Commands;
@@ -62,22 +64,47 @@ public class GdsImportDialogRenderTests : IDisposable
         var executor = new GdsPlacementExecutor(
             new DesignCanvasViewModel(), new CommandManager(), () => new List<ComponentTemplate>());
         var vm = new GdsImportDialogViewModel(gdsPath, service, executor);
-        await vm.StartAnalysisAsync();
-        vm.HasError.ShouldBeFalse(vm.ErrorText);
-        vm.HasSuggestions.ShouldBeTrue("the chips template only builds when suggestions exist");
-        vm.HasCensus.ShouldBeTrue("the census template only builds when rows exist");
-
+        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var starts = 0;
+        void OnAnalysisChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(vm.IsBusy)) return;
+            if (vm.IsBusy) starts++;
+            else if (starts > 0) completed.TrySetResult();
+        }
+        vm.PropertyChanged += OnAnalysisChanged;
         var dialog = new GdsImportDialog { DataContext = vm };
-        dialog.Show();
-        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            // OnOpened owns the analysis. Await its actual completion instead of
+            // pre-analyzing and racing a second run started by Show().
+            dialog.Show();
+            await completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            starts.ShouldBe(1);
+            vm.HasError.ShouldBeFalse(vm.ErrorText);
+            vm.HasSuggestions.ShouldBeTrue("the shown chips must have analyzed data");
+            vm.HasCensus.ShouldBeTrue("the shown census must have analyzed data");
 
-        // The layer-assignment section is collapsed by default — expanding it
-        // builds the deferred chip/census templates (the runtime-cast crash site).
-        dialog.FindControl<Expander>("LayerAssignmentExpander")
-            .ShouldNotBeNull().IsExpanded = true;
-        Dispatcher.UIThread.RunJobs();
-
-        dialog.Close();
-        Dispatcher.UIThread.RunJobs();
+            var layers = dialog.FindControl<Expander>("LayerAssignmentExpander").ShouldNotBeNull();
+            layers.IsExpanded = true;
+            dialog.UpdateLayout();
+            Dispatcher.UIThread.RunJobs();
+            // Census has its own nested expander; expand it too so both formerly
+            // crashing parent-Window command bindings are actually materialized.
+            layers.GetVisualDescendants().OfType<Expander>().Single().IsExpanded = true;
+            dialog.UpdateLayout();
+            Dispatcher.UIThread.RunJobs();
+            var buttons = dialog.GetVisualDescendants().OfType<Button>().ToArray();
+            buttons.ShouldContain(b => b.DataContext is GdsLayerSuggestionChip
+                && ReferenceEquals(b.Command, vm.AcceptSuggestionCommand));
+            buttons.ShouldContain(b => b.DataContext is GdsLayerCensusRow
+                && ReferenceEquals(b.Command, vm.AppendCensusRowCommand));
+        }
+        finally
+        {
+            vm.PropertyChanged -= OnAnalysisChanged;
+            dialog.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
     }
 }
