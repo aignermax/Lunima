@@ -153,6 +153,7 @@ public partial class DesignCanvas : Control
     {
         base.OnDetachedFromVisualTree(e);
         LocalizationService.Instance.PropertyChanged -= OnLocalizationChanged;
+        _gateConnectionGesture?.Cancel();
     }
 
     // Redraw the code-drawn HUD (mode indicator, status line) in the newly chosen language.
@@ -265,6 +266,7 @@ public partial class DesignCanvas : Control
             if (recognizer.TryRecognize(e, canvasPoint, vm, MainViewModel))
             {
                 _activeGesture = recognizer;
+                if (recognizer == _gateConnectionGesture) e.Pointer.Capture(this);
                 break;
             }
         }
@@ -297,7 +299,8 @@ public partial class DesignCanvas : Control
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        if (_interactionState.HoveredComponent == null) return;
+        _interactionState.ResetPlacementPreview();
+        _interactionState.ResetGroupTemplatePlacementPreview();
         _interactionState.HoveredComponent = null;
         InvalidateVisual();
     }
@@ -316,6 +319,7 @@ public partial class DesignCanvas : Control
         base.OnPointerReleased(e);
         if (ViewModel != null)
             _activeGesture?.OnPointerReleased(e, ViewModel, MainViewModel);
+        if (_activeGesture == _gateConnectionGesture) e.Pointer.Capture(null);
         _activeGesture = null;
     }
 
@@ -371,6 +375,7 @@ public partial class DesignCanvas : Control
     private void InitGestures()
     {
         var componentDrag = new ComponentDragGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom, c => Cursor = c);
+        InitGateConnectionGesture();
         _gestureRecognizers =
         [
             // First: a bend-radius handle grab must win over selection / component drag (#574).
@@ -380,6 +385,7 @@ public partial class DesignCanvas : Control
             new SegmentShiftGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom),
             new PanGestureRecognizer(_interactionState, InvalidateVisual),
             new CutToolGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom),
+            _gateConnectionGesture,
             new ConnectionGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom),
             new PlacementGestureRecognizer(_interactionState, InvalidateVisual),
             // A crossing with wires slides along one of them; Shift (at the press or mid-drag)
@@ -405,6 +411,8 @@ public partial class DesignCanvas : Control
 
     private void OnMainViewModelChanged(AvaloniaPropertyChangedEventArgs e)
     {
+        _interactionState.ResetPlacementPreview();
+        _interactionState.ResetGroupTemplatePlacementPreview();
         if (e.OldValue is MainViewModel oldVm)
         {
             oldVm.CommandManager.StateChanged -= OnCommandStateChanged;
@@ -419,17 +427,7 @@ public partial class DesignCanvas : Control
             newVm.CanvasInteraction.PropertyChanged += OnInteractionPropertyChanged;
             newVm.GateView.Changed += InvalidateVisual;
         }
-    }
-
-    /// <summary>
-    /// Repaints when the interaction mode changes so mode-dependent overlays (the
-    /// analysis-output candidate glow #754, the HUD mode indicator) update immediately
-    /// after a mode button click instead of on the next pointer movement.
-    /// </summary>
-    private void OnInteractionPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ViewModels.Panels.CanvasInteractionViewModel.CurrentMode))
-            InvalidateVisual();
+        InvalidateVisual();
     }
 
     private void OnViewModelChanged(AvaloniaPropertyChangedEventArgs e)

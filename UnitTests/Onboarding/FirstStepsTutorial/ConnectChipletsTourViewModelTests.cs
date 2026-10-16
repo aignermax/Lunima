@@ -76,7 +76,8 @@ public class ConnectChipletsTourViewModelTests : IDisposable
         tour.CurrentTitle.ShouldNotBeNullOrWhiteSpace();
         tour.CurrentTitle.ShouldNotBe(tour.CurrentStep.TitleKey, "title must be localized, not the raw key");
         tour.CurrentBody.ShouldNotBe(tour.CurrentStep.BodyKey, "body must be localized, not the raw key");
-        tour.CurrentTargetName.ShouldBe("DesignCanvasControl");
+        tour.CurrentTargetName.ShouldBeNull("an empty design has no receiver to demonstrate");
+        tour.CurrentCue.ShouldContain("Receiver missing");
     }
 
     [Fact]
@@ -105,11 +106,11 @@ public class ConnectChipletsTourViewModelTests : IDisposable
         canvas.ShowPowerFlow = true;
         tour.ShowMoveForMeButton.ShouldBeTrue();
         tour.NextCommand.Execute(null);
-        tour.ShowMoveForMeButton.ShouldBeFalse("leaving the move step hides the helper button");
+        tour.ShowMoveForMeButton.ShouldBeTrue("Next cannot claim the receiver was moved");
     }
 
     [Fact]
-    public void Next_AdvancesManually_ThroughAllSteps()
+    public void Next_CannotBypassRealActionsOrClaimCompletion()
     {
         var (_, _, _, tour) = CreateFixture();
         tour.Start();
@@ -117,8 +118,9 @@ public class ConnectChipletsTourViewModelTests : IDisposable
         for (var i = 0; i < 7; i++)
             tour.NextCommand.Execute(null);
 
-        tour.IsCompleted.ShouldBeTrue();
-        tour.IsActive.ShouldBeFalse("the overlay hides once the tour completes");
+        tour.IsCompleted.ShouldBeFalse();
+        tour.IsActive.ShouldBeTrue();
+        tour.CurrentStepIndex.ShouldBe(1, "only the introduction may advance without its action");
     }
 
     [Fact]

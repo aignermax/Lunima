@@ -169,6 +169,12 @@ public class MainViewModelWorkspaceTests
 
             loadVm.WorkspaceSwitch.Current.ShouldBe(Workspace.System,
                 "the stored workspace wins over the content default (an empty design would be Layout)");
+            loadVm.Tutorial.IsActive.ShouldBeFalse("loading an empty saved design is not first-use creation");
+
+            var copyVm = MainViewModelTestHelper.CreateMainViewModel();
+            (await copyVm.FileOperations.OpenDesignAsCopyAsync(file)).ShouldBeTrue();
+            copyVm.WorkspaceSwitch.Current.ShouldBe(Workspace.System);
+            copyVm.Tutorial.IsActive.ShouldBeFalse("an untitled copy still preserves its source workspace");
         }
         finally
         {

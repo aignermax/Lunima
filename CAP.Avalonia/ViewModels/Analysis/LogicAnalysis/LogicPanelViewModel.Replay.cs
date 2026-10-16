@@ -65,6 +65,17 @@ public partial class LogicPanelViewModel
         SelectedTimelineEvent = ReferenceEquals(SelectedTimelineEvent, row) ? null : row;
     }
 
+    /// <summary>Seeks to the nearest existing event without toggling an already selected row off.</summary>
+    [RelayCommand]
+    private void SeekWaveform(double timePicoseconds)
+    {
+        if (!double.IsFinite(timePicoseconds) || TimelineEvents.Count == 0)
+            return;
+        var nearest = TimelineEvents.MinBy(row => Math.Abs(row.Event.TimePicoseconds - timePicoseconds));
+        StopPlayback();
+        SelectedTimelineEvent = nearest;
+    }
+
     /// <summary>Steps the replay one event earlier; manual stepping stops the auto-play.</summary>
     [RelayCommand(CanExecute = nameof(CanStepToPreviousEvent))]
     private void PreviousTimelineEvent()

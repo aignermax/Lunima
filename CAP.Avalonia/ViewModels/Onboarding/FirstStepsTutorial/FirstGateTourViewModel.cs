@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using CAP.Avalonia.Commands;
 using System.ComponentModel;
 using System.Globalization;
 using CAP.Avalonia.Services.Localization;
@@ -29,6 +30,7 @@ public partial class FirstGateTourViewModel : ObservableObject
     private readonly DesignCanvasViewModel _canvas;
     private readonly MakeGateViewModel _makeGate;
     private readonly LogicPanelViewModel _logic;
+    private readonly CommandManager? _commands;
 
     /// <summary>True while the tour card is shown and the engine observes the app.</summary>
     [ObservableProperty]
@@ -43,19 +45,20 @@ public partial class FirstGateTourViewModel : ObservableObject
     private bool _isCompleted;
 
     /// <summary>Builds the seven steps against the canvas, the Make-gate steps and the Logic panel.</summary>
-    public FirstGateTourViewModel(DesignCanvasViewModel canvas, MakeGateViewModel makeGate, LogicPanelViewModel logic)
+    public FirstGateTourViewModel(DesignCanvasViewModel canvas, MakeGateViewModel makeGate, LogicPanelViewModel logic, CommandManager? commands = null)
     {
         _canvas = canvas;
         _makeGate = makeGate;
         _logic = logic;
+        _commands = commands;
         Steps = new List<TutorialStep>
         {
             new("FirstGateTour.Step1Title", "FirstGateTour.Step1Body", () => false),
             new("FirstGateTour.Step2Title", "FirstGateTour.Step2Body", HasGroup),
-            new("FirstGateTour.Step3Title", "FirstGateTour.Step3Body", () => _makeGate.IsActive, "MakeGateButton"),
+            new("FirstGateTour.Step3Title", "FirstGateTour.Step3Body", IsKitEditorOpen, "MakeGateButton"),
             new("FirstGateTour.Step4Title", "FirstGateTour.Step4Body", () => _makeGate.HasResult, "MakeGateSimulateButton"),
             new("FirstGateTour.Step5Title", "FirstGateTour.Step5Body", IsNandWithCleanThreshold, "MakeGateFunctionPicker"),
-            new("FirstGateTour.Step6Title", "FirstGateTour.Step6Body", () => _makeGate.IsSaved, "MakeGateSaveButton"),
+            new("FirstGateTour.Step6Title", "FirstGateTour.Step6Body", HasSavedKit, "MakeGateSaveButton"),
             new("FirstGateTour.Step7Title", "FirstGateTour.Step7Body", () => _logic.HasNetwork, "MakeGateOpenLogicButton"),
         };
     }
@@ -73,7 +76,7 @@ public partial class FirstGateTourViewModel : ObservableObject
     public string CurrentBody => LocalizationService.Instance.Translate(CurrentStep.BodyKey);
 
     /// <summary><c>x:Name</c> of the control the current step spotlights, or null for a floating card.</summary>
-    public string? CurrentTargetName => CurrentStep.TargetName;
+    public string? CurrentTargetName => ResolveTargetName();
 
     /// <summary>Localized position label, e.g. "Step 2/7".</summary>
     public string ProgressText => string.Format(
@@ -85,22 +88,25 @@ public partial class FirstGateTourViewModel : ObservableObject
     public void Start()
     {
         Detach();
+        CaptureKit();
         CurrentStepIndex = 0;
         IsCompleted = false;
         IsActive = true;
         _canvas.Components.CollectionChanged += OnCanvasChanged;
         _makeGate.PropertyChanged += OnObservedPropertyChanged;
         _logic.PropertyChanged += OnObservedPropertyChanged;
+        AttachVisualObservers();
+        if (_commands != null) _commands.StateChanged += OnCommandStateChanged;
         EvaluateCurrentStep();
     }
 
-    /// <summary>Advances manually; on the last step the tour completes.</summary>
+    /// <summary>Begins the action steps from the introduction; later steps require the demonstrated action.</summary>
     [RelayCommand]
     public void Next()
     {
         if (!IsActive)
             return;
-        Advance();
+        if (CurrentStepIndex == 0) Advance();
         EvaluateCurrentStep();
     }
 
@@ -112,20 +118,29 @@ public partial class FirstGateTourViewModel : ObservableObject
         Detach();
     }
 
-    private bool HasGroup() => _canvas.Components.Any(c => c.Component is ComponentGroup);
+    private bool HasGroup() => FindKitGroup() != null;
 
     private bool IsNandWithCleanThreshold() =>
         _makeGate.SelectedFunction.Function == GateFunction.Nand && _makeGate.MatchesFunction;
 
     private void OnCanvasChanged(object? sender, NotifyCollectionChangedEventArgs e) => EvaluateCurrentStep();
 
+    private void OnCommandStateChanged(object? sender, EventArgs e) => EvaluateCurrentStep();
+
     private void OnObservedPropertyChanged(object? sender, PropertyChangedEventArgs e) => EvaluateCurrentStep();
 
     /// <summary>Advances past every already-satisfied step, so a state reached early cannot stall the tour.</summary>
     private void EvaluateCurrentStep()
     {
+        if (!IsActive) return;
+        if (CurrentStepIndex > 1 && !HasGroup()) CurrentStepIndex = 1;
+        else if (CurrentStepIndex > 2 && !IsKitEditorOpen()) CurrentStepIndex = 2;
+        else if (CurrentStepIndex > 3 && !_makeGate.HasResult) CurrentStepIndex = 3;
+        else if (CurrentStepIndex > 4 && !IsNandWithCleanThreshold()) CurrentStepIndex = 4;
+        else if (CurrentStepIndex > 5 && !HasSavedKit()) CurrentStepIndex = 5;
         while (IsActive && CurrentStep.IsCompleted())
             Advance();
+        NotifyVisualTargets();
     }
 
     private void Advance()
@@ -146,6 +161,8 @@ public partial class FirstGateTourViewModel : ObservableObject
         _canvas.Components.CollectionChanged -= OnCanvasChanged;
         _makeGate.PropertyChanged -= OnObservedPropertyChanged;
         _logic.PropertyChanged -= OnObservedPropertyChanged;
+        DetachVisualObservers();
+        if (_commands != null) _commands.StateChanged -= OnCommandStateChanged;
     }
 
     partial void OnCurrentStepIndexChanged(int value)
@@ -155,5 +172,6 @@ public partial class FirstGateTourViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentBody));
         OnPropertyChanged(nameof(CurrentTargetName));
         OnPropertyChanged(nameof(ProgressText));
+        NotifyVisualTargets();
     }
 }

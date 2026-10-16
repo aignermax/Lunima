@@ -6,33 +6,27 @@
              x:Class="CAP.Avalonia.Views.Panels.StoreNumberTourPanel"
              x:DataType="vm:StoreNumberTourViewModel">
 
-  <!-- "Store a number in light" tour card (issue #1422, slice 5 of #769): shows
-       the current step and progress; deliberately minimal — no spotlight/arrow
-       engine yet. Non-modal: the Logic panel stays fully interactive. -->
-  <Border Classes="overlay" Padding="12" Width="340">
-    <StackPanel Spacing="8">
-
-      <!-- Header: progress + close -->
+  <Border Classes="overlay" Padding="10" Width="280">
+    <StackPanel Spacing="6">
       <DockPanel>
         <Button DockPanel.Dock="Right" Classes="ghost icon" Command="{Binding SkipCommand}"
-                ToolTip.Tip="{loc:Localize Tutorial.Skip}">
+                AutomationProperties.Name="{loc:Localize Tutorial.Skip}" ToolTip.Tip="{loc:Localize Tutorial.Skip}">
           <controls:Icon Data="{StaticResource Icon.X}"/>
         </Button>
-        <TextBlock Classes="label" Text="{Binding ProgressText}"
-                   VerticalAlignment="Center"/>
+        <Button DockPanel.Dock="Right" Classes="ghost icon" AutomationProperties.Name="{Binding CurrentTitle}">
+          <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
+          <Button.Flyout><Flyout><StackPanel Width="280" Spacing="6">
+            <TextBlock Text="{Binding ProgressText}" Classes="label"/>
+            <TextBlock Text="{Binding CurrentTitle}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding CurrentBody}" TextWrapping="Wrap"/>
+          </StackPanel></Flyout></Button.Flyout>
+        </Button>
+        <TextBlock Text="{Binding CurrentCue}" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center"/>
       </DockPanel>
-
-      <!-- Current step -->
-      <TextBlock Classes="subtitle" Text="{Binding CurrentTitle}" TextWrapping="Wrap"/>
-      <TextBlock Classes="secondary" Text="{Binding CurrentBody}" TextWrapping="Wrap"/>
-
-      <!-- Actions -->
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Classes="ghost" Content="{loc:Localize Tutorial.Skip}"
-                Command="{Binding SkipCommand}"/>
-        <Button Classes="primary" Content="{loc:Localize Tutorial.Next}"
-                Command="{Binding NextCommand}"/>
-      </StackPanel>
+      <Button x:Name="StoreTourShowControlsButton" Content="{loc:Localize StoreNumberTour.Controls}"
+              Command="{Binding ShowControlsCommand}" IsVisible="{Binding NeedsControlsRecovery}"/>
+      <Button x:Name="StoreTourNextButton" Content="{loc:Localize Tutorial.Next}"
+              Command="{Binding NextCommand}" IsVisible="{Binding IsClosing}" HorizontalAlignment="Right"/>
     </StackPanel>
   </Border>
 </UserControl>

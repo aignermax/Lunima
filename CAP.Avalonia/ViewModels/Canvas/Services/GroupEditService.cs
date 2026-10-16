@@ -10,7 +10,7 @@ namespace CAP.Avalonia.ViewModels.Canvas.Services;
 /// Manages group editing operations (Unity-style sub-canvas approach).
 /// Handles entering/exiting edit mode, breadcrumb navigation, and canvas state backup/restore.
 /// </summary>
-public class GroupEditService
+public partial class GroupEditService
 {
     private readonly ObservableCollection<ComponentViewModel> _components;
     private readonly ObservableCollection<WaveguideConnectionViewModel> _connections;

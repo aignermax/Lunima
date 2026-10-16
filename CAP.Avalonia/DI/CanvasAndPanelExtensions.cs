@@ -62,6 +62,9 @@ internal static class CanvasAndPanelExtensions
             var previews = new GdsPreviewRenderService(
                 sp.GetRequiredService<NazcaComponentPreviewService>(),
                 sp.GetRequiredService<GdsFactoryComponentPreviewService>());
+            sp.GetRequiredService<UserPreferencesService>().PythonInterpreterActivated += previews.RetryFailedPreviews;
+            previews.ReportPreviewFailure = message => sp.GetService<CAP_Core.ErrorConsoleService>()?
+                .LogWarning($"Component preview: {message}");
             // Resolved lazily: the left panel itself shows previews through this service.
             previews.InlineNazcaCodeLookup = (module, function) =>
                 InlineNazcaCode.Find(sp.GetRequiredService<LeftPanelViewModel>().AllTemplates, module, function);

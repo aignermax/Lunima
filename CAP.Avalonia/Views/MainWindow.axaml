@@ -45,16 +45,22 @@
                                 ToolTip.Tip="{loc:Localize Home.ToolbarTip}">
                             <controls:Icon Data="{StaticResource Icon.House}"/>
                         </Button>
+                        <Button x:Name="ResumeVisualGuideButton" Classes="toolbar"
+                                Command="{Binding Home.LearnTutorialCommand}"
+                                AutomationProperties.Name="{loc:Localize Home.LearnTutorial}"
+                                ToolTip.Tip="{loc:Localize Home.LearnTutorial}">
+                            <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
+                        </Button>
 
                         <Border Classes="divider"/>
 
                         <!-- Canvas modes: one segmented group, the active mode carries .active -->
-                        <Button Classes="toolbar" Command="{Binding SetSelectModeCommand}"
+                        <Button x:Name="SelectModeButton" Classes="toolbar" Command="{Binding SetSelectModeCommand}"
                                 Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Select}"
                                 ToolTip.Tip="{loc:Localize Toolbar.SelectModeTip}">
                             <controls:Icon Data="{StaticResource Icon.MousePointer2}"/>
                         </Button>
-                        <Button Classes="toolbar" Command="{Binding SetConnectModeCommand}"
+                        <Button x:Name="ConnectModeButton" Classes="toolbar" Command="{Binding SetConnectModeCommand}"
                                 Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Connect}"
                                 ToolTip.Tip="{loc:Localize Toolbar.ConnectModeTip}">
                             <controls:Icon Data="{StaticResource Icon.Spline}"/>
@@ -157,22 +163,22 @@
                         <!-- Workspace switch: decides what Run does and which dock tabs show (Ctrl+1..4). -->
                         <Border x:Name="WorkspaceSwitchBar" Classes="segmented">
                             <StackPanel Orientation="Horizontal" Spacing="2">
-                                <Button Classes="toolbar segment" Content="{loc:Localize Workspace.Layout}"
+                                <Button x:Name="LayoutWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.Layout}"
                                         Classes.active="{Binding WorkspaceSwitch.IsLayout}"
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.Layout}"
                                         ToolTip.Tip="{loc:Localize Workspace.LayoutTip}"/>
-                                <Button Classes="toolbar segment" Content="{loc:Localize Workspace.Optics}"
+                                <Button x:Name="OpticsWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.Optics}"
                                         Classes.active="{Binding WorkspaceSwitch.IsOptics}"
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.Optics}"
                                         ToolTip.Tip="{loc:Localize Workspace.OpticsTip}"/>
-                                <Button Classes="toolbar segment" Content="{loc:Localize Workspace.Logic}"
+                                <Button x:Name="LogicWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.Logic}"
                                         Classes.active="{Binding WorkspaceSwitch.IsLogic}"
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.Logic}"
                                         ToolTip.Tip="{loc:Localize Workspace.LogicTip}"/>
-                                <Button Classes="toolbar segment" Content="{loc:Localize Workspace.System}"
+                                <Button x:Name="SystemWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.System}"
                                         Classes.active="{Binding WorkspaceSwitch.IsSystem}"
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.System}"
@@ -213,6 +219,17 @@
                                 <TextBlock Text="{Binding RunHint.Text}"/>
                             </Border>
                         </Popup>
+                        <Popup PlacementTarget="{Binding #RunSimulationButton}" Placement="Bottom"
+                               VerticalOffset="8" IsOpen="{Binding ShowLearningSuccess}"
+                               IsLightDismissEnabled="False" IsHitTestVisible="False">
+                            <Border Classes="overlay" Padding="14,8" CornerRadius="12">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="☺" FontSize="30" Foreground="{DynamicResource Brush.Success}"/>
+                                    <TextBlock Text="{loc:Localize Tutorial.CompletedCue}" VerticalAlignment="Center"
+                                               FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
                         <!-- Logic sub-choice: gate-level view or physical design (V). -->
                         <Border x:Name="GateViewSwitchBar" Classes="segmented" Margin="4,0,0,0"
                                 IsVisible="{Binding GateView.IsAvailable}"
@@ -250,7 +267,7 @@
                                 ToolTip.Tip="{loc:Localize Toolbar.RedoTip}">
                             <controls:Icon Data="{StaticResource Icon.Redo2}"/>
                         </Button>
-                        <Button Classes="toolbar" Command="{Binding CreateGroupCommand}"
+                        <Button x:Name="CreateGroupButton" Classes="toolbar" Command="{Binding CreateGroupCommand}"
                                 ToolTip.Tip="{loc:Localize Toolbar.CreateGroupTip}">
                             <controls:Icon Data="{StaticResource Icon.Group}"/>
                         </Button>
@@ -287,7 +304,7 @@
                             <controls:Icon Data="{StaticResource Icon.FileInput}"/>
                         </Button>
                         <!-- Unified Export flyout — add formats via IExportFormat + ExportMenuViewModel, no axaml changes needed -->
-                        <Button Classes="toolbar menu" ToolTip.Tip="{loc:Localize Toolbar.ExportTip}">
+                        <Button x:Name="ExportMenuButton" Classes="toolbar menu" ToolTip.Tip="{loc:Localize Toolbar.ExportTip}">
                             <StackPanel Orientation="Horizontal" Spacing="2">
                                 <controls:Icon Data="{StaticResource Icon.FileOutput}"/>
                                 <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
@@ -301,6 +318,7 @@
                                                 <DataTemplate>
                                                     <Button Classes="menuItem"
                                                             Command="{Binding ExportCommand}"
+                                                            Click="ExportMenuItem_Click"
                                                             ToolTip.Tip="{Binding Description}">
                                                         <Grid ColumnDefinitions="Auto,*">
                                                             <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.FileOutput}"/>
@@ -608,7 +626,7 @@
                                     ToolTip.Placement="Right">
                                 <controls:Icon Data="{StaticResource Icon.Binary}" Size="18"/>
                             </Button>
-                            <Button Classes="rail" Command="{Binding LeftRail.ShowChipletsCommand}"
+                            <Button x:Name="ChipletsRailButton" Classes="rail" Command="{Binding LeftRail.ShowChipletsCommand}"
                                     Grid.Row="{Binding LeftRail.ChipletsOrder}" Margin="0,0,0,4"
                                     IsVisible="{Binding LeftRail.IsChipletsAvailable}"
                                     Classes.active="{Binding LeftRail.IsChipletsActive}"
@@ -692,6 +710,43 @@
                                                    Margin="8,0,0,0"/>
                                 </TextBox.InnerLeftContent>
                             </TextBox>
+
+                            <StackPanel x:Name="PythonStartupProgress" DockPanel.Dock="Top" Margin="12,0,12,8" Spacing="4"
+                                        IsVisible="{Binding PythonStartup.IsRunning, FallbackValue=False}">
+                                <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:Localize PythonStartup.Preparing}"/>
+                                <ProgressBar IsIndeterminate="True" Height="3"/>
+                                <TextBlock Classes="caption" TextTrimming="CharacterEllipsis" MaxLines="2"
+                                           Text="{Binding PythonStartup.ProgressText}" ToolTip.Tip="{Binding PythonStartup.ProgressText}"/>
+                            </StackPanel>
+                            <StackPanel DockPanel.Dock="Top" Margin="12,0,12,8" Spacing="4"
+                                        IsVisible="{Binding PythonStartup.HasError, FallbackValue=False}">
+                                <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:Localize PythonStartup.Failed}"/>
+                                <Button x:Name="PythonStartupRetryButton" Classes="link" HorizontalAlignment="Left"
+                                        Content="{loc:Localize PythonStartup.Retry}" Command="{Binding PythonStartup.RetryCommand}"/>
+                                <Button Classes="link" HorizontalAlignment="Left" Content="{loc:Localize Settings.Section.PythonEnvironments}"
+                                        Command="{Binding OpenPreviewPythonSettingsCommand}"/>
+                                <Expander Header="{loc:Localize Preview.ErrorDetails}">
+                                    <TextBlock Classes="caption" TextWrapping="Wrap" MaxHeight="100" Text="{Binding PythonStartup.ErrorText}"/>
+                                </Expander>
+                            </StackPanel>
+                            <StackPanel DockPanel.Dock="Top" Margin="12,0,12,8"
+                                        IsVisible="{Binding GdsPreviewRenderService.HasUnavailablePreviews}">
+                              <StackPanel IsVisible="{Binding !PythonStartup.IsRunning, FallbackValue=True}">
+                               <StackPanel Spacing="4" IsVisible="{Binding !PythonStartup.HasError, FallbackValue=True}">
+                                <TextBlock Classes="caption" TextWrapping="Wrap"
+                                           Text="{loc:Localize Preview.Unavailable}"
+                                           ToolTip.Tip="{Binding GdsPreviewRenderService.PreviewFailureDetail}"/>
+                                <Button x:Name="PreviewPythonSettingsButton" Classes="link"
+                                        HorizontalAlignment="Left"
+                                        Content="{loc:Localize Settings.Section.PythonEnvironments}"
+                                        Command="{Binding OpenPreviewPythonSettingsCommand}"/>
+                                <Expander Header="{loc:Localize Preview.ErrorDetails}">
+                                    <TextBlock Classes="caption" TextWrapping="Wrap" MaxHeight="100"
+                                               Text="{Binding GdsPreviewRenderService.PreviewFailureDetail}"/>
+                                </Expander>
+                               </StackPanel>
+                              </StackPanel>
+                            </StackPanel>
 
                             <!-- Online-registry hit line under the local hits: visible only while
                                  it has something to say, styled as a link so it is never mistaken
@@ -841,21 +896,6 @@
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="vmLib:ComponentTemplate">
                                                 <DockPanel>
-                                                    <!-- Edit/delete appear on hover or selection only: the palette
-                                                         stays calm but the actions remain discoverable. -->
-                                                    <StackPanel Classes="itemActions" DockPanel.Dock="Right"
-                                                                Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                                                        <Button Classes="rowAction" Click="TemplateEditComponent_Click"
-                                                                ToolTip.Tip="{loc:Localize LeftPanel.EditComponentTip}">
-                                                            <controls:Icon Data="{StaticResource Icon.Pencil}"/>
-                                                        </Button>
-                                                        <!-- Only where there is something to delete or restore. -->
-                                                        <Button Classes="rowAction danger" Click="TemplateDeleteComponent_Click"
-                                                                IsVisible="{Binding IsDeletable}"
-                                                                ToolTip.Tip="{loc:Localize LeftPanel.DeleteComponentTip}">
-                                                            <controls:Icon Data="{StaticResource Icon.Trash2}"/>
-                                                        </Button>
-                                                    </StackPanel>
                                                     <Border DockPanel.Dock="Left" Classes="previewFrame">
                                                         <controls:ComponentPreview
                                                             Width="52" Height="32"
@@ -883,8 +923,27 @@
                                                                        TextWrapping="Wrap" MaxLines="2"
                                                                        ToolTip.Tip="{Binding Name}"/>
                                                         </DockPanel>
-                                                        <TextBlock Classes="caption" Text="{Binding Category}"
-                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <!-- Actions share the category row, leaving the title its full width.
+                                                             Their reserved space does not change on hover/selection. -->
+                                                        <DockPanel>
+                                                            <!-- Edit/delete appear on hover or selection only: the palette
+                                                                 stays calm but the actions remain discoverable. -->
+                                                            <StackPanel Classes="itemActions" DockPanel.Dock="Right"
+                                                                        Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                                                <Button Classes="rowAction" Click="TemplateEditComponent_Click"
+                                                                        ToolTip.Tip="{loc:Localize LeftPanel.EditComponentTip}">
+                                                                    <controls:Icon Data="{StaticResource Icon.Pencil}"/>
+                                                                </Button>
+                                                                <!-- Only where there is something to delete or restore. -->
+                                                                <Button Classes="rowAction danger" Click="TemplateDeleteComponent_Click"
+                                                                        IsVisible="{Binding IsDeletable}"
+                                                                        ToolTip.Tip="{loc:Localize LeftPanel.DeleteComponentTip}">
+                                                                    <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                                                </Button>
+                                                            </StackPanel>
+                                                            <TextBlock Classes="caption" Text="{Binding Category}"
+                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                        </DockPanel>
                                                     </StackPanel>
                                                 </DockPanel>
                                             </DataTemplate>
@@ -1216,44 +1275,57 @@
     <!-- Guided-tour overlays: the card docks to the control the current step acts on —
          spotlight, arrow, card beside it; non-modal so the canvas stays interactive. -->
     <tour:TourAnchorOverlay IsVisible="{Binding Tutorial.IsActive, FallbackValue=False}"
-                                TargetName="{Binding Tutorial.CurrentTargetName}">
+                           Demonstrate="True"
+                           TargetName="{Binding Tutorial.CurrentTargetName}"
+                           TargetItem="{Binding Tutorial.CurrentTargetItem}"
+                           TargetCanvasPoint="{Binding Tutorial.CurrentCanvasPoint}"
+                           TargetPin="{Binding Tutorial.CurrentTargetPin}"
+                           ConnectionTargetPin="{Binding Tutorial.ConnectionTargetPin}">
         <tour:TourAnchorOverlay.Card>
             <panels:FirstStepsTutorialPanel DataContext="{Binding Tutorial}"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
     <tour:TourAnchorOverlay IsVisible="{Binding FirstGateTour.IsActive, FallbackValue=False}"
+                                Demonstrate="True"
+                                TargetCanvasPoint="{Binding FirstGateTour.CurrentCanvasPoint}"
+                                TargetCanvasDestinationPoint="{Binding FirstGateTour.CurrentCanvasDestinationPoint}"
                                 TargetName="{Binding FirstGateTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
             <panels:FirstGateTourPanel DataContext="{Binding FirstGateTour}"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}"
+    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}" Demonstrate="True"
                                 TargetName="{Binding WatchTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
             <panels:WatchComputeTourPanel DataContext="{Binding WatchTour}"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <!-- Hosts the steps that anchor in this window (Logic Build, Tools menu); the
+    <!-- Hosts Logic Build and the direct ISA-open action in this window; the
          playground steps are hosted by the overlay in IsaPlaygroundWindow. -->
     <tour:TourAnchorOverlay IsVisible="{Binding RunProgramTour.ShowCardInMainWindow, FallbackValue=False}"
-                                TargetName="{Binding RunProgramTour.CurrentTargetName}">
+                                TargetName="{Binding RunProgramTour.CurrentTargetName}" Demonstrate="True">
         <tour:TourAnchorOverlay.Card>
-            <panels:RunProgramTourPanel DataContext="{Binding RunProgramTour}"/>
+            <panels:RunProgramTourPanel DataContext="{Binding RunProgramTour}"
+                                        OpenPlaygroundRequested="OpenIsaPlayground_Click"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
     <tour:TourAnchorOverlay IsVisible="{Binding ConnectChipletsTour.IsActive, FallbackValue=False}"
-                                TargetName="{Binding ConnectChipletsTour.CurrentTargetName}">
+                           Demonstrate="True"
+                           TargetName="{Binding ConnectChipletsTour.CurrentTargetName}"
+                           TargetCanvasPoint="{Binding ConnectChipletsTour.CurrentCanvasPoint}"
+                           TargetCanvasDestinationPoint="{Binding ConnectChipletsTour.CurrentCanvasDestinationPoint}">
         <tour:TourAnchorOverlay.Card>
             <panels:ConnectChipletsTourPanel DataContext="{Binding ConnectChipletsTour}"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
     <tour:TourAnchorOverlay IsVisible="{Binding StoreNumberTour.IsActive, FallbackValue=False}"
-                                TargetName="{Binding StoreNumberTour.CurrentTargetName}">
+                                Demonstrate="True" TargetName="{Binding StoreNumberTour.CurrentTargetName}"
+                                TargetItem="{Binding StoreNumberTour.CurrentTargetItem}">
         <tour:TourAnchorOverlay.Card>
             <panels:StoreNumberTourPanel DataContext="{Binding StoreNumberTour}"/>
         </tour:TourAnchorOverlay.Card>

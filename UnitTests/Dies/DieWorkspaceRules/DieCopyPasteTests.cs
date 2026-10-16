@@ -16,7 +16,7 @@ namespace UnitTests.Dies.DieWorkspaceRules;
 public class DieCopyPasteTests
 {
     [Fact]
-    public void PastedDie_LandsFreeOfTheOthers_WithItsPartsAndWires()
+    public async Task PastedDie_LandsFreeOfTheOthers_WithItsPartsAndWires()
     {
         var f = new DieWorkspaceFixture();
         f.Vm.WorkspaceSwitch.Current = Workspace.System;
@@ -41,10 +41,10 @@ public class DieCopyPasteTests
             routeBefore.Select(s => (s.Item1 + dx, s.Item2 + dy, s.Item3 + dx, s.Item4 + dy)).ToList(),
             "the wire is copied with its route, only translated");
 
-        f.Vm.UndoCommand.Execute(null);
+        await f.Vm.UndoCommand.ExecuteAsync(null);
         f.Canvas.Dies.RootDies.Count.ShouldBe(2);
         f.Canvas.Connections.Count.ShouldBe(1);
-        f.Vm.RedoCommand.Execute(null);
+        await f.Vm.RedoCommand.ExecuteAsync(null);
         f.Canvas.Dies.RootDies.Count.ShouldBe(3);
         f.Canvas.Connections.Count.ShouldBe(2);
     }

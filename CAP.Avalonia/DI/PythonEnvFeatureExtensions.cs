@@ -24,6 +24,8 @@ internal static class PythonEnvFeatureExtensions
         services.AddSingleton<NazcaPackageInstaller>();
         services.AddSingleton<PythonDiscoveryService>();
         services.AddSingleton<EnvironmentHealthChecker>();
+        services.AddSingleton<IManagedPythonProvisioner, ManagedPythonProvisioner>();
+        services.AddSingleton<PythonStartupViewModel>();
 
         services.AddSingleton<PythonEnvironmentRegistry>(sp =>
         {
@@ -49,7 +51,9 @@ internal static class PythonEnvFeatureExtensions
                 sp.GetRequiredService<PythonDiscoveryService>(),
                 // The active interpreter path is the shared preference the registry callback
                 // keeps in sync — reuse it to mark the active system interpreter (issue #645).
-                () => sp.GetRequiredService<UserPreferencesService>().GetCustomPythonPath()));
+                () => sp.GetRequiredService<UserPreferencesService>().GetCustomPythonPath(),
+                sp.GetRequiredService<IManagedPythonProvisioner>(),
+                sp.GetRequiredService<PythonStartupViewModel>()));
 
         return services;
     }

@@ -90,6 +90,15 @@ public partial class MainWindow : Window
             if (DataContext is MainViewModel vm)
             {
                 WireSettingsOpener(vm); // see MainWindow.SettingsOpener.cs
+                vm.Update.ConfirmShutdownAsync = vm.FileOperations.ConfirmCloseAsync;
+                vm.Update.ShutdownAfterConfirmation = () =>
+                {
+                    _forceClose = true;
+                    if (global::Avalonia.Application.Current?.ApplicationLifetime is
+                        global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime lifetime)
+                        lifetime.Shutdown();
+                    else Close();
+                };
                 AttachNotificationHost();
 
                 vm.FileDialogService = new FileDialogService(this);
@@ -273,11 +282,9 @@ public partial class MainWindow : Window
                 // Wire up clipboard for the Netlist panel (#687)
                 vm.RightPanel.Netlist.CopyToClipboard = async (text) =>
                 {
-                    var clipboard = Clipboard;
-                    if (clipboard != null)
-                    {
-                        await clipboard.SetTextAsync(text);
-                    }
+                    var clipboard = Clipboard ?? throw new InvalidOperationException(
+                        Services.Localization.LocalizationService.Instance.Translate("Netlist.ClipboardNotAvailable"));
+                    await clipboard.SetTextAsync(text);
                 };
 
                 // Wire up clipboard for DimensionValidator
@@ -737,6 +744,8 @@ public partial class MainWindow : Window
         if (vm == null) return;
 
         var window = new IsaPlaygroundWindow { DataContext = vm };
+        if (DataContext is ViewModels.MainViewModel main)
+            Services.IsaPlaygroundNavigation.Attach(vm, main);
         // The "Run a program on your chip" tour (#1267) hosts its card here for
         // the playground steps and tracks the window's open state.
         window.Tour = App.Services.GetService(
@@ -788,6 +797,20 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainViewModel vm)
             vm.BottomPanel.Analysis.OpenChecks();
+    }
+
+    private async void ExportMenuItem_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: ViewModels.Export.Formats.NetlistClipboardExportFormat format }
+            || DataContext is not MainViewModel vm)
+            return;
+
+        // Handle activation ourselves so the command runs once and the flyout stays bound while copying.
+        e.Handled = true;
+        if (!format.ExportCommand.CanExecute(null)) return;
+        await format.ExportCommand.ExecuteAsync(null);
+        if (vm.RightPanel.Netlist.LastCopySucceeded)
+            ExportMenuButton.Flyout?.Hide();
     }
 
     /// <summary>

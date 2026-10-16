@@ -158,15 +158,8 @@ public class GateViewScreenshotTests
         window.Show();
         try
         {
-            WriteableBitmap? bitmap = null;
-            for (var attempt = 0; attempt < 3 && bitmap == null; attempt++)
-            {
-                Dispatcher.UIThread.RunJobs();
-                bitmap = window.CaptureRenderedFrame();
-            }
-            bitmap.ShouldNotBeNull();
-            using (bitmap)
-                ScreenshotArtifacts.SavePng(bitmap!, path);
+            using var bitmap = HeadlessFrameCapture.Capture(window);
+            ScreenshotArtifacts.SavePng(bitmap, path);
         }
         finally
         {

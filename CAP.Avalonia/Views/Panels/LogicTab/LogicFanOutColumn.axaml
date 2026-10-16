@@ -10,9 +10,9 @@
 
     <!-- Optical fan-out warnings (#996): non-blocking — the idealized logic result stays
          available; the warning marks where a physical implementation would need
-         splitters and level restoration. Long reports scroll inside the column. -->
+         splitters and level restoration. The full report is available behind explicit, initially collapsed details. -->
     <Border Background="{DynamicResource Brush.Warning.Subtle}" CornerRadius="{DynamicResource Radius.M}" Padding="8,6">
-        <Grid RowDefinitions="Auto,*">
+        <Grid RowDefinitions="Auto,Auto,*">
             <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
                 <TextBlock Text="{loc:Localize LogicPanel.FanOutWarning.Title}" TextWrapping="Wrap"
                            Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}" FontWeight="SemiBold"
@@ -27,7 +27,15 @@
                     </controls:HelpFlyoutButton.HelpContent>
                 </controls:HelpFlyoutButton>
             </Grid>
-            <ScrollViewer Grid.Row="1" Classes="logicColumnScroll" VerticalScrollBarVisibility="Auto">
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
+                <TextBlock Text="{loc:Localize LogicPanel.FanOutWarning.ReportCount}"
+                           Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}"/>
+                <TextBlock x:Name="WarningReportCount" Text="{Binding RightPanel.Logic.FanOutWarnings.Count}"
+                           Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}"/>
+            </StackPanel>
+            <Expander Grid.Row="2" Header="{loc:Localize LogicPanel.FanOutWarning.Details}"
+                      IsExpanded="False" HorizontalAlignment="Stretch">
+            <ScrollViewer Classes="logicColumnScroll" VerticalScrollBarVisibility="Auto" MaxHeight="320">
                 <StackPanel Spacing="3">
                     <ItemsControl ItemsSource="{Binding RightPanel.Logic.FanOutWarnings}">
                         <ItemsControl.ItemTemplate>
@@ -58,6 +66,7 @@
                                Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" FontStyle="Italic"/>
                 </StackPanel>
             </ScrollViewer>
+            </Expander>
         </Grid>
     </Border>
 </UserControl>

@@ -1,5 +1,8 @@
 using System.Text.Json;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
@@ -58,14 +61,15 @@ public class Issue1445LinkLossWarningScreenshotTests
         var previousLanguage = LocalizationService.Instance.ActiveLanguageCode;
         var vm = MainViewModelTestHelper.CreateMainViewModel();
         var window = new Window { Width = PanelWidth, Height = PanelHeight, Content = new LogicPanel { DataContext = vm } };
+        ToolTip.SetServiceEnabled(window, false);
         window.Show();
         try
         {
-            CaptureLanguage(window, vm, warning, "en", "01-logic-link-warning-en.png",
+            await CaptureLanguageAsync(window, vm, warning, "en", "01-logic-link-warning-en.png",
                 "Logic panel on the misaligned two-chiplet journey design (English): the "
                 + "link warning names 'Chiplet A' / 'Chiplet B' and the level report shows "
                 + "the delivered 1-level after the link's coupling loss.", dir, manifest);
-            CaptureLanguage(window, vm, warning, "de", "02-logic-link-warning-de.png",
+            await CaptureLanguageAsync(window, vm, warning, "de", "02-logic-link-warning-de.png",
                 "Same warning in German: LinkLine and LinkSplitLine resolve through the "
                 + "localization keys — the long link name stays unclipped.", dir, manifest);
         }
@@ -114,7 +118,7 @@ public class Issue1445LinkLossWarningScreenshotTests
     /// Shows the warning in the given language, asserts the link rows render without
     /// clipping the long link name, and saves the capture.
     /// </summary>
-    private static void CaptureLanguage(
+    private static async Task CaptureLanguageAsync(
         Window window,
         CAP.Avalonia.ViewModels.MainViewModel vm,
         LogicFanOutWarning warning,
@@ -131,6 +135,21 @@ public class Issue1445LinkLossWarningScreenshotTests
         logic.FanOutWarnings.Add(row);
         logic.HasFanOutWarnings = true;
         PumpRenderLoop();
+
+        // Details are intentionally collapsed by default. Exercise the real header
+        // click before documenting its full report, just as a user reveals it.
+        var details = window.GetVisualDescendants().OfType<Expander>().Single();
+        if (!details.IsExpanded)
+        {
+            var header = details.GetVisualDescendants().OfType<ToggleButton>().First();
+            var point = header.TranslatePoint(new Point(header.Bounds.Width / 2, header.Bounds.Height / 2), window)!.Value;
+            window.MouseMove(point);
+            window.MouseDown(point, MouseButton.Left);
+            window.MouseUp(point, MouseButton.Left);
+            await Task.Delay(250);
+            PumpRenderLoop();
+        }
+        details.IsExpanded.ShouldBeTrue("the actual Details click must reveal the full warning report");
 
         row.WarningText.ShouldContain(ExpectedLinkName,
             customMessage: $"the {language} warning line must name the link");

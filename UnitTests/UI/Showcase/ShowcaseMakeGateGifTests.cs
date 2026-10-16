@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using CAP.Avalonia.ViewModels;
@@ -33,6 +34,7 @@ public class ShowcaseMakeGateGifTests
     private const int SelectedHoldMs = 500;
     private const int StepsHoldMs = 700;
     private const int ResultHoldMs = 2000;
+    private const int SavedGateHoldMs = 1600;
     private static readonly double[] BoxGrowth = { 0.35, 0.7, 1.0 };
 
     [AvaloniaFact]
@@ -47,6 +49,7 @@ public class ShowcaseMakeGateGifTests
             await vm.FileOperations.PostLoadRouting;
             vm.FileOperations.SetActiveProcess(ActiveProcessSelection.Playground(), markDirty: false);
             vm.WorkspaceSwitch.Current = Workspace.Logic;
+            vm.GateView.ShowPhysicalCommand.Execute(null);
 
             var window = ShowcaseCircuit.BootMainWindow(vm, WindowWidth, WindowHeight);
             ShowcaseFraming.SetRightPanelWidth(window, RightPanelWidth);
@@ -63,7 +66,7 @@ public class ShowcaseMakeGateGifTests
             Dispatcher.UIThread.RunJobs();
             var makeGate = vm.RightPanel.MakeGate;
             makeGate.IsActive.ShouldBeTrue(vm.StatusText);
-            ShowcaseFraming.ScrollRightPanelTo(window, ShowcaseFraming.Named<Avalonia.Controls.Control>(window, "MakeGateSimulateButton"));
+            RevealAction(window, "MakeGateSimulateButton");
             gif.Capture(StepsHoldMs);
 
             await makeGate.SimulateCommand.ExecuteAsync(null);
@@ -71,13 +74,31 @@ public class ShowcaseMakeGateGifTests
             makeGate.SelectedFunction = makeGate.Functions.Single(f => f.Function == GateFunction.Nand);
             makeGate.MatchesFunction.ShouldBeTrue("the kit is a NAND");
             Dispatcher.UIThread.RunJobs();
-            ShowcaseFraming.ScrollRightPanelTo(window, ShowcaseFraming.Named<Avalonia.Controls.Control>(window, "MakeGateSaveButton"));
+            RevealAction(window, "MakeGateSaveButton");
             gif.Capture(ResultHoldMs);
+
+            makeGate.SaveCommand.Execute(null);
+            makeGate.IsSaved.ShouldBeTrue(makeGate.StatusText);
+            vm.GateView.ShowGatesCommand.Execute(null);
+            await vm.GateView.PendingRebuild;
+            vm.GateView.Graph.Nodes.Single().DisplayName.ShouldBe("NAND");
+            ShowcaseFraming.FitComponents(window, vm, FitMarginPx);
+            gif.Capture(SavedGateHoldMs);
 
             await gif.EncodeAsync();
             window.Close();
             Dispatcher.UIThread.RunJobs();
         });
+    }
+
+    private static void RevealAction(Avalonia.Controls.Window window, string name)
+    {
+        ShowcaseCapture.PumpRenderLoop();
+        var target = ShowcaseFraming.Named<Avalonia.Controls.Control>(window, name);
+        // Leave a small margin below the real action, instead of capturing its
+        // bottom border exactly on the properties panel's scroll clipping edge.
+        target.BringIntoView(new Avalonia.Rect(0, 0, target.Bounds.Width, target.Bounds.Height + 12));
+        ShowcaseCapture.PumpRenderLoop();
     }
 
     /// <summary>Draws the rubber-band box growing over the kit (the canvas renders the

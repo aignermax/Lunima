@@ -94,7 +94,7 @@ public class UvBootstrapper
         progress?.Report($"Creating Python {pythonVersion} venv at {venvPath}...");
 
         var (exitCode, _, stderr) = await RunProcessAsync(
-            _launchFactory, uvPath, new[] { "venv", "--python", pythonVersion, venvPath },
+            _launchFactory, uvPath, new[] { "venv", "--managed-python", "--python", pythonVersion, venvPath },
             ct, LongOperationTimeoutMs);
 
         if (exitCode != 0)
@@ -215,6 +215,15 @@ public class UvBootstrapper
             : "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-musl.tar.gz";
     }
 
+    /// <summary>Stops owned subprocesses synchronously when desktop shutdown cancels setup.</summary>
+    internal static CancellationTokenRegistration KillOnCancellation(Process process, CancellationToken token) =>
+        token.Register(() =>
+        {
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) { /* already exited/disposed */ }
+            catch (System.ComponentModel.Win32Exception) { /* already exiting */ }
+        });
+
     /// <summary>
     /// Runs a process built via <paramref name="launchFactory"/> and captures its output.
     /// A user cancellation throws <see cref="OperationCanceledException"/>; a pure timeout
@@ -240,11 +249,11 @@ public class UvBootstrapper
         var errorTask = process.StandardError.ReadToEndAsync(ct);
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        using var shutdown = KillOnCancellation(process, cts.Token);
         cts.CancelAfter(timeoutMs);
         try { await process.WaitForExitAsync(cts.Token); }
         catch (OperationCanceledException)
         {
-            try { process.Kill(entireProcessTree: true); } catch { /* gone */ }
             ct.ThrowIfCancellationRequested();
             return (-1, string.Empty, "Operation timed out.");
         }

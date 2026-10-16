@@ -10,7 +10,7 @@ namespace CAP.Avalonia.ViewModels.Canvas.Services;
 /// <summary>
 /// Manages asynchronous waveguide route calculation with cancellation, throttling, and grid initialization.
 /// </summary>
-public class RoutingOrchestrator
+public partial class RoutingOrchestrator
 {
     private readonly WaveguideRouter _router;
     private readonly WaveguideConnectionManager _connectionManager;
@@ -198,6 +198,8 @@ public class RoutingOrchestrator
     /// </summary>
     public async Task RecalculateRoutesAsync()
     {
+        if (_suspendRouting > 0) return;
+        var generation = MutationGeneration;
         // Refresh the process bend-radius floor before every pass (still on the caller's
         // UI thread — the provider reads ViewModel state).
         if (GetProcessMinBendRadiusMicrometers != null)
@@ -229,7 +231,7 @@ public class RoutingOrchestrator
 
         try
         {
-            if (token.IsCancellationRequested) return;
+            if (token.IsCancellationRequested || generation != MutationGeneration) return;
 
             var passId = ++_passId;
             _totalCount = _connectionManager.Connections.Count;
@@ -240,17 +242,25 @@ public class RoutingOrchestrator
             RoutingStatusText = BuildProgressText();
             StateChanged?.Invoke();
 
+            using var heartbeat = new RoutingProgressHeartbeat(
+                () => passId == _passId && !token.IsCancellationRequested && IsRouting,
+                BuildProgressText,
+                text =>
+                {
+                    RoutingStatusText = text;
+                    StateChanged?.Invoke();
+                });
+
             // Wire Phase 2 callback: update status text when a complex route is being computed.
+            _connectionManager.OnRoutingPhaseChanged = phase =>
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => heartbeat.PhaseChanged(phase),
+                    global::Avalonia.Threading.DispatcherPriority.Normal);
             // Called on the background routing thread — must post to UI thread.
             _connectionManager.OnComplexRouteStarted = () =>
             {
                 global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
-                    if (passId == _passId && !token.IsCancellationRequested)
-                    {
-                        RoutingStatusText = LocalizationService.Instance.Translate("Routing.Status.ComplexPath");
-                        StateChanged?.Invoke();
-                    }
+                    heartbeat.ComplexRouteStarted();
                 }, global::Avalonia.Threading.DispatcherPriority.Normal);
             };
 
@@ -276,8 +286,7 @@ public class RoutingOrchestrator
                         if (passId != _passId || token.IsCancellationRequested || !IsRouting)
                             return;
 
-                        RoutingStatusText = BuildProgressText();
-                        StateChanged?.Invoke();
+                        heartbeat.ConnectionCompleted();
                         foreach (var conn in _connections)
                             conn.NotifyPathChanged();
                         RepaintRequested?.Invoke();
@@ -315,6 +324,7 @@ public class RoutingOrchestrator
         finally
         {
             _connectionManager.OnComplexRouteStarted = null;
+            _connectionManager.OnRoutingPhaseChanged = null;
             _routingSemaphore.Release();
             IsRouting = false;
             StateChanged?.Invoke();

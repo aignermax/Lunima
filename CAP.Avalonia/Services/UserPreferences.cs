@@ -5,6 +5,9 @@ namespace CAP.Avalonia.Services;
 /// </summary>
 public class UserPreferences
 {
+    /// <summary>Offer visual first-use guidance until it is completed or explicitly dismissed.</summary>
+    public bool GuidedLearningEnabled { get; set; } = true;
+
     /// <summary>
     /// List of PDK names that are currently enabled (visible in library).
     /// </summary>
@@ -113,9 +116,9 @@ public class UserPreferences
 
     /// <summary>
     /// Whether adaptive crossing insertion is enabled for routing.
-    /// Off by default — a design that inserts crossings changes insertion loss.
+    /// On for new/unset preferences; an explicitly saved false remains off.
     /// </summary>
-    public bool CrossingInsertionEnabled { get; set; }
+    public bool CrossingInsertionEnabled { get; set; } = true;
 
     /// <summary>
     /// Whether diagonal (45°) waveguide routing is enabled. Off by default —

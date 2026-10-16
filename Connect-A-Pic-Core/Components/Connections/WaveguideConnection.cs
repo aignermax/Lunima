@@ -217,9 +217,11 @@ namespace CAP_Core.Components.Connections
 
             if (IsRouteFrozen)
             {
+                if (GeneratedRoutePinDirections.NeedsRepair(this))
+                    IsRouteFrozen = false;
                 // Both endpoints moved by the same delta (joint drag of both components):
                 // translate the frozen geometry instead of unfreezing it.
-                if (FrozenPathStillMatchesPins() || JointMoveRouteTranslator.TryTranslateToPins(this))
+                if (IsRouteFrozen && (FrozenPathStillMatchesPins() || JointMoveRouteTranslator.TryTranslateToPins(this)))
                 {
                     // Keep manually edited geometry; just refresh the loss values.
                     UpdateLossFromPath(wavelengthNm);

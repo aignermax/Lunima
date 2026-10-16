@@ -32,8 +32,13 @@ internal static class HeadlessFrameCapture
     /// </summary>
     public static WriteableBitmap Capture(Window window)
     {
-        return TryCompositorFrame(window) ?? RenderSynchronously(window);
+        return Capture(window, TryCompositorFrame);
     }
+
+    // Injectable capture source lets the null-frame path be verified without relying on
+    // the long-running compositor dropout that motivated the fallback.
+    internal static WriteableBitmap Capture(Window window, Func<Window, WriteableBitmap?> captureFrame)
+        => captureFrame(window) ?? RenderSynchronously(window);
 
     private static WriteableBitmap? TryCompositorFrame(Window window)
     {

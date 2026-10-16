@@ -10,6 +10,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## How to use at release time
 
+- [ ] Fresh profile: the first desktop start prepares managed Python and the same preview/export packages as Settings in the background, with an unobtrusive progress indicator. Editing remains available; failure exposes Retry and details; only full health activates the environment and refreshes previews. Reopening retries a failed setup, explicit external interpreters remain unchanged, and exit cancels owned setup processes. `(auto: PythonStartupTests, PythonStartupJourneyTests, ManagedPythonProvisionerTests, UvBootstrapperTests; manual: fresh-machine online download on supported OSes)`
+
 1. Open a release issue / draft PR and paste the checklist below into it.
 2. Walk through every manual item in a fresh build on each supported OS (Windows, Linux, macOS) where feasible.
 3. Tick an item only after you have observed the expected result.
@@ -19,6 +21,32 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 ---
 
 ## 1. Application startup & project lifecycle
+
+- [ ] **auto** Placement ghosts disappear when leaving the canvas, changing tools, disarming/replacing templates or replacing the canvas main model. Continuous placement remains armed inside the canvas; the optical Connect step shows a single detector name (`PlacementPreviewLifecycleTests`, `VisualLearningJourneyTests`).
+
+- [ ] **auto** Optical guidance reveals the exact virtualized library row after layout without duplicate/overlapping containers. Stopping guidance, changing targets or replacing the library cancels pending reveals. Library titles retain their width when row actions appear; Photodetector does not wrap its last letter onto another line (`VisualLearningJourneyTests`, `VisualGuideOverlayTests`).
+
+- [ ] **auto** First-gate guidance demonstrates real kit marquee selection, Group, Make gate, Simulate, NAND, Save and Build. Next cannot skip actions; dies/unrelated groups cannot satisfy them. Closing the editor, losing selection, changing the function and undoing Save expose a valid recovery action; observers detach when dismissed (`FirstGateTourViewModelTests`, `FirstGateVisualJourneyTests`).
+
+- [ ] **auto** First-use optical guidance demonstrates the real compatible library item, placement, pin drag and simulation controls; actions advance only when performed, dismissal is remembered, resume preserves work, and Show target reveals offscreen targets without editing the design. Hidden guidance stops polling and animation. (`VisualLearningJourneyTests`, `VisualGuideOverlayTests`, `OpticalTutorialActionTests`, first-steps onboarding tests.)
+
+- [ ] **auto** Run-program guidance advances only after building/opening/selecting/enabling and three actual photonic ADD results; status text or Next cannot bypass actions. The compact English/German cues point to real ISA controls, an explicit button opens/reopens the ISA window without losing progress, lost prerequisites lead back to the required action, Done acknowledges success, and closed windows release their playback subscription (`RunProgramTourViewModelTests`, `IsaVisualJourneyTests`).
+
+- [ ] **auto** Adaptive crossings default to enabled for fresh/unset preferences; saved true/false values survive restart. Restoring the policy on startup does not start routing or repair (`RoutingSettingsPreferencesTests`, `RoutingSettingsPersistenceTests`, `AdaptiveCrossingToggleTests`).
+
+- [ ] Reopen the 4-bit adder over an existing design, then switch Logic/System repeatedly: unchanged hierarchy subtrees stay intact, replaced nodes release model subscriptions, and removed die surfaces release cached parts even when old model parent links remain. `(auto: HierarchyLifecycleTests, DieSurfaceLifetimeTests, RepeatedExampleLoadTests [Slow])`
+- [ ] **auto** Component previews recover after activating a working Python environment without restarting. A shared localized library hint opens Python settings and shows failure details; it clears on recovery. Old in-flight failures cannot block retries, and disk-cache reads retain no completed work (`PreviewEnvironmentRecoveryTests`, `PreviewRecoveryHintTests`).
+
+- [ ] Windows MSI is an x64 package with ICE80 architecture validation enabled, and requires a successful .NET 10 core-runtime compatibility check matching the application's minor roll-forward policy; .NET 8-only and .NET 11-only machines are not accepted. Existing installations remain uninstallable without the runtime. `(auto: WindowsInstallerWorkflowTests; manual: clean-machine prerequisites)`
+
+- [ ] Windows installed-app update uses basic MSI progress (UAC only), preserves its registered install directory, waits for app exit, and relaunches only after installer success. Canceling the unsaved-change prompt launches no updater; portable copies retain manual installation. `(auto: WindowsInstallerWorkflowTests, WindowsUpdaterExecutionTests, UpdateViewModelTests)`
+
+- [ ] Open the 4-bit adder, ALU + RAM, and ALU + RAM + ACC examples: both carry-copy input wires have cached routes through real crossings, the adder's top-level wires have no red fallbacks, and opening needs no routing search. Shifted gates remain clear of crossing bodies and retain their logical connections. `(auto: AdderCachedRoutingTests, LogicGateFourBitAdderExampleTests, AluRamChipExampleTests, AluRamAccChipExampleTests)`
+
+- [ ] Two rotated SiN Edge Couplers connected at their left-facing o2 ports route around the target's left side, entering opposite its outward normal. Bend and Auto reject wrong-way S primitives; ordinary recalculation repairs unedited cached generated arcs, while manual edits and valid quantized A* fallbacks remain preserved. `(auto: SiNEdgeCouplerDirectionTests)`
+
+- [ ] System → New die → Create works through the actual flyout button, closes after creation, and can be undone. The Chiplets list contains real dies; a new or legacy single-chip design shows Die 1 rather than its logic groups. `(auto: NewDieButtonTests, WorkspaceContextTests)`
+- [ ] Routing status identifies crossing insertion, route refinement, and conflict repair while elapsed time continues; speculative repair searches do not increment completed connections or retain the initial complex-search label. Cancelled/finished passes ignore late phase updates. `(auto: RoutingPhaseProgressTests, RoutingOrchestratorProgressTests)`
 
 - [ ] Start Lunima without a command-line file → Home screen appears with recent projects and example tiles. `(manual)`
 - [ ] Open an example project from the Home screen → design loads and canvas is usable; gate groups sit apart with their pins on their bodies. `(auto: HomeExamplesTests, LogicExamplesLayoutTests)`
@@ -32,12 +60,14 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Dirty-state marker (`*`) appears in title bar after an edit and clears on save. `(auto: WindowTitleTests)`
 - [ ] Check for update banner appears when a newer release is available. `(manual)`
 - [ ] Settings window opens from toolbar and shows all settings pages. `(manual)`
+- [ ] Settings → Chip Size: legacy single-chip designs can still apply root dimensions; designs with explicit dies disable the root editor and Apply, directing users to System die properties. Entering a group on a die keeps Apply disabled; returning to a legacy design restores it. Loading saved root dimensions never resizes explicit dies. `(auto: ChipSizeScopeTests; manual: disabled controls and localized explanation)`
 - [ ] All main-toolbar buttons have the same height (Import / Export / Tools / AI / Settings match New / Open / Save). `(auto: ToolbarButtonHeightTests)`
 
 ## 2. Localization & accessibility
 
 - [ ] Switch UI language in Settings → all menus, tooltips, and status text update without restart. `(auto: LocalizeExtensionLiveSwitchTests)`
 - [ ] Status-bar messages re-translate after a live language switch. `(auto: MainViewModelLocalizationTests)`
+- [ ] Discarded shell ViewModels and their canvases remain collectible despite process-wide localization subscriptions; live instances still update when the language changes. `(auto: LocalizationViewModelLifetimeTests, MainViewModelLocalizationTests)`
 - [ ] Export outputs (scripts, GDS params) use invariant culture for numeric formatting. `(auto: NazcaExportCultureInvarianceTests)`
 
 ## 3. Design canvas
@@ -73,7 +103,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Create a group from selected components with `Ctrl + G`. `(auto: GroupingWorkflowTests)`
 - [ ] A new group's external pins read by direction — IN1, IN2… (west, top to bottom), OUT1… (east), N…/S… (north/south), E… (electrical) — while saved files keep their pin names. `(auto: GroupPinNamerTests)`
 - [ ] The right panel's gate section (truth table) appears only while exactly one group is selected; nothing renders otherwise. `(auto: TruthTablePanelRenderTests)`
-- [ ] "Make gate…" in the gate section: role chips (in/out/bias/–) with suggested roles and short names, Simulate shows power bars, picking NAND/AND/OR/NOR/XOR/NOT moves the threshold midway between the levels with the margin in dB (overlap warning for a wrong function, manual override + "Use suggested"), Save as gate renames the pins (undoable), Save to library adds it under Saved Groups, then "Open in Logic ›" opens the Logic tab; (?) help animates roles and threshold. `(auto: MakeGateViewModelTests, GatePinRoleSuggesterTests, GateThresholdAdvisorTests, MakeGateScreenshotTests)`
+- [ ] Saving a gate definition updates the Logic canvas automatically: the NAND symbol and current name appear without toggling views; Undo removes the definition, Redo restores it, and renaming updates the displayed name. `(auto: GateDefinitionGraphRefreshTests)`
+- [ ] "Make gate…" in the gate section: role chips (in/out/bias/–) with suggested roles and short names, Simulate shows power bars, picking NAND/AND/OR/NOR/XOR/NOT moves the threshold midway between the levels with the margin in dB (overlap warning for a wrong function, manual override + "Use suggested"), Save as gate renames the pins (undoable); Save → Undo → Save still builds a valid gate and Save to library persists the current editor choices after undo; Save to library adds it under Saved Groups, then "Open in Logic ›" opens the Logic tab; (?) help animates roles and threshold. `(auto: MakeGateViewModelTests, GatePinRoleSuggesterTests, GateThresholdAdvisorTests, MakeGateScreenshotTests)`
 - [ ] Plain truth-table extraction shows the automatic threshold suggestion (largest power step, margin in dB) with "Use" and an "Open in Logic ›" link. `(auto: GateLinkingTests)`
 - [ ] Ungroup a group with `Ctrl + Shift + G`. `(auto: GroupingWorkflowTests)`
 - [ ] Rename a group via context menu and see the change in the Hierarchy panel. `(auto: HierarchyRenameTests)`
@@ -84,12 +115,16 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ### Dies (multi-die assemblies)
 
+- [ ] In Layout, click an empty area of each of two dies with different processes: the library follows that die without selecting or moving its frame. Hover does not switch it. Arming and repeatedly placing a component retains that die's library. `(auto: DieLibraryContextTests)`
+- [ ] Arm a Layout-only component, then switch to System: Select mode is active and dies can be moved. A permitted edge coupler stays armed and placeable. `(auto: WorkspaceLibraryPlacementTests)`
+
 - [ ] A single-chip design (every older file) shows its chip as "Die 1": a die frame with its size and the design process. In System a click on the chip selects Die 1 (die properties), double-click and F frame it; the first edit makes it a real die (one Ctrl+Z restores the single chip). The model, file and exports stay single-die until then. `(auto: ChipDieTests, DieCommandTests, DiePersistenceTests, UiFlowDieWorkspaceRulesTests)`
 - [ ] System workspace → Chiplets → "New die": pick a process + size preset; the chip becomes "Die 1" and the new die appears to the right with its own process-coloured frame, name, size label and edge zone; one Ctrl+Z restores the single chip. `(auto: DieCommandTests, DieViewModelTests, ChipletAssemblyScreenshotTests)`
 - [ ] Selecting a die (Chiplets row or its frame) shows its properties on the right — name, size presets per process + custom, process, PDK checkboxes, edge zone, Zoom to die/Delete — every edit undoable; the library and PDK list only offer what the die's process and PDKs allow. `(auto: DieViewModelTests)`
 - [ ] A die is a work surface: in Layout, parts (and saved groups) dropped on a die join it without opening anything; they are selected, moved (they stay on their die), rotated, grouped, deleted and wired right there; dropping between dies places nothing and says why; no red preview over a free spot on a die. In System, double-click on a die (or "Zoom to die") frames it, never enters it. `(auto: DieSurfaceTests, DieSurfaceCommandTests, DieCommandTests, UiFlowDieWorkSurfaceTests)`
 - [ ] Outside System (Layout/Optics/Logic) a die is background: a press on its empty area draws a marquee, it is never dragged, deleted or edited there, double-click on it does nothing special, its properties show read-only only when the die itself is selected (a selected part keeps the panel). F frames the content of the current die (selection, cursor, last worked); in System F frames all dies. `(auto: InertDieTests, DieZoomToFitTests, UiFlowDieWorkspaceRulesTests)`
 - [ ] Dies are never grouped (Create group disabled with the reason); a die's context menu offers no Edit component, Ungroup, Rename group or Make gate; the hierarchy lists dies with the chip icon, "Die · process" and the process colour dot. `(auto: DieGroupAndMenuRulesTests, HierarchyDieNodeTests)`
+- [ ] Changing a populated die process previews incompatible component names and affected connection endpoints. Cancel changes nothing; confirm preserves compatible/unknown-source parts and nested groups, removes incompatible parts and incident live/frozen wires, and one Undo restores all (including legacy chip promotion). Check English/German confirmation buttons. `(auto: DieProcessChangeTests, DieProcessConfirmationTests)`
 - [ ] Copy/paste of a die lands it in a free spot next to the others with its parts and wires (one undo step); a die stuck in an overlap can always be moved out. Releasing a moved die is instant (the carrier routing grid rebuilds in the background). Right-click opens the canvas menu on the first click, also with a pixel of jitter or after a middle-button pan. `(auto: DieCopyPasteTests, DieDropResponsivenessTests, UiFlowCanvasContextMenuTests)`
 - [ ] Moving a die moves everything on it rigidly: the routes on it are identical afterwards (nothing re-routes); only die-to-die links re-evaluate. Routes stay inside their die. `(auto: DieSurfaceTests, DieWiringPolicyTests, UiFlowDieWorkSurfaceTests)`
 - [ ] Wiring across dies: two facing edge couplers become a die-to-die link (the far die aligns, one undo step); any other wire from one die to another is refused with the hint "Chips connect only through edge couplers"; Design Checks flag a legacy cross-die waveguide. `(auto: CrossDieWiringTests, DieWiringPolicyTests, UiFlowDieWorkSurfaceTests)`
@@ -101,12 +136,17 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 6. Routing & connections
 
+- [ ] Unchanged automatic routes tolerate neighbouring padding only inside their own pin corridors, avoiding redundant searches; component bodies and frozen group paths still force rerouting. `(auto: PinCorridorOwnershipTests)`
+- [ ] Enabling adaptive crossings in Settings starts one routing pass on the open design without another edit; restoring the preference, opening Settings, or enabling it on an empty canvas does not start a pass. `(auto: AdaptiveCrossingToggleTests)`
+- [ ] While a complex route is computing, the status keeps the connection count and advances elapsed seconds; cancellation and completion stop periodic updates and ignore late phase callbacks. `(auto: RoutingOrchestratorProgressTests)`
+
 - [ ] Connect mode draws a waveguide between two pins. `(auto: ViewModels/Canvas/ConnectModeAutoSwitchTests)`
 - [ ] A* routing finds a path around obstacles and respects grid ownership. `(manual)`
 - [ ] Manual bend handles adjust waveguide shape. `(auto: SegmentShiftCommandTests, BendRadiusCommandTests)`
 - [ ] Bend radius cannot be reduced below the active process minimum. `(auto: BendRadiusCommandTests)`
 - [ ] Crossing-insertion routes around existing components automatically. `(auto: CrossingInsertionCanvasBinderTests, InsertManualCrossingCommandTests)`
 - [ ] Router-placed crossings are temporary: moving a wire end takes its chain out even with adaptive insertion off; user-placed crossings stay. `(auto: TemporaryCrossingTests, AdaptiveCrossingRerouteTests)`
+- [ ] Move a gate in the clean 2-bit Counter, then Undo: original crossings, connection order and route geometry return without another search. Joint drags restore their pre-drag wires; Redo still routes the moved layout. Undo during routing drains the cancelled worker before restoring, and late crossing callbacks cannot overwrite it. Empty Undo preserves legitimate pending canvas updates. `(auto: MoveRouteRestorationTests, RoutingOrchestratorProgressTests)`
 - [ ] Tools → Clean Up Crossings removes every router-placed crossing, re-routes the wires and is undoable. `(auto: CleanUpCrossingsCommandTests)`
 - [ ] Cut mode also cuts a wire coming out of a crossing (router- or user-placed): the halves keep their geometry and the neighbouring router chain stays; undoable. Segment handles work on such pieces too. `(auto: CrossingPieceEditingTests, CutToolCandidateComputerTests)`
 - [ ] Dragging a crossing in Select mode slides it along one of its two wires (dominant drag direction, dashed guide + ghost); that wire's pieces only stretch/shrink, the other wire re-routes; a moved router crossing becomes user-owned; one undo step. `(auto: UiFlowCrossingAxisDragTests, MoveCrossingAlongAxisCommandTests, CrossingAxisMovePlannerTests)`
@@ -122,6 +162,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Unconnected pins are hints, not issues: hidden by default, the "Show unconnected pins" toggle in the Checks tab shows them (count in brackets) after the real problems. `(auto: DesignChecksPanelNestedTests, DesignValidationMenuCommandTests)`
 
 ## 7. Simulation & S-matrix
+
+- [ ] **auto** Logic waveforms identify the hovered signal by highlighting its row, label and trace; clicking a trace selects the nearest existing replay event and pauses playback, while repeated clicks retain the cursor. Empty/narrow plots and label/header clicks do not seek (`LogicWaveformInteractionTests`, `LogicWaveformStripRenderTests`).
+- [ ] **auto** Optical level warnings retain their amber title and exact report count in a compact card. Details start collapsed; opening them shows every unchanged warning, level calculation and receiving-pin verdict; closing restores the compact view (`LogicWarningSummaryTests`).
 
 - [ ] Run CW simulation → optical power reaches the expected output ports. `(auto: SimulationModeTests, LightCalculation/TransitiveSMatrixCalculatorTests)`
 - [ ] Run Transient simulation → time-domain output appears in the analysis dock. `(auto: TimeDomainSimulation/TimeDomainSimulatorTests)`
@@ -142,7 +185,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Truth Table / Make gate shows in the properties panel only in Logic and System (exactly one group selected); "Make gate…" from Layout/Optics switches to Logic. Select / Connect / Delete are in the toolbar everywhere; Probe is in the toolbar in Layout and Optics, Cut in Layout / Logic / System — elsewhere each sits under "More tools" (⋯), and X keeps reaching Cut in every workspace. `(auto: WorkspaceContextTests, WorkspacePresentationTests, UiFlowWorkspaceLayoutOpticsTests)`
 - [ ] Layout vs Optics on the Mach-Zehnder example: Optics (Run on) shows the light, recedes component bodies (sources/detectors keep full strength and teal names) and opens the dock on Transient; switching to Layout turns the light off, draws bodies at full strength, marks the design-check findings after Run (L) (warning diamonds, info rings on open pins) and opens Design Checks; back in Optics the light returns. The layers icon (Overlays) toggles light / check markers, and each workspace remembers the choice. `(auto: WorkspacePresentationTests, WorkspaceOverlayMemoryTests, UiFlowWorkspaceLayoutOpticsTests)`
 - [ ] Logic opens on the gate view: gate symbols (NAND/AND/OR/XOR/NOT, flip-flops for registers, triangles for copies, boxes for anything else) at their physical gate positions, nets as clean wires labelled with signal names, input/output flags, legend top-left. After Run (L) the nets colour by live level (green 1, grey 0, dashed = no level yet) and follow input toggles. Check Half Adder, Counter 2-bit and ALU + RAM + ACC (overview stays calm; zoom in for symbols and labels). `(auto: GateViewGraphExtractorTests, GateViewLayoutTests, GateViewScreenshotTests)`
-- [ ] Gates | Physical switch next to Run (and V) flips gate view ↔ physical MMIs/waveguides; picking Connect / Cut / Probe in the gate view switches to Physical. Clicking a gate selects its group (Properties follow, Layout shows the same selection); dragging moves the whole gate; double-click jumps to Layout centred on it. Entering Logic on the CPU example stays responsive. `(auto: GateViewViewModelTests, UiFlowGateViewTests, KeyboardHandlerTests)`
+- [ ] Gates | Physical switch next to Run (and V) flips gate view ↔ physical MMIs/waveguides; picking Cut / Probe in the gate view switches to Physical. Clicking a gate selects its group (Properties follow, Layout shows the same selection); dragging moves the whole gate; double-click jumps to Layout centred on it. Entering Logic on the CPU example stays responsive. `(auto: GateViewViewModelTests, UiFlowGateViewTests, KeyboardHandlerTests)`
+- [ ] `auto` **Logic gate connections:** C keeps gate symbols visible; dragging displayed output/input terminals in either direction connects their physical ports. Same-direction, mixed-domain and polarization-mismatched joins leave wires/undo unchanged; cancelled drags preserve wires, and gate movement/undo still work (`GateSymbolConnectionTests`).
+- [ ] `auto` **Read-only property precision:** formatted position labels do not round the selected component's coordinates; dragging a selected gate then Undo restores exact model and view-model positions (`SelectedPositionReadoutTests`).
 - [ ] Truth Table / Make gate shows in the properties panel only in Logic and System (exactly one group selected); "Make gate…" from Layout/Optics switches to Logic. Probe shows only in Layout and Optics; Select / Connect / Delete / Cut stay everywhere. `(auto: WorkspaceContextTests)`
 
 ## 8. Parameter sweep
@@ -153,10 +198,13 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 9. Analysis panels
 
+- [ ] Transient trace visibility toggles preserve chart zoom and existing sample buffers. Tracking long transient or spectrum traces remains responsive; exact samples, interpolated values, duplicate coordinates, and unsorted data retain their tracker behavior. `(auto: TimeTraceVisibilityTests, XTrackingLineSeriesTests; manual: large transient result)`
+
 - [ ] ONA wavelength sweep panel measures transmission across a wavelength range. `(auto: OnaAnalysis/OnaAnalyzerSimulationTests)`
 - [ ] Wavelength spectrum panel plots transmission curves. `(auto: WavelengthSpectrum/WavelengthSpectrumViewModelTests)`
 - [ ] Spectrum tab "Coherent interference" toggle: EBeam MZI sweep shows fringes (FSR = λ²/(n_g·ΔL)) when on, none when off; the flag round-trips through .lun save/load; (?) help shows the ΔL→fringes animation. `(auto: Integration/EBeamMziSpectrumToggleTests, Persistence/CoherentPropagationPhasePersistenceTests)`
 - [ ] Time-domain / transient analysis panel plots signals over time. `(auto: TimeDomainSimulation/TimeDomainSimulatorTests)`
+- [ ] Transient initialization shares one peak scan per trace between legend and table, preserving signal filtering, stable peak ordering, and first-peak time; plot buffers are allocated to their final sample count. `(auto: TimeTracePeakTests, TimeTracePlotBuilderTests; manual: large transient result)`
 - [ ] Eye diagram panel opens and renders eye metrics / BER. `(auto: EyeDiagram/EyeDiagramBuilderTests, BerEstimatorTests)`
 - [ ] Monte Carlo panel runs fabrication-variance sweeps. `(auto: MonteCarloAnalysis/MonteCarloRunnerTests)`
 - [ ] Circuit optimization panel suggests and applies component variants. `(auto: CircuitOptimization/CircuitOptimizerTests)`
@@ -195,6 +243,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] GDS import dialog previews the cell hierarchy and lets the user pick placement. `(auto: Services/GdsImport/GdsImportDialogViewModelTests)`
 - [ ] Importing a finished layout with the dialog defaults keeps every route frozen and exactly as drawn (core + cladding polygons, mirrored cells mirrored), flat on the canvas; save/reopen keeps it frozen. `(auto: Integration/GdsLosslessFrozenImportTests)`
 - [ ] Selecting one imported waveguide → "Re-route selected" re-routes only that waveguide; Ctrl+Z brings the drawn route back. `(auto: Integration/GdsLosslessFrozenImportTests)`
+- [ ] Re-routing imported groups drains the previous routing worker before switching canvas scope. Hand-edited routes stay intact; removing a target or replacing a document cannot restore stale objects. Changing edit scope during routing preserves Undo for completed work, including nested groups. `(auto: RerouteImportedRoutesViewModelTests)`
 - [ ] Exporting an untouched import writes the drawn polygons verbatim and mirrored cells with `flip=True`. `(auto: Integration/GdsLosslessFrozenImportTests)`
 - [ ] Imported components are linked to the design scope (saved in `.lun`). `(auto: Services/GdsImport/DesignScopedGdsComponentServiceTests)`
 - [ ] Import a PDK JSON and register its components. `(auto: ViewModels/PdkImport/PdkImportWizardViewModelTests)`
@@ -210,7 +259,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] PhotonTorch export dialog configures and writes an export script. `(auto: Export/PhotonTorchExporterTests)`
 - [ ] Verilog-A export produces a SPICE-compatible model. `(auto: Export/VerilogAExporterTests, Export/VerilogASimulationTests)`
 - [ ] Export menu → "Netlist (YAML)" saves the gdsfactory YAML netlist to a .yml file; the status bar confirms. There is no Netlist tab in the analysis dock any more (the Export menu is the single entry point). `(auto: Export/ExportMenuViewModelTests, Export/Netlist/NetlistViewModelTests)`
-- [ ] Export menu → "Netlist (YAML) → Clipboard" copies the netlist without a file dialog; the status bar confirms. `(auto: Export/ExportMenuViewModelTests)`
+- [ ] Export menu → "Netlist (YAML) → Clipboard" copies the netlist without a file dialog; the menu stays open while copying, closes only after success, and the status bar confirms. Clipboard failures keep the menu open and show an error. `(auto: Export/ExportMenuViewModelTests, NetlistClipboardMenuTests)`
 - [ ] Export guards warn when the design contains broken routes or missing PDKs. `(auto: Export/GdsExportGuardTests, Export/NazcaExportSkipsBrokenConnectionsTests)`
 - [ ] Foundry environment selection resolves a working Python/Nazca interpreter. `(auto: Export/GdsExportEnvironmentSelectionTests, Export/ProcessLaunchFactoryTests)`
 - [ ] PDK resolution check validates all Nazca functions resolve for export. `(auto: Export/PdkResolution/PdkFunctionResolutionServiceTests)`
@@ -253,6 +302,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Monte Carlo tab (?) help explains fabrication variance and yield; the scatter/histogram animation loops. `(manual)`
 - [ ] PDK JSON help page opens from the Tools flyout. `(manual)`
 - [ ] ISA playground opens from the Tools flyout; Assemble + Step runs count-to-5 to ACC = 5; Reset restores PC = 0. `(manual)`
+- [ ] ISA playground hint offers Open suitable example, preserves unsaved-design Save/Discard/Cancel, then offers Build logic network as an explicit next step. Missing examples report a readable message; English/German buttons fit the default window. `(auto: IsaExampleActionTests, IsaPlaygroundExampleActionTests, LocalizationCompletenessTests)`
 - [ ] ISA playground editor shows line numbers and highlights the current step in place (green bar follows Step); no second program listing beside the machine state. `(auto: IsaProgramEditorTests)`
 - [ ] ISA playground Run auto-steps count-to-5 to "halted after N steps" with ACC = 5; Stop mid-run freezes PC and re-enables Step. `(manual)`
 - [ ] ISA playground "Compute ADD on the photonic chip" toggle: disabled with a hint before a build; after building the 4-bit adder example in the Logic tab it runs count-to-5 to ACC = 5 and the status names the photonic adder. `(manual)`
@@ -280,3 +330,16 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - **Date:** ___________________
 - **Blockers:** ___________________
 - **Approved for release:** ☐ Yes  ☐ No
+
+- [ ] Connect two chiplets guidance: Skip/completion releases the receiver position subscription; restarting records a fresh baseline without duplicate handlers.
+
+- [ ] System chiplet guide: real simulation, receiver move, checks, alignment and New die actions drive progress; Next cannot bypass them. Verify receiver drag demonstration, System/Chiplets/New die targets, EN/DE concise cues, undo recovery, and canceled unsaved-work prompt.
+- [ ] Store a number guidance points at the actual D0, LOAD and A checkboxes; a fresh clock write (including the same word), LOAD off and address away/back are required. Missing controls offer explicit recovery; Skip and input Reset release observers. Verify English/German real-click flow and unsaved-example cancellation. Store/Watch/ISA example starts fit once after the analysis dock opens; cancelled or superseded starts preserve the current viewport.
+
+### Watch it compute: real control actions
+
+- [ ] Start Watch it compute in English and German. The compact cue and animated pointer identify Build logic network, Step clock, Run and Stop; no Next button can skip these actions.
+- [ ] Follow the real Counter buttons without changing input toggles. Clock events and register values change, Run starts, Stop preserves the committed state, and Done closes the summary.
+- [ ] Hide the analysis dock or leave Logic during the guide. Show Logic controls restores the workspace/tab without rebuilding or modifying the circuit; hiding a running dock must not count as pressing Stop.
+- [ ] Invalidate the built logic network during the guide. Guidance returns to Build instead of pointing at disabled clock controls.
+- [ ] Home visibly offers the first optical circuit with a Place → Connect → Light sequence in all five languages. The real entry starts guidance without replacing existing work; New/Open remain available and the complete German/Spanish cue fits at 1000 px. The complete Home card also fits a 760 px laptop window. `(auto: HomeOpticalEntryTests, HomeCompactLayoutScreenshotTests, HomeLearnTourListTests, FirstUseGuidanceTests)`

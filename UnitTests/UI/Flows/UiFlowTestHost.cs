@@ -43,7 +43,9 @@ internal sealed class UiFlowTestHost : IDisposable
     private readonly IServiceProvider? _previousServices;
     private readonly string _previousLanguageCode;
 
-    public UiFlowTestHost()
+    public UiFlowTestHost(CAP.Avalonia.Controls.Canvas.ComponentPreview.GdsPreviewRenderService? previewService = null,
+        CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
+        UserPreferencesService? preferences = null)
     {
         // Flow tests look up buttons/tooltips by their English literals; the process-global
         // localization singleton follows the OS display language, so pin English for the
@@ -55,7 +57,7 @@ internal sealed class UiFlowTestHost : IDisposable
         UserPdkRoot = Path.Combine(Path.GetTempPath(), $"lunima-uiflow-pdks-{id}");
         _prefsPath = Path.Combine(Path.GetTempPath(), $"lunima-uiflow-prefs-{id}.json");
 
-        var prefs = new UserPreferencesService(_prefsPath);
+        var prefs = preferences ?? new UserPreferencesService(_prefsPath);
         var canvas = new DesignCanvasViewModel();
         var commandManager = new CommandManager();
         var libraryManager = new GroupLibraryManager();
@@ -78,7 +80,8 @@ internal sealed class UiFlowTestHost : IDisposable
             preferencesService: prefs,
             libraryManager: libraryManager,
             canvas: canvas,
-            leftPanel: leftPanel);
+            leftPanel: leftPanel,
+            previewService: previewService, pythonStartup: pythonStartup);
 
         // The startup process picker (issue #570) would otherwise open modally over the window
         // right after Loaded; a pre-established Playground process makes it a no-op.
@@ -92,6 +95,10 @@ internal sealed class UiFlowTestHost : IDisposable
         App.OverrideServicesForTesting(services.BuildServiceProvider());
 
         Window = new MainWindow { DataContext = Vm };
+        // Hover tooltips use overlay popup hosts in headless mode and can consume the
+        // next synthetic click after a panel changes. Action flows keep tooltip text
+        // available for lookup; dedicated tooltip tests use their own fixture.
+        global::Avalonia.Controls.ToolTip.SetServiceEnabled(Window, false);
         Window.Show();
         Dispatcher.UIThread.RunJobs();
 
@@ -137,6 +144,10 @@ internal sealed class UiFlowTestHost : IDisposable
     {
         foreach (var owned in Window.OwnedWindows.ToList())
             owned.Close();
+        // This temporary fixture is being discarded, not asking the user to save.
+        // The real headless save-prompt service returns Cancel, which would leave
+        // this window alive and leak focus/input state into the shared UI session.
+        Vm.FileOperations.HasUnsavedChanges = false;
         Window.Close();
         Dispatcher.UIThread.RunJobs();
 

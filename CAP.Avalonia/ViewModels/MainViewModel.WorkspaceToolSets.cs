@@ -55,8 +55,13 @@ public partial class MainViewModel
     private void ApplyWorkspaceToolSet()
     {
         var toolSet = ToolSet;
-        LeftPanel.ApplyWorkspaceScope(toolSet.CanPlace);
+        // Filtering resets the bound ListBox and can clear SelectedTemplate before
+        // its refusal is inspected, leaving placement mode armed without a template.
         DisarmRefusedTemplate(toolSet);
+        var allowedTemplate = CanvasInteraction.SelectedTemplate;
+        LeftPanel.ApplyWorkspaceScope(toolSet.CanPlace);
+        if (allowedTemplate != null && CanvasInteraction.SelectedTemplate == null)
+            CanvasInteraction.SelectedTemplate = allowedTemplate;
         RefreshCanvasContextMenu();
         OnPropertyChanged(nameof(ToolSet));
         OnPropertyChanged(nameof(IsInstrumentLibrary));

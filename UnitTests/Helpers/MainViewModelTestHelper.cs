@@ -45,7 +45,11 @@ public static class MainViewModelTestHelper
         GroupLibraryManager? libraryManager = null,
         DesignCanvasViewModel? canvas = null,
         LeftPanelViewModel? leftPanel = null,
-        CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null)
+        CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null,
+        UpdateViewModel? updateViewModel = null,
+        GdsPreviewRenderService? previewService = null,
+        CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
+        CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -68,7 +72,7 @@ public static class MainViewModelTestHelper
 
         var errorConsoleService = new CAP_Core.ErrorConsoleService();
         var gdsExportVm = new GdsExportViewModel(new GdsExportService(), errorConsoleService);
-        var updateVm = new UpdateViewModel(
+        var updateVm = updateViewModel ?? new UpdateViewModel(
             new UpdateChecker(new HttpClient(), "aignermax", "Connect-A-PIC-Pro"),
             new UpdateDownloader(new HttpClient()),
             preferencesService,
@@ -118,10 +122,10 @@ public static class MainViewModelTestHelper
             // tests don't contaminate each other or the developer's real file.
             new CAP.Avalonia.Services.UserSMatrixOverrideStore(
                 Path.Combine(Path.GetTempPath(), $"sparam-overrides-test-{Guid.NewGuid()}.json")),
-            new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")),
+            previewService ?? new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")),
             registryBrowser,
             gdsImportButton,
-            designScopedGdsComponents: designScope);
+            designScopedGdsComponents: designScope, pythonStartup: pythonStartup, isaPlayground: isaPlayground);
     }
 
     /// <summary>

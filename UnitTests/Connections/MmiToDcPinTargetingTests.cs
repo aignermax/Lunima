@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CAP.Avalonia.Commands;
@@ -14,7 +16,6 @@ using CAP_Core.Components.Core;
 using CAP_Core.Routing;
 using Shouldly;
 using UnitTests.Helpers;
-using UnitTests.UI.Flows;
 using Xunit;
 using Component = CAP_Core.Components.Core.Component;
 
@@ -127,9 +128,19 @@ public class MmiToDcPinTargetingTests
         try
         {
             Dispatcher.UIThread.RunJobs();
-            UiInput.DragMouse(window,
-                WindowPoint(window, designCanvas, scene.MmiOutPos),
-                WindowPoint(window, designCanvas, scene.DcUpperPos));
+            // RunJobs settles layout, but does not publish the compositor's input scene.
+            // The first real pointer event must target the rendered canvas, not an old scene.
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            var from = WindowPoint(window, designCanvas, scene.MmiOutPos);
+            var to = WindowPoint(window, designCanvas, scene.DcUpperPos);
+            window.MouseMove(from);
+            window.MouseDown(from, MouseButton.Left, RawInputModifiers.LeftMouseButton);
+            designCanvas.InteractionState.ConnectionDragStartPin.ShouldBeSameAs(scene.MmiOut,
+                "the real press must capture the rendered MMI start pin");
+            window.MouseMove(new Point((from.X + to.X) / 2, (from.Y + to.Y) / 2), RawInputModifiers.LeftMouseButton);
+            window.MouseMove(to, RawInputModifiers.LeftMouseButton);
+            window.MouseUp(to, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
 
             var vm = await AssertConnectionAndRouteAsync(scene);
             vm.Connection.StartPin.ShouldBeSameAs(scene.MmiOut);

@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services.GdsImport;
 using CAP.Avalonia.Services.Localization;
@@ -63,7 +64,7 @@ public class GdsImportDialogLayerPickerTests : IDisposable
         return vm;
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task CreateLayerPicker_BuildsSceneOverSelectedTopCell()
     {
         var vm = await AnalyzedDialog();
@@ -85,7 +86,7 @@ public class GdsImportDialogLayerPickerTests : IDisposable
         vm.CreateLayerPicker().ShouldBeNull();
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task CreateLayerPicker_SeedsAssignmentsFromCurrentFields()
     {
         var vm = await AnalyzedDialog();
@@ -98,7 +99,7 @@ public class GdsImportDialogLayerPickerTests : IDisposable
         picker.Rows.Single(r => r.Pair == new GdsLayerPair(37, 0)).AssignmentText.ShouldBe("metal");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task PickedAssignment_AppendsPairToTargetField()
     {
         var vm = await AnalyzedDialog();
@@ -114,7 +115,7 @@ public class GdsImportDialogLayerPickerTests : IDisposable
             .ShouldContain((37, 0));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task PickedAssignment_MovesPairBetweenFields()
     {
         var vm = await AnalyzedDialog();
@@ -131,7 +132,7 @@ public class GdsImportDialogLayerPickerTests : IDisposable
         GdsImportDialogViewModel.ParseLayerPairs(vm.WaveguideLayersText)!.ShouldContain((1, 0));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task PickedIgnore_RemovesPairFromEveryField()
     {
         var vm = await AnalyzedDialog();

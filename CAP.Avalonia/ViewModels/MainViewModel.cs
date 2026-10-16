@@ -370,7 +370,8 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null,
         ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel? storeNumberTourViewModel = null,
         ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel? firstGateTourViewModel = null,
-        ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? claudeConnectPrompt = null)
+        ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? claudeConnectPrompt = null,
+        ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null)
     {
         _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
         // Injected for activation: constructing the binder wires the adaptive
@@ -386,6 +387,7 @@ public partial class MainViewModel : ObservableObject
         InitializeLiveSimulation();
         Update = updateViewModel;
         ClaudeConnectPrompt = claudeConnectPrompt;
+        PythonStartup = pythonStartup;
 
         // Wire panel ViewModels (injected via DI)
         LeftPanel = leftPanel;
@@ -422,7 +424,7 @@ public partial class MainViewModel : ObservableObject
         InitializeGateView();
         InitializeRunHint();
         InitializeWorkspaceToolSets();
-        Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
+        Home.LearnTutorialRequested = StartVisualTutorialAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
         Home.ConnectChipletsTourRequested = StartConnectChipletsTourAsync;
@@ -430,9 +432,13 @@ public partial class MainViewModel : ObservableObject
         FileOperations.ProjectOpened = OnProjectOpened;
 
         Tutorial = tutorialViewModel ?? new ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel(canvas);
+        Tutorial.AttachInteraction(CanvasInteraction, LeftPanel.FilteredTemplates);
+        Tutorial.AttachWorkspace(WorkspaceSwitch);
+        InitializeVisualLearning(preferencesService);
         // The tour must observe the panel instance the user actually clicks.
         WatchTour = watchComputeTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
+        WatchTour.AttachWorkspace(WorkspaceSwitch);
         // Same for the ISA playground: the tour must observe the singleton the
         // playground window shows, not a private instance.
         RunProgramTour = runProgramTourViewModel
@@ -444,14 +450,18 @@ public partial class MainViewModel : ObservableObject
         ConnectChipletsTour = connectChipletsTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel(
                 Canvas, RightPanel.DesignValidation, BottomPanel.Analysis, CommandManager);
+        ConnectChipletsTour.AttachVisualContext(WorkspaceSwitch, LeftRail);
         // The tour must observe the panel instance the user actually clicks.
         StoreNumberTour = storeNumberTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
+        StoreNumberTour.AttachWorkspace(WorkspaceSwitch);
         // The gate tour observes the Make-gate steps and Logic panel the window shows.
         FirstGateTour = firstGateTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel(
-                Canvas, RightPanel.MakeGate, RightPanel.Logic);
+                Canvas, RightPanel.MakeGate, RightPanel.Logic, CommandManager);
         Home.FirstGateTourRequested = StartFirstGateTourAsync;
+        FirstGateTour.AttachUi(WorkspaceSwitch, BottomPanel.Analysis, CanvasInteraction);
+        FirstGateTour.RevealGateRequested = SelectGroupAndOpenMakeGate;
         WireMakeGate();
 
         // Keep the window title in sync with the open file and dirty state
@@ -921,11 +931,11 @@ public partial class MainViewModel : ObservableObject
         // Re-read the VM-side one-time translations when the UI language switches (field bug
         // round 5). Filtered to ActiveLanguageCode because SetLanguage raises several
         // notifications ("Item"/"Item[]" for the AXAML indexer bindings) per switch.
-        LocalizationService.Instance.PropertyChanged += (_, e) =>
+        LocalizationWeakSubscription.Subscribe(this, static (self, e) =>
         {
             if (e.PropertyName == nameof(LocalizationService.ActiveLanguageCode))
-                OnUiLanguageChanged();
-        };
+                self.OnUiLanguageChanged();
+        });
 
         // One zoom-to-fit body for both post-content triggers — design load and
         // GDS import placement: prefer the live viewport size over the caller's
@@ -1083,18 +1093,13 @@ public partial class MainViewModel : ObservableObject
     private async Task SaveDesign() => await FileOperations.SaveDesignCommand.ExecuteAsync(null);
 
     /// <summary>
-    /// Starts the first-steps tour on a fresh design (Home "Learn Lunima" card).
-    /// When the user cancels the unsaved-changes prompt, the tour does not start
-    /// and the current design stays open.
+    /// Starts or resumes guidance in the current design without discarding work.
     /// </summary>
-    private async Task StartTutorialOnFreshDesignAsync()
+    private Task StartVisualTutorialAsync()
     {
-        if (!await FileOperations.TryNewProjectAsync())
-            return;
-
-        // The tour's Run step expects the CW power-flow overlay.
-        WorkspaceSwitch.Current = ViewModels.Workspaces.Workspace.Optics;
-        Tutorial.Start();
+        _guidancePreferences?.SetGuidedLearningEnabled(true);
+        StartVisualLearning();
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -1114,6 +1119,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         WatchTour.Start();
+        FitStartedLearningJourney(() => WatchTour.IsActive);
     }
 
     /// <summary>
@@ -1133,6 +1139,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         RunProgramTour.Start();
+        FitStartedLearningJourney(() => RunProgramTour.IsActive);
     }
 
     /// <summary>
@@ -1171,6 +1178,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         StoreNumberTour.Start();
+        FitStartedLearningJourney(() => StoreNumberTour.IsActive);
     }
 
     /// <summary>
@@ -1331,9 +1339,9 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(CanUndo))]
-    private void Undo()
+    private async Task Undo()
     {
-        if (CommandManager.Undo())
+        if (await Canvas.Routing.ExecuteHistoryChangeAsync(CommandManager.Undo, () => CommandManager.CanUndo))
         {
             StatusText = string.Format(LocalizationService.Instance.Translate("Status.Undone"), CommandManager.RedoDescription ?? "action");
         }
@@ -1346,9 +1354,9 @@ public partial class MainViewModel : ObservableObject
     private bool CanUndo() => CommandManager.CanUndo;
 
     [RelayCommand(CanExecute = nameof(CanRedo))]
-    private void Redo()
+    private async Task Redo()
     {
-        if (CommandManager.Redo())
+        if (await Canvas.Routing.ExecuteHistoryChangeAsync(CommandManager.Redo, () => CommandManager.CanRedo))
         {
             StatusText = string.Format(LocalizationService.Instance.Translate("Status.Redone"), CommandManager.UndoDescription ?? "action");
         }

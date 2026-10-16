@@ -107,7 +107,9 @@ public class Issue1422StoreNumberTourScreenshotTests
                 vm.BottomPanel.Analysis.IsVisible = true;
                 vm.BottomPanel.Analysis.SetDockHeight(DockHeight);
                 vm.BottomPanel.Analysis.OpenLogic();
-                Dispatcher.UIThread.RunJobs();
+                // TabControl creates the selected page during layout. RunJobs alone does
+                // not advance the headless render timer after switching the dock tab.
+                PumpRenderLoop();
 
                 var tour = vm.StoreNumberTour;
                 var logic = vm.RightPanel.Logic;
@@ -218,7 +220,9 @@ public class Issue1422StoreNumberTourScreenshotTests
         targetName.ShouldNotBeNullOrEmpty("every actionable tour step names an anchor");
         window.GetVisualDescendants().OfType<Control>()
             .Any(c => c.Name == targetName && c.IsEffectivelyVisible)
-            .ShouldBeTrue($"tour anchor '{targetName}' must resolve to a visible control");
+            .ShouldBeTrue($"tour anchor '{targetName}' must resolve to a visible control; "
+                + string.Join("; ", window.GetVisualDescendants().OfType<TabControl>()
+                    .Select(t => $"tab index={t.SelectedIndex}, visible={t.IsEffectivelyVisible}")));
     }
 
     /// <summary>

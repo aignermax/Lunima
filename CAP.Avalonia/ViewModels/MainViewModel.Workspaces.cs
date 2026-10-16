@@ -164,18 +164,19 @@ public partial class MainViewModel
     [RelayCommand]
     public void RefreshSystemOverview()
     {
-        // Inside an open die the canvas shows only that die's content; the overview keeps
-        // the assembly's dies and links it last saw instead of going empty.
-        if (Canvas.IsInGroupEditMode && Canvas.Dies.ActiveDie != null)
-            return;
+        // The System overview always describes the design root, including while a
+        // logic group's contents temporarily occupy the editing canvas.
+        var rootComponents = Canvas.Groups.RootComponents.Select(c => c.Component).ToList();
         var context = CanvasInteraction.PlacementContext;
         var wavelengthNm = Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm
                            ?? StandardWaveLengths.RedNM;
         SystemOverview.Refresh(
-            TopLevelComponents(),
-            DesignConnections(),
+            rootComponents,
+            Canvas.Groups.RootConnections.Select(c => c.Connection),
             context.ResolveChipletProcess,
-            wavelengthNm);
+            wavelengthNm,
+            rootComponents.Any(c => c is CAP_Core.Components.Core.ComponentGroup { IsDie: true })
+                ? null : Canvas.ChipDie.Die);
     }
 
     private List<CAP_Core.Components.Core.Component> TopLevelComponents() =>

@@ -108,6 +108,9 @@ public partial class App : Application
             {
                 DataContext = mainVm
             };
+            var pythonStartup = Services.GetRequiredService<ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel>();
+            desktop.MainWindow.Opened += (_, _) => _ = pythonStartup.StartOnceAsync();
+            desktop.Exit += (_, _) => pythonStartup.Cancel();
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
         {

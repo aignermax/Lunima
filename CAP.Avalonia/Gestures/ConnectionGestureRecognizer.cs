@@ -36,7 +36,7 @@ public class ConnectionGestureRecognizer : IGestureRecognizer
     /// <inheritdoc/>
     public bool TryRecognize(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel canvas, MainViewModel? mainVm)
     {
-        if (mainVm?.CanvasInteraction.CurrentMode != InteractionMode.Connect) return false;
+        if (mainVm?.GateView.IsShown == true || mainVm?.CanvasInteraction.CurrentMode != InteractionMode.Connect) return false;
         if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed) return false;
 
         // The press position is authoritative: the hover highlight can be stale when no
@@ -65,7 +65,7 @@ public class ConnectionGestureRecognizer : IGestureRecognizer
     /// <inheritdoc/>
     public void UpdatePassiveState(Point canvasPoint, DesignCanvasViewModel canvas, MainViewModel? mainVm)
     {
-        if (mainVm?.CanvasInteraction.CurrentMode != InteractionMode.Connect) return;
+        if (mainVm?.GateView.IsShown == true || mainVm?.CanvasInteraction.CurrentMode != InteractionMode.Connect) return;
 
         // The highlight distance is screen-space capped the same way the hit radius and the
         // pin glyph itself are — otherwise a hover ring drawn at the capped (small) glyph size

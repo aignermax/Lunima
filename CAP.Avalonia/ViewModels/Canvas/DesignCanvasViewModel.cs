@@ -262,16 +262,23 @@ public partial class DesignCanvasViewModel : ObservableObject
     public void InitializeAStarRouting(double minX, double minY, double maxX, double maxY)
         => Routing.InitializeAStarRouting(minX, minY, maxX, maxY);
     public Task RecalculateRoutesAsync() => Routing.RecalculateRoutesAsync();
+    internal RouteGeometrySnapshot? DragRouteSnapshot { get; private set; }
 
     // ── Drag / command execution ──────────────────────────────────────────
 
-    public void BeginDragComponent(ComponentViewModel component) { _dragStart = (component.X, component.Y); Placement.BeginDrag(component.Component); }
+    public void BeginDragComponent(ComponentViewModel component)
+    {
+        DragRouteSnapshot = RouteGeometrySnapshot.Capture(this);
+        _dragStart = (component.X, component.Y);
+        Placement.BeginDrag(component.Component);
+    }
     public void BeginCommandExecution() => Placement.IsExecutingCommand = true;
     public void EndCommandExecution() => Placement.IsExecutingCommand = false;
 
     public async void EndDragComponent(ComponentViewModel component)
     {
         Placement.EndDrag();
+        DragRouteSnapshot = null;
         // A die moves rigidly: its wires were translated with it, nothing needs routing.
         if (!OnDieDragEnded(component))
             await RecalculateRoutesAsync();

@@ -13,7 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace CAP.Avalonia.ViewModels.Workspaces;
 
-/// <summary>One chiplet (a die, or a top-level group of a single-die design) and its process.</summary>
+/// <summary>One die and its process, including the implicit die of a single-chip design.</summary>
 /// <param name="Name">The chiplet's group name.</param>
 /// <param name="ProcessName">The fabrication process it is bound to, or a "no process" label.</param>
 /// <param name="Group">The chiplet's top-level group, used to select and show it; null in hand-built rows.</param>
@@ -34,7 +34,7 @@ public sealed record ChipletSummaryRow(
 public sealed record ChipletLinkRow(string Label, string LossText, bool IsOverBudget);
 
 /// <summary>
-/// The System workspace's overview strip: the design's chiplets (top-level groups) with
+/// The System workspace's overview strip: the design's dies with
 /// their process binding, and every cross-chiplet edge-coupler link with the coupling loss
 /// the S-matrix simulation applies to it (<see cref="ChipletEdgeCouplerCoupling.FieldFactor"/>,
 /// the same model the Design Checks' chiplet-interface rule uses). Read-only; recomputed
@@ -50,7 +50,7 @@ public partial class SystemOverviewViewModel : ObservableObject
     /// <summary>The cross-chiplet edge-coupler links of the design.</summary>
     public ObservableCollection<ChipletLinkRow> Links { get; } = new();
 
-    /// <summary>True when the design has at least one chiplet (top-level group).</summary>
+    /// <summary>True when the design has at least one die to display.</summary>
     [ObservableProperty]
     private bool _hasChiplets;
 
@@ -78,11 +78,13 @@ public partial class SystemOverviewViewModel : ObservableObject
     /// <param name="connections">The design's canvas connections.</param>
     /// <param name="resolveProcess">The chiplet's process scope (explicit or derived binding); null = unbound.</param>
     /// <param name="wavelengthNm">Simulation wavelength the gap loss is evaluated at.</param>
+    /// <param name="singleChipDie">The implicit die of a legacy single-chip design, when shown.</param>
     public void Refresh(
         IEnumerable<Component> topLevelComponents,
         IEnumerable<WaveguideConnection> connections,
         Func<ComponentGroup, ActiveProcessSelection?> resolveProcess,
-        double wavelengthNm)
+        double wavelengthNm,
+        ComponentGroup? singleChipDie = null)
     {
         ArgumentNullException.ThrowIfNull(topLevelComponents);
         ArgumentNullException.ThrowIfNull(connections);
@@ -91,14 +93,16 @@ public partial class SystemOverviewViewModel : ObservableObject
         Chiplets.Clear();
         var groups = topLevelComponents.OfType<ComponentGroup>().ToList();
         bool isAssembly = groups.Any(g => g.IsDie);
-        foreach (var group in groups.Where(g => !isAssembly || g.IsDie))
+        var dies = groups.Where(g => g.IsDie).ToList();
+        if (!isAssembly && singleChipDie is { IsDie: true })
+            dies.Add(singleChipDie);
+        foreach (var group in dies)
         {
             var binding = resolveProcess(group);
             var process = binding?.DisplayName
                           ?? LocalizationService.Instance.Translate("Workspace.System.NoProcess");
-            Chiplets.Add(group.IsDie
-                ? new ChipletSummaryRow(group.GroupName, process, group, DieProcessColors.BrushFor(binding), DetailOf(group, binding))
-                : new ChipletSummaryRow(group.GroupName, process, group));
+            Chiplets.Add(new ChipletSummaryRow(group.GroupName, process, group,
+                DieProcessColors.BrushFor(binding), DetailOf(group, binding)));
         }
         IsAssembly = isAssembly;
 

@@ -8,6 +8,7 @@ using CAP.Avalonia.Views;
 using CAP.Avalonia.ViewModels.Workspaces;
 using Shouldly;
 using UnitTests.Analysis.LogicAnalysis;
+using UnitTests.Dies;
 using UnitTests.UI.Showcase;
 using Xunit;
 
@@ -28,8 +29,9 @@ public class WorkspaceShellRenderTests
         var vm = ShowcaseCircuit.CreateStagedViewModel();
         vm.Home.Examples.Add(new ExampleDesign("Logic Gate NOT-NAND", Path.Combine("x", "Logic Gate NOT-NAND.lun")));
         var chiplet = LogicGateFixtureFactory.CreateCombinerGroup();
-        chiplet.GroupName = "Die A";
+        chiplet.GroupName = "Logic cell";
         vm.Canvas.AddComponent(chiplet);
+        vm.Canvas.AddComponent(DieTestFixtures.Die("Die A", 0, 0, 2000, 2000));
         var window = ShowcaseCircuit.BootMainWindow(vm);
         try
         {
@@ -54,6 +56,7 @@ public class WorkspaceShellRenderTests
             Dispatcher.UIThread.RunJobs();
             window.GetVisualDescendants().OfType<TextBlock>()
                 .ShouldContain(t => t.Text == "Die A" && t.IsEffectivelyVisible, "System opens on Chiplets");
+            vm.SystemOverview.Chiplets.ShouldNotContain(item => item.Name == "Logic cell");
         }
         finally
         {

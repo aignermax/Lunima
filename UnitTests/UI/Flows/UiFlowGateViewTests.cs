@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Input.Raw;
 using CAP.Avalonia.Controls;
 using CAP.Avalonia.Controls.Rendering;
 using CAP.Avalonia.ViewModels.Logic.GateView.Layout;
@@ -55,11 +56,34 @@ public class UiFlowGateViewTests
         var vm = host.Vm;
         await OpenHalfAdderInGateView(host);
 
-        var point = SymbolCenterOnScreen(host, "NAND4");
-        UiInput.ClickAt(host.Window, point);
-        // The double-click window is wall-clock time; a loaded CI runner must not split the pair.
-        UiInput.Descendants<DesignCanvas>(host.Window).First().InteractionState.LastClickTime = DateTime.UtcNow;
-        UiInput.ClickAt(host.Window, point);
+        // Headless input normally timestamps events after rendering. Model a real
+        // double-click's event times independently of a slow CI render/selection.
+        var platform = host.Window.PlatformImpl!;
+        var inputProperty = typeof(Avalonia.Platform.ITopLevelImpl).GetProperty("Input", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)!;
+        var input = (Action<RawInputEventArgs>)inputProperty.GetValue(platform)!;
+        var timestampProperty = typeof(RawInputEventArgs).GetProperty("Timestamp")!;
+        var typeProperty = typeof(RawPointerEventArgs).GetProperty("Type")!;
+        ulong timestamp = 0;
+        var presses = new List<ulong>();
+        Action<RawInputEventArgs> timedInput = e =>
+        {
+            if (timestamp == 0) timestamp = (ulong)timestampProperty.GetValue(e)!;
+            timestampProperty.SetValue(e, timestamp += 10);
+            if (e is RawPointerEventArgs && (RawPointerEventType)typeProperty.GetValue(e)! == RawPointerEventType.LeftButtonDown) presses.Add(timestamp);
+            input(e);
+        };
+        inputProperty.SetValue(platform, timedInput);
+        try
+        {
+            UiInput.ClickAt(host.Window, SymbolCenterOnScreen(host, "NAND4"));
+            vm.Canvas.SelectedComponent!.Component.ShouldBeOfType<ComponentGroup>().GroupName.ShouldBe("NAND4");
+            await Task.Delay(CanvasInteractionState.DoubleClickMilliseconds + 50);
+            // Selection can resize the inspector; resolve the displayed symbol again.
+            UiInput.ClickAt(host.Window, SymbolCenterOnScreen(host, "NAND4"));
+            presses.Count.ShouldBe(2);
+            (presses[1] - presses[0]).ShouldBeLessThan((ulong)CanvasInteractionState.DoubleClickMilliseconds);
+        }
+        finally { inputProperty.SetValue(platform, input); }
 
         vm.WorkspaceSwitch.Current.ShouldBe(Workspace.Layout);
         vm.Canvas.SelectedComponent!.Component.ShouldBeOfType<ComponentGroup>().GroupName.ShouldBe("NAND4");

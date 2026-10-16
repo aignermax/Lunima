@@ -78,7 +78,7 @@ public class InertDieTests
     }
 
     [Fact]
-    public void SwitchingToSystem_MakesTheDieEditable()
+    public async Task SwitchingToSystem_MakesTheDieEditable()
     {
         var f = new DieWorkspaceFixture();
         f.Select(f.DieVm(f.Die2));
@@ -88,7 +88,7 @@ public class InertDieTests
         f.Vm.DieProperties.Name = "Laser die";
 
         f.Die2.GroupName.ShouldBe("Laser die");
-        f.Vm.UndoCommand.Execute(null);
+        await f.Vm.UndoCommand.ExecuteAsync(null);
         f.Die2.GroupName.ShouldBe("Die 2", "one undo step per edit");
     }
 }

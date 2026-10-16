@@ -18,7 +18,7 @@ namespace CAP.Avalonia.ViewModels.Onboarding.FirstStepsTutorial;
 /// Checks — simulation run, receiver chiplet moved off its facet, the gap
 /// warning raised, the one-click "Align chiplet" fix applied — and advances
 /// automatically as each task is completed. The move step offers a "do it for
-/// me" button that shifts the receiver 5 µm along the facet axis through the
+/// me" button that shifts the receiver 170 µm along the facet axis through the
 /// same undoable group move a drag-drop records. Plain observable state with no
 /// view dependency, so the whole tour can be driven headlessly from unit tests
 /// against a real <see cref="DesignCanvasViewModel"/> and
@@ -30,7 +30,7 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
     public const string ExampleFileName = "Two Chiplets - Edge-Coupler Link.lun";
 
     /// <summary>How far the "do it for me" button shifts the receiver chiplet along the facet axis.</summary>
-    public const double MoveDistanceMicrometers = 5.0;
+    public const double MoveDistanceMicrometers = 170.0;
 
     /// <summary>Displacement below which the move step keeps waiting (filters out accidental nudges).</summary>
     internal const double MoveDetectionThresholdMicrometers = 1.0;
@@ -102,10 +102,10 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
     public string CurrentBody => LocalizationService.Instance.Translate(CurrentStep.BodyKey);
 
     /// <summary><c>x:Name</c> of the control the current step spotlights, or null for a floating card.</summary>
-    public string? CurrentTargetName => CurrentStep.TargetName;
+    public string? CurrentTargetName => VisualTargetName;
 
     /// <summary>True while the move step is current — the card offers the "do it for me" button.</summary>
-    public bool ShowMoveForMeButton => IsActive && CurrentStepIndex == MoveStepIndex;
+    public bool ShowMoveForMeButton => IsActive && CurrentStepIndex == MoveStepIndex && _workspace?.IsSystem != false;
 
     /// <summary>Localized position label, e.g. "Step 2/6".</summary>
     public string ProgressText => string.Format(
@@ -127,16 +127,19 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
         _validation.PropertyChanged += OnValidationPropertyChanged;
         _receiverTracker.ReceiverPositionChanged += OnReceiverPositionChanged;
         _receiverTracker.ResetBaseline();
+        ObserveVisualContext();
+        NotifyVisualTargets();
         EvaluateCurrentStep();
     }
 
-    /// <summary>Advances to the next step manually; on the last step the tour completes.</summary>
-    [RelayCommand]
+    /// <summary>Acknowledges introduction/completion; action steps require their real editor action.</summary>
+    [RelayCommand(CanExecute = nameof(CanAdvance))]
     public void Next()
     {
         if (!IsActive)
             return;
-        Advance();
+        if (CanAdvance) Advance();
+        EvaluateCurrentStep();
     }
 
     /// <summary>Exits the tour without completing it.</summary>
@@ -145,6 +148,7 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
     {
         IsActive = false;
         Detach();
+        NotifyVisualTargets();
     }
 
     /// <summary>
@@ -189,10 +193,6 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
         }
     }
 
-    private void OnReceiverPositionChanged(object? sender, EventArgs e) => EvaluateCurrentStep();
-
-    private void OnDiesChanged() => EvaluateCurrentStep();
-
     /// <summary>
     /// Advances past every already-satisfied step, so a canvas state that
     /// already fulfils a condition when the tour starts cannot stall it.
@@ -218,6 +218,7 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
         IsCompleted = true;
         IsActive = false;
         Detach();
+        NotifyVisualTargets();
     }
 
     private void Detach()
@@ -226,6 +227,8 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
         _canvas.DiesChanged -= OnDiesChanged;
         _validation.PropertyChanged -= OnValidationPropertyChanged;
         _receiverTracker.ReceiverPositionChanged -= OnReceiverPositionChanged;
+        _receiverTracker.StopTracking();
+        DetachVisualContext();
     }
 
     partial void OnCurrentStepIndexChanged(int value)
@@ -235,5 +238,6 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentBody));
         OnPropertyChanged(nameof(CurrentTargetName));
         OnPropertyChanged(nameof(ProgressText));
+        NotifyVisualTargets();
     }
 }

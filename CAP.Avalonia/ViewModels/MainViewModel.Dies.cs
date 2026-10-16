@@ -65,12 +65,15 @@ public partial class MainViewModel
 
     /// <summary>
     /// The die the user currently works with: the die around the group being edited, the die
-    /// selected on the assembly, or the die of the selected part (parts are edited in place).
+    /// selected on the assembly, the die of the selected part, or the last activated root die.
+    /// Arming a placement tool clears object selection but keeps this work-surface context.
     /// </summary>
     public ComponentGroup? ScopeDie =>
         Canvas.Dies.ActiveDie
         ?? (Canvas.Dies.IsAssemblyRoot && Canvas.SelectedComponent?.Component is ComponentGroup { IsDie: true } die ? die : null)
-        ?? Canvas.Surface.DieOf(Canvas.SelectedComponent);
+        ?? Canvas.Surface.DieOf(Canvas.SelectedComponent)
+        ?? (Canvas.Dies.IsAssemblyRoot && Canvas.Surface.LastWorkedDie is { } last
+            && Canvas.Dies.RootDies.Contains(last) ? last : null);
 
     /// <summary>
     /// The die whose properties the panel shows: the die itself when it is selected, or the
@@ -89,6 +92,9 @@ public partial class MainViewModel
         {
             ZoomToDieRequested = ZoomToDie,
             IsEditable = Canvas.Surface.IsContentLocked,
+            ResolvePdkSource = CanvasInteraction.PlacementContext.ResolveComponentPdkSource,
+            ResolveAllowedPdkNames = process => LeftPanel.ResolveLiveMemberPdkNames(process)
+                .Concat(LeftPanel.GetProcessAgnosticPdkNames()).ToArray(),
         };
         NewDie = new NewDieViewModel(Canvas, CommandManager, Catalog, () => FileOperations.ActiveProcess)
         {
@@ -101,6 +107,17 @@ public partial class MainViewModel
 
         Canvas.DiesChanged += OnDiesChanged;
         Canvas.PropertyChanged += OnCanvasPropertyChangedForDies;
+        CanvasInteraction.SelectionPointChanged = (x, y) =>
+        {
+            if (!Canvas.Dies.IsAssemblyRoot)
+                return;
+            var die = CAP_Core.Components.Dies.DieAssembly.DieAt(
+                Canvas.Components.Select(c => c.Component), x, y);
+            if (die == null)
+                return;
+            Canvas.Surface.LastWorkedDie = die;
+            UpdateDieScope();
+        };
         CanvasInteraction.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(CanvasInteraction.SelectedWaveguideConnection))
@@ -230,10 +247,20 @@ public partial class MainViewModel
         _scopedDieState = state;
         OnPropertyChanged(nameof(ScopeDie));
 
+        var armedTemplate = CanvasInteraction.SelectedTemplate;
         if (die != null)
             LeftPanel.ApplyDieScope(die.ProcessBinding, die.Die?.EnabledPdkNames);
         else if (hadScope)
             RefreshProcessIndicator();
+        // Rebuilding the bound library clears its selection. Keep repeated placement
+        // available only when the armed template remains valid in the new die scope.
+        if (armedTemplate != null)
+        {
+            if (LeftPanel.FilteredTemplates.Contains(armedTemplate))
+                CanvasInteraction.SelectedTemplate = armedTemplate;
+            else
+                CanvasInteraction.SetSelectModeCommand.Execute(null);
+        }
         UpdateActiveProcessLabel(FileOperations.ActiveProcess);
     }
 }

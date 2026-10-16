@@ -98,21 +98,26 @@ public class TourAnchorTests
 
         tutorial.Steps[0].TargetName.ShouldBe("ComponentLibraryList");
         tutorial.Steps[1].TargetName.ShouldBe("DesignCanvasControl");
-        tutorial.Steps[2].TargetName.ShouldBe("RunSimulationButton");
+        tutorial.Steps[2].TargetName.ShouldBe("ComponentLibraryList");
+        tutorial.Steps[3].TargetName.ShouldBe("DesignCanvasControl");
+        tutorial.Steps[4].TargetName.ShouldBe("ConnectModeButton");
+        tutorial.Steps[5].TargetName.ShouldBe("DesignCanvasControl");
+        tutorial.Steps[6].TargetName.ShouldBe("OpticsWorkspaceButton");
+        tutorial.Steps[7].TargetName.ShouldBe("RunSimulationButton");
     }
 
     [Fact]
-    public void LearnTour_CurrentTargetName_FollowsStepAdvance()
+    public void LearnTour_MissingLibraryCandidate_DoesNotPointAtAnUnrelatedControl()
     {
         var canvas = new DesignCanvasViewModel();
         var tutorial = new TutorialViewModel(canvas);
         tutorial.Start();
 
-        tutorial.CurrentTargetName.ShouldBe("ComponentLibraryList");
+        tutorial.CurrentTargetName.ShouldBeNull();
 
         canvas.AddComponent(TestComponentFactory.CreateStraightWaveGuide());
 
-        tutorial.CurrentTargetName.ShouldBe("DesignCanvasControl");
+        tutorial.CurrentTargetName.ShouldBeNull();
     }
 
     [Fact]
@@ -152,9 +157,17 @@ public class TourAnchorTests
         tour.ShowCardInMainWindow.ShouldBeTrue("the build step anchors in the main window");
         tour.ShowCardInPlayground.ShouldBeFalse();
 
-        tour.CurrentStepIndex = 2;
+        logic.HasNetwork = true;
+        tour.NotifyPlaygroundOpened();
+        tour.CurrentStepIndex.ShouldBe(2);
+        tour.ShowCardInPlayground.ShouldBeTrue("the sample card belongs to the open playground window");
+        tour.ShowCardInMainWindow.ShouldBeFalse();
 
-        tour.ShowCardInPlayground.ShouldBeTrue("from the sample step on, the card lives in the playground window");
+        tour.NotifyPlaygroundClosed();
+        tour.ShowCardInMainWindow.ShouldBeTrue("closing the playground exposes its reopen action");
+        tour.ShowCardInPlayground.ShouldBeFalse();
+        tour.NotifyPlaygroundOpened();
+        tour.ShowCardInPlayground.ShouldBeTrue();
         tour.ShowCardInMainWindow.ShouldBeFalse();
     }
 

@@ -60,6 +60,22 @@
             </ComboBox.ItemTemplate>
         </ComboBox>
 
+        <Border IsVisible="{Binding DieProperties.HasProcessPreview}" Padding="10" CornerRadius="4"
+                BorderBrush="{DynamicResource Brush.Warning}" BorderThickness="1">
+            <StackPanel Spacing="8">
+                <TextBlock Text="{loc:Localize Dies.ProcessChange.Title}" FontWeight="SemiBold"/>
+                <ScrollViewer MaxHeight="220">
+                    <TextBlock x:Name="DieProcessPreviewText" Text="{Binding DieProperties.ProcessPreviewText}" TextWrapping="Wrap"/>
+                </ScrollViewer>
+                <StackPanel Spacing="6">
+                    <Button x:Name="CancelDieProcessButton" HorizontalAlignment="Stretch" Content="{loc:Localize Dies.ProcessChange.Cancel}"
+                            Command="{Binding DieProperties.CancelProcessChangeCommand}"/>
+                    <Button x:Name="ConfirmDieProcessButton" HorizontalAlignment="Stretch" Content="{loc:Localize Dies.ProcessChange.Confirm}"
+                            Command="{Binding DieProperties.ConfirmProcessChangeCommand}" IsEnabled="{Binding DieProperties.IsEditable}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <TextBlock Classes="label" Margin="0,6,0,0" Text="{loc:Localize Dies.Properties.SizeMm}"/>
         <ComboBox x:Name="DieSizeBox" HorizontalAlignment="Stretch"
                   ItemsSource="{Binding DieProperties.SizeOptions}"
@@ -91,6 +107,8 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
         </StackPanel>
+
+
 
         <TextBlock Classes="caption" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Warning}"
                    Text="{Binding DieProperties.StatusText}"

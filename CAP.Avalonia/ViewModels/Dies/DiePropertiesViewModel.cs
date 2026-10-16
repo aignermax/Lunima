@@ -82,6 +82,7 @@ public partial class DiePropertiesViewModel : ObservableObject
     /// <summary>Shows <paramref name="die"/> (or hides the section for null).</summary>
     public void Show(ComponentGroup? die)
     {
+        ClearProcessPreview();
         Die = die is { IsDie: true } ? die : null;
         Reload();
     }
@@ -89,6 +90,7 @@ public partial class DiePropertiesViewModel : ObservableObject
     /// <summary>Re-reads the shown die (after undo/redo or an edit elsewhere).</summary>
     public void Reload()
     {
+        ClearProcessPreview();
         _loading = true;
         try
         {
@@ -170,9 +172,7 @@ public partial class DiePropertiesViewModel : ObservableObject
 
     partial void OnSelectedProcessChanged(DieProcessOption? value)
     {
-        if (value == null)
-            return;
-        Commit(state => state with { Process = value.Selection, Definition = state.Definition with { EnabledPdkNames = null } });
+        PreviewProcessChange(value);
     }
 
     private void CommitSize()

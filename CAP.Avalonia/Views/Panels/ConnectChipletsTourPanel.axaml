@@ -5,42 +5,33 @@
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.ConnectChipletsTourPanel"
              x:DataType="vm:ConnectChipletsTourViewModel">
-
-  <!-- "Connect two chiplets" tour card (issue #1288, slice 4 of #769): shows
-       the current step and progress. Non-modal: the canvas, the toolbar and the
-       Design Checks tab stay fully interactive. Hosted by the anchored overlay
-       in MainWindow; the move step additionally offers a "do it for me" button
-       that shifts the receiver chiplet through the tour engine. -->
-  <Border Classes="overlay" Padding="12" Width="340">
-    <StackPanel Spacing="8">
-
-      <!-- Header: progress + close -->
-      <DockPanel>
-        <Button DockPanel.Dock="Right" Classes="ghost icon" Command="{Binding SkipCommand}"
-                ToolTip.Tip="{loc:Localize Tutorial.Skip}">
+  <Border Classes="overlay" Padding="10,6" Width="280" CornerRadius="12">
+    <StackPanel Spacing="6">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBlock Text="{Binding CurrentCue}" FontSize="14" FontWeight="SemiBold"
+                   VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,6,0"/>
+        <Button Grid.Column="1" Classes="ghost icon" ToolTip.Tip="{Binding CurrentTitle}" AutomationProperties.Name="{Binding CurrentTitle}">
+          <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
+          <Button.Flyout>
+            <Flyout>
+              <StackPanel MaxWidth="300" Spacing="8">
+                <TextBlock Classes="label" Text="{Binding ProgressText}"/>
+                <TextBlock Classes="subtitle" Text="{Binding CurrentTitle}" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding CurrentBody}" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
+        <Button Grid.Column="2" Classes="ghost icon" Command="{Binding SkipCommand}"
+                ToolTip.Tip="{loc:Localize Tutorial.Skip}" AutomationProperties.Name="{loc:Localize Tutorial.Skip}">
           <controls:Icon Data="{StaticResource Icon.X}"/>
         </Button>
-        <TextBlock Classes="label" Text="{Binding ProgressText}"
-                   VerticalAlignment="Center"/>
-      </DockPanel>
-
-      <!-- Current step -->
-      <TextBlock Classes="subtitle" Text="{Binding CurrentTitle}" TextWrapping="Wrap"/>
-      <TextBlock Classes="secondary" Text="{Binding CurrentBody}" TextWrapping="Wrap"/>
-
-      <!-- Move step helper: shifts the receiver chiplet 5 µm off its facet. -->
-      <Button Content="{loc:Localize ConnectChipletsTour.MoveForMe}"
-              Command="{Binding MoveReceiverForMeCommand}"
-              IsVisible="{Binding ShowMoveForMeButton}"
+      </Grid>
+      <Button x:Name="MoveChipletForMeButton" Content="{loc:Localize ConnectChipletsTour.MoveForMe}"
+              Command="{Binding MoveReceiverForMeCommand}" IsVisible="{Binding ShowMoveForMeButton}"
               HorizontalAlignment="Left"/>
-
-      <!-- Actions -->
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Classes="ghost" Content="{loc:Localize Tutorial.Skip}"
-                Command="{Binding SkipCommand}"/>
-        <Button Classes="primary" Content="{loc:Localize Tutorial.Next}"
-                Command="{Binding NextCommand}"/>
-      </StackPanel>
+      <Button x:Name="ChipletTourNextButton" Classes="primary" Content="{loc:Localize Tutorial.Next}"
+              Command="{Binding NextCommand}" IsVisible="{Binding CanAdvance}" HorizontalAlignment="Right"/>
     </StackPanel>
   </Border>
 </UserControl>

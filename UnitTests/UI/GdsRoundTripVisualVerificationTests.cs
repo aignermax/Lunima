@@ -843,14 +843,7 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
         window.Show();
         try
         {
-            WriteableBitmap? bitmap = null;
-            for (var attempt = 0; attempt < 3 && bitmap == null; attempt++)
-            {
-                Dispatcher.UIThread.RunJobs();
-                bitmap = window.CaptureRenderedFrame();
-            }
-            bitmap.ShouldNotBeNull("CaptureRenderedFrame stayed null after 3 attempts");
-            return bitmap;
+            return HeadlessFrameCapture.Capture(window);
         }
         finally
         {

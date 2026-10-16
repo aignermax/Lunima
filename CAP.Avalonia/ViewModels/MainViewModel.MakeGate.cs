@@ -21,6 +21,7 @@ public partial class MainViewModel
         makeGate.SaveToLibraryRequested = SaveGateToLibrary;
         makeGate.OpenLogicRequested = OpenLogicTab;
         makeGate.GateSaved += (_, _) => RightPanel.Logic.RefreshGateCandidates();
+        makeGate.GateDefinitionChanged += (_, _) => GateView.RequestRebuild();
         RightPanel.TruthTable.OpenLogicRequested = OpenLogicTab;
         RightPanel.Logic.MakeGateRequested = SelectGroupAndOpenMakeGate;
     }

@@ -71,10 +71,16 @@ public class ConnectChipletsReceiverTracker
     /// <summary>Re-records the current position as the baseline (e.g. when the tour restarts).</summary>
     public void ResetBaseline()
     {
+        StopTracking();
+        EnsureReceiver();
+    }
+
+    /// <summary>Releases the receiver subscription without resolving or reacquiring a receiver.</summary>
+    public void StopTracking()
+    {
         if (_receiver != null)
             _receiver.PropertyChanged -= OnReceiverPropertyChanged;
         _receiver = null;
-        EnsureReceiver();
     }
 
     private ComponentViewModel? EnsureReceiver()

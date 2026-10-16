@@ -18,6 +18,12 @@ namespace CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 /// </summary>
 public partial class LogicPanelViewModel
 {
+    /// <summary>Raised after a clock edge has committed and refreshed its visible outputs, even if the word is unchanged.</summary>
+    public event EventHandler? ClockStepped;
+
+    /// <summary>Raised after an explicit register reset has refreshed the visible outputs.</summary>
+    public event EventHandler? RegistersReset;
+
     /// <summary>True when the assembled network contains at least one register — only then is clocking meaningful.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StepClockCommand))]
@@ -63,6 +69,7 @@ public partial class LogicPanelViewModel
         ReEvaluate();
         AppendClockStepEvents(stepEvents, preStepResult);
         RefreshRegisterStates();
+        ClockStepped?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -94,6 +101,7 @@ public partial class LogicPanelViewModel
         // ReEvaluate refreshed the live bits without touching the timeline (the input
         // toggles did not move), so the waveform's live levels would be stale.
         RefreshWaveform();
+        RegistersReset?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>Builds the readout rows from the network's committed register state, one row per register gate.</summary>

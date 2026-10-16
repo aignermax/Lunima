@@ -4,7 +4,7 @@
 
   This file defines:
     - Package metadata (name, version, upgrade code)
-    - .NET 8 Desktop Runtime prerequisite check
+    - .NET 10 core Runtime prerequisite check
     - Installation directory: %ProgramFiles%\Lunima
     - Desktop shortcut with Lunima icon
     - Start Menu shortcut with Lunima icon
@@ -51,27 +51,27 @@
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/aignermax/Connect-A-PIC-Pro" />
 
     <!-- ─────────────────────────────────────────────────────── -->
-    <!-- .NET 8 Desktop Runtime prerequisite                     -->
+    <!-- .NET 10 Runtime prerequisite                            -->
     <!-- ─────────────────────────────────────────────────────── -->
 
     <!--
-      Detect whether .NET 8 Desktop Runtime (x64) is present.
-      The DOTNET8_PRESENT property is set to "1" when found.
+      Match CAP.Desktop.runtimeconfig.json: Microsoft.NETCore.App 10.0.0,
+      default minor roll-forward. WiX returns 0 on success, nonzero on failure.
     -->
     <netfx:DotNetCompatibilityCheck
-        Property="DOTNET8_PRESENT"
+        Property="DOTNET_RUNTIME_CHECK"
         Platform="x64"
-        RollForward="latestMajor"
-        RuntimeType="desktop"
-        Version="8.0.0" />
+        RollForward="minor"
+        RuntimeType="core"
+        Version="10.0.0" />
 
     <!--
-      Block installation if .NET 8 is absent (except during uninstall
-      or upgrade where the package is already registered).
+      Block installation if a compatible .NET 10 runtime is absent.
+      Existing products may still be uninstalled without the runtime.
     -->
     <Launch
-        Condition="Installed OR DOTNET8_PRESENT"
-        Message="Lunima requires the .NET 8 Desktop Runtime (x64) or later.&#13;&#10;&#13;&#10;Please download and install it from:&#13;&#10;https://dotnet.microsoft.com/download/dotnet/8.0" />
+        Condition="Installed OR DOTNET_RUNTIME_CHECK = &quot;0&quot;"
+        Message="Lunima requires the .NET 10 Runtime (x64).&#13;&#10;&#13;&#10;Please download and install it from:&#13;&#10;https://dotnet.microsoft.com/download/dotnet/10.0" />
 
     <!-- ─────────────────────────────────────────────────────── -->
     <!-- Installer UI                                             -->
@@ -169,6 +169,7 @@
       <!-- Shortcuts -->
       <ComponentRef Id="DesktopShortcutComp" />
       <ComponentRef Id="StartMenuShortcutComp" />
+      <ComponentRef Id="InstallRootMarker" />
 
       <!--
         Optional, checked by default: turns on the agent bridge and registers
@@ -185,6 +186,12 @@
     <!-- ─────────────────────────────────────────────────────── -->
     <!-- Connect Claude Code: marker component + custom actions  -->
     <!-- ─────────────────────────────────────────────────────── -->
+
+    <!-- Machine-owned location: portable/source copies must never launch an MSI update. -->
+    <Component Id="InstallRootMarker" Directory="INSTALLDIR" Guid="A7B68FC3-5B37-4CB4-871C-E83096B846F4" Bitness="always64">
+      <RegistryValue Root="HKLM" Key="Software\Lunima\Installer" Name="InstallRoot"
+                     Type="string" Value="[INSTALLDIR]" KeyPath="yes" />
+    </Component>
 
     <!-- Marker so the optional feature installs something; its state drives the actions below. -->
     <Component Id="ClaudeCodeConnectComp" Directory="INSTALLDIR" Guid="C3E5F7A9-D4B6-8102-B3C5-E7F9A1B3D5C7">

@@ -29,10 +29,13 @@ public sealed class UndoTool : IAgentBridgeTool
     public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
     {
         var description = _session.Commands.UndoDescription;
-        if (!_session.Commands.Undo())
+        var routing = _session.Canvas.Routing;
+        var restoredBefore = routing.RestoredGeometryVersion;
+        if (!await routing.ExecuteHistoryChangeAsync(_session.Commands.Undo, () => _session.Commands.CanUndo))
             return AgentToolResult.Error("Nothing to undo.");
 
-        var routed = await RoutingAwaiter.RerouteAndWaitAsync(_session.Canvas);
+        var routed = routing.RestoredGeometryVersion != restoredBefore
+            || await RoutingAwaiter.RerouteAndWaitAsync(_session.Canvas);
         _session.Canvas.InvalidateSimulation();
 
         return AgentToolResult.Json(new

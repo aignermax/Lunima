@@ -20,6 +20,8 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
     private readonly EnvironmentHealthChecker _healthChecker;
     private readonly PythonDiscoveryService _discovery;
     private readonly Func<string?> _getActiveInterpreterPath;
+    private readonly IManagedPythonProvisioner _provisioner;
+    private readonly PythonStartupViewModel? _startup;
 
     private CancellationTokenSource? _cts;
 
@@ -58,7 +60,9 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
         NazcaPackageInstaller installer,
         EnvironmentHealthChecker healthChecker,
         PythonDiscoveryService? discovery = null,
-        Func<string?>? getActiveInterpreterPath = null)
+        Func<string?>? getActiveInterpreterPath = null,
+        IManagedPythonProvisioner? provisioner = null,
+        PythonStartupViewModel? startup = null)
     {
         _registry = registry;
         _bootstrapper = bootstrapper;
@@ -66,6 +70,14 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
         _healthChecker = healthChecker;
         _discovery = discovery ?? new PythonDiscoveryService();
         _getActiveInterpreterPath = getActiveInterpreterPath ?? (() => null);
+        _provisioner = provisioner ?? new ManagedPythonProvisioner(bootstrapper, installer, ProcessLaunchFactory.CreateDefault());
+        _startup = startup;
+        if (startup != null)
+            startup.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(PythonStartupViewModel.IsRunning) && !startup.IsRunning)
+                    RebuildInterpreters();
+            };
 
         RebuildInterpreters();
     }
@@ -81,7 +93,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
     /// </summary>
     public async Task StartDefaultNazcaInstallAsync()
     {
-        if (IsBusy) return;
+        if (OperationInProgress()) return;
 
         if (_registry.Exists(DefaultEnvironmentName))
         {
@@ -104,6 +116,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
     [RelayCommand]
     private async Task CreateAndInstallAsync()
     {
+        if (OperationInProgress()) return;
         var version = PythonVersion.Trim();
         if (!EnvironmentNaming.IsValidPythonVersion(version))
         {
@@ -130,18 +143,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
         {
             var progress = CreateProgress(env);
 
-            env.Status = PythonEnvironmentStatus.Creating;
-            progress.Report("Locating uv...");
-
-            var uvPath = await _bootstrapper.EnsureUvAsync(progress, ct);
-
-            await _bootstrapper.CreateVenvAsync(uvPath, venvPath, pythonVersion, progress, ct);
-
-            env.Status = PythonEnvironmentStatus.Installing;
-            await _installer.InstallAsync(uvPath, venvPath, progress, ct);
-            await _installer.InstallGdsFactoryAsync(uvPath, venvPath, progress, ct);
-
-            await _healthChecker.CheckAsync(env, ct);
+            await _provisioner.ProvisionAsync(env, pythonVersion, progress, ct);
             _registry.AddOrUpdate(env);
         }, env, $"Environment '{name}' is ready (Nazca + gdsfactory).");
     }
@@ -156,7 +158,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
     public async Task<bool> EnsureGdsFactoryInstalledAsync(
         IProgress<string> progress, CancellationToken ct)
     {
-        if (IsBusy) return false;
+        if (OperationInProgress()) return false;
 
         var active = _registry.GetActive();
         var target = active ?? _registry.GetAll().FirstOrDefault();
@@ -212,7 +214,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
         string packageSpec, IProgress<string> progress, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(packageSpec)) return false;
-        if (IsBusy)
+        if (OperationInProgress())
         {
             progress.Report("An environment operation is already running — try again once it finishes.");
             return false;
@@ -284,6 +286,14 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
             ProgressText = msg;
             Interpreters.FirstOrDefault(i => i.ManagedName == env.Name)?.RefreshAll();
         });
+
+    private bool OperationInProgress()
+    {
+        if (IsBusy) return true;
+        if (_startup?.IsRunning != true) return false;
+        ProgressText = CAP.Avalonia.Services.Localization.LocalizationService.Instance.Translate("PythonStartup.Working");
+        return true;
+    }
 
     private async Task RunLongOperationAsync(
         Func<CancellationToken, Task> operation,
