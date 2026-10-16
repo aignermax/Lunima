@@ -1722,7 +1722,7 @@
   "ConnectChipletsTour.Step1Title": "Dos chiplets, un enlace",
   "ConnectChipletsTour.Step2Body": "Pulsa «Ejecutar sistema» en la barra de herramientas. La superposición de potencia muestra la luz llegando al segundo dado: las facetas están alineadas, así que el enlace apenas cuesta nada.",
   "ConnectChipletsTour.Step2Title": "Deja pasar la luz",
-  "ConnectChipletsTour.Step3Body": "Arrastra el dado de la derecha unos micrómetros lejos de su pareja, o pulsa «Muévelo por mí» abajo para desplazarlo 5 µm. Un hueco tan pequeño ya cuesta luz.",
+  "ConnectChipletsTour.Step3Body": "Aleja el receptor de su compañero siguiendo la flecha, o elige «Mover por mí». Después comprueba cómo afecta el espacio a la luz.",
   "ConnectChipletsTour.Step3Title": "Mueve un dado",
   "ConnectChipletsTour.Step4Body": "En la pestaña Comprobaciones de diseño, pulsa «Ejecutar comprobaciones de diseño»: el comprobador señala el hueco entre facetas. Vuelve a ejecutar la simulación y la potencia recibida ha caído.",
   "ConnectChipletsTour.Step4Title": "Mira el aviso",
@@ -2162,5 +2162,15 @@
   "Tutorial.NoPlacementSpace": "Elige un espacio libre en el chip o deja más espacio.",
   "Tutorial.ActionOptics.Title": "Abre Óptica",
   "Tutorial.ActionOptics.Body": "Cambia a Óptica para simular el circuito que has construido.",
-  "Tutorial.ActionOptics.Cue": "Haz clic en Óptica"
+  "Tutorial.ActionOptics.Cue": "Haz clic en Óptica",
+  "ConnectChipletsTour.Action0Cue": "Estos dies intercambian luz",
+  "ConnectChipletsTour.Action1Cue": "Inicia la simulación de luz",
+  "ConnectChipletsTour.Action2Cue": "Arrastra este receptor siguiendo la flecha",
+  "ConnectChipletsTour.Action3Cue": "Comprueba la separación",
+  "ConnectChipletsTour.Action4Cue": "Alinea el receptor",
+  "ConnectChipletsTour.Action5Cue": "Elige proceso y tamaño y crea un die",
+  "ConnectChipletsTour.Action6Cue": "Alineados: prueba tu propio diseño",
+  "ConnectChipletsTour.SystemCue": "Abre Sistema",
+  "ConnectChipletsTour.RailCue": "Muestra los dies",
+  "ConnectChipletsTour.MissingReceiverCue": "Falta el receptor: deshaz su eliminación o reinicia esta guía"
 }

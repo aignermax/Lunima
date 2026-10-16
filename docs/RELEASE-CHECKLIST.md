@@ -316,3 +316,5 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - **Approved for release:** ☐ Yes  ☐ No
 
 - [ ] Connect two chiplets guidance: Skip/completion releases the receiver position subscription; restarting records a fresh baseline without duplicate handlers.
+
+- [ ] System chiplet guide: real simulation, receiver move, checks, alignment and New die actions drive progress; Next cannot bypass them. Verify receiver drag demonstration, System/Chiplets/New die targets, EN/DE concise cues, undo recovery, and canceled unsaved-work prompt.

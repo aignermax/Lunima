@@ -449,6 +449,7 @@ public partial class MainViewModel : ObservableObject
         ConnectChipletsTour = connectChipletsTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel(
                 Canvas, RightPanel.DesignValidation, BottomPanel.Analysis, CommandManager);
+        ConnectChipletsTour.AttachVisualContext(WorkspaceSwitch, LeftRail);
         // The tour must observe the panel instance the user actually clicks.
         StoreNumberTour = storeNumberTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel(RightPanel.Logic, BottomPanel.Analysis);

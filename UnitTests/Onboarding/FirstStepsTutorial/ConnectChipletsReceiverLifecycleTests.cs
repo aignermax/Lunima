@@ -69,6 +69,8 @@ public class ConnectChipletsReceiverLifecycleTests
         Assert.NotNull(tracker.Receiver);
         var reference = new WeakReference(tracker);
         tour.Skip();
+        Assert.Null(tour.CurrentCanvasPoint);
+        Assert.Null(tour.CurrentCanvasDestinationPoint);
         return reference;
     }
 }

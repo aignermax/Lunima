@@ -1722,7 +1722,7 @@
   "ConnectChipletsTour.Step1Title": "2 つのチップレット、1 つのリンク",
   "ConnectChipletsTour.Step2Body": "ツールバーの「システム実行」を押してください。パワーオーバーレイで光が 2 つ目のダイに届くのが見えます。ファセットが揃っているため、リンクの損失はほぼありません。",
   "ConnectChipletsTour.Step2Title": "光を渡す",
-  "ConnectChipletsTour.Step3Body": "右側のダイを相手から数マイクロメートル離すようにドラッグするか、下の「代わりに動かす」で 5 µm ずらします。これほど小さなギャップでも光を失います。",
+  "ConnectChipletsTour.Step3Body": "矢印に沿って受信側を相手から離すか、「代わりに動かす」を選びます。次に、隙間が光に与える影響を確認します。",
   "ConnectChipletsTour.Step3Title": "ダイを動かす",
   "ConnectChipletsTour.Step4Body": "「デザインチェック」タブで「デザインチェックを実行」を押すと、チェッカーがファセットギャップを指摘します。シミュレーションを再実行すると、受信パワーが低下しています。",
   "ConnectChipletsTour.Step4Title": "警告を見る",
@@ -2162,5 +2162,15 @@
   "Tutorial.NoPlacementSpace": "チップの空いている場所を選ぶか、スペースを確保してください。",
   "Tutorial.ActionOptics.Title": "光学ワークスペースを開く",
   "Tutorial.ActionOptics.Body": "光学に切り替えて、作成した回路をシミュレーションします。",
-  "Tutorial.ActionOptics.Cue": "光学をクリック"
+  "Tutorial.ActionOptics.Cue": "光学をクリック",
+  "ConnectChipletsTour.Action0Cue": "このダイ間で光が伝わります",
+  "ConnectChipletsTour.Action1Cue": "光のシミュレーションを実行",
+  "ConnectChipletsTour.Action2Cue": "矢印に沿って受信側をドラッグ",
+  "ConnectChipletsTour.Action3Cue": "隙間をチェック",
+  "ConnectChipletsTour.Action4Cue": "受信側を整列",
+  "ConnectChipletsTour.Action5Cue": "プロセスとサイズを選んでダイを作成",
+  "ConnectChipletsTour.Action6Cue": "整列できました。自分の設計を試しましょう",
+  "ConnectChipletsTour.SystemCue": "システムを開く",
+  "ConnectChipletsTour.RailCue": "ダイを表示",
+  "ConnectChipletsTour.MissingReceiverCue": "受信側がありません。削除を元に戻すかガイドを再開してください"
 }

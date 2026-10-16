@@ -1722,7 +1722,7 @@
   "ConnectChipletsTour.Step1Title": "两个芯粒，一条链路",
   "ConnectChipletsTour.Step2Body": "点击工具栏中的“运行系统”。功率叠加层会显示光到达第二个芯片——端面对准，链路几乎无损耗。",
   "ConnectChipletsTour.Step2Title": "让光穿过去",
-  "ConnectChipletsTour.Step3Body": "把右侧芯片拖离其伙伴几微米，或点击下方“帮我移动”将其移动 5 µm。如此小的间隙已经会损耗光。",
+  "ConnectChipletsTour.Step3Body": "沿箭头将接收端移离另一块芯片，或选择“帮我移动”。然后检查间隙对光的影响。",
   "ConnectChipletsTour.Step3Title": "移动一个芯片",
   "ConnectChipletsTour.Step4Body": "在“设计检查”选项卡中点击“运行设计检查”——检查器会标记端面间隙。重新运行仿真，接收功率已经下降。",
   "ConnectChipletsTour.Step4Title": "查看警告",
@@ -2162,5 +2162,15 @@
   "Tutorial.NoPlacementSpace": "请选择芯片上的空白位置，或腾出更多空间。",
   "Tutorial.ActionOptics.Title": "打开光学工作区",
   "Tutorial.ActionOptics.Body": "切换到光学工作区，仿真你搭建的电路。",
-  "Tutorial.ActionOptics.Cue": "点击光学"
+  "Tutorial.ActionOptics.Cue": "点击光学",
+  "ConnectChipletsTour.Action0Cue": "这些芯粒之间传递光信号",
+  "ConnectChipletsTour.Action1Cue": "运行光学仿真",
+  "ConnectChipletsTour.Action2Cue": "沿箭头拖动接收端",
+  "ConnectChipletsTour.Action3Cue": "检查间隙",
+  "ConnectChipletsTour.Action4Cue": "对齐接收端",
+  "ConnectChipletsTour.Action5Cue": "选择工艺和尺寸，然后创建芯粒",
+  "ConnectChipletsTour.Action6Cue": "已对齐，现在尝试自己的设计",
+  "ConnectChipletsTour.SystemCue": "打开系统工作区",
+  "ConnectChipletsTour.RailCue": "显示芯粒",
+  "ConnectChipletsTour.MissingReceiverCue": "接收端已丢失：撤销删除或重新开始引导"
 }
