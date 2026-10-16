@@ -2203,5 +2203,7 @@
   "RunProgramTour.ActionOpen.Cue": "ISAプレイグラウンドを開く",
   "Home.Optical.Place": "配置",
   "Home.Optical.Connect": "接続",
-  "Home.Optical.Light": "光"
+  "Home.Optical.Light": "光",
+  "LogicPanel.FanOutWarning.ReportCount": "警告件数：",
+  "LogicPanel.FanOutWarning.Details": "詳細"
 }

@@ -2203,5 +2203,7 @@
   "RunProgramTour.ActionOpen.Cue": "Abrir el entorno ISA",
   "Home.Optical.Place": "Colocar",
   "Home.Optical.Connect": "Conectar",
-  "Home.Optical.Light": "Luz"
+  "Home.Optical.Light": "Luz",
+  "LogicPanel.FanOutWarning.ReportCount": "Advertencias:",
+  "LogicPanel.FanOutWarning.Details": "Detalles"
 }

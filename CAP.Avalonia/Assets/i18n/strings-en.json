@@ -2203,5 +2203,7 @@
   "RunProgramTour.ActionOpen.Cue": "Open the ISA playground",
   "Home.Optical.Place": "Place",
   "Home.Optical.Connect": "Connect",
-  "Home.Optical.Light": "Light"
+  "Home.Optical.Light": "Light",
+  "LogicPanel.FanOutWarning.ReportCount": "Warnings:",
+  "LogicPanel.FanOutWarning.Details": "Details"
 }

@@ -2203,5 +2203,7 @@
   "RunProgramTour.ActionOpen.Cue": "ISA-Playground öffnen",
   "Home.Optical.Place": "Platzieren",
   "Home.Optical.Connect": "Verbinden",
-  "Home.Optical.Light": "Licht"
+  "Home.Optical.Light": "Licht",
+  "LogicPanel.FanOutWarning.ReportCount": "Warnmeldungen:",
+  "LogicPanel.FanOutWarning.Details": "Details"
 }
