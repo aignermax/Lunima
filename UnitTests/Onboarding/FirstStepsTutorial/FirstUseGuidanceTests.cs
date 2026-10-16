@@ -7,6 +7,23 @@ namespace UnitTests.Onboarding.FirstStepsTutorial;
 public class FirstUseGuidanceTests
 {
     [AvaloniaFact]
+    public void ContinuingWithoutProject_GuidesNewUsers_ButRespectsDismissal()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"lunima-guide-{Guid.NewGuid():N}.json");
+        try
+        {
+            var vm = MainViewModelTestHelper.CreateMainViewModel(preferencesService: new UserPreferencesService(path));
+            vm.Home.ContinueWithoutProjectCommand.Execute(null);
+            Assert.True(vm.Tutorial.IsActive);
+            vm.Tutorial.Skip();
+            vm.Home.Show();
+            vm.Home.ContinueWithoutProjectCommand.Execute(null);
+            Assert.False(vm.Tutorial.IsActive);
+        }
+        finally { if (File.Exists(path)) File.Delete(path); }
+    }
+
+    [AvaloniaFact]
     public async Task ReplacingProject_AndResumingLearning_StopOtherChapters()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();

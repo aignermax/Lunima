@@ -8,6 +8,10 @@ using Avalonia.VisualTree;
 using CAP.Avalonia.Controls;
 using CAP.Avalonia.Controls.TourAnchor;
 using CAP.Avalonia.Services.Localization;
+using CAP.Avalonia.Services;
+using CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
+using CAP_Core.Export.PythonEnvironmentManager;
+using UnitTests.Export.PythonEnvironmentManager;
 
 namespace UnitTests.UI.Flows;
 
@@ -19,12 +23,14 @@ public class VisualLearningJourneyTests
     [InlineData("de")]
     public async Task Novice_BuildsCircuitByFollowingActualTargets(string language)
     {
-        using var host = new UiFlowTestHost();
+        await using var setup = new PendingPythonSetup();
+        using var host = new UiFlowTestHost(pythonStartup: setup.Startup, preferences: setup.Preferences);
         var vm = host.Vm;
         var window = host.Window;
         window.Width = 1280;
         window.Height = 800;
         LocalizationService.Instance.SetLanguage(language);
+        setup.Start();
         await vm.Home.LearnTutorialCommand.ExecuteAsync(null);
         Pump();
         Assert.Equal(0, vm.Tutorial.CurrentStepIndex);
@@ -108,6 +114,33 @@ public class VisualLearningJourneyTests
         var flow = vm.Canvas.PowerFlowVisualizer.GetFlowForConnection(Assert.Single(vm.Canvas.Connections).Connection.Id);
         Assert.NotNull(flow);
         Assert.True(double.IsFinite(flow.OutputPower) && flow.OutputPower > 0, vm.StatusText);
+        Assert.False(setup.Pending!.IsCompleted, "The whole circuit journey must work while Python setup is pending.");
+        Assert.True(window.FindControl<StackPanel>("PythonStartupProgress")!.IsEffectivelyVisible);
+    }
+
+    private sealed class PendingPythonSetup : IAsyncDisposable
+    {
+        private readonly string _folder = Path.Combine(Path.GetTempPath(), "lunima-learning-python-" + Guid.NewGuid().ToString("N"));
+        public UserPreferencesService Preferences { get; }
+        public PythonStartupViewModel Startup { get; }
+        public Task? Pending { get; private set; }
+
+        public PendingPythonSetup()
+        {
+            Directory.CreateDirectory(_folder);
+            Preferences = new UserPreferencesService(Path.Combine(_folder, "prefs.json"));
+            var registry = new PythonEnvironmentRegistry(Path.Combine(_folder, "envs.json"));
+            Startup = new PythonStartupViewModel(registry, Preferences, new FakePythonProvisioner(), _folder);
+        }
+
+        public void Start() => Pending = Startup.StartOnceAsync();
+
+        public async ValueTask DisposeAsync()
+        {
+            Startup.Cancel();
+            if (Pending != null) await Pending;
+            Directory.Delete(_folder, true);
+        }
     }
 
     private static void Pump()

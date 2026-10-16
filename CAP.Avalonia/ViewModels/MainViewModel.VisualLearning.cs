@@ -15,6 +15,12 @@ public partial class MainViewModel
     private void InitializeVisualLearning(UserPreferencesService preferences)
     {
         _guidancePreferences = preferences;
+        Home.ContinueWithoutProjectRequested = () =>
+        {
+            if (FileOperations.CurrentFilePath == null && Canvas.Components.Count == 0 &&
+                preferences.GetGuidedLearningEnabled())
+                StartVisualLearning();
+        };
         Tutorial.PropertyChanged += (_, change) =>
         {
             if (change.PropertyName == nameof(Tutorial.IsCompleted))
@@ -33,7 +39,10 @@ public partial class MainViewModel
     {
         // A replaced document must never inherit pin references or progress from the previous one.
         StopLearningChapters();
-        if (cameFromHome && Canvas.Components.Count == 0 && _guidancePreferences?.GetGuidedLearningEnabled() == true)
+        // File loads restore their own workspace, even when the saved design is empty.
+        // Open-as-copy also still has its source path during ProjectOpened.
+        if (cameFromHome && FileOperations.CurrentFilePath == null && Canvas.Components.Count == 0 &&
+            _guidancePreferences?.GetGuidedLearningEnabled() == true)
             StartVisualLearning();
     }
 
