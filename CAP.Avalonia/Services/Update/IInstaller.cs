@@ -9,7 +9,7 @@ public interface IInstaller
 {
     /// <summary>
     /// True when an in-place update can be performed right now — the running app's install
-    /// location is known and writable. When false, <paramref name="reason"/> explains why and the
+    /// location is a registered MSI install (Windows) or writable (Unix). When false, <paramref name="reason"/> explains why and the
     /// caller should fall back to a manual installer / the releases page instead of quitting.
     /// </summary>
     bool CanInstallInPlace(out string reason);

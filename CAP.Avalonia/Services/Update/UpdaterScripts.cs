@@ -30,7 +30,8 @@ public static class UpdaterScripts
         WindowsTemplate
             .Replace("__OLD_PID__", target.ProcessId.ToString(CultureInfo.InvariantCulture))
             .Replace("__MSI__", PsQuote(msiPath))
-            .Replace("__EXE__", PsQuote(target.ExecutablePath));
+            .Replace("__EXE__", PsQuote(target.ExecutablePath))
+            .Replace("__INSTALL_ROOT__", PsQuote(target.Root.TrimEnd('\\', '/')));
 
     /// <summary>Single-quotes a value for safe use in a POSIX shell (escapes embedded quotes).</summary>
     internal static string ShQuote(string value) => "'" + value.Replace("'", "'\\''") + "'";
@@ -201,15 +202,32 @@ public static class UpdaterScripts
     private const string WindowsTemplate =
         """
         # Lunima in-place updater (Windows) — generated. Runs the MSI upgrade and relaunches.
-        $ErrorActionPreference = 'Continue'
+        $ErrorActionPreference = 'Stop'
         $targetPid = __OLD_PID__
         $msi = __MSI__
         $exe = __EXE__
+        $installRoot = __INSTALL_ROOT__
         $log = Join-Path $env:TEMP 'lunima-update.log'
         "=== lunima update $(Get-Date) pid=$targetPid ===" | Out-File -FilePath $log -Append
         try { Wait-Process -Id $targetPid -Timeout 60 -ErrorAction SilentlyContinue } catch {}
-        $p = Start-Process msiexec -ArgumentList '/i', $msi, '/qb' -Wait -PassThru
-        "msiexec exit $($p.ExitCode)" | Out-File -FilePath $log -Append
-        Start-Process -FilePath $exe
+        # A canceled close or slow shutdown must never race MSI against the running app.
+        if (Get-Process -Id $targetPid -ErrorAction SilentlyContinue) {
+            'App still running; update aborted.' | Out-File -FilePath $log -Append
+            exit 1
+        }
+        try {
+            # Start-Process joins ArgumentList; quote paths explicitly, including INSTALLDIR.
+            $msiArgs = '/i "' + $msi + '" /qb /norestart INSTALLDIR="' + $installRoot + '"'
+            $p = Start-Process msiexec -ArgumentList $msiArgs -Verb RunAs -Wait -PassThru
+            "msiexec exit $($p.ExitCode)" | Out-File -FilePath $log -Append
+            if ($p.ExitCode -notin @(0, 3010)) { throw "Windows Installer failed (exit $($p.ExitCode))." }
+            # Only msiexec was elevated: the replacement app inherits this user's normal token.
+            Start-Process -FilePath $exe
+        } catch {
+            $_ | Out-File -FilePath $log -Append
+            Add-Type -AssemblyName System.Windows.Forms
+            [System.Windows.Forms.MessageBox]::Show("The update could not finish. See $log for details.", 'Lunima update') | Out-Null
+            exit 1
+        }
         """;
 }

@@ -1,4 +1,8 @@
 {
+  "PythonStartup.Preparing": "Preparing Python previews in the background. You can keep working.",
+  "PythonStartup.Working": "Python setup is already running in the background.",
+  "PythonStartup.Failed": "Python setup could not finish. You can keep working and retry when ready.",
+  "PythonStartup.Retry": "Retry setup",
   "Preview.Unavailable": "Some component previews are unavailable.",
   "Preview.ErrorDetails": "Error details",
   "AgentBridge.Prompt.Body": "Claude Code is installed. One click turns on Lunima's local agent bridge and registers it, so Claude can inspect and edit your open design — every edit is undoable.",

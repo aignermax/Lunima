@@ -121,10 +121,8 @@ public class UpdateChecker
     public static GitHubReleaseAsset? FindAutoUpdateAsset(GitHubReleaseInfo release)
     {
         if (OperatingSystem.IsWindows())
-            // Windows in-place self-update is deferred (#614 follow-up): msiexec installs to its own
-            // perMachine location, so a portable/zip install would be silently misrouted and the
-            // stale exe relaunched. Returning null makes the caller fall back to the manual MSI upgrade.
-            return null;
+            // SelfUpdateInstaller first verifies this process runs from the registered MSI root.
+            return release.Assets.FirstOrDefault(a => a.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase));
 
         if (OperatingSystem.IsMacOS())
         {

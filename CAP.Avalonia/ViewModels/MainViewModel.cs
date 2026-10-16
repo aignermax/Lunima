@@ -370,7 +370,8 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null,
         ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel? storeNumberTourViewModel = null,
         ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel? firstGateTourViewModel = null,
-        ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? claudeConnectPrompt = null)
+        ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? claudeConnectPrompt = null,
+        ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null)
     {
         _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
         // Injected for activation: constructing the binder wires the adaptive
@@ -386,6 +387,7 @@ public partial class MainViewModel : ObservableObject
         InitializeLiveSimulation();
         Update = updateViewModel;
         ClaudeConnectPrompt = claudeConnectPrompt;
+        PythonStartup = pythonStartup;
 
         // Wire panel ViewModels (injected via DI)
         LeftPanel = leftPanel;

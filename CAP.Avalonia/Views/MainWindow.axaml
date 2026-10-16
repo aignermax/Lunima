@@ -711,8 +711,28 @@
                                 </TextBox.InnerLeftContent>
                             </TextBox>
 
+                            <StackPanel x:Name="PythonStartupProgress" DockPanel.Dock="Top" Margin="12,0,12,8" Spacing="4"
+                                        IsVisible="{Binding PythonStartup.IsRunning, FallbackValue=False}">
+                                <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:Localize PythonStartup.Preparing}"/>
+                                <ProgressBar IsIndeterminate="True" Height="3"/>
+                                <TextBlock Classes="caption" TextTrimming="CharacterEllipsis" MaxLines="2"
+                                           Text="{Binding PythonStartup.ProgressText}" ToolTip.Tip="{Binding PythonStartup.ProgressText}"/>
+                            </StackPanel>
                             <StackPanel DockPanel.Dock="Top" Margin="12,0,12,8" Spacing="4"
+                                        IsVisible="{Binding PythonStartup.HasError, FallbackValue=False}">
+                                <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:Localize PythonStartup.Failed}"/>
+                                <Button x:Name="PythonStartupRetryButton" Classes="link" HorizontalAlignment="Left"
+                                        Content="{loc:Localize PythonStartup.Retry}" Command="{Binding PythonStartup.RetryCommand}"/>
+                                <Button Classes="link" HorizontalAlignment="Left" Content="{loc:Localize Settings.Section.PythonEnvironments}"
+                                        Command="{Binding OpenPreviewPythonSettingsCommand}"/>
+                                <Expander Header="{loc:Localize Preview.ErrorDetails}">
+                                    <TextBlock Classes="caption" TextWrapping="Wrap" MaxHeight="100" Text="{Binding PythonStartup.ErrorText}"/>
+                                </Expander>
+                            </StackPanel>
+                            <StackPanel DockPanel.Dock="Top" Margin="12,0,12,8"
                                         IsVisible="{Binding GdsPreviewRenderService.HasUnavailablePreviews}">
+                              <StackPanel IsVisible="{Binding !PythonStartup.IsRunning, FallbackValue=True}">
+                               <StackPanel Spacing="4" IsVisible="{Binding !PythonStartup.HasError, FallbackValue=True}">
                                 <TextBlock Classes="caption" TextWrapping="Wrap"
                                            Text="{loc:Localize Preview.Unavailable}"
                                            ToolTip.Tip="{Binding GdsPreviewRenderService.PreviewFailureDetail}"/>
@@ -724,6 +744,8 @@
                                     <TextBlock Classes="caption" TextWrapping="Wrap" MaxHeight="100"
                                                Text="{Binding GdsPreviewRenderService.PreviewFailureDetail}"/>
                                 </Expander>
+                               </StackPanel>
+                              </StackPanel>
                             </StackPanel>
 
                             <!-- Online-registry hit line under the local hits: visible only while

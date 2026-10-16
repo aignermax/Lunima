@@ -43,7 +43,9 @@ internal sealed class UiFlowTestHost : IDisposable
     private readonly IServiceProvider? _previousServices;
     private readonly string _previousLanguageCode;
 
-    public UiFlowTestHost(CAP.Avalonia.Controls.Canvas.ComponentPreview.GdsPreviewRenderService? previewService = null)
+    public UiFlowTestHost(CAP.Avalonia.Controls.Canvas.ComponentPreview.GdsPreviewRenderService? previewService = null,
+        CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
+        UserPreferencesService? preferences = null)
     {
         // Flow tests look up buttons/tooltips by their English literals; the process-global
         // localization singleton follows the OS display language, so pin English for the
@@ -55,7 +57,7 @@ internal sealed class UiFlowTestHost : IDisposable
         UserPdkRoot = Path.Combine(Path.GetTempPath(), $"lunima-uiflow-pdks-{id}");
         _prefsPath = Path.Combine(Path.GetTempPath(), $"lunima-uiflow-prefs-{id}.json");
 
-        var prefs = new UserPreferencesService(_prefsPath);
+        var prefs = preferences ?? new UserPreferencesService(_prefsPath);
         var canvas = new DesignCanvasViewModel();
         var commandManager = new CommandManager();
         var libraryManager = new GroupLibraryManager();
@@ -79,7 +81,7 @@ internal sealed class UiFlowTestHost : IDisposable
             libraryManager: libraryManager,
             canvas: canvas,
             leftPanel: leftPanel,
-            previewService: previewService);
+            previewService: previewService, pythonStartup: pythonStartup);
 
         // The startup process picker (issue #570) would otherwise open modally over the window
         // right after Loaded; a pre-established Playground process makes it a no-op.

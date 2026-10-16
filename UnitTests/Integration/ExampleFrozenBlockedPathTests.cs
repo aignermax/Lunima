@@ -47,13 +47,13 @@ public class ExampleFrozenBlockedPathTests
         ["Logic Gate RAM 2x4.lun"] = 1,
         // 17 blocked top-level wires + 11 blocked intra-cell wires across the four cells.
         ["Logic Gate RAM 4x4.lun"] = 28,
-        ["Logic Gate 4-Bit Adder.lun"] = 2,
-        // 2 blocked top-level adder wires + the 29 (18 inter-cell + 11 intra-cell) frozen inside
+        ["Logic Gate 4-Bit Adder.lun"] = 0,
+        // Repaired top-level adder wires are clear; 29 (18 inter-cell + 11 intra-cell) remain frozen inside
         // the wrapping RAM group (the RAM block as authored, before its own re-bake).
-        ["Logic Gate ALU + RAM.lun"] = 31,
-        // 31 as on ALU + RAM: the four Logic Gate Bit cells of the ACC register
+        ["Logic Gate ALU + RAM.lun"] = 29,
+        // 29 as on ALU + RAM: the four Logic Gate Bit cells of the ACC register
         // ship zero blocked wires, so their frozen intra-bit routes add none.
-        ["Logic Gate ALU + RAM + ACC.lun"] = 31,
+        ["Logic Gate ALU + RAM + ACC.lun"] = 29,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>

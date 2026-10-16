@@ -10,6 +10,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## How to use at release time
 
+- [ ] Fresh profile: the first desktop start prepares managed Python and the same preview/export packages as Settings in the background, with an unobtrusive progress indicator. Editing remains available; failure exposes Retry and details; only full health activates the environment and refreshes previews. Reopening retries a failed setup, explicit external interpreters remain unchanged, and exit cancels owned setup processes. `(auto: PythonStartupTests, PythonStartupJourneyTests, ManagedPythonProvisionerTests, UvBootstrapperTests; manual: fresh-machine online download on supported OSes)`
+
 1. Open a release issue / draft PR and paste the checklist below into it.
 2. Walk through every manual item in a fresh build on each supported OS (Windows, Linux, macOS) where feasible.
 3. Tick an item only after you have observed the expected result.
@@ -26,6 +28,12 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 - [ ] Reopen the 4-bit adder over an existing design, then switch Logic/System repeatedly: unchanged hierarchy subtrees stay intact, replaced nodes release model subscriptions, and removed die surfaces release cached parts even when old model parent links remain. `(auto: HierarchyLifecycleTests, DieSurfaceLifetimeTests, RepeatedExampleLoadTests [Slow])`
 - [ ] **auto** Component previews recover after activating a working Python environment without restarting. A shared localized library hint opens Python settings and shows failure details; it clears on recovery. Old in-flight failures cannot block retries, and disk-cache reads retain no completed work (`PreviewEnvironmentRecoveryTests`, `PreviewRecoveryHintTests`).
+
+- [ ] Windows MSI is an x64 package with ICE80 architecture validation enabled, and requires a successful .NET 10 core-runtime compatibility check matching the application's minor roll-forward policy; .NET 8-only and .NET 11-only machines are not accepted. Existing installations remain uninstallable without the runtime. `(auto: WindowsInstallerWorkflowTests; manual: clean-machine prerequisites)`
+
+- [ ] Windows installed-app update uses basic MSI progress (UAC only), preserves its registered install directory, waits for app exit, and relaunches only after installer success. Canceling the unsaved-change prompt launches no updater; portable copies retain manual installation. `(auto: WindowsInstallerWorkflowTests, WindowsUpdaterExecutionTests, UpdateViewModelTests)`
+
+- [ ] Open the 4-bit adder, ALU + RAM, and ALU + RAM + ACC examples: both carry-copy input wires have cached routes through real crossings, the adder's top-level wires have no red fallbacks, and opening needs no routing search. Shifted gates remain clear of crossing bodies and retain their logical connections. `(auto: AdderCachedRoutingTests, LogicGateFourBitAdderExampleTests, AluRamChipExampleTests, AluRamAccChipExampleTests)`
 
 - [ ] Two rotated SiN Edge Couplers connected at their left-facing o2 ports route around the target's left side, entering opposite its outward normal. Bend and Auto reject wrong-way S primitives; ordinary recalculation repairs unedited cached generated arcs, while manual edits and valid quantized A* fallbacks remain preserved. `(auto: SiNEdgeCouplerDirectionTests)`
 

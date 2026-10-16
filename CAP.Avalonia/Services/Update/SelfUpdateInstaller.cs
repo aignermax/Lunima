@@ -25,6 +25,14 @@ public class SelfUpdateInstaller : IInstaller
             return false;
         }
 
+        // MSI requests elevation itself; writable probes reject normal Program Files installs.
+        if (OperatingSystem.IsWindows())
+        {
+            var registered = WindowsMsiRegistration.Matches(location, WindowsMsiRegistration.ReadInstallRoot());
+            reason = registered ? string.Empty : "the app is not running from its registered MSI installation";
+            return registered;
+        }
+
         // The macOS bundle swap writes in the parent (moves the .app aside); the Linux file-by-file
         // updater writes INSIDE the root (its backup dir + the replaced files). Require both to be
         // writable so a parent-writable-but-root-read-only layout fails the check up front rather
@@ -61,6 +69,9 @@ public class SelfUpdateInstaller : IInstaller
     {
         var location = InstallLocation.Resolve()
             ?? throw new InvalidOperationException("Cannot resolve the install location to update.");
+
+        if (OperatingSystem.IsWindows() && !WindowsMsiRegistration.Matches(location, WindowsMsiRegistration.ReadInstallRoot()))
+            throw new InvalidOperationException("The running app no longer matches its registered MSI installation.");
 
         var script = BuildScript(location, downloadedArchivePath);
         var extension = OperatingSystem.IsWindows() ? ".ps1" : ".sh";

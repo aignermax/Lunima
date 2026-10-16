@@ -1,4 +1,8 @@
 {
+  "PythonStartup.Preparing": "Preparando las vistas previas de Python en segundo plano. Puede seguir trabajando.",
+  "PythonStartup.Working": "La configuración de Python ya se está ejecutando en segundo plano.",
+  "PythonStartup.Failed": "No se pudo completar la configuración de Python. Puede seguir trabajando y volver a intentarlo.",
+  "PythonStartup.Retry": "Reintentar configuración",
   "Preview.Unavailable": "Algunas vistas previas de componentes no están disponibles.",
   "Preview.ErrorDetails": "Detalles del error",
   "AgentBridge.Prompt.Body": "Claude Code está instalado. Un clic activa el puente de agentes local de Lunima y lo registra, para que Claude pueda inspeccionar y editar tu diseño abierto; cada edición se puede deshacer.",
