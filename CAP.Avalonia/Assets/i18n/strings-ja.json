@@ -2118,5 +2118,9 @@
   "Context.ShowInLayout": "レイアウトで表示",
   "Context.ShowInLayoutTip": "この要素を中心にレイアウトへ切り替えます",
   "Context.EditGate": "ゲートを編集…",
-  "Context.EditGateTip": "このゲートの作成手順を開きます：ピンの役割、シミュレーション、しきい値、保存。"
+  "Context.EditGateTip": "このゲートの作成手順を開きます：ピンの役割、シミュレーション、しきい値、保存。",
+  "Dies.ProcessChange.Title": "ダイのプロセスを変更しますか？",
+  "Dies.ProcessChange.Preview": "{0} に変更しますか？互換性のないコンポーネント {1} 個と関連する接続 {2} 本が削除されます。互換性のあるコンポーネントは保持されます。「元に戻す」1回ですべて復元できます。",
+  "Dies.ProcessChange.Cancel": "キャンセル",
+  "Dies.ProcessChange.Confirm": "プロセスを変更"
 }

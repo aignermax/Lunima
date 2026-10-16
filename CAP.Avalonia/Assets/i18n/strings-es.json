@@ -2118,5 +2118,9 @@
   "Context.ShowInLayout": "Mostrar en Diseño",
   "Context.ShowInLayoutTip": "Cambia a Diseño, centrado en este elemento",
   "Context.EditGate": "Editar puerta…",
-  "Context.EditGateTip": "Abre los pasos de la puerta: roles de pines, simular, umbral, guardar."
+  "Context.EditGateTip": "Abre los pasos de la puerta: roles de pines, simular, umbral, guardar.",
+  "Dies.ProcessChange.Title": "¿Cambiar el proceso del chip?",
+  "Dies.ProcessChange.Preview": "¿Cambiar a {0}? Se eliminarán {1} componentes incompatibles y {2} conexiones asociadas. Los componentes compatibles se conservarán. Deshacer restaura todo en un solo paso.",
+  "Dies.ProcessChange.Cancel": "Cancelar",
+  "Dies.ProcessChange.Confirm": "Cambiar proceso"
 }
