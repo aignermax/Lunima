@@ -2162,5 +2162,12 @@
   "Tutorial.NoPlacementSpace": "チップの空いている場所を選ぶか、スペースを確保してください。",
   "Tutorial.ActionOptics.Title": "光学ワークスペースを開く",
   "Tutorial.ActionOptics.Body": "光学に切り替えて、作成した回路をシミュレーションします。",
-  "Tutorial.ActionOptics.Cue": "光学をクリック"
+  "Tutorial.ActionOptics.Cue": "光学をクリック",
+  "StoreNumberTour.Controls": "論理コントロールを表示",
+  "StoreNumberTour.DataCue": "D0 をオンにする",
+  "StoreNumberTour.LoadOnCue": "LOAD をオンにする",
+  "StoreNumberTour.LoadOffCue": "LOAD をオフにする",
+  "StoreNumberTour.AddressAwayCue": "アドレス A を切り替える",
+  "StoreNumberTour.AddressBackCue": "A を元に戻す",
+  "StoreNumberTour.ReadBackCue": "Q に保存した数が表示される"
 }

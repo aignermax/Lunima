@@ -1313,7 +1313,8 @@
     </tour:TourAnchorOverlay>
 
     <tour:TourAnchorOverlay IsVisible="{Binding StoreNumberTour.IsActive, FallbackValue=False}"
-                                TargetName="{Binding StoreNumberTour.CurrentTargetName}">
+                                Demonstrate="True" TargetName="{Binding StoreNumberTour.CurrentTargetName}"
+                                TargetItem="{Binding StoreNumberTour.CurrentTargetItem}">
         <tour:TourAnchorOverlay.Card>
             <panels:StoreNumberTourPanel DataContext="{Binding StoreNumberTour}"/>
         </tour:TourAnchorOverlay.Card>

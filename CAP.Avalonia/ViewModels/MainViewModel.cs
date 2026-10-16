@@ -452,6 +452,7 @@ public partial class MainViewModel : ObservableObject
         // The tour must observe the panel instance the user actually clicks.
         StoreNumberTour = storeNumberTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
+        StoreNumberTour.AttachWorkspace(WorkspaceSwitch);
         // The gate tour observes the Make-gate steps and Logic panel the window shows.
         FirstGateTour = firstGateTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel(

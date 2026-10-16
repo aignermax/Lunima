@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 using CAP.Avalonia.Services.Localization;
@@ -67,6 +66,7 @@ public partial class StoreNumberTourViewModel : ObservableObject
     {
         _logic = logic;
         _dock = dock;
+        LocalizationWeakSubscription.Subscribe(this, static (self, _) => self.NotifyVisualState());
         Steps = new List<TutorialStep>
         {
             new("StoreNumberTour.Step1Title", "StoreNumberTour.Step1Body",
@@ -74,7 +74,7 @@ public partial class StoreNumberTourViewModel : ObservableObject
             new("StoreNumberTour.Step2Title", "StoreNumberTour.Step2Body",
                 HasAnyDataBitOn, "LogicInputRows"),
             new("StoreNumberTour.Step3Title", "StoreNumberTour.Step3Body",
-                () => ReadInput(LoadPin) && _logic.ClockStepCount > 0 && ReadOutputWord() != 0,
+                () => false,
                 "LogicStepClockButton"),
             new("StoreNumberTour.Step4Title", "StoreNumberTour.Step4Body",
                 () => !ReadInput(LoadPin) && _addressLeft
@@ -98,7 +98,8 @@ public partial class StoreNumberTourViewModel : ObservableObject
     public string CurrentBody => LocalizationService.Instance.Translate(CurrentStep.BodyKey);
 
     /// <summary><c>x:Name</c> of the control the current step spotlights, or null for a floating card.</summary>
-    public string? CurrentTargetName => CurrentStep.TargetName;
+    public string? CurrentTargetName => NeedsControlsRecovery ? null :
+        CurrentTargetItem != null ? "LogicInputRows" : CurrentStepIndex == 4 ? "LogicOutputRows" : CurrentStep.TargetName;
 
     /// <summary>Localized position label, e.g. "Step 2/5".</summary>
     public string ProgressText => string.Format(
@@ -116,20 +117,16 @@ public partial class StoreNumberTourViewModel : ObservableObject
         _storedAddress = false;
         _addressLeft = false;
         IsActive = true;
-        _dock.OpenLogic();
-        _logic.PropertyChanged += OnLogicPropertyChanged;
-        _logic.Inputs.CollectionChanged += OnInputsCollectionChanged;
-        HookInputs();
+        ShowControls();
+        Observe();
         EvaluateCurrentStep();
     }
 
-    /// <summary>Advances to the next step manually; on the last step the tour completes.</summary>
+    /// <summary>Acknowledges the completed read-back; action stages cannot be skipped.</summary>
     [RelayCommand]
     public void Next()
     {
-        if (!IsActive)
-            return;
-        Advance();
+        if (IsActive && IsClosing) Advance();
     }
 
     /// <summary>Exits the tour without completing it.</summary>
@@ -140,40 +137,37 @@ public partial class StoreNumberTourViewModel : ObservableObject
         Detach();
     }
 
-    private void OnLogicPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnClockStepped(object? sender, EventArgs e)
     {
-        EvaluateCurrentStep();
+        if (!IsActive || NeedsControlsRecovery || !_logic.HasNetwork) return;
+        if (CurrentStepIndex == 2 && ReadInput(LoadPin) && HasAnyDataBitOn()
+            && ReadOutputWord() == ReadDataWord())
+        {
+            LatchStoredWord();
+            CurrentStepIndex = ReadBackStepIndex;
+        }
+        else EvaluateCurrentStep();
     }
 
-    private void OnInputsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        if (e.OldItems != null)
-            foreach (LogicNetworkInputViewModel input in e.OldItems)
-                input.PropertyChanged -= OnInputPropertyChanged;
-        if (e.NewItems != null)
-            foreach (LogicNetworkInputViewModel input in e.NewItems)
-                input.PropertyChanged += OnInputPropertyChanged;
-        if (e.Action == NotifyCollectionChangedAction.Reset)
-            HookInputs();
-    }
-
-    private void OnInputPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName != nameof(LogicNetworkInputViewModel.IsOn))
-            return;
-        if (CurrentStepIndex == ReadBackStepIndex && ReadInput(AddressPin) != _storedAddress)
-            _addressLeft = true;
-        EvaluateCurrentStep();
-    }
-
-    /// <summary>
-    /// Advances past every already-satisfied step, so a panel state that already
-    /// fulfils a condition when the tour starts cannot stall it.
-    /// </summary>
     private void EvaluateCurrentStep()
     {
-        while (IsActive && CurrentStep.IsCompleted())
-            Advance();
+        if (!IsActive || IsClosing) return;
+        if (!_logic.HasNetwork)
+        {
+            _storedWord = 0;
+            _addressLeft = false;
+            CurrentStepIndex = 0;
+        }
+        else if (CurrentStepIndex == 2 && !HasAnyDataBitOn()) CurrentStepIndex = 1;
+        else if (CurrentStepIndex == ReadBackStepIndex && ReadInput(AddressPin) == _storedAddress
+            && ReadOutputWord() != _storedWord)
+        {
+            _addressLeft = false;
+            CurrentStepIndex = HasAnyDataBitOn() ? 2 : 1;
+        }
+        if (!NeedsControlsRecovery)
+            while (IsActive && CurrentStep.IsCompleted()) Advance();
+        NotifyVisualState();
     }
 
     private void Advance()
@@ -198,22 +192,6 @@ public partial class StoreNumberTourViewModel : ObservableObject
         _addressLeft = false;
     }
 
-    private void Detach()
-    {
-        _logic.PropertyChanged -= OnLogicPropertyChanged;
-        _logic.Inputs.CollectionChanged -= OnInputsCollectionChanged;
-        foreach (var input in _logic.Inputs)
-            input.PropertyChanged -= OnInputPropertyChanged;
-    }
-
-    private void HookInputs()
-    {
-        foreach (var input in _logic.Inputs)
-            input.PropertyChanged -= OnInputPropertyChanged;
-        foreach (var input in _logic.Inputs)
-            input.PropertyChanged += OnInputPropertyChanged;
-    }
-
     private bool ReadInput(string pinName) =>
         _logic.Inputs.FirstOrDefault(input => input.PinName == pinName)?.IsOn ?? false;
 
@@ -226,6 +204,9 @@ public partial class StoreNumberTourViewModel : ObservableObject
         return word;
     }
 
+    private int ReadDataWord() => Enumerable.Range(0, WordBitCount)
+        .Where(bit => ReadInput(DataPinPrefix + bit)).Sum(bit => 1 << bit);
+
     private bool HasAnyDataBitOn() =>
         Enumerable.Range(0, WordBitCount).Any(bit => ReadInput(DataPinPrefix + bit));
 
@@ -236,5 +217,6 @@ public partial class StoreNumberTourViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentBody));
         OnPropertyChanged(nameof(CurrentTargetName));
         OnPropertyChanged(nameof(ProgressText));
+        NotifyVisualState();
     }
 }

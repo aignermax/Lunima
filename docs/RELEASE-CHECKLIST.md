@@ -316,3 +316,5 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - **Approved for release:** ☐ Yes  ☐ No
 
 - [ ] Connect two chiplets guidance: Skip/completion releases the receiver position subscription; restarting records a fresh baseline without duplicate handlers.
+
+- [ ] Store a number guidance points at the actual D0, LOAD and A checkboxes; a fresh clock write (including the same word), LOAD off and address away/back are required. Missing controls offer explicit recovery; Skip and input Reset release observers. Verify English/German real-click flow and unsaved-example cancellation.

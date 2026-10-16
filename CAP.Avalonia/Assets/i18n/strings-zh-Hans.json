@@ -2162,5 +2162,12 @@
   "Tutorial.NoPlacementSpace": "请选择芯片上的空白位置，或腾出更多空间。",
   "Tutorial.ActionOptics.Title": "打开光学工作区",
   "Tutorial.ActionOptics.Body": "切换到光学工作区，仿真你搭建的电路。",
-  "Tutorial.ActionOptics.Cue": "点击光学"
+  "Tutorial.ActionOptics.Cue": "点击光学",
+  "StoreNumberTour.Controls": "显示逻辑控件",
+  "StoreNumberTour.DataCue": "打开 D0",
+  "StoreNumberTour.LoadOnCue": "打开 LOAD",
+  "StoreNumberTour.LoadOffCue": "关闭 LOAD",
+  "StoreNumberTour.AddressAwayCue": "切换地址 A",
+  "StoreNumberTour.AddressBackCue": "将 A 切换回来",
+  "StoreNumberTour.ReadBackCue": "Q 显示已保存的数字"
 }

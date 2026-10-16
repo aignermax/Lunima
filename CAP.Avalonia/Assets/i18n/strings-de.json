@@ -2162,5 +2162,12 @@
   "Tutorial.NoPlacementSpace": "Wähle eine freie Stelle auf dem Chip oder schaffe mehr Platz.",
   "Tutorial.ActionOptics.Title": "Optik öffnen",
   "Tutorial.ActionOptics.Body": "Wechsle zu Optik, um deine aufgebaute Schaltung zu simulieren.",
-  "Tutorial.ActionOptics.Cue": "Auf Optik klicken"
+  "Tutorial.ActionOptics.Cue": "Auf Optik klicken",
+  "StoreNumberTour.Controls": "Logik-Steuerung zeigen",
+  "StoreNumberTour.DataCue": "D0 einschalten",
+  "StoreNumberTour.LoadOnCue": "LOAD einschalten",
+  "StoreNumberTour.LoadOffCue": "LOAD ausschalten",
+  "StoreNumberTour.AddressAwayCue": "Adresse A umschalten",
+  "StoreNumberTour.AddressBackCue": "A zurückschalten",
+  "StoreNumberTour.ReadBackCue": "Q zeigt deine gespeicherte Zahl"
 }

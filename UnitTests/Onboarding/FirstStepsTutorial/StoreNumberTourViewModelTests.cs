@@ -290,8 +290,13 @@ public class StoreNumberTourViewModelTests
         var logic = await CreateBuiltPanel();
         var tour = new StoreNumberTourViewModel(logic, MakeDock());
         tour.Start();
-        for (var i = 0; i < 5; i++)
-            tour.NextCommand.Execute(null);
+        Set(logic, "D0", true);
+        Set(logic, "LOAD", true);
+        logic.StepClockCommand.Execute(null);
+        Set(logic, "LOAD", false);
+        Set(logic, "A", true);
+        Set(logic, "A", false);
+        tour.NextCommand.Execute(null);
 
         Set(logic, "D0", true);
         Set(logic, "LOAD", true);
@@ -315,6 +320,101 @@ public class StoreNumberTourViewModelTests
         tour.IsCompleted.ShouldBeFalse();
         tour.CurrentStepIndex.ShouldBe(2,
             "the built network and the set data bit still satisfy the first two steps");
+    }
+
+    [Fact]
+    public async Task NextCannotBypassStoreActions()
+    {
+        var tour = new StoreNumberTourViewModel(await CreateBuiltPanel(), MakeDock());
+        tour.Start();
+        tour.Next();
+        tour.CurrentStepIndex.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task PreviouslyStoredWordRequiresFreshClockAfterRestart()
+    {
+        var logic = await CreateBuiltPanel();
+        Set(logic, "D0", true);
+        Set(logic, "LOAD", true);
+        logic.StepClockCommand.Execute(null);
+        var tour = new StoreNumberTourViewModel(logic, MakeDock());
+        tour.Start();
+        tour.CurrentStepIndex.ShouldBe(2, "an old clock and existing Q cannot prove this lesson's write");
+        var oldCount = logic.ClockStepCount;
+        logic.StepClockCommand.Execute(null);
+        logic.ClockStepCount.ShouldBe(oldCount, "same-word writes do not add a state-change timeline block");
+        tour.CurrentStepIndex.ShouldBe(3, "a fresh same-word write must still count");
+        tour.Skip();
+    }
+
+    [Fact]
+    public async Task LosingDataOrNetworkReturnsToMissingAction()
+    {
+        var logic = await CreateBuiltPanel();
+        var tour = new StoreNumberTourViewModel(logic, MakeDock());
+        tour.Start();
+        Set(logic, "D0", true);
+        Set(logic, "D0", false);
+        tour.CurrentStepIndex.ShouldBe(1);
+        logic.HasNetwork = false;
+        tour.CurrentStepIndex.ShouldBe(0);
+        tour.Skip();
+    }
+
+    [Fact]
+    public async Task ClearedInputsDoNotRetainDismissedTour()
+    {
+        var logic = await CreateBuiltPanel();
+        var oldInput = logic.Inputs[0];
+        var weak = ObserveThenClear(logic);
+        GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+        weak.IsAlive.ShouldBeFalse("Reset must detach inputs that are no longer in the collection");
+        GC.KeepAlive(oldInput);
+        GC.KeepAlive(logic);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static WeakReference ObserveThenClear(LogicPanelViewModel logic)
+    {
+        var tour = new StoreNumberTourViewModel(logic, MakeDock());
+        tour.Start();
+        logic.Inputs.Clear();
+        tour.Skip();
+        return new WeakReference(tour);
+    }
+
+    [Fact]
+    public async Task ResetAfterWriteRequiresAnotherWrite()
+    {
+        var logic = await CreateBuiltPanel();
+        var tour = new StoreNumberTourViewModel(logic, MakeDock());
+        tour.Start();
+        Set(logic, "D0", true);
+        Set(logic, "LOAD", true);
+        logic.StepClockCommand.Execute(null);
+        tour.CurrentStepIndex.ShouldBe(3);
+        logic.ResetRegistersCommand.Execute(null);
+        tour.CurrentStepIndex.ShouldBe(2);
+        tour.Skip();
+    }
+
+    [Fact]
+    public async Task HiddenControlsRequireExplicitRecovery()
+    {
+        var logic = await CreateBuiltPanel();
+        var dock = MakeDock();
+        var workspace = new CAP.Avalonia.ViewModels.Workspaces.WorkspaceViewModel(dock);
+        var tour = new StoreNumberTourViewModel(logic, dock);
+        tour.AttachWorkspace(workspace);
+        tour.Start();
+        workspace.Current = CAP.Avalonia.ViewModels.Workspaces.Workspace.Layout;
+        tour.NeedsControlsRecovery.ShouldBeTrue();
+        tour.CurrentTargetItem.ShouldBeNull();
+        tour.ShowControlsCommand.Execute(null);
+        workspace.IsLogic.ShouldBeTrue();
+        tour.CurrentTargetItem.ShouldBeSameAs(logic.Inputs.Single(i => i.PinName == "D0"));
+        tour.Skip();
     }
 
     /// <summary>
