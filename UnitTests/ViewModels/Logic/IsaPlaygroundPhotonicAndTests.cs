@@ -30,7 +30,7 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
     public IsaPlaygroundPhotonicAndTests(LogicGateAnd4BitExampleTests.And4BitFixture fixture)
     {
         _fixture = fixture;
-        // The hint assertions match English example names; pin English over the machine's UI culture.
+        // The hint assertions match English guidance; pin English over the machine's UI culture.
         LocalizationService.Instance.SetLanguage("en");
     }
 
@@ -100,7 +100,7 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
     }
 
     [Fact]
-    public void NoNetwork_ToggleDisabled_AndHintNamesAllExamples()
+    public void NoNetwork_ToggleDisabled_AndExampleActionOffersNextStep()
     {
         var vm = new IsaPlaygroundViewModel();
 
@@ -108,14 +108,13 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
         vm.IsPhotonicToggleEnabled.ShouldBeFalse();
 
         var hint = LocalizationService.Instance.Translate("IsaPlayground.PhotonicAdderHint");
-        hint.ShouldContain("adder", Case.Insensitive,
-            customMessage: "the hint names the 4-bit adder example");
-        hint.ShouldContain("NOT 4-bit",
-            customMessage: "the hint names the NOT 4-bit example");
-        hint.ShouldContain("AND 4-bit",
-            customMessage: "the hint names the AND 4-bit example");
-        hint.ShouldContain("Logic Unit 4-bit",
-            customMessage: "the hint names the Logic Unit 4-bit example (issue #1295)");
+        hint.ShouldContain("example", Case.Insensitive,
+            customMessage: "the hint points to the suitable-example action");
+        hint.ShouldContain("build", Case.Insensitive,
+            customMessage: "the hint explains the explicit next step");
+        vm.OpenSuitableExampleCommand.CanExecute(null).ShouldBeTrue();
+        vm.BuildExampleNetworkCommand.CanExecute(null).ShouldBeFalse(
+            "build is offered only after an example was successfully opened");
     }
 
     [Fact]
