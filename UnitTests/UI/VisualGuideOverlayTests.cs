@@ -15,6 +15,35 @@ namespace UnitTests.UI;
 public class VisualGuideOverlayTests
 {
     [AvaloniaFact]
+    public void NestedSignalTarget_PointsAtExactCheckbox_WithoutTogglingIt()
+    {
+        var first = new object();
+        var wanted = new object();
+        var firstBox = new CheckBox { DataContext = first, Content = "D0", Height = 32 };
+        var wantedBox = new CheckBox { DataContext = wanted, Content = "LOAD", Height = 32 };
+        var nested = new ItemsControl { ItemsSource = new object[] { firstBox, wantedBox } };
+        var rows = new ItemsControl { Name = "SignalRows", Width = 150, ItemsSource = new object[] { nested } };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = "SignalRows", TargetItem = wanted };
+        var window = new Window { Width = 800, Height = 600, Content = new global::Avalonia.Controls.Grid { Children = { rows, overlay } } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            overlay.TargetName = null;
+            overlay.TargetName = "SignalRows";
+            var pointer = overlay.FindControl<Control>("GuidePointer")!;
+            Assert.True(pointer.IsVisible);
+            var actual = (Point?)typeof(TourAnchorOverlay).GetField("_pointerTarget", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(overlay);
+            var root = overlay.FindControl<global::Avalonia.Controls.Canvas>("RootCanvas")!;
+            Assert.Equal(wantedBox.TranslatePoint(new Point(wantedBox.Bounds.Width / 2, wantedBox.Bounds.Height / 2), root), actual);
+            Assert.False(wantedBox.IsChecked == true);
+            overlay.TargetItem = new object();
+            Assert.False(pointer.IsVisible);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void NestedScrollTarget_ManualInnerScroll_IsNotRevealedAgain()
     {
         var target = new Button { Name = "NestedAction", Height = 40, Content = "Save" };

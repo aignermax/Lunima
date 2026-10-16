@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using CAP.Avalonia.Behaviors;
 using CAP_Core.Components.Core;
 using System.Diagnostics;
@@ -35,7 +36,7 @@ public partial class TourAnchorOverlay
     private Point? _pointerTarget;
     private Point? _pointerDestination;
     private object? _scrolledItem;
-    private ListBox? _scrolledList;
+    private ItemsControl? _scrolledList;
     private DesignCanvas? _offscreenCanvas;
     private Point? _offscreenPoint;
 
@@ -79,8 +80,23 @@ public partial class TourAnchorOverlay
     {
         if (!Demonstrate || TargetItem == null)
             return target;
-        if (target is not ListBox list || !list.Items.Contains(TargetItem))
+        if (target is not ItemsControl items)
             return null;
+        if (items is not ListBox list)
+        {
+            // Bus rows nest another ItemsControl. Resolve the actual input by identity,
+            // never a nearby label or an unrelated checkbox with the same display name.
+            var input = items.GetVisualDescendants().OfType<CheckBox>().FirstOrDefault(c =>
+                ReferenceEquals(c.DataContext, TargetItem) && c.IsEffectivelyVisible);
+            if (input != null && (!ReferenceEquals(_scrolledItem, TargetItem) || !ReferenceEquals(_scrolledList, items)))
+            {
+                input.BringIntoView();
+                _scrolledItem = TargetItem;
+                _scrolledList = items;
+            }
+            return input;
+        }
+        if (!list.Items.Contains(TargetItem)) return null;
         if (!ReferenceEquals(_scrolledItem, TargetItem) || !ReferenceEquals(_scrolledList, list))
         {
             list.ScrollIntoView(TargetItem);

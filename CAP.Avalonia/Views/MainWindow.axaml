@@ -178,7 +178,7 @@
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.Logic}"
                                         ToolTip.Tip="{loc:Localize Workspace.LogicTip}"/>
-                                <Button Classes="toolbar segment" Content="{loc:Localize Workspace.System}"
+                                <Button x:Name="SystemWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.System}"
                                         Classes.active="{Binding WorkspaceSwitch.IsSystem}"
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.System}"
@@ -626,7 +626,7 @@
                                     ToolTip.Placement="Right">
                                 <controls:Icon Data="{StaticResource Icon.Binary}" Size="18"/>
                             </Button>
-                            <Button Classes="rail" Command="{Binding LeftRail.ShowChipletsCommand}"
+                            <Button x:Name="ChipletsRailButton" Classes="rail" Command="{Binding LeftRail.ShowChipletsCommand}"
                                     Grid.Row="{Binding LeftRail.ChipletsOrder}" Margin="0,0,0,4"
                                     IsVisible="{Binding LeftRail.IsChipletsAvailable}"
                                     Classes.active="{Binding LeftRail.IsChipletsActive}"
@@ -1307,7 +1307,10 @@
     </tour:TourAnchorOverlay>
 
     <tour:TourAnchorOverlay IsVisible="{Binding ConnectChipletsTour.IsActive, FallbackValue=False}"
-                                TargetName="{Binding ConnectChipletsTour.CurrentTargetName}">
+                           Demonstrate="True"
+                           TargetName="{Binding ConnectChipletsTour.CurrentTargetName}"
+                           TargetCanvasPoint="{Binding ConnectChipletsTour.CurrentCanvasPoint}"
+                           TargetCanvasDestinationPoint="{Binding ConnectChipletsTour.CurrentCanvasDestinationPoint}">
         <tour:TourAnchorOverlay.Card>
             <panels:ConnectChipletsTourPanel DataContext="{Binding ConnectChipletsTour}"/>
         </tour:TourAnchorOverlay.Card>

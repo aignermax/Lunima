@@ -24,7 +24,7 @@ namespace UnitTests.Onboarding.FirstStepsTutorial;
 /// <summary>
 /// Acceptance for the "Connect two chiplets" guided tour (issue #1288, slice 4
 /// of #769): walking the steps with the real shipped example and the real
-/// commands — simulate, move the receiver 5 µm through the tour's "do it for
+/// commands — simulate, move the receiver 170 µm through the tour's "do it for
 /// me" button, Design Checks flag the facet gap, "Align chiplet" fixes it —
 /// ends with the chiplets aligned and the received power back to the initial
 /// value within 1e-9 relative.
@@ -55,7 +55,7 @@ public class ConnectChipletsTourJourneyTests
         canvas.ShowPowerFlow = true;
         tour.CurrentStepIndex.ShouldBe(2, "the finished simulation must advance to the move step");
 
-        // Step 2 → 3: the "do it for me" button shifts the receiver 5 µm.
+        // Step 2 → 3: the "do it for me" button shifts the receiver 170 µm.
         double receiverX = chipletB.PhysicalX;
         double receiverY = chipletB.PhysicalY;
         tour.MoveReceiverForMeCommand.Execute(null);
@@ -63,17 +63,22 @@ public class ConnectChipletsTourJourneyTests
         double movedDistance = Math.Sqrt(
             Math.Pow(chipletB.PhysicalX - receiverX, 2) + Math.Pow(chipletB.PhysicalY - receiverY, 2));
         movedDistance.ShouldBe(ConnectChipletsTourViewModel.MoveDistanceMicrometers, AmplitudeTolerance,
-            "the helper must shift the receiver exactly 5 µm along the facet axis");
+            "the helper must shift the receiver exactly 170 µm along the facet axis");
         tour.CurrentStepIndex.ShouldBe(3, "the move must advance to the Design Checks step");
+
+        commandManager.Undo();
+        tour.CurrentStepIndex.ShouldBe(2, "undoing the move before checks must return to the actual move action");
+        commandManager.Redo();
+        tour.CurrentStepIndex.ShouldBe(3);
 
         double amplitudeMoved = await SimulateOutputAmplitudeAsync(canvas, chipletA, chipletB);
         (amplitudeMoved * amplitudeMoved).ShouldBeLessThan(amplitude0 * amplitude0,
-            "the 5 µm facet gap must cost received power");
+            "the 170 µm facet gap must cost received power");
 
         // Step 3 → 4: Design Checks flag the cross-chiplet link.
         RunChecks(validation, canvas, chipletA, chipletB);
         validation.Issues.ShouldContain(i => i.Type.ToString().StartsWith("ChipletInterface"),
-            "the 5 µm gap must raise a chiplet-interface finding");
+            "the 170 µm gap must raise a chiplet-interface finding");
         tour.CurrentStepIndex.ShouldBe(4, "the finding must advance to the Align step");
         NavigateToChipletIssue(validation);
         validation.IsCurrentIssueAlignable.ShouldBeTrue();
@@ -94,6 +99,10 @@ public class ConnectChipletsTourJourneyTests
             new CAP.Avalonia.Commands.Dies.DieSpec("Die 1", null, 5000, 5000)));
         tour.CurrentStepIndex.ShouldBe(6, "a new die must advance to the closing words");
 
+        commandManager.Undo();
+        tour.CurrentStepIndex.ShouldBe(5, "undoing the new die cannot leave a completed creation step");
+        commandManager.Redo();
+        tour.CurrentStepIndex.ShouldBe(6);
         tour.NextCommand.Execute(null);
         tour.IsCompleted.ShouldBeTrue();
         tour.IsActive.ShouldBeFalse();
