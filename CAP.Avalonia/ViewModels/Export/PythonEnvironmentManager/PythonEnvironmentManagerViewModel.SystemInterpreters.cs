@@ -112,7 +112,7 @@ public partial class PythonEnvironmentManagerViewModel
     [RelayCommand]
     private async Task CheckHealthInterpreter(InterpreterEntryViewModel entry)
     {
-        if (entry?.ManagedName == null || IsBusy) return;
+        if (entry?.ManagedName == null || OperationInProgress()) return;
         var env = _registry.GetAll().FirstOrDefault(e => e.Name == entry.ManagedName);
         if (env == null) return;
 
@@ -143,7 +143,7 @@ public partial class PythonEnvironmentManagerViewModel
     [RelayCommand]
     private async Task RemoveInterpreter(InterpreterEntryViewModel entry)
     {
-        if (entry?.ManagedName == null || IsBusy) return;
+        if (entry?.ManagedName == null || OperationInProgress()) return;
         var env = _registry.GetAll().FirstOrDefault(e => e.Name == entry.ManagedName);
         if (env == null) return;
 

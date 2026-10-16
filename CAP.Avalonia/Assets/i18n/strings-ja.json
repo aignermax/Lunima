@@ -1,4 +1,8 @@
 {
+  "PythonStartup.Preparing": "Python プレビューをバックグラウンドで準備しています。作業を続けられます。",
+  "PythonStartup.Working": "Python のセットアップはバックグラウンドで実行中です。",
+  "PythonStartup.Failed": "Python のセットアップを完了できませんでした。作業を続けながら、後で再試行できます。",
+  "PythonStartup.Retry": "セットアップを再試行",
   "Preview.Unavailable": "一部の部品プレビューを表示できません。",
   "Preview.ErrorDetails": "エラーの詳細",
 

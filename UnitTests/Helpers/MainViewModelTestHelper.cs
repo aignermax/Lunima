@@ -47,7 +47,8 @@ public static class MainViewModelTestHelper
         LeftPanelViewModel? leftPanel = null,
         CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null,
         UpdateViewModel? updateViewModel = null,
-        GdsPreviewRenderService? previewService = null)
+        GdsPreviewRenderService? previewService = null,
+        CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -123,7 +124,7 @@ public static class MainViewModelTestHelper
             previewService ?? new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")),
             registryBrowser,
             gdsImportButton,
-            designScopedGdsComponents: designScope);
+            designScopedGdsComponents: designScope, pythonStartup: pythonStartup);
     }
 
     /// <summary>
