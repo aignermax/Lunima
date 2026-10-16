@@ -92,7 +92,7 @@
         <Border.RenderTransform>
             <TranslateTransform/>
         </Border.RenderTransform>
-        <StackPanel Spacing="24">
+        <StackPanel Spacing="20">
 
             <!-- Hero: name and tagline left, the two file actions right. -->
             <DockPanel>
