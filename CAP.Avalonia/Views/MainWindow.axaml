@@ -1289,7 +1289,7 @@
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}"
+    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}" Demonstrate="True"
                                 TargetName="{Binding WatchTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
             <panels:WatchComputeTourPanel DataContext="{Binding WatchTour}"/>

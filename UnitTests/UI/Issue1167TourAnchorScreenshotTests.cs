@@ -72,6 +72,7 @@ public class Issue1167TourAnchorScreenshotTests
             vm.Tutorial.IsActive = false;
 
             // Watch-it-compute tour: dock open on the Logic tab, real panel state.
+            vm.WorkspaceSwitch.Current = CAP.Avalonia.ViewModels.Workspaces.Workspace.Logic;
             vm.BottomPanel.Analysis.IsVisible = true;
             vm.BottomPanel.Analysis.SetDockHeight(DockHeight);
             vm.BottomPanel.Analysis.OpenLogic();
