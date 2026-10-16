@@ -155,7 +155,10 @@ public partial class TourAnchorOverlay : UserControl
         if (!double.IsFinite(viewport.Width) || !double.IsFinite(viewport.Height)
             || viewport.Width <= 0 || viewport.Height <= 0)
             return;
-        ClearOffscreenTarget();
+        // Keep the reveal button alive across polling/layout refreshes: briefly
+        // hiding it cancels a mouse press before release can produce a click.
+        _offscreenCanvas = null;
+        _offscreenPoint = null;
         var target = FindTarget();
         target = ResolveItemTarget(target);
         var targetRect = target == null ? default : TargetRectInOverlay(target);

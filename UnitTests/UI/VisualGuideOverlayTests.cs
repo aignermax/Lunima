@@ -15,6 +15,33 @@ namespace UnitTests.UI;
 public class VisualGuideOverlayTests
 {
     [AvaloniaFact]
+    public void RevealTarget_RemainsClickableDuringAnchorRefresh()
+    {
+        var vm = new DesignCanvasViewModel();
+        var canvas = new DesignCanvas { Name = "Canvas", ViewModel = vm };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = "Canvas", TargetCanvasPoint = new Point(9000, 8000) };
+        var window = new Window { Width = 800, Height = 600, Content = new global::Avalonia.Controls.Grid { Children = { canvas, overlay } } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            var refresh = typeof(TourAnchorOverlay).GetMethod("RefreshAnchor", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            refresh.Invoke(overlay, null);
+            Dispatcher.UIThread.RunJobs();
+            var reveal = overlay.FindControl<Button>("GuideShowTarget")!;
+            Assert.True(reveal.IsVisible);
+            var visibilityDrops = 0;
+            reveal.PropertyChanged += (_, e) => { if (e.Property == Visual.IsVisibleProperty && !reveal.IsVisible) visibilityDrops++; };
+            refresh.Invoke(overlay, null);
+            Assert.Equal(0, visibilityDrops);
+            UnitTests.UI.Flows.UiInput.Click(window, reveal);
+            Assert.False(reveal.IsVisible);
+            Assert.Empty(vm.Components);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void NestedSignalTarget_PointsAtExactCheckbox_WithoutTogglingIt()
     {
         var first = new object();
