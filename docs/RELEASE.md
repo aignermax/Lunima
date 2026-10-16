@@ -31,6 +31,8 @@ For version `X.Y.Z`, the published release must contain non-empty assets:
 
 Confirm the tag points to the intended release commit, the build tests passed, download links work, and the website offers the matching version. Use [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) for behavior checks. Record what was actually tested; a headless UI test is not a native desktop smoke test.
 
+After the downloads are published, update the static version labels and fallback asset links in `docs/index.html` to the released version. Verify them with the GitHub API unavailable as well as with the live latest-release response; an API failure must not send visitors to an older installer.
+
 ## Installation and first start
 
 The Windows MSI is framework-dependent and checks for the compatible .NET 10 x64 runtime. Portable builds include .NET. macOS packages are unsigned; the release page documents first-launch steps.
