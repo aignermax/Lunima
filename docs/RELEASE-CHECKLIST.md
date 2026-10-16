@@ -26,6 +26,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] **auto** Component previews recover after activating a working Python environment without restarting. A shared localized library hint opens Python settings and shows failure details; it clears on recovery. Old in-flight failures cannot block retries, and disk-cache reads retain no completed work (`PreviewEnvironmentRecoveryTests`, `PreviewRecoveryHintTests`).
 
 - [ ] Windows installed-app update uses basic MSI progress (UAC only), preserves its registered install directory, waits for app exit, and relaunches only after installer success. Canceling the unsaved-change prompt launches no updater; portable copies retain manual installation. `(auto: WindowsInstallerWorkflowTests, WindowsUpdaterExecutionTests, UpdateViewModelTests)`
+
+- [ ] Open the 4-bit adder, ALU + RAM, and ALU + RAM + ACC examples: both carry-copy input wires have cached routes through real crossings, the adder's top-level wires have no red fallbacks, and opening needs no routing search. Shifted gates remain clear of crossing bodies and retain their logical connections. `(auto: AdderCachedRoutingTests, LogicGateFourBitAdderExampleTests, AluRamChipExampleTests, AluRamAccChipExampleTests)`
+
 - [ ] Two rotated SiN Edge Couplers connected at their left-facing o2 ports route around the target's left side, entering opposite its outward normal. Bend and Auto reject wrong-way S primitives; ordinary recalculation repairs unedited cached generated arcs, while manual edits and valid quantized A* fallbacks remain preserved. `(auto: SiNEdgeCouplerDirectionTests)`
 
 - [ ] System → New die → Create works through the actual flyout button, closes after creation, and can be undone. The Chiplets list contains real dies; a new or legacy single-chip design shows Die 1 rather than its logic groups. `(auto: NewDieButtonTests, WorkspaceContextTests)`
