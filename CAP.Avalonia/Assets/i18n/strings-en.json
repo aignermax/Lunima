@@ -2162,5 +2162,14 @@
   "Tutorial.NoPlacementSpace": "Choose a free spot on the chip, or make more room.",
   "Tutorial.ActionOptics.Title": "Open Optics",
   "Tutorial.ActionOptics.Body": "Switch to Optics to simulate the circuit you built.",
-  "Tutorial.ActionOptics.Cue": "Click Optics"
+  "Tutorial.ActionOptics.Cue": "Click Optics",
+  "RunProgramTour.Action1.Cue": "Click Build",
+  "RunProgramTour.Action2.Cue": "Open the ISA playground",
+  "RunProgramTour.Action3.Cue": "Select “Multiply 3 by 4”",
+  "RunProgramTour.Action4.Cue": "Enable photonic ADD",
+  "RunProgramTour.Action5.Cue": "Click Step to watch three ADDs",
+  "RunProgramTour.Action6.Cue": "Three additions ran on your chip",
+  "RunProgramTour.ActionOpen.Button": "Open ISA playground",
+  "RunProgramTour.ActionDone.Button": "Done",
+  "RunProgramTour.ActionOpen.Cue": "Open the ISA playground"
 }

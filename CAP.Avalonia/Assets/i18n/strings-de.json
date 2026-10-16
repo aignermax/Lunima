@@ -2162,5 +2162,14 @@
   "Tutorial.NoPlacementSpace": "Wähle eine freie Stelle auf dem Chip oder schaffe mehr Platz.",
   "Tutorial.ActionOptics.Title": "Optik öffnen",
   "Tutorial.ActionOptics.Body": "Wechsle zu Optik, um deine aufgebaute Schaltung zu simulieren.",
-  "Tutorial.ActionOptics.Cue": "Auf Optik klicken"
+  "Tutorial.ActionOptics.Cue": "Auf Optik klicken",
+  "RunProgramTour.Action1.Cue": "Logiknetzwerk aufbauen",
+  "RunProgramTour.Action2.Cue": "ISA-Playground öffnen",
+  "RunProgramTour.Action3.Cue": "„3 mal 4 rechnen“ auswählen",
+  "RunProgramTour.Action4.Cue": "Photonisches ADD aktivieren",
+  "RunProgramTour.Action5.Cue": "Mit Schritt drei ADDs beobachten",
+  "RunProgramTour.Action6.Cue": "Drei Additionen liefen auf deinem Chip",
+  "RunProgramTour.ActionOpen.Button": "ISA-Playground öffnen",
+  "RunProgramTour.ActionDone.Button": "Fertig",
+  "RunProgramTour.ActionOpen.Cue": "ISA-Playground öffnen"
 }

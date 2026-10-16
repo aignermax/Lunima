@@ -13,6 +13,8 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// </summary>
 public partial class IsaPlaygroundViewModel
 {
+    internal event Action<PhotonicAddTrace>? PhotonicAddCompleted;
+    private PhotonicAddTrace? _reportedPhotonicAddTrace;
 
     /// <summary>True when the next instruction to execute is an ADD and it will run photonically.</summary>
     private bool NextStepIsPhotonicAdd() =>
@@ -49,6 +51,14 @@ public partial class IsaPlaygroundViewModel
             ToBinary(trace.Sum),
             trace.LightTravelPicoseconds,
             _photonicGateCount);
+
+        // A failed step can report the previous trace again; only a new result
+        // represents a completed addition, regardless of translated status text.
+        if (!ReferenceEquals(_reportedPhotonicAddTrace, trace))
+        {
+            _reportedPhotonicAddTrace = trace;
+            PhotonicAddCompleted?.Invoke(trace);
+        }
     }
 
     /// <summary>

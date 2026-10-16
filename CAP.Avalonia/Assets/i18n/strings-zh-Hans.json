@@ -2162,5 +2162,14 @@
   "Tutorial.NoPlacementSpace": "请选择芯片上的空白位置，或腾出更多空间。",
   "Tutorial.ActionOptics.Title": "打开光学工作区",
   "Tutorial.ActionOptics.Body": "切换到光学工作区，仿真你搭建的电路。",
-  "Tutorial.ActionOptics.Cue": "点击光学"
+  "Tutorial.ActionOptics.Cue": "点击光学",
+  "RunProgramTour.Action1.Cue": "构建逻辑网络",
+  "RunProgramTour.Action2.Cue": "打开 ISA 演练场",
+  "RunProgramTour.Action3.Cue": "选择“3 乘以 4”",
+  "RunProgramTour.Action4.Cue": "启用光子 ADD",
+  "RunProgramTour.Action5.Cue": "点击单步，观察三次 ADD",
+  "RunProgramTour.Action6.Cue": "芯片已执行三次加法",
+  "RunProgramTour.ActionOpen.Button": "打开 ISA 演练场",
+  "RunProgramTour.ActionDone.Button": "完成",
+  "RunProgramTour.ActionOpen.Cue": "打开 ISA 演练场"
 }
