@@ -97,9 +97,13 @@ public class VisualLearningJourneyTests
         UiInput.ClickAt(window, WorldPoint(vm.Tutorial.CurrentCanvasPoint!.Value));
         Pump();
         Assert.Equal(4, vm.Tutorial.CurrentStepIndex);
+        // Repeated placement remains armed while the pointer is still on the canvas.
+        Assert.True(canvas.InteractionState.ShowPlacementPreview);
         UiInput.Click(window, window.FindControl<Button>("ConnectModeButton")!);
         Pump();
         Assert.Equal(5, vm.Tutorial.CurrentStepIndex);
+        Assert.False(canvas.InteractionState.ShowPlacementPreview);
+        Assert.Null(canvas.InteractionState.PlacementPreviewTemplate);
         await RefreshTarget();
         Save(window, language, "connect-pins");
         var start = vm.Tutorial.CurrentTargetPin!.GetAbsolutePosition();

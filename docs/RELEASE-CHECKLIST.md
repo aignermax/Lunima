@@ -22,6 +22,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 1. Application startup & project lifecycle
 
+- [ ] **auto** Placement ghosts disappear when leaving the canvas, changing tools, disarming/replacing templates or replacing the canvas main model. Continuous placement remains armed inside the canvas; the optical Connect step shows a single detector name (`PlacementPreviewLifecycleTests`, `VisualLearningJourneyTests`).
+
 - [ ] **auto** Optical guidance reveals the exact virtualized library row after layout without duplicate/overlapping containers. Stopping guidance, changing targets or replacing the library cancels pending reveals. Library titles retain their width when row actions appear; Photodetector does not wrap its last letter onto another line (`VisualLearningJourneyTests`, `VisualGuideOverlayTests`).
 
 - [ ] **auto** First-gate guidance demonstrates real kit marquee selection, Group, Make gate, Simulate, NAND, Save and Build. Next cannot skip actions; dies/unrelated groups cannot satisfy them. Closing the editor, losing selection, changing the function and undoing Save expose a valid recovery action; observers detach when dismissed (`FirstGateTourViewModelTests`, `FirstGateVisualJourneyTests`).

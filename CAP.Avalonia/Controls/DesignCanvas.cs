@@ -299,7 +299,8 @@ public partial class DesignCanvas : Control
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        if (_interactionState.HoveredComponent == null) return;
+        _interactionState.ResetPlacementPreview();
+        _interactionState.ResetGroupTemplatePlacementPreview();
         _interactionState.HoveredComponent = null;
         InvalidateVisual();
     }
@@ -410,6 +411,8 @@ public partial class DesignCanvas : Control
 
     private void OnMainViewModelChanged(AvaloniaPropertyChangedEventArgs e)
     {
+        _interactionState.ResetPlacementPreview();
+        _interactionState.ResetGroupTemplatePlacementPreview();
         if (e.OldValue is MainViewModel oldVm)
         {
             oldVm.CommandManager.StateChanged -= OnCommandStateChanged;
@@ -424,6 +427,7 @@ public partial class DesignCanvas : Control
             newVm.CanvasInteraction.PropertyChanged += OnInteractionPropertyChanged;
             newVm.GateView.Changed += InvalidateVisual;
         }
+        InvalidateVisual();
     }
 
     /// <summary>
@@ -436,6 +440,15 @@ public partial class DesignCanvas : Control
         if (e.PropertyName == nameof(ViewModels.Panels.CanvasInteractionViewModel.CurrentMode))
         {
             _gateConnectionGesture?.Cancel();
+        }
+        if (e.PropertyName is nameof(ViewModels.Panels.CanvasInteractionViewModel.CurrentMode)
+            or nameof(ViewModels.Panels.CanvasInteractionViewModel.SelectedTemplate)
+            or nameof(ViewModels.Panels.CanvasInteractionViewModel.SelectedGroupTemplate))
+        {
+            // A toolbar/key mode change has no subsequent canvas pointer event. Drop
+            // the old ghost now; movement rearms the current template at the cursor.
+            _interactionState.ResetPlacementPreview();
+            _interactionState.ResetGroupTemplatePlacementPreview();
             InvalidateVisual();
         }
     }
