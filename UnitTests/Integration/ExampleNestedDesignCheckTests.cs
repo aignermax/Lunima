@@ -24,12 +24,12 @@ public class ExampleNestedDesignCheckTests
         ["Two Dies - SOI and SiN Edge-Coupler Link.lun"] = "",
         ["EBeam Mach-Zehnder Interferometer.lun"] = "UnconnectedPin=2",
         ["Logic Gate - Build your first gate.lun"] = "UnconnectedPin=6",
-        ["Logic Gate 4-Bit Adder.lun"] = "BlockedPath=2 UnconnectedPin=688",
+        ["Logic Gate 4-Bit Adder.lun"] = "UnconnectedPin=688",
         // Wrapped RAM 4x4: its inter-cell wires are frozen one level deeper and now meet the
         // cells' frozen wires (+99 overlaps, as on the standalone RAM 4x4); the RAM group's
         // frozen wires leave the chip by up to 38 µm (top) and 16 µm (right edge).
-        ["Logic Gate ALU + RAM + ACC.lun"] = "BlockedPath=31 OutOfBounds=1 OverlappingPaths=222 UnconnectedPin=1087 WaveguideThroughComponent=1",
-        ["Logic Gate ALU + RAM.lun"] = "BlockedPath=31 OutOfBounds=1 OverlappingPaths=222 UnconnectedPin=1023 WaveguideThroughComponent=1",
+        ["Logic Gate ALU + RAM + ACC.lun"] = "BlockedPath=29 OutOfBounds=1 OverlappingPaths=222 UnconnectedPin=1087 WaveguideThroughComponent=1",
+        ["Logic Gate ALU + RAM.lun"] = "BlockedPath=29 OutOfBounds=1 OverlappingPaths=222 UnconnectedPin=1023 WaveguideThroughComponent=1",
         ["Logic Gate ALU 1-bit.lun"] = "UnconnectedPin=18",
         ["Logic Gate AND 4-bit.lun"] = "UnconnectedPin=12",
         ["Logic Gate AND-from-NAND.lun"] = "UnconnectedPin=3",
