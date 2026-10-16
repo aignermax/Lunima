@@ -316,3 +316,10 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - **Approved for release:** ☐ Yes  ☐ No
 
 - [ ] Connect two chiplets guidance: Skip/completion releases the receiver position subscription; restarting records a fresh baseline without duplicate handlers.
+
+### Watch it compute: real control actions
+
+- [ ] Start Watch it compute in English and German. The compact cue and animated pointer identify Build logic network, Step clock, Run and Stop; no Next button can skip these actions.
+- [ ] Follow the real Counter buttons without changing input toggles. Clock events and register values change, Run starts, Stop preserves the committed state, and Done closes the summary.
+- [ ] Hide the analysis dock or leave Logic during the guide. Show Logic controls restores the workspace/tab without rebuilding or modifying the circuit; hiding a running dock must not count as pressing Stop.
+- [ ] Invalidate the built logic network during the guide. Guidance returns to Build instead of pointing at disabled clock controls.
