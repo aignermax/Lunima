@@ -7,6 +7,7 @@ using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP.Avalonia.ViewModels.Workspaces;
 using CAP_Core.Components.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -19,6 +20,7 @@ public partial class TutorialViewModel : ObservableObject
     private readonly DesignCanvasViewModel _canvas;
     private CanvasInteractionViewModel? _interaction;
     private ObservableCollection<ComponentTemplate>? _templates;
+    private WorkspaceViewModel? _workspace;
     private readonly List<INotifyPropertyChanged> _observed = new();
     private OpticalTutorialState _state = new();
     [ObservableProperty] private bool _isActive;
@@ -28,10 +30,10 @@ public partial class TutorialViewModel : ObservableObject
     public TutorialViewModel(DesignCanvasViewModel canvas)
     {
         _canvas = canvas;
-        string[] actions = ["SelectSource", "PlaceSource", "SelectReceiver", "PlaceReceiver", "ConnectMode", "ConnectPins", "Simulate"];
-        string[] targets = ["ComponentLibraryList", "DesignCanvasControl", "ComponentLibraryList", "DesignCanvasControl", "ConnectModeButton", "DesignCanvasControl", "RunSimulationButton"];
+        string[] actions = ["SelectSource", "PlaceSource", "SelectReceiver", "PlaceReceiver", "ConnectMode", "ConnectPins", "Optics", "Simulate"];
+        string[] targets = ["ComponentLibraryList", "DesignCanvasControl", "ComponentLibraryList", "DesignCanvasControl", "ConnectModeButton", "DesignCanvasControl", "OpticsWorkspaceButton", "RunSimulationButton"];
         Steps = actions.Select((action, i) => new TutorialStep($"Tutorial.Action{action}.Title",
-            $"Tutorial.Action{action}.Body", () => _state.Stage > i || (i == 6 && _state.Connected && _canvas.ShowPowerFlow), targets[i])).ToList();
+            $"Tutorial.Action{action}.Body", () => _state.Stage > i || (i == 7 && _state.Stage == 7 && _state.Connected && _canvas.ShowPowerFlow), targets[i])).ToList();
     }
 
     /// <summary>Attaches to the actual editor and its visible library; subscriptions live only during guidance.</summary>
@@ -40,6 +42,14 @@ public partial class TutorialViewModel : ObservableObject
         Detach();
         _interaction = interaction;
         _templates = visibleTemplates;
+        if (IsActive) { Observe(); Evaluate(); }
+    }
+
+    /// <summary>Observes the real workspace; the guide asks the user to switch before simulation.</summary>
+    public void AttachWorkspace(WorkspaceViewModel workspace)
+    {
+        Detach();
+        _workspace = workspace;
         if (IsActive) { Observe(); Evaluate(); }
     }
 
@@ -72,7 +82,7 @@ public partial class TutorialViewModel : ObservableObject
 
     /// <summary>Rechecks the action, never bypasses it.</summary>
     [RelayCommand] public void Next() => Evaluate();
-    [RelayCommand] public void Skip() { IsActive = false; Detach(); }
+    [RelayCommand] public void Skip() { IsActive = false; Detach(); _state.ClearTargets(); NotifyCurrent(); }
 
     private void Observe()
     {
@@ -81,6 +91,7 @@ public partial class TutorialViewModel : ObservableObject
         _canvas.PropertyChanged += OnChanged;
         _canvas.DiesChanged += OnDiesChanged;
         if (_interaction != null) _interaction.PropertyChanged += OnChanged;
+        if (_workspace != null) _workspace.PropertyChanged += OnChanged;
         if (_templates != null) _templates.CollectionChanged += OnCollectionChanged;
         ObserveChildren();
     }
@@ -89,26 +100,49 @@ public partial class TutorialViewModel : ObservableObject
     {
         foreach (var item in _observed) item.PropertyChanged -= OnChanged;
         _observed.Clear();
-        _observed.AddRange(_canvas.Components);
-        _observed.AddRange(_canvas.Surface.Items);
-        _observed.AddRange(_canvas.Connections);
+        var children = new HashSet<INotifyPropertyChanged>(ReferenceEqualityComparer.Instance);
+        children.UnionWith(_canvas.Components);
+        children.UnionWith(_canvas.Surface.Items);
+        children.UnionWith(_canvas.Connections);
+        _observed.AddRange(children);
         foreach (var item in _observed) item.PropertyChanged += OnChanged;
     }
 
-    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) { ObserveChildren(); Evaluate(); }
+    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (!ReferenceEquals(sender, _templates)) ObserveChildren();
+        Evaluate();
+    }
     private void OnDiesChanged() { ObserveChildren(); Evaluate(); }
-    private void OnChanged(object? sender, PropertyChangedEventArgs e) => Evaluate();
+    private void OnChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        var relevant = sender switch
+        {
+            DesignCanvasViewModel => e.PropertyName == nameof(DesignCanvasViewModel.ShowPowerFlow),
+            WorkspaceViewModel => e.PropertyName == nameof(WorkspaceViewModel.Current),
+            CanvasInteractionViewModel => e.PropertyName is nameof(CanvasInteractionViewModel.SelectedTemplate)
+                or nameof(CanvasInteractionViewModel.CurrentMode),
+            ComponentViewModel => e.PropertyName is nameof(ComponentViewModel.X) or nameof(ComponentViewModel.Y)
+                or nameof(ComponentViewModel.Width) or nameof(ComponentViewModel.Height)
+                or nameof(ComponentViewModel.IsLightSource) or nameof(ComponentViewModel.IsLaserOff),
+            WaveguideConnectionViewModel => e.PropertyName == nameof(WaveguideConnectionViewModel.IsBlockedFallback),
+            _ => false
+        };
+        if (relevant) Evaluate();
+    }
     private void Evaluate()
     {
         if (!IsActive) return;
-        _state = OpticalTutorialState.Read(_canvas, _interaction, _templates);
+        _state = OpticalTutorialState.Read(_canvas, _interaction, _templates, _workspace == null || _workspace.IsOptics);
         CurrentStepIndex = _state.Stage;
         NotifyCurrent();
-        if (_state.Connected && _canvas.ShowPowerFlow)
+        if (_state.Stage == 7 && _state.Connected && _canvas.ShowPowerFlow)
         {
             IsCompleted = true;
             IsActive = false;
             Detach();
+            _state.ClearTargets();
+            NotifyCurrent();
         }
     }
 
@@ -119,6 +153,7 @@ public partial class TutorialViewModel : ObservableObject
         _canvas.PropertyChanged -= OnChanged;
         _canvas.DiesChanged -= OnDiesChanged;
         if (_interaction != null) _interaction.PropertyChanged -= OnChanged;
+        if (_workspace != null) _workspace.PropertyChanged -= OnChanged;
         if (_templates != null) _templates.CollectionChanged -= OnCollectionChanged;
         foreach (var item in _observed) item.PropertyChanged -= OnChanged;
         _observed.Clear();

@@ -2154,5 +2154,8 @@
   "Tutorial.ActionSimulate.Cue": "Auf Start klicken",
   "Tutorial.NoCompatibleTemplate": "Kein passendes Bauteil sichtbar. Öffne die optische Bibliothek oder passe den Filter an.",
   "Tutorial.CompletedCue": "Deine Lichtschaltung ist verbunden!",
-  "Tutorial.NoPlacementSpace": "Wähle eine freie Stelle auf dem Chip oder schaffe mehr Platz."
+  "Tutorial.NoPlacementSpace": "Wähle eine freie Stelle auf dem Chip oder schaffe mehr Platz.",
+  "Tutorial.ActionOptics.Title": "Optik öffnen",
+  "Tutorial.ActionOptics.Body": "Wechsle zu Optik, um deine aufgebaute Schaltung zu simulieren.",
+  "Tutorial.ActionOptics.Cue": "Auf Optik klicken"
 }

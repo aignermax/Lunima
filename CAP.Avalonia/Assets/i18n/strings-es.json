@@ -2154,5 +2154,8 @@
   "Tutorial.ActionSimulate.Cue": "Haz clic en Ejecutar",
   "Tutorial.NoCompatibleTemplate": "No hay un componente compatible visible. Abre la biblioteca óptica o ajusta el filtro.",
   "Tutorial.CompletedCue": "¡Tu circuito óptico está conectado!",
-  "Tutorial.NoPlacementSpace": "Elige un espacio libre en el chip o deja más espacio."
+  "Tutorial.NoPlacementSpace": "Elige un espacio libre en el chip o deja más espacio.",
+  "Tutorial.ActionOptics.Title": "Abre Óptica",
+  "Tutorial.ActionOptics.Body": "Cambia a Óptica para simular el circuito que has construido.",
+  "Tutorial.ActionOptics.Cue": "Haz clic en Óptica"
 }

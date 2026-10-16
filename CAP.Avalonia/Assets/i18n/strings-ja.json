@@ -2154,5 +2154,8 @@
   "Tutorial.ActionSimulate.Cue": "実行をクリック",
   "Tutorial.NoCompatibleTemplate": "互換性のある部品が表示されていません。光部品ライブラリを開くか、フィルターを変更してください。",
   "Tutorial.CompletedCue": "光回路を接続できました！",
-  "Tutorial.NoPlacementSpace": "チップの空いている場所を選ぶか、スペースを確保してください。"
+  "Tutorial.NoPlacementSpace": "チップの空いている場所を選ぶか、スペースを確保してください。",
+  "Tutorial.ActionOptics.Title": "光学ワークスペースを開く",
+  "Tutorial.ActionOptics.Body": "光学に切り替えて、作成した回路をシミュレーションします。",
+  "Tutorial.ActionOptics.Cue": "光学をクリック"
 }

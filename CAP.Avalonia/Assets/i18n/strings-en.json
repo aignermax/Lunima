@@ -2154,5 +2154,8 @@
   "Tutorial.ActionSimulate.Cue": "Click Run",
   "Tutorial.NoCompatibleTemplate": "No compatible component is visible. Open the optical library or adjust its filter.",
   "Tutorial.CompletedCue": "Your light circuit is connected!",
-  "Tutorial.NoPlacementSpace": "Choose a free spot on the chip, or make more room."
+  "Tutorial.NoPlacementSpace": "Choose a free spot on the chip, or make more room.",
+  "Tutorial.ActionOptics.Title": "Open Optics",
+  "Tutorial.ActionOptics.Body": "Switch to Optics to simulate the circuit you built.",
+  "Tutorial.ActionOptics.Cue": "Click Optics"
 }
