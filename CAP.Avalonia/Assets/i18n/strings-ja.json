@@ -1934,6 +1934,7 @@
   "Workspace.Action.BuildLogic": "ロジック ネットワーク構築",
   "Workspace.Action.LogicStep": "ロジック ステップ",
   "Workspace.Action.RunSystem": "システム実行",
+  "GateView.ConnectDirection": "ゲートの出力をゲートの入力に接続してください。",
   "GateView.Gates": "ゲート",
   "GateView.Physical": "物理",
   "GateView.ShowPhysicalTip": "ゲートと信号を表示中です。導波路を編集するには物理的な MMI と導波路の表示に切り替えます (V)。",

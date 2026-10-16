@@ -95,6 +95,10 @@ internal sealed class UiFlowTestHost : IDisposable
         App.OverrideServicesForTesting(services.BuildServiceProvider());
 
         Window = new MainWindow { DataContext = Vm };
+        // Hover tooltips use overlay popup hosts in headless mode and can consume the
+        // next synthetic click after a panel changes. Action flows keep tooltip text
+        // available for lookup; dedicated tooltip tests use their own fixture.
+        global::Avalonia.Controls.ToolTip.SetServiceEnabled(Window, false);
         Window.Show();
         Dispatcher.UIThread.RunJobs();
 
