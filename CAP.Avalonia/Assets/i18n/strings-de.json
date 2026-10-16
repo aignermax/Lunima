@@ -1932,6 +1932,7 @@
   "Workspace.Action.BuildLogic": "Logiknetz bauen",
   "Workspace.Action.LogicStep": "Logikschritt",
   "Workspace.Action.RunSystem": "System ausführen",
+  "GateView.ConnectDirection": "Verbinde einen Gatterausgang mit einem Gattereingang.",
   "GateView.Gates": "Gatter",
   "GateView.Physical": "Physisch",
   "GateView.ShowPhysicalTip": "Zeigt Gatter und Signale. Zu den physischen MMIs und Wellenleitern wechseln, um Wellenleiter zu bearbeiten (V).",

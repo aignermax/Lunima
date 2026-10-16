@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.GdsImport;
 using CAP.Avalonia.ViewModels.GdsImport.LayerPicker;
@@ -54,7 +55,7 @@ public class GdsLayerPickerViewModelTests
             (pair, target) => applied.Add((pair, target)));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Rows_OnePerLayer_WithDistinctColors()
     {
         var vm = CreatePicker(new());
@@ -64,7 +65,7 @@ public class GdsLayerPickerViewModelTests
         vm.Rows.Select(r => r.PairText).ShouldBe(new[] { "(1,0)", "(11,0)", "(56,0)" });
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void InitialAssignments_ShowInLegend()
     {
         var initial = new Dictionary<GdsLayerPair, GdsLayerFieldTarget>
@@ -77,7 +78,7 @@ public class GdsLayerPickerViewModelTests
         vm.Rows.Single(r => r.Pair == new GdsLayerPair(11, 0)).AssignmentText.ShouldBe("—");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PickAt_OnGeometry_SelectsTheClickedLayer()
     {
         var vm = CreatePicker(new());
@@ -90,7 +91,7 @@ public class GdsLayerPickerViewModelTests
         vm.SelectionText.ShouldContain("(11,0)");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PickAt_OnEmptySpace_ClearsSelection()
     {
         var vm = CreatePicker(new());
@@ -102,7 +103,7 @@ public class GdsLayerPickerViewModelTests
         vm.Rows.ShouldAllBe(r => !r.IsSelected);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AssignCommands_DisabledWithoutSelection()
     {
         var vm = CreatePicker(new());
@@ -116,7 +117,7 @@ public class GdsLayerPickerViewModelTests
         vm.AssignMetalCommand.CanExecute(null).ShouldBeTrue();
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AssignMetal_FiresCallback_AndUpdatesLegend()
     {
         var applied = new List<(GdsLayerPair, GdsLayerFieldTarget?)>();
@@ -129,7 +130,7 @@ public class GdsLayerPickerViewModelTests
         vm.SelectedRow!.AssignmentText.ShouldBe("metal");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AssignIgnore_FiresCallbackWithNullTarget_AndClearsLegendEntry()
     {
         var applied = new List<(GdsLayerPair, GdsLayerFieldTarget?)>();
@@ -146,7 +147,7 @@ public class GdsLayerPickerViewModelTests
         vm.SelectedRow!.AssignmentText.ShouldBe("—");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SelectRowCommand_SelectsFromLegend()
     {
         var vm = CreatePicker(new());
