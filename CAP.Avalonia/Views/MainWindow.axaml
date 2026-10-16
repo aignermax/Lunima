@@ -694,6 +694,21 @@
                                 </TextBox.InnerLeftContent>
                             </TextBox>
 
+                            <StackPanel DockPanel.Dock="Top" Margin="12,0,12,8" Spacing="4"
+                                        IsVisible="{Binding GdsPreviewRenderService.HasUnavailablePreviews}">
+                                <TextBlock Classes="caption" TextWrapping="Wrap"
+                                           Text="{loc:Localize Preview.Unavailable}"
+                                           ToolTip.Tip="{Binding GdsPreviewRenderService.PreviewFailureDetail}"/>
+                                <Button x:Name="PreviewPythonSettingsButton" Classes="link"
+                                        HorizontalAlignment="Left"
+                                        Content="{loc:Localize Settings.Section.PythonEnvironments}"
+                                        Command="{Binding OpenPreviewPythonSettingsCommand}"/>
+                                <Expander Header="{loc:Localize Preview.ErrorDetails}">
+                                    <TextBlock Classes="caption" TextWrapping="Wrap" MaxHeight="100"
+                                               Text="{Binding GdsPreviewRenderService.PreviewFailureDetail}"/>
+                                </Expander>
+                            </StackPanel>
+
                             <!-- Online-registry hit line under the local hits: visible only while
                                  it has something to say, styled as a link so it is never mistaken
                                  for a placeable local template. -->

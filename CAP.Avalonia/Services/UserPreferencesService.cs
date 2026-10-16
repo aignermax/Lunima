@@ -246,7 +246,11 @@ public partial class UserPreferencesService
     {
         _preferences.CustomPythonPath = pythonPath;
         Save();
+        PythonInterpreterActivated?.Invoke();
     }
+
+    /// <summary>Raised on activation, including reactivation after repairing the same environment.</summary>
+    public event Action? PythonInterpreterActivated;
 
     /// <summary>
     /// Gets the version the user chose to skip during update prompts.

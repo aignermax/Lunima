@@ -46,7 +46,8 @@ public static class MainViewModelTestHelper
         DesignCanvasViewModel? canvas = null,
         LeftPanelViewModel? leftPanel = null,
         CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null,
-        UpdateViewModel? updateViewModel = null)
+        UpdateViewModel? updateViewModel = null,
+        GdsPreviewRenderService? previewService = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -119,7 +120,7 @@ public static class MainViewModelTestHelper
             // tests don't contaminate each other or the developer's real file.
             new CAP.Avalonia.Services.UserSMatrixOverrideStore(
                 Path.Combine(Path.GetTempPath(), $"sparam-overrides-test-{Guid.NewGuid()}.json")),
-            new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")),
+            previewService ?? new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")),
             registryBrowser,
             gdsImportButton,
             designScopedGdsComponents: designScope);

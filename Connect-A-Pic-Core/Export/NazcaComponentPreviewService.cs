@@ -79,6 +79,8 @@ public class NazcaComponentPreviewService
 
     private readonly ProcessLaunchFactory _launchFactory;
     private readonly string _pythonExecutable;
+    /// <summary>Optional live interpreter selection; resolved for each subprocess launch.</summary>
+    public Func<string>? PythonExecutableResolver { get; set; }
     private readonly string _scriptPath;
     private readonly TimeSpan _timeout;
     private readonly ConcurrentDictionary<string, NazcaPreviewResult> _cache = new();
@@ -190,21 +192,23 @@ public class NazcaComponentPreviewService
     private async Task<NazcaPreviewResult> RunProcessAsync(
         IReadOnlyList<string> arguments, CancellationToken ct)
     {
+        var pythonExecutable = _pythonExecutable;
         try
         {
+            pythonExecutable = PythonExecutableResolver?.Invoke() ?? _pythonExecutable;
             var workingDir = Path.GetDirectoryName(_scriptPath);
             // PYTHONSAFEPATH: stray sibling files next to the script must not shadow
             // stdlib/Nazca modules (see PythonModuleShadowing).
-            if (!_launchFactory.TryBuild(_pythonExecutable, arguments, workingDir,
+            if (!_launchFactory.TryBuild(pythonExecutable, arguments, workingDir,
                     PythonModuleShadowing.SafePathEnvironment, out var psi, out var launchError))
-                return NazcaPreviewResult.Fail($"Could not start Python '{_pythonExecutable}': {launchError}");
+                return NazcaPreviewResult.Fail($"Could not start Python '{pythonExecutable}': {launchError}");
 
             psi.RedirectStandardOutput = true;
             psi.RedirectStandardError = true;
 
             using var process = Process.Start(psi);
             if (process == null)
-                return NazcaPreviewResult.Fail($"Could not start Python '{_pythonExecutable}'.");
+                return NazcaPreviewResult.Fail($"Could not start Python '{pythonExecutable}'.");
 
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
             var stderrTask = process.StandardError.ReadToEndAsync();
@@ -225,7 +229,7 @@ public class NazcaComponentPreviewService
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            return NazcaPreviewResult.Fail($"Could not start Python '{_pythonExecutable}': {ex.Message}");
+            return NazcaPreviewResult.Fail($"Could not start Python '{pythonExecutable}': {ex.Message}");
         }
         catch (Exception ex)
         {

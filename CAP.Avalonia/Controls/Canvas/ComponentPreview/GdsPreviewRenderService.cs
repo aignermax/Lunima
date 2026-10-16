@@ -20,11 +20,11 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 /// <see cref="OnPreviewLoaded"/> fires on the UI thread when the geometry arrives.
 /// </para>
 /// <para>
-/// Failed renders (Python unavailable, script error) are remembered for the session so they
-/// are not retried every frame, and are never persisted, so the next launch retries them.
+/// Failed renders are remembered until interpreter activation or restart, avoiding retries
+/// every frame. Failures are never persisted to disk.
 /// </para>
 /// </remarks>
-public sealed class GdsPreviewRenderService
+public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {
     private readonly NazcaComponentPreviewService _previewService;
 
@@ -48,12 +48,22 @@ public sealed class GdsPreviewRenderService
     private readonly ConcurrentDictionary<string, Task> _pending = new();
 
     /// <summary>
-    /// Geometry keys whose render failed, remembered for the whole session. Kept outside the
+    /// Geometry keys whose render failed, remembered until interpreter activation. Kept outside the
     /// LRU geometry cache on purpose: a large GDS import can carry more unique (failing) keys
     /// than the LRU holds, and evicting a failure marker would re-spawn a doomed Python render
     /// for that key forever. Not persisted, so the next launch retries a transient failure.
     /// </summary>
-    private readonly ConcurrentDictionary<string, byte> _failedGeometryKeys = new();
+    private readonly ConcurrentDictionary<string, int> _failedGeometryKeys = new();
+    private int _environmentGeneration;
+
+    /// <summary>Retries failed previews after interpreter activation, preserving successful geometry.</summary>
+    public void RetryFailedPreviews()
+    {
+        Interlocked.Increment(ref _environmentGeneration);
+        _failedGeometryKeys.Clear();
+        PublishPreviewFailure(null, Volatile.Read(ref _environmentGeneration));
+        RaisePreviewLoaded();
+    }
 
     /// <summary>
     /// Raised on the UI thread whenever a previously-pending preview finishes
@@ -210,23 +220,27 @@ public sealed class GdsPreviewRenderService
         if (!key.IsRenderable) return null;
         var cacheKey = key.Hash();
         if (_memGeometry.TryGet(cacheKey, out var cached)) return cached;
-        if (_failedGeometryKeys.ContainsKey(cacheKey)) return null;
+        if (_failedGeometryKeys.TryGetValue(cacheKey, out var failedGeneration)
+            && failedGeneration == Volatile.Read(ref _environmentGeneration)) return null;
         // Reserve the slot BEFORE starting the fetch (mirrors the canvas TryGetPreview
         // path) so a duplicate fetch is never launched for the same key. Passing the
         // started task straight into TryAdd would run the task before TryAdd decides
         // to keep it, defeating the _pending dedup under concurrent callers.
-        if (_pending.TryAdd(cacheKey, Task.CompletedTask))
-            _pending[cacheKey] = FetchGeometryAsync(key, cacheKey, InlineNazcaCodeLookup?.Invoke(key.Module, key.Function));
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (_pending.TryAdd(cacheKey, completion.Task))
+            _ = FetchGeometryAsync(key, cacheKey, completion);
         return null;
     }
 
     /// <summary>Test hook: awaits all in-flight geometry and canvas preview fetches.</summary>
     public Task WaitForPendingAsync() => Task.WhenAll(_pending.Values.ToArray());
 
-    private async Task FetchGeometryAsync(GdsPreviewKey key, string cacheKey, string? inlineCode)
+    private async Task FetchGeometryAsync(GdsPreviewKey key, string cacheKey, TaskCompletionSource completion)
     {
+        var generation = Volatile.Read(ref _environmentGeneration);
         try
         {
+            var inlineCode = InlineNazcaCodeLookup?.Invoke(key.Module, key.Function);
             // Inline code is not part of the disk-cache key, so its renders are never persisted:
             // an edited template must not keep showing the old geometry.
             if (inlineCode == null && _diskCache.TryRead(key, out var disk))
@@ -264,22 +278,27 @@ public sealed class GdsPreviewRenderService
                 // The render FAILED (Python/env/script error — e.g. cspdk not yet installed, a
                 // broken or half-provisioned interpreter). Do NOT persist: a transient env failure
                 // must not poison the disk cache permanently, or the component stays blank forever
-                // even after the env is fixed. Remember null for this session only (like the catch
-                // block below), so the next launch retries.
-                _failedGeometryKeys.TryAdd(cacheKey, 0);
+                // even after the env is fixed. Activation or restart allows another attempt.
+                _failedGeometryKeys[cacheKey] = generation;
+                PublishPreviewFailure(result.Error ?? "Preview render failed.", generation);
             }
             RaisePreviewLoaded();
         }
-        catch
+        catch (Exception ex)
         {
             // Transient failure (e.g. Python hiccup): remember "empty" for this session
             // only — deliberately NOT WriteEmpty, so a restart can retry. A genuinely
             // empty render (above) persists the empty marker; a crash does not.
-            _failedGeometryKeys.TryAdd(cacheKey, 0);
+            _failedGeometryKeys[cacheKey] = generation;
+            PublishPreviewFailure(ex.Message, generation);
         }
         finally
         {
             _pending.TryRemove(cacheKey, out _);
+            completion.TrySetResult();
+            // An activation repaint may have happened while this old request still held
+            // the slot. Repaint again now so the newly selected interpreter gets a turn.
+            if (generation != Volatile.Read(ref _environmentGeneration)) RaisePreviewLoaded();
         }
     }
 

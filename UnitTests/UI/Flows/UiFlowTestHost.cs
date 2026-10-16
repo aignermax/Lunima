@@ -43,7 +43,7 @@ internal sealed class UiFlowTestHost : IDisposable
     private readonly IServiceProvider? _previousServices;
     private readonly string _previousLanguageCode;
 
-    public UiFlowTestHost()
+    public UiFlowTestHost(CAP.Avalonia.Controls.Canvas.ComponentPreview.GdsPreviewRenderService? previewService = null)
     {
         // Flow tests look up buttons/tooltips by their English literals; the process-global
         // localization singleton follows the OS display language, so pin English for the
@@ -78,7 +78,8 @@ internal sealed class UiFlowTestHost : IDisposable
             preferencesService: prefs,
             libraryManager: libraryManager,
             canvas: canvas,
-            leftPanel: leftPanel);
+            leftPanel: leftPanel,
+            previewService: previewService);
 
         // The startup process picker (issue #570) would otherwise open modally over the window
         // right after Loaded; a pre-established Playground process makes it a no-op.

@@ -1,4 +1,7 @@
 {
+  "Preview.Unavailable": "一部の部品プレビューを表示できません。",
+  "Preview.ErrorDetails": "エラーの詳細",
+
   "AgentBridge.Prompt.Body": "Claude Code がインストールされています。ワンクリックで Lunima のローカルエージェントブリッジをオンにして登録し、Claude が開いている設計を調査・編集できるようにします。すべての編集は元に戻せます。",
   "AgentBridge.Prompt.Close": "閉じる",
   "AgentBridge.Prompt.Connect": "Claude Code を接続",

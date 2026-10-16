@@ -1,4 +1,7 @@
 {
+  "Preview.Unavailable": "Einige Bauteilvorschauen sind nicht verfügbar.",
+  "Preview.ErrorDetails": "Fehlerdetails",
+
   "AgentBridge.Prompt.Body": "Claude Code ist installiert. Ein Klick schaltet Lunimas lokale Agenten-Brücke ein und registriert sie, damit Claude dein geöffnetes Design untersuchen und bearbeiten kann — jede Änderung lässt sich rückgängig machen.",
   "AgentBridge.Prompt.Close": "Schließen",
   "AgentBridge.Prompt.Connect": "Claude Code verbinden",

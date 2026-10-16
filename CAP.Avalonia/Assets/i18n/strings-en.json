@@ -1,4 +1,7 @@
 {
+  "Preview.Unavailable": "Some component previews are unavailable.",
+  "Preview.ErrorDetails": "Error details",
+
   "AgentBridge.Prompt.Body": "Claude Code is installed. One click turns on Lunima's local agent bridge and registers it, so Claude can inspect and edit your open design — every edit is undoable.",
   "AgentBridge.Prompt.Close": "Close",
   "AgentBridge.Prompt.Connect": "Connect Claude Code",

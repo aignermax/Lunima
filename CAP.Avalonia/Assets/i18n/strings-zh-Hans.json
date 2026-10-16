@@ -1,4 +1,7 @@
 {
+  "Preview.Unavailable": "部分元件预览不可用。",
+  "Preview.ErrorDetails": "错误详情",
+
   "AgentBridge.Prompt.Body": "已安装 Claude Code。一键开启 Lunima 的本地智能体桥接并完成注册，Claude 即可查看和编辑你打开的设计 — 每次编辑都可撤销。",
   "AgentBridge.Prompt.Close": "关闭",
   "AgentBridge.Prompt.Connect": "连接 Claude Code",

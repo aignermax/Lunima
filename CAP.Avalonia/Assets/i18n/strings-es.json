@@ -1,4 +1,7 @@
 {
+  "Preview.Unavailable": "Algunas vistas previas de componentes no están disponibles.",
+  "Preview.ErrorDetails": "Detalles del error",
+
   "AgentBridge.Prompt.Body": "Claude Code está instalado. Un clic activa el puente de agentes local de Lunima y lo registra, para que Claude pueda inspeccionar y editar tu diseño abierto; cada edición se puede deshacer.",
   "AgentBridge.Prompt.Close": "Cerrar",
   "AgentBridge.Prompt.Connect": "Conectar Claude Code",
