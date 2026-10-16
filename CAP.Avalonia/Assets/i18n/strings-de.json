@@ -1320,6 +1320,9 @@
   "Routing.Reroute.Selected": "Auswahl neu routen",
   "Routing.Reroute.Title": "Importierte Routen:",
   "Routing.Status.ComplexPath": "Komplexer Pfad wird berechnet…",
+  "Routing.Status.CrossingInsertion": "Kreuzungen werden eingefügt…",
+  "Routing.Status.Finishing": "Routen werden verfeinert…",
+  "Routing.Status.ContentionRepair": "Routenkonflikte werden behoben…",
   "Routing.Status.Progress": "Routing {0}/{1} Verbindungen · {2} s",
   "Routing.Status.Stop": "Stopp",
   "Routing.Status.StopTip": "Stoppt das laufende Routing. Bereits geroutete Verbindungen behalten ihre neuen Wege, der Rest bleibt unverändert.",
@@ -1390,6 +1393,7 @@
   "Settings.Ai.Description": "Den Anthropic-Claude-API-Schlüssel für den KI-Design-Assistenten im rechten Panel konfigurieren. Der Schlüssel wird lokal gespeichert und nie anderweitig übertragen.",
   "Settings.Ai.Title": "KI-Assistent",
   "Settings.ChipSize.Description": "Legt die physische Grundfläche des PIC-Chips fest. Komponenten außerhalb der Grenze werden in den Design-Checks markiert, aber nicht verschoben. Bereich: 0,25–100 mm pro Dimension.",
+  "Settings.ChipSize.DieScopeDescription": "Jeder Die hat eigene Abmessungen. Wähle einen Die im Arbeitsbereich System aus, um seine Größe in den Eigenschaften zu ändern. Diese Chip-Einstellungen ändern weder Dies noch die Baugruppe.",
   "Settings.ChipSize.GridPrefix": "Raster: ",
   "Settings.ChipSize.Height": "Höhe (mm):",
   "Settings.ChipSize.Preset": "Voreinstellung:",
@@ -2114,5 +2118,9 @@
   "Context.ShowInLayout": "Im Layout zeigen",
   "Context.ShowInLayoutTip": "Wechselt ins Layout, zentriert auf dieses Element",
   "Context.EditGate": "Gatter bearbeiten…",
-  "Context.EditGateTip": "Öffnet die Gatter-Schritte für dieses Gatter: Pin-Rollen, Simulation, Schwelle, Speichern."
+  "Context.EditGateTip": "Öffnet die Gatter-Schritte für dieses Gatter: Pin-Rollen, Simulation, Schwelle, Speichern.",
+  "Dies.ProcessChange.Title": "Die-Prozess ändern?",
+  "Dies.ProcessChange.Preview": "Zu {0} wechseln? Dabei werden {1} inkompatible Bauteile und {2} verbundene Leitungen entfernt. Kompatible Bauteile bleiben erhalten. Mit Rückgängig wird alles wiederhergestellt.",
+  "Dies.ProcessChange.Cancel": "Abbrechen",
+  "Dies.ProcessChange.Confirm": "Prozess ändern"
 }

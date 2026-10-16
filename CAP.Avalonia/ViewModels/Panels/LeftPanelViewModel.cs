@@ -120,11 +120,11 @@ public partial class LeftPanelViewModel : ObservableObject
             _registryBrowser.Components.CollectionChanged += (_, _) => UpdateRegistrySearchHint();
 
         // Like the search text, the hint must re-translate on a live UI language switch.
-        LocalizationService.Instance.PropertyChanged += (_, e) =>
+        LocalizationWeakSubscription.Subscribe(this, static (self, e) =>
         {
             if (e.PropertyName == nameof(LocalizationService.ActiveLanguageCode))
-                UpdateRegistrySearchHint();
-        };
+                self.UpdateRegistrySearchHint();
+        });
     }
 
     /// <summary>

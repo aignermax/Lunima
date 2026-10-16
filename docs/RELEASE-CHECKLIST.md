@@ -20,6 +20,11 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 1. Application startup & project lifecycle
 
+- [ ] Two rotated SiN Edge Couplers connected at their left-facing o2 ports route around the target's left side, entering opposite its outward normal. Bend and Auto reject wrong-way S primitives; ordinary recalculation repairs unedited cached generated arcs, while manual edits and valid quantized A* fallbacks remain preserved. `(auto: SiNEdgeCouplerDirectionTests)`
+
+- [ ] System → New die → Create works through the actual flyout button, closes after creation, and can be undone. The Chiplets list contains real dies; a new or legacy single-chip design shows Die 1 rather than its logic groups. `(auto: NewDieButtonTests, WorkspaceContextTests)`
+- [ ] Routing status identifies crossing insertion, route refinement, and conflict repair while elapsed time continues; speculative repair searches do not increment completed connections or retain the initial complex-search label. Cancelled/finished passes ignore late phase updates. `(auto: RoutingPhaseProgressTests, RoutingOrchestratorProgressTests)`
+
 - [ ] Start Lunima without a command-line file → Home screen appears with recent projects and example tiles. `(manual)`
 - [ ] Open an example project from the Home screen → design loads and canvas is usable; gate groups sit apart with their pins on their bodies. `(auto: HomeExamplesTests, LogicExamplesLayoutTests)`
 - [ ] Home guided tours: first steps (place → connect → simulate), "Watch it compute" (Counter), and "Run a program on your chip" (4-bit adder → ISA playground → photonic multiply) each start from the Home card and advance only on the real user actions. `(auto: TutorialViewModelTests, WatchComputeTourViewModelTests, RunProgramTourViewModelTests)`
@@ -32,12 +37,14 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Dirty-state marker (`*`) appears in title bar after an edit and clears on save. `(auto: WindowTitleTests)`
 - [ ] Check for update banner appears when a newer release is available. `(manual)`
 - [ ] Settings window opens from toolbar and shows all settings pages. `(manual)`
+- [ ] Settings → Chip Size: legacy single-chip designs can still apply root dimensions; designs with explicit dies disable the root editor and Apply, directing users to System die properties. Entering a group on a die keeps Apply disabled; returning to a legacy design restores it. Loading saved root dimensions never resizes explicit dies. `(auto: ChipSizeScopeTests; manual: disabled controls and localized explanation)`
 - [ ] All main-toolbar buttons have the same height (Import / Export / Tools / AI / Settings match New / Open / Save). `(auto: ToolbarButtonHeightTests)`
 
 ## 2. Localization & accessibility
 
 - [ ] Switch UI language in Settings → all menus, tooltips, and status text update without restart. `(auto: LocalizeExtensionLiveSwitchTests)`
 - [ ] Status-bar messages re-translate after a live language switch. `(auto: MainViewModelLocalizationTests)`
+- [ ] Discarded shell ViewModels and their canvases remain collectible despite process-wide localization subscriptions; live instances still update when the language changes. `(auto: LocalizationViewModelLifetimeTests, MainViewModelLocalizationTests)`
 - [ ] Export outputs (scripts, GDS params) use invariant culture for numeric formatting. `(auto: NazcaExportCultureInvarianceTests)`
 
 ## 3. Design canvas
@@ -84,12 +91,16 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ### Dies (multi-die assemblies)
 
+- [ ] In Layout, click an empty area of each of two dies with different processes: the library follows that die without selecting or moving its frame. Hover does not switch it. Arming and repeatedly placing a component retains that die's library. `(auto: DieLibraryContextTests)`
+- [ ] Arm a Layout-only component, then switch to System: Select mode is active and dies can be moved. A permitted edge coupler stays armed and placeable. `(auto: WorkspaceLibraryPlacementTests)`
+
 - [ ] A single-chip design (every older file) shows its chip as "Die 1": a die frame with its size and the design process. In System a click on the chip selects Die 1 (die properties), double-click and F frame it; the first edit makes it a real die (one Ctrl+Z restores the single chip). The model, file and exports stay single-die until then. `(auto: ChipDieTests, DieCommandTests, DiePersistenceTests, UiFlowDieWorkspaceRulesTests)`
 - [ ] System workspace → Chiplets → "New die": pick a process + size preset; the chip becomes "Die 1" and the new die appears to the right with its own process-coloured frame, name, size label and edge zone; one Ctrl+Z restores the single chip. `(auto: DieCommandTests, DieViewModelTests, ChipletAssemblyScreenshotTests)`
 - [ ] Selecting a die (Chiplets row or its frame) shows its properties on the right — name, size presets per process + custom, process, PDK checkboxes, edge zone, Zoom to die/Delete — every edit undoable; the library and PDK list only offer what the die's process and PDKs allow. `(auto: DieViewModelTests)`
 - [ ] A die is a work surface: in Layout, parts (and saved groups) dropped on a die join it without opening anything; they are selected, moved (they stay on their die), rotated, grouped, deleted and wired right there; dropping between dies places nothing and says why; no red preview over a free spot on a die. In System, double-click on a die (or "Zoom to die") frames it, never enters it. `(auto: DieSurfaceTests, DieSurfaceCommandTests, DieCommandTests, UiFlowDieWorkSurfaceTests)`
 - [ ] Outside System (Layout/Optics/Logic) a die is background: a press on its empty area draws a marquee, it is never dragged, deleted or edited there, double-click on it does nothing special, its properties show read-only only when the die itself is selected (a selected part keeps the panel). F frames the content of the current die (selection, cursor, last worked); in System F frames all dies. `(auto: InertDieTests, DieZoomToFitTests, UiFlowDieWorkspaceRulesTests)`
 - [ ] Dies are never grouped (Create group disabled with the reason); a die's context menu offers no Edit component, Ungroup, Rename group or Make gate; the hierarchy lists dies with the chip icon, "Die · process" and the process colour dot. `(auto: DieGroupAndMenuRulesTests, HierarchyDieNodeTests)`
+- [ ] Changing a populated die process previews incompatible component names and affected connection endpoints. Cancel changes nothing; confirm preserves compatible/unknown-source parts and nested groups, removes incompatible parts and incident live/frozen wires, and one Undo restores all (including legacy chip promotion). Check English/German confirmation buttons. `(auto: DieProcessChangeTests, DieProcessConfirmationTests)`
 - [ ] Copy/paste of a die lands it in a free spot next to the others with its parts and wires (one undo step); a die stuck in an overlap can always be moved out. Releasing a moved die is instant (the carrier routing grid rebuilds in the background). Right-click opens the canvas menu on the first click, also with a pixel of jitter or after a middle-button pan. `(auto: DieCopyPasteTests, DieDropResponsivenessTests, UiFlowCanvasContextMenuTests)`
 - [ ] Moving a die moves everything on it rigidly: the routes on it are identical afterwards (nothing re-routes); only die-to-die links re-evaluate. Routes stay inside their die. `(auto: DieSurfaceTests, DieWiringPolicyTests, UiFlowDieWorkSurfaceTests)`
 - [ ] Wiring across dies: two facing edge couplers become a die-to-die link (the far die aligns, one undo step); any other wire from one die to another is refused with the hint "Chips connect only through edge couplers"; Design Checks flag a legacy cross-die waveguide. `(auto: CrossDieWiringTests, DieWiringPolicyTests, UiFlowDieWorkSurfaceTests)`
@@ -100,6 +111,10 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Old multi-chiplet files open as dies sized to their content; the shipped chiplet examples and "Two Dies - SOI and SiN Edge-Coupler Link" run in System with the link loss shown. `(auto: DiePersistenceTests, TwoDieExampleTests)`
 
 ## 6. Routing & connections
+
+- [ ] Unchanged automatic routes tolerate neighbouring padding only inside their own pin corridors, avoiding redundant searches; component bodies and frozen group paths still force rerouting. `(auto: PinCorridorOwnershipTests)`
+- [ ] Enabling adaptive crossings in Settings starts one routing pass on the open design without another edit; restoring the preference, opening Settings, or enabling it on an empty canvas does not start a pass. `(auto: AdaptiveCrossingToggleTests)`
+- [ ] While a complex route is computing, the status keeps the connection count and advances elapsed seconds; cancellation and completion stop periodic updates and ignore late phase callbacks. `(auto: RoutingOrchestratorProgressTests)`
 
 - [ ] Connect mode draws a waveguide between two pins. `(auto: ViewModels/Canvas/ConnectModeAutoSwitchTests)`
 - [ ] A* routing finds a path around obstacles and respects grid ownership. `(manual)`
@@ -153,10 +168,13 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 9. Analysis panels
 
+- [ ] Transient trace visibility toggles preserve chart zoom and existing sample buffers. Tracking long transient or spectrum traces remains responsive; exact samples, interpolated values, duplicate coordinates, and unsorted data retain their tracker behavior. `(auto: TimeTraceVisibilityTests, XTrackingLineSeriesTests; manual: large transient result)`
+
 - [ ] ONA wavelength sweep panel measures transmission across a wavelength range. `(auto: OnaAnalysis/OnaAnalyzerSimulationTests)`
 - [ ] Wavelength spectrum panel plots transmission curves. `(auto: WavelengthSpectrum/WavelengthSpectrumViewModelTests)`
 - [ ] Spectrum tab "Coherent interference" toggle: EBeam MZI sweep shows fringes (FSR = λ²/(n_g·ΔL)) when on, none when off; the flag round-trips through .lun save/load; (?) help shows the ΔL→fringes animation. `(auto: Integration/EBeamMziSpectrumToggleTests, Persistence/CoherentPropagationPhasePersistenceTests)`
 - [ ] Time-domain / transient analysis panel plots signals over time. `(auto: TimeDomainSimulation/TimeDomainSimulatorTests)`
+- [ ] Transient initialization shares one peak scan per trace between legend and table, preserving signal filtering, stable peak ordering, and first-peak time; plot buffers are allocated to their final sample count. `(auto: TimeTracePeakTests, TimeTracePlotBuilderTests; manual: large transient result)`
 - [ ] Eye diagram panel opens and renders eye metrics / BER. `(auto: EyeDiagram/EyeDiagramBuilderTests, BerEstimatorTests)`
 - [ ] Monte Carlo panel runs fabrication-variance sweeps. `(auto: MonteCarloAnalysis/MonteCarloRunnerTests)`
 - [ ] Circuit optimization panel suggests and applies component variants. `(auto: CircuitOptimization/CircuitOptimizerTests)`
@@ -210,7 +228,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] PhotonTorch export dialog configures and writes an export script. `(auto: Export/PhotonTorchExporterTests)`
 - [ ] Verilog-A export produces a SPICE-compatible model. `(auto: Export/VerilogAExporterTests, Export/VerilogASimulationTests)`
 - [ ] Export menu → "Netlist (YAML)" saves the gdsfactory YAML netlist to a .yml file; the status bar confirms. There is no Netlist tab in the analysis dock any more (the Export menu is the single entry point). `(auto: Export/ExportMenuViewModelTests, Export/Netlist/NetlistViewModelTests)`
-- [ ] Export menu → "Netlist (YAML) → Clipboard" copies the netlist without a file dialog; the status bar confirms. `(auto: Export/ExportMenuViewModelTests)`
+- [ ] Export menu → "Netlist (YAML) → Clipboard" copies the netlist without a file dialog; the menu stays open while copying, closes only after success, and the status bar confirms. Clipboard failures keep the menu open and show an error. `(auto: Export/ExportMenuViewModelTests, NetlistClipboardMenuTests)`
 - [ ] Export guards warn when the design contains broken routes or missing PDKs. `(auto: Export/GdsExportGuardTests, Export/NazcaExportSkipsBrokenConnectionsTests)`
 - [ ] Foundry environment selection resolves a working Python/Nazca interpreter. `(auto: Export/GdsExportEnvironmentSelectionTests, Export/ProcessLaunchFactoryTests)`
 - [ ] PDK resolution check validates all Nazca functions resolve for export. `(auto: Export/PdkResolution/PdkFunctionResolutionServiceTests)`

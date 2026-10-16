@@ -43,7 +43,9 @@ public partial class RoutingSettingsViewModel : ObservableObject
 
     partial void OnCrossingInsertionEnabledChanged(bool value)
     {
-        if (_crossingBinder != null)
-            _crossingBinder.IsEnabled = value;
+        if (_crossingBinder == null) return;
+        _crossingBinder.IsEnabled = value;
+        if (value && Canvas.ConnectionManager.Connections.Count > 0)
+            _ = Canvas.RecalculateRoutesAsync();
     }
 }

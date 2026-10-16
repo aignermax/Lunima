@@ -18,11 +18,63 @@ namespace UnitTests.ViewModels.Canvas;
 /// The assertions on "n/m" substrings are locale-independent; English is pinned so the
 /// exact wording checks stay stable regardless of the CI/dev OS language.
 /// </summary>
-public class RoutingOrchestratorProgressTests
+public partial class RoutingOrchestratorProgressTests
 {
     public RoutingOrchestratorProgressTests()
     {
         LocalizationService.Instance.SetLanguage(SupportedLanguage.English.Code);
+    }
+
+    [AvaloniaFact]
+    public async Task ComplexRoute_KeepsProgressAliveUntilCancelled_AndIgnoresLateCallbacks()
+    {
+        Action? reportComplex = null;
+        var orchestrator = CreateOrchestratorWithDeferredConnections(1,
+            manager => reportComplex = () => manager.OnComplexRouteStarted?.Invoke());
+        using var parked = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        orchestrator.BuildConnectionProcessFloorProvider = () => (_, _) =>
+        {
+            reportComplex!();
+            parked.Set();
+            release.Wait();
+            return null;
+        };
+        int updates = 0;
+        orchestrator.StateChanged += () => updates++;
+        var task = orchestrator.RecalculateRoutesAsync();
+        try
+        {
+            parked.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
+            Dispatcher.UIThread.RunJobs();
+            var first = orchestrator.RoutingStatusText;
+            first.ShouldContain("0/1");
+            first.ShouldContain(LocalizationService.Instance.Translate("Routing.Status.ComplexPath"));
+            var deadline = DateTime.UtcNow.AddSeconds(4);
+            while (orchestrator.RoutingStatusText == first && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(20);
+                Dispatcher.UIThread.RunJobs();
+            }
+            orchestrator.RoutingStatusText.ShouldNotBe(first, "elapsed time must advance before a connection completes");
+            orchestrator.RoutingStatusText.ShouldContain("0/1");
+
+            orchestrator.CancelRouting();
+            int afterCancel = updates;
+            reportComplex!();
+            await Task.Delay(1100);
+            Dispatcher.UIThread.RunJobs();
+            updates.ShouldBe(afterCancel, "cancelled passes must stop heartbeat and queued phase updates");
+        }
+        finally
+        {
+            release.Set();
+            await PumpUntilDone(task);
+        }
+        int afterFinish = updates;
+        await Task.Delay(1100);
+        Dispatcher.UIThread.RunJobs();
+        updates.ShouldBe(afterFinish, "completed passes must dispose the heartbeat");
     }
 
     [AvaloniaFact]
@@ -132,10 +184,12 @@ public class RoutingOrchestratorProgressTests
     /// the total. The ViewModel collections stay empty: the pass only reads them for the
     /// obstacle rebuild and the repaint notifications.
     /// </summary>
-    private static RoutingOrchestrator CreateOrchestratorWithDeferredConnections(int connectionCount)
+    private static RoutingOrchestrator CreateOrchestratorWithDeferredConnections(
+        int connectionCount, Action<WaveguideConnectionManager>? configureManager = null)
     {
         var router = new WaveguideRouter();
         var manager = new WaveguideConnectionManager(router);
+        configureManager?.Invoke(manager);
         var orchestrator = new RoutingOrchestrator(
             router,
             manager,

@@ -92,6 +92,12 @@ public class DieProcessScopeTests
     {
         var vm = ShowcaseCircuit.CreateStagedViewModel();
         await TwoDieExampleBuilder.BuildAsync(vm);
+        var last = vm.ScopeDie;
+        vm.Canvas.SelectedComponent = null;
+        vm.ScopeDie.ShouldBe(last, "deselecting an object does not leave the active work surface");
+        // Explicitly leave the remembered scope to exercise the assembly summary below.
+        vm.Canvas.SelectedComponent = vm.Canvas.Components.First();
+        vm.Canvas.Surface.LastWorkedDie = null;
         vm.Canvas.SelectedComponent = null;
 
         vm.ActiveProcessLabel.ShouldContain("2");

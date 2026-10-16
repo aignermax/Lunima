@@ -37,7 +37,7 @@ public partial class AnalysisOutputPanelViewModel : ObservableObject
     public AnalysisOutputPanelViewModel()
     {
         // Live language switch: the "(automatic)" placeholder must re-translate.
-        LocalizationService.Instance.PropertyChanged += (_, _) => Refresh();
+        LocalizationWeakSubscription.Subscribe(this, static (self, _) => self.Refresh());
         Refresh();
     }
 

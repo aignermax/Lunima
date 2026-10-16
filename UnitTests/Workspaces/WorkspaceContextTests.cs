@@ -151,19 +151,64 @@ public class WorkspaceContextTests
         vm.IsFullLibrary.ShouldBeTrue();
     }
 
-    [Fact]
-    public void ChipletsPanel_ListsTopLevelGroups_AndActivatingOneSelectsIt()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ChipletsPanel_SingleChipListsItsDie_NotLogicGroups(int gateCount)
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
-        var chiplet = LogicGateFixtureFactory.CreateCombinerGroup();
-        chiplet.GroupName = "Die A";
-        vm.Canvas.AddComponent(chiplet);
+        for (int i = 0; i < gateCount; i++)
+            vm.Canvas.AddComponent(LogicGateFixtureFactory.CreateCombinerGroup());
 
         vm.LeftRail.ShowChipletsCommand.Execute(null);
 
         var row = vm.SystemOverview.Chiplets.ShouldHaveSingleItem();
-        row.Name.ShouldBe("Die A");
+        row.Name.ShouldBe("Die 1");
+        row.IsDie.ShouldBeTrue();
+        vm.SystemOverview.IsAssembly.ShouldBeFalse();
         vm.SystemOverview.ActivateChipletCommand.Execute(row);
-        vm.Canvas.SelectedComponent?.Component.ShouldBeSameAs(chiplet);
+        vm.Canvas.ChipDie.IsSelected.ShouldBeTrue();
+        vm.Canvas.Components.Count.ShouldBe(gateCount, "viewing the chip must not convert or mutate the design");
+    }
+
+    [Fact]
+    public void ChipletsPanel_AfterCreationAndUndo_TracksActualDies()
+    {
+        var vm = MainViewModelTestHelper.CreateMainViewModel();
+        vm.Canvas.AddComponent(LogicGateFixtureFactory.CreateCombinerGroup());
+        vm.NewDie.Prepare();
+        vm.NewDie.CreateCommand.Execute(null);
+        vm.RefreshSystemOverview();
+        vm.SystemOverview.Chiplets.Count.ShouldBe(2);
+        vm.SystemOverview.Chiplets.ShouldAllBe(row => row.IsDie);
+        vm.SystemOverview.IsAssembly.ShouldBeTrue();
+        vm.CommandManager.Undo();
+        vm.RefreshSystemOverview();
+        vm.SystemOverview.Chiplets.ShouldHaveSingleItem().Name.ShouldBe("Die 1");
+        vm.SystemOverview.IsAssembly.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(false, 1)]
+    [InlineData(true, 2)]
+    public void ChipletsPanel_InsideLogicGroupStillListsRootDies(bool assembly, int expectedDies)
+    {
+        var vm = MainViewModelTestHelper.CreateMainViewModel();
+        var group = LogicGateFixtureFactory.CreateCombinerGroup();
+        vm.Canvas.AddComponent(group);
+        if (assembly)
+        {
+            vm.NewDie.Prepare();
+            vm.NewDie.CreateCommand.Execute(null);
+        }
+        vm.Canvas.EnterGroupEditMode(group);
+        vm.SystemOverview.Chiplets.Clear();
+        vm.RefreshSystemOverview();
+        vm.SystemOverview.Chiplets.Count.ShouldBe(expectedDies);
+        var row = vm.SystemOverview.Chiplets.First();
+        row.Name.ShouldBe("Die 1");
+        vm.SystemOverview.ActivateChipletCommand.Execute(row);
+        vm.Canvas.IsInGroupEditMode.ShouldBeFalse();
+        vm.Canvas.SelectedComponent!.Component.ShouldBeSameAs(row.Group);
     }
 }

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core;
 using CAP_Core.Grid;
+using CAP_Core.Components.Dies;
 using CAP.Avalonia.Services;
 
 namespace CAP.Avalonia.ViewModels.Canvas;
@@ -40,6 +41,9 @@ public partial class ChipSizeViewModel : ObservableObject
     public ObservableCollection<ChipSizePreset> Presets { get; }
         = new(ChipSizeConfiguration.Presets);
 
+    /// <summary>Root dimensions are editable only in designs without explicit dies.</summary>
+    public bool CanEditRootChipSize => !DieAssembly.IsAssembly(_canvas.Groups.RootComponents.Select(c => c.Component));
+
     // ── Constructor ───────────────────────────────────────────────────────
 
     /// <summary>
@@ -61,6 +65,16 @@ public partial class ChipSizeViewModel : ObservableObject
         _selectedPreset    = FindMatchingPreset(_widthMillimeters, _heightMillimeters);
 
         ApplyToCanvas(_widthMillimeters * UmPerMm, _heightMillimeters * UmPerMm);
+        _canvas.Components.CollectionChanged += (_, _) => RefreshScope();
+        _canvas.Groups.EditStateChanged += RefreshScope;
+        _canvas.DiesChanged += RefreshScope;
+    }
+
+    private void RefreshScope()
+    {
+        OnPropertyChanged(nameof(CanEditRootChipSize));
+        ApplyCommand.NotifyCanExecuteChanged();
+        StatusText = string.Empty;
     }
 
     // ── Property change handlers ──────────────────────────────────────────
@@ -96,9 +110,12 @@ public partial class ChipSizeViewModel : ObservableObject
     /// Applies the current width × height to the canvas and saves the user default.
     /// Reports a count of out-of-bounds components in the StatusText.
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanEditRootChipSize))]
     private void Apply()
     {
+        if (!CanEditRootChipSize)
+            return;
+
         double widthUm  = _widthMillimeters  * UmPerMm;
         double heightUm = _heightMillimeters * UmPerMm;
 

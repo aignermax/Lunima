@@ -43,7 +43,7 @@ public static class ConnectionStyleRouteBuilder
     private const double MinArcSweepDegrees = 2.0;
 
     /// <summary>Above this |turn| the tangent length r·tan(|sweep|/2) diverges and the corner
-    /// construction becomes numerically unstable; fall back to the S-bend instead.</summary>
+    /// construction becomes numerically unstable; defer to the router instead.</summary>
     private const double MaxArcSweepDegrees = 179.0;
 
     /// <summary>Below this lateral offset (µm) facing pins with no S-bend solution count as
@@ -111,8 +111,8 @@ public static class ConnectionStyleRouteBuilder
 
     /// <summary>
     /// Builds the Bend route as stub–arc–stub so it reaches BOTH pins exactly.
-    /// Degenerate layouts (parallel axes, corner behind a pin) fall back to the two-arc S
-    /// via <see cref="TryBuildArcS"/>; when even that is impossible the route is null (A*).
+    /// Matching travel headings fall back to the two-arc S via <see cref="TryBuildArcS"/>.
+    /// Other degenerate layouts (U-turn, corner behind a pin) return null for A*.
     /// </summary>
     private static RoutedPath? BuildArc(double sx, double sy, double startAngle,
                                         double arrivalAngle, double ex, double ey,
@@ -126,8 +126,12 @@ public static class ConnectionStyleRouteBuilder
                 return arcPath;
         }
 
-        // Parallel pins (sweep ≈ 0 / 180°) or a corner not ahead of both pins: a single arc
-        // cannot join the pins, so fall back to the symmetric S-bend (or a collinear straight).
+        // An S preserves the start heading. It cannot replace a U-turn or a failed
+        // angled corner: that would enter the target from behind its outward normal.
+        if (Math.Abs(sweep) >= MinArcSweepDegrees)
+            return null;
+
+        // Only matching travel headings admit the symmetric S (or collinear straight).
         return TryBuildArcS(sx, sy, startAngle, ex, ey, minBendRadius, allowedBendRadii);
     }
 

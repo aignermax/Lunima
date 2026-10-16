@@ -106,7 +106,7 @@ public class UiFlowChipletAssemblyTests
 
     /// <summary>
     /// Presses the flyout's Create button: through the window when the flyout lives in its
-    /// overlay layer, otherwise (separate popup root) by invoking the button's own command.
+    /// overlay layer, otherwise (separate popup root) through keyboard activation.
     /// </summary>
     private static string ClickCreate(MainWindow win, Button newDieButton, CAP.Avalonia.ViewModels.MainViewModel vm)
     {
@@ -121,16 +121,11 @@ public class UiFlowChipletAssemblyTests
         }
         else
         {
-            how = create == null ? "button not found" : $"popup root {create.GetVisualRoot()?.GetType().Name}";
+            create.ShouldNotBeNull("the flyout must expose its Create button");
+            create!.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
+            how = "keyboard activation in popup";
         }
         UiInput.RunJobs();
-        if (vm.Canvas.Dies.RootDies.Count == 0)
-        {
-            (create?.Command ?? vm.NewDie.CreateCommand).Execute(null);
-            newDieButton.Flyout?.Hide();
-            UiInput.RunJobs();
-            how += " → command";
-        }
         return how;
     }
 

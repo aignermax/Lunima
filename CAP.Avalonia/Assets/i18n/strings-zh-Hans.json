@@ -1320,6 +1320,9 @@
   "Routing.Reroute.Selected": "重新布线所选",
   "Routing.Reroute.Title": "导入的布线：",
   "Routing.Status.ComplexPath": "正在计算复杂路径…",
+  "Routing.Status.CrossingInsertion": "正在插入交叉…",
+  "Routing.Status.Finishing": "正在优化路径…",
+  "Routing.Status.ContentionRepair": "正在修复路径冲突…",
   "Routing.Status.Progress": "正在布线 {0}/{1} 条连接 · {2} 秒",
   "Routing.Status.Stop": "停止",
   "Routing.Status.StopTip": "停止正在进行的重新布线。已完成布线的连接保留新路径，其余保持不变。",
@@ -1390,6 +1393,7 @@
   "Settings.Ai.Description": "配置右侧面板 AI 设计助手使用的 Anthropic Claude API 密钥。密钥仅存储在本地，绝不会传输到其他地方。",
   "Settings.Ai.Title": "AI 助手",
   "Settings.ChipSize.Description": "设置 PIC 芯片的物理尺寸。放置在边界之外的元件会在设计检查中被标记，但不会被移动。范围：每个方向 0.25–100 mm。",
+  "Settings.ChipSize.DieScopeDescription": "每个裸片都有独立的尺寸。在 System 工作区中选择裸片，即可在属性中修改其尺寸。此处的根芯片设置不会调整裸片或组件的尺寸。",
   "Settings.ChipSize.GridPrefix": "网格：",
   "Settings.ChipSize.Height": "高度 (mm)：",
   "Settings.ChipSize.Preset": "预设：",
@@ -2114,5 +2118,9 @@
   "Context.ShowInLayout": "在版图中显示",
   "Context.ShowInLayoutTip": "切换到版图并以此元素为中心",
   "Context.EditGate": "编辑逻辑门…",
-  "Context.EditGateTip": "打开此逻辑门的创建步骤：引脚角色、仿真、阈值、保存。"
+  "Context.EditGateTip": "打开此逻辑门的创建步骤：引脚角色、仿真、阈值、保存。",
+  "Dies.ProcessChange.Title": "更改芯粒工艺？",
+  "Dies.ProcessChange.Preview": "更改为 {0}？这将删除 {1} 个不兼容的元件及其关联的 {2} 条连接。兼容的元件将保留。撤销一次即可恢复全部内容。",
+  "Dies.ProcessChange.Cancel": "取消",
+  "Dies.ProcessChange.Confirm": "更改工艺"
 }

@@ -14,6 +14,26 @@ namespace CAP.Avalonia.Controls.Plotting;
 /// </summary>
 public class XTrackingLineSeries : LineSeries
 {
+    private bool _hasSortedFinitePoints;
+
+    /// <inheritdoc/>
+    protected override void UpdateData()
+    {
+        base.UpdateData();
+        var points = ActualPoints;
+        _hasSortedFinitePoints = points != null && points.Count > 0;
+        if (points == null) return;
+        for (int i = 0; i < points.Count; i++)
+        {
+            if (!double.IsFinite(points[i].X) || !double.IsFinite(points[i].Y)
+                || (i > 0 && points[i].X <= points[i - 1].X))
+            {
+                _hasSortedFinitePoints = false;
+                break;
+            }
+        }
+    }
+
     /// <summary>
     /// Optional formatter for the tracker label given the interpolated data point.
     /// Keeps this control domain-agnostic: callers supply their own units
@@ -42,6 +62,24 @@ public class XTrackingLineSeries : LineSeries
             return Hit(points[0], 0);
         if (targetX >= points[^1].X)
             return Hit(points[^1], points.Count - 1);
+
+        if (_hasSortedFinitePoints && double.IsFinite(targetX))
+        {
+            int low = 1;
+            int high = points.Count - 1;
+            while (low < high)
+            {
+                int middle = low + (high - low) / 2;
+                if (points[middle].X < targetX)
+                    low = middle + 1;
+                else
+                    high = middle;
+            }
+            var a = points[low - 1];
+            var b = points[low];
+            double fraction = (targetX - a.X) / (b.X - a.X);
+            return Hit(new DataPoint(targetX, a.Y + fraction * (b.Y - a.Y)), low - 1);
+        }
 
         for (int i = 0; i < points.Count - 1; i++)
         {

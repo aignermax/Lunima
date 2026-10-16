@@ -287,7 +287,7 @@
                             <controls:Icon Data="{StaticResource Icon.FileInput}"/>
                         </Button>
                         <!-- Unified Export flyout — add formats via IExportFormat + ExportMenuViewModel, no axaml changes needed -->
-                        <Button Classes="toolbar menu" ToolTip.Tip="{loc:Localize Toolbar.ExportTip}">
+                        <Button x:Name="ExportMenuButton" Classes="toolbar menu" ToolTip.Tip="{loc:Localize Toolbar.ExportTip}">
                             <StackPanel Orientation="Horizontal" Spacing="2">
                                 <controls:Icon Data="{StaticResource Icon.FileOutput}"/>
                                 <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
@@ -301,6 +301,7 @@
                                                 <DataTemplate>
                                                     <Button Classes="menuItem"
                                                             Command="{Binding ExportCommand}"
+                                                            Click="ExportMenuItem_Click"
                                                             ToolTip.Tip="{Binding Description}">
                                                         <Grid ColumnDefinitions="Auto,*">
                                                             <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.FileOutput}"/>

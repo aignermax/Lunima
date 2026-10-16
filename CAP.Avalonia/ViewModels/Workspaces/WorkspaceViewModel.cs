@@ -64,7 +64,7 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         _dock = dock ?? throw new ArgumentNullException(nameof(dock));
         _dock.ApplyWorkspaceTabs(Profile.Tabs);
-        LocalizationService.Instance.PropertyChanged += OnLanguageChanged;
+        LocalizationWeakSubscription.Subscribe(this, static (self, args) => self.OnLanguageChanged(null, args));
     }
 
     /// <summary>What the active workspace means (tabs, Run label).</summary>

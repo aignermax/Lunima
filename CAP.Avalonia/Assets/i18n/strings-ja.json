@@ -1320,6 +1320,9 @@
   "Routing.Reroute.Selected": "選択を再ルーティング",
   "Routing.Reroute.Title": "インポート経路：",
   "Routing.Status.ComplexPath": "複雑なパスを計算中…",
+  "Routing.Status.CrossingInsertion": "交差を挿入中…",
+  "Routing.Status.Finishing": "経路を調整中…",
+  "Routing.Status.ContentionRepair": "経路の競合を修復中…",
   "Routing.Status.Progress": "ルーティング中 {0}/{1} 接続 · {2} 秒",
   "Routing.Status.Stop": "停止",
   "Routing.Status.StopTip": "実行中の再ルーティングを停止します。ルーティング済みの接続は新しい経路を保持し、残りはそのままです。",
@@ -1390,6 +1393,7 @@
   "Settings.Ai.Description": "右パネルの AI 設計アシスタントが使用する Anthropic Claude API キーを設定します。キーはローカルに保存され、他の場所には送信されません。",
   "Settings.Ai.Title": "AI アシスタント",
   "Settings.ChipSize.Description": "PIC チップの物理的なフットプリントを設定します。境界の外に配置されたコンポーネントはデザインチェックでフラグが付きますが、移動はされません。範囲: 各寸法 0.25～100 mm。",
+  "Settings.ChipSize.DieScopeDescription": "各ダイには独自の寸法があります。System ワークスペースでダイを選択し、プロパティでサイズを編集してください。このチップ設定ではダイやアセンブリのサイズは変更されません。",
   "Settings.ChipSize.GridPrefix": "グリッド: ",
   "Settings.ChipSize.Height": "高さ (mm):",
   "Settings.ChipSize.Preset": "プリセット:",
@@ -2114,5 +2118,9 @@
   "Context.ShowInLayout": "レイアウトで表示",
   "Context.ShowInLayoutTip": "この要素を中心にレイアウトへ切り替えます",
   "Context.EditGate": "ゲートを編集…",
-  "Context.EditGateTip": "このゲートの作成手順を開きます：ピンの役割、シミュレーション、しきい値、保存。"
+  "Context.EditGateTip": "このゲートの作成手順を開きます：ピンの役割、シミュレーション、しきい値、保存。",
+  "Dies.ProcessChange.Title": "ダイのプロセスを変更しますか？",
+  "Dies.ProcessChange.Preview": "{0} に変更しますか？互換性のないコンポーネント {1} 個と関連する接続 {2} 本が削除されます。互換性のあるコンポーネントは保持されます。「元に戻す」1回ですべて復元できます。",
+  "Dies.ProcessChange.Cancel": "キャンセル",
+  "Dies.ProcessChange.Confirm": "プロセスを変更"
 }

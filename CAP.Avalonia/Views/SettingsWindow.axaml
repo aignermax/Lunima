@@ -390,10 +390,12 @@
                     <DataTemplate DataType="{x:Type vmCanvas:ChipSizeViewModel}">
                         <StackPanel>
                             <TextBlock Classes="headline" Text="{loc:Localize Settings.ChipSize.Title}"/>
-                            <TextBlock Classes="caption" Text="{loc:Localize Settings.ChipSize.Description}"
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.ChipSize.Description}" IsVisible="{Binding CanEditRootChipSize}"
                                        TextWrapping="Wrap" Margin="0,4,0,8"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.ChipSize.DieScopeDescription}"
+                                       IsVisible="{Binding !CanEditRootChipSize}" TextWrapping="Wrap" Margin="0,4,0,8"/>
 
-                            <Border Classes="setting">
+                            <Border Classes="setting" IsEnabled="{Binding CanEditRootChipSize}">
                                 <Grid ColumnDefinitions="*,24,200">
                                     <TextBlock Classes="strong" Text="{loc:Localize Settings.ChipSize.Preset}" VerticalAlignment="Center"/>
                                     <ComboBox Grid.Column="2" ItemsSource="{Binding Presets}"
@@ -402,7 +404,7 @@
                                               HorizontalAlignment="Stretch"/>
                                 </Grid>
                             </Border>
-                            <Border Classes="setting">
+                            <Border Classes="setting" IsEnabled="{Binding CanEditRootChipSize}">
                                 <Grid ColumnDefinitions="*,24,200">
                                     <TextBlock Classes="strong" Text="{loc:Localize Settings.ChipSize.Width}" VerticalAlignment="Center"/>
                                     <NumericUpDown Grid.Column="2" Value="{Binding WidthMillimeters}"
@@ -410,7 +412,7 @@
                                                    Increment="1" FormatString="F2"/>
                                 </Grid>
                             </Border>
-                            <Border Classes="setting">
+                            <Border Classes="setting" IsEnabled="{Binding CanEditRootChipSize}">
                                 <Grid ColumnDefinitions="*,24,200">
                                     <TextBlock Classes="strong" Text="{loc:Localize Settings.ChipSize.Height}" VerticalAlignment="Center"/>
                                     <NumericUpDown Grid.Column="2" Value="{Binding HeightMillimeters}"

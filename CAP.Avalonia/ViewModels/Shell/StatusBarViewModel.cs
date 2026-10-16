@@ -44,7 +44,7 @@ public partial class StatusBarViewModel : ObservableObject
         _canvas.Selection.SelectedComponents.CollectionChanged += (_, _) => UpdateSelection();
         _canvas.Selection.SelectedConnections.CollectionChanged += (_, _) => UpdateSelection();
         _interaction.PropertyChanged += OnInteractionPropertyChanged;
-        _localization.PropertyChanged += (_, _) => Refresh();
+        LocalizationWeakSubscription.Subscribe(this, static (self, _) => self.Refresh(), _localization);
         Refresh();
     }
 

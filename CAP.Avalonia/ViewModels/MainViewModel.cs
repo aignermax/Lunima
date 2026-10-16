@@ -921,11 +921,11 @@ public partial class MainViewModel : ObservableObject
         // Re-read the VM-side one-time translations when the UI language switches (field bug
         // round 5). Filtered to ActiveLanguageCode because SetLanguage raises several
         // notifications ("Item"/"Item[]" for the AXAML indexer bindings) per switch.
-        LocalizationService.Instance.PropertyChanged += (_, e) =>
+        LocalizationWeakSubscription.Subscribe(this, static (self, e) =>
         {
             if (e.PropertyName == nameof(LocalizationService.ActiveLanguageCode))
-                OnUiLanguageChanged();
-        };
+                self.OnUiLanguageChanged();
+        });
 
         // One zoom-to-fit body for both post-content triggers — design load and
         // GDS import placement: prefer the live viewport size over the caller's

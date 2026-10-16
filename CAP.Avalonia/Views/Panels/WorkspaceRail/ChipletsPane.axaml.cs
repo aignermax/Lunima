@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Workspaces;
 
@@ -27,7 +28,9 @@ public partial class ChipletsPane : UserControl
 
     private void CreateDie_Click(object? sender, RoutedEventArgs e)
     {
-        NewDieButton.Flyout?.Hide();
+        // Button executes its bound command after raising Click. Closing synchronously
+        // detaches the popup's bindings and clears Command before it can run.
+        Dispatcher.UIThread.Post(() => NewDieButton.Flyout?.Hide());
     }
 
     private void ChipletRow_DoubleTapped(object? sender, TappedEventArgs e)
