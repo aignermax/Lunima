@@ -679,7 +679,7 @@
   "IsaPlayground.PhotonicAdderDataMemoryToggle": "在光子芯片上计算 ADD 并保存数据 RAM",
   "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle": "在光子芯片上计算 ADD 并保存数据 RAM 和累加器",
   "IsaPlayground.PhotonicAccumulatorToggle": "在光子芯片上保存累加器",
-  "IsaPlayground.PhotonicAdderHint": "打开 ALU + RAM + ACC 示例（一次包含所有单元）或 4 位示例（加法器、NOT 4 位、AND 4 位、逻辑单元 4 位、零检测 4 位、RAM 4x4），然后在“逻辑”选项卡中点击“构建逻辑网络”。",
+  "IsaPlayground.PhotonicAdderHint": "打开适用示例，然后构建其逻辑网络。也可以在“逻辑”中构建自己的兼容电路。",
   "IsaPlayground.StatusPhotonicAdd": "光子 ADD {0} + {1} = {2} — 光耗时 {3:0.##} ps（{4} 个门）",
   "IsaPlayground.StatusPhotonicNot": "光子 NOT {0} = {1}（{2} 个门）",
   "IsaPlayground.StatusPhotonicAnd": "光子 AND {0} & {1} = {2}（{3} 个门）",
@@ -2122,5 +2122,11 @@
   "Dies.ProcessChange.Title": "更改芯粒工艺？",
   "Dies.ProcessChange.Preview": "更改为 {0}？这将删除 {1} 个不兼容的元件及其关联的 {2} 条连接。兼容的元件将保留。撤销一次即可恢复全部内容。",
   "Dies.ProcessChange.Cancel": "取消",
-  "Dies.ProcessChange.Confirm": "更改工艺"
+  "Dies.ProcessChange.Confirm": "更改工艺",
+  "IsaPlayground.OpenSuitableExample": "打开适用示例",
+  "IsaPlayground.BuildExampleNetwork": "构建逻辑网络",
+  "IsaPlayground.ExampleMissing": "此安装中没有适用的示例。",
+  "IsaPlayground.ExampleReady": "示例已打开。下一步请构建逻辑网络。",
+  "IsaPlayground.ExampleActionFailed": "无法打开示例。",
+  "IsaPlayground.ExampleBuildFailed": "无法构建网络。请检查逻辑分析消息后重试。"
 }

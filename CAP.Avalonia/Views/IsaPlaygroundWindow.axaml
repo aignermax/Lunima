@@ -68,6 +68,14 @@
                 <TextBlock Classes="caption" Text="{loc:Localize IsaPlayground.PhotonicAdderHint}"
                            TextWrapping="Wrap" MaxWidth="260"
                            IsVisible="{Binding !IsAnyPhotonicAvailable}"/>
+                <StackPanel Spacing="4" MaxWidth="260" IsVisible="{Binding !IsAnyPhotonicAvailable}">
+                    <Button x:Name="OpenSuitableIsaExampleButton" Content="{loc:Localize IsaPlayground.OpenSuitableExample}"
+                            Command="{Binding OpenSuitableExampleCommand}" IsVisible="{Binding !HasOpenedSuitableExample}"/>
+                    <Button x:Name="BuildIsaExampleNetworkButton" Content="{loc:Localize IsaPlayground.BuildExampleNetwork}"
+                            Command="{Binding BuildExampleNetworkCommand}" IsVisible="{Binding HasOpenedSuitableExample}"/>
+                    <TextBlock Classes="caption" Text="{Binding ExampleActionStatus}" TextWrapping="Wrap"
+                               IsVisible="{Binding ExampleActionStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
                 <TextBlock Classes="caption success" Text="{Binding PhotonicStatusText}"
                            TextWrapping="Wrap" MaxWidth="260"
                            IsVisible="{Binding PhotonicStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>

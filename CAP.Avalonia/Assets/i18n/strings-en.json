@@ -679,7 +679,7 @@
   "IsaPlayground.PhotonicAdderDataMemoryToggle": "Compute ADD and keep the data RAM on the photonic chip",
   "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle": "Compute ADD and keep the data RAM and the accumulator on the photonic chip",
   "IsaPlayground.PhotonicAccumulatorToggle": "Keep the accumulator on the photonic chip",
-  "IsaPlayground.PhotonicAdderHint": "Open the ALU + RAM + ACC example (all units at once) or a 4-bit example (adder, NOT 4-bit, AND 4-bit, Logic Unit 4-bit, Zero Detect 4-bit, RAM 4x4) and press Build logic network in the Logic tab.",
+  "IsaPlayground.PhotonicAdderHint": "Open a suitable example, then build its logic network. You can also build your own compatible circuit in Logic.",
   "IsaPlayground.StatusPhotonicAdd": "Photonic ADD {0} + {1} = {2} — the light took {3:0.##} ps ({4} gates)",
   "IsaPlayground.StatusPhotonicNot": "Photonic NOT {0} = {1} ({2} gates)",
   "IsaPlayground.StatusPhotonicAnd": "Photonic AND {0} & {1} = {2} ({3} gates)",
@@ -2122,5 +2122,11 @@
   "Dies.ProcessChange.Title": "Change die process?",
   "Dies.ProcessChange.Preview": "Change to {0}? This removes {1} incompatible components and {2} connected wires. Compatible components stay. One Undo restores everything.",
   "Dies.ProcessChange.Cancel": "Cancel",
-  "Dies.ProcessChange.Confirm": "Change process"
+  "Dies.ProcessChange.Confirm": "Change process",
+  "IsaPlayground.OpenSuitableExample": "Open suitable example",
+  "IsaPlayground.BuildExampleNetwork": "Build logic network",
+  "IsaPlayground.ExampleMissing": "No suitable example is available in this installation.",
+  "IsaPlayground.ExampleReady": "Example opened. Build its logic network next.",
+  "IsaPlayground.ExampleActionFailed": "The example could not be opened.",
+  "IsaPlayground.ExampleBuildFailed": "The network could not be built. Check the Logic analysis messages and try again."
 }
