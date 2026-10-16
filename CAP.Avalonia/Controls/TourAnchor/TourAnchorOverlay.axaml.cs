@@ -75,6 +75,7 @@ public partial class TourAnchorOverlay : UserControl
             UpdatePolling();
         else if (change.Property == DemonstrateProperty || change.Property == TargetItemProperty ||
                  change.Property == TargetCanvasPointProperty || change.Property == TargetPinProperty ||
+                 change.Property == TargetCanvasDestinationPointProperty ||
                  change.Property == ConnectionTargetPinProperty)
             RefreshAnchor();
     }

@@ -15,6 +15,38 @@ namespace UnitTests.UI;
 public class VisualGuideOverlayTests
 {
     [AvaloniaFact]
+    public void CanvasDrag_DemonstratesActualWorldEndpoints_WithoutEditing()
+    {
+        var vm = new DesignCanvasViewModel();
+        var canvas = new DesignCanvas { Name = "Canvas", ViewModel = vm };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = "Canvas", TargetCanvasPoint = new Point(100, 100) };
+        var destinationProperty = typeof(TourAnchorOverlay).GetProperty("TargetCanvasDestinationPoint");
+        Assert.NotNull(destinationProperty);
+        destinationProperty.SetValue(overlay, new Point(9000, 8000));
+        var window = new Window { Width = 800, Height = 600, Content = new Avalonia.Controls.Grid { Children = { canvas, overlay } } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            overlay.TargetName = null;
+            overlay.TargetName = "Canvas";
+            var reveal = overlay.FindControl<Button>("GuideShowTarget")!;
+            Assert.True(reveal.IsVisible);
+            reveal.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var trail = overlay.FindControl<global::Avalonia.Controls.Shapes.Line>("GuideTrail")!;
+            Assert.True(trail.IsVisible);
+            Assert.NotEqual(trail.StartPoint, trail.EndPoint);
+            Assert.False(reveal.IsVisible);
+            Assert.Empty(vm.Components);
+            Assert.Empty(vm.Connections);
+            overlay.IsVisible = false;
+            Assert.False(trail.IsVisible);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void OffscreenConnectionTarget_RevealsBothPins()
     {
         var vm = new DesignCanvasViewModel();

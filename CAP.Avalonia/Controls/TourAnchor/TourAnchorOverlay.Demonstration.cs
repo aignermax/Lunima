@@ -16,6 +16,8 @@ public partial class TourAnchorOverlay
         AvaloniaProperty.Register<TourAnchorOverlay, object?>(nameof(TargetItem));
     public static readonly StyledProperty<Point?> TargetCanvasPointProperty =
         AvaloniaProperty.Register<TourAnchorOverlay, Point?>(nameof(TargetCanvasPoint));
+    public static readonly StyledProperty<Point?> TargetCanvasDestinationPointProperty =
+        AvaloniaProperty.Register<TourAnchorOverlay, Point?>(nameof(TargetCanvasDestinationPoint));
     public static readonly StyledProperty<PhysicalPin?> TargetPinProperty =
         AvaloniaProperty.Register<TourAnchorOverlay, PhysicalPin?>(nameof(TargetPin));
     public static readonly StyledProperty<PhysicalPin?> ConnectionTargetPinProperty =
@@ -24,6 +26,7 @@ public partial class TourAnchorOverlay
     public bool Demonstrate { get => GetValue(DemonstrateProperty); set => SetValue(DemonstrateProperty, value); }
     public object? TargetItem { get => GetValue(TargetItemProperty); set => SetValue(TargetItemProperty, value); }
     public Point? TargetCanvasPoint { get => GetValue(TargetCanvasPointProperty); set => SetValue(TargetCanvasPointProperty, value); }
+    public Point? TargetCanvasDestinationPoint { get => GetValue(TargetCanvasDestinationPointProperty); set => SetValue(TargetCanvasDestinationPointProperty, value); }
     public PhysicalPin? TargetPin { get => GetValue(TargetPinProperty); set => SetValue(TargetPinProperty, value); }
     public PhysicalPin? ConnectionTargetPin { get => GetValue(ConnectionTargetPinProperty); set => SetValue(ConnectionTargetPinProperty, value); }
 
@@ -47,13 +50,23 @@ public partial class TourAnchorOverlay
     {
         if (_offscreenCanvas is not { ViewModel: { } vm } canvas || _offscreenPoint is not { } point)
             return;
-        if (TargetPin is { } startPin && ConnectionTargetPin is { } endPin)
+        Point? startPoint = TargetCanvasPoint, endPoint = TargetCanvasDestinationPoint;
+        if (TargetPin is { } startPin)
         {
             var start = startPin.GetAbsolutePosition();
+            startPoint = new Point(start.x, start.y);
+            endPoint = null;
+        }
+        if (ConnectionTargetPin is { } endPin)
+        {
             var end = endPin.GetAbsolutePosition();
-            point = new Point((start.x + end.x) / 2, (start.y + end.y) / 2);
-            var fit = Math.Min(Math.Max(1, canvas.Bounds.Width - 96) / Math.Max(1, Math.Abs(end.x - start.x)),
-                Math.Max(1, canvas.Bounds.Height - 96) / Math.Max(1, Math.Abs(end.y - start.y)));
+            endPoint = new Point(end.x, end.y);
+        }
+        if (startPoint is { } from && endPoint is { } to)
+        {
+            point = new Point((from.X + to.X) / 2, (from.Y + to.Y) / 2);
+            var fit = Math.Min(Math.Max(1, canvas.Bounds.Width - 96) / Math.Max(1, Math.Abs(to.X - from.X)),
+                Math.Max(1, canvas.Bounds.Height - 96) / Math.Max(1, Math.Abs(to.Y - from.Y)));
             canvas.SetCurrentValue(DesignCanvas.ZoomProperty, Math.Min(canvas.Zoom, fit));
         }
         // Only the viewport changes, and only after the user requests it.
@@ -83,8 +96,10 @@ public partial class TourAnchorOverlay
         if (target is not DesignCanvas canvas || canvas.ViewModel == null)
             return fallback;
         var point = TargetCanvasPoint;
+        var destination = TargetCanvasDestinationPoint;
         if (TargetPin is { } first)
         {
+            destination = null;
             var pin = canvas.InteractionState.ConnectionDragStartPin == first
                 ? ConnectionTargetPin ?? first : first;
             var position = pin.GetAbsolutePosition();
@@ -92,15 +107,19 @@ public partial class TourAnchorOverlay
             if (canvas.InteractionState.ConnectionDragStartPin == null && ConnectionTargetPin is { } endPin)
             {
                 var end = endPin.GetAbsolutePosition();
-                var endLocal = new Point(end.x * canvas.Zoom + canvas.ViewModel.PanX,
-                    end.y * canvas.Zoom + canvas.ViewModel.PanY);
-                if (new Rect(canvas.Bounds.Size).Contains(endLocal))
-                    _pointerDestination = canvas.TranslatePoint(endLocal, RootCanvas);
-                else
-                {
-                    _offscreenCanvas = canvas;
-                    _offscreenPoint = new Point(end.x, end.y);
-                }
+                destination = new Point(end.x, end.y);
+            }
+        }
+        if (destination is { } endpoint)
+        {
+            var endLocal = new Point(endpoint.X * canvas.Zoom + canvas.ViewModel.PanX,
+                endpoint.Y * canvas.Zoom + canvas.ViewModel.PanY);
+            if (new Rect(canvas.Bounds.Size).Contains(endLocal))
+                _pointerDestination = canvas.TranslatePoint(endLocal, RootCanvas);
+            else
+            {
+                _offscreenCanvas = canvas;
+                _offscreenPoint = endpoint;
             }
         }
         if (point == null)

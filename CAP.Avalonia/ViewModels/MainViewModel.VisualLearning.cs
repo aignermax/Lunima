@@ -32,17 +32,34 @@ public partial class MainViewModel
     private void UpdateGuidanceForOpenedProject(bool cameFromHome)
     {
         // A replaced document must never inherit pin references or progress from the previous one.
-        _resettingGuidance = true;
-        try { Tutorial.Skip(); }
-        finally { _resettingGuidance = false; }
+        StopLearningChapters();
         if (cameFromHome && Canvas.Components.Count == 0 && _guidancePreferences?.GetGuidedLearningEnabled() == true)
             StartVisualLearning();
     }
 
     private void StartVisualLearning()
     {
+        StopLearningChapters();
         Home.IsHomeVisible = false;
         WorkspaceSwitch.Current = Workspace.Layout;
         Tutorial.Start();
+    }
+
+    private void StopLearningChapters()
+    {
+        _resettingGuidance = true;
+        try
+        {
+            Tutorial.Skip();
+            FirstGateTour.Skip();
+            WatchTour.Skip();
+            RunProgramTour.Skip();
+            ConnectChipletsTour.Skip();
+            StoreNumberTour.Skip();
+            _learningSuccessTimeout?.Dispose();
+            _learningSuccessTimeout = null;
+            ShowLearningSuccess = false;
+        }
+        finally { _resettingGuidance = false; }
     }
 }

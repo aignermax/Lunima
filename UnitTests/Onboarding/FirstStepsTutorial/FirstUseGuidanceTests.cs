@@ -7,6 +7,28 @@ namespace UnitTests.Onboarding.FirstStepsTutorial;
 public class FirstUseGuidanceTests
 {
     [AvaloniaFact]
+    public async Task ReplacingProject_AndResumingLearning_StopOtherChapters()
+    {
+        var vm = MainViewModelTestHelper.CreateMainViewModel();
+        vm.Canvas.AddComponent(TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins());
+        vm.FirstGateTour.Start();
+        vm.WatchTour.Start();
+        vm.RunProgramTour.Start();
+        vm.ConnectChipletsTour.Start();
+        vm.StoreNumberTour.Start();
+        vm.FileOperations.ProjectOpened!();
+        Assert.False(vm.FirstGateTour.IsActive);
+        Assert.False(vm.WatchTour.IsActive);
+        Assert.False(vm.RunProgramTour.IsActive);
+        Assert.False(vm.ConnectChipletsTour.IsActive);
+        Assert.False(vm.StoreNumberTour.IsActive);
+        vm.FirstGateTour.Start();
+        await vm.Home.LearnTutorialCommand.ExecuteAsync(null);
+        Assert.False(vm.FirstGateTour.IsActive);
+        Assert.True(vm.Tutorial.IsActive);
+    }
+
+    [AvaloniaFact]
     public void EmptyNewDesign_StartsGuidance_AndDismissalPersists()
     {
         var path = Path.Combine(Path.GetTempPath(), $"lunima-guide-{Guid.NewGuid():N}.json");
