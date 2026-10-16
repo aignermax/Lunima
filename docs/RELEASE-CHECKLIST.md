@@ -155,6 +155,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 7. Simulation & S-matrix
 
+- [ ] **auto** Logic waveforms identify the hovered signal by highlighting its row, label and trace; clicking a trace selects the nearest existing replay event and pauses playback, while repeated clicks retain the cursor. Empty/narrow plots and label/header clicks do not seek (`LogicWaveformInteractionTests`, `LogicWaveformStripRenderTests`).
+
 - [ ] Run CW simulation → optical power reaches the expected output ports. `(auto: SimulationModeTests, LightCalculation/TransitiveSMatrixCalculatorTests)`
 - [ ] Run Transient simulation → time-domain output appears in the analysis dock. `(auto: TimeDomainSimulation/TimeDomainSimulatorTests)`
 - [ ] Toggle simulation mode (CW / Transient) from the toolbar combo box. `(auto: SimulationModeTests)`

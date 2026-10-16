@@ -16,8 +16,7 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// padding, 0 maps to its left edge and 1 to its right edge. Same dark-chip style
 /// family as the canvas logic renderers (<see cref="LogicGateStateBadgeRenderer"/>,
 /// issue #994): muted green traces and gray labels, the gold of the timeline's
-/// clock dividers for the boundary lines. Read-only — no zoom, pan, or hover in
-/// this slice.
+/// clock dividers for the boundary lines. The hovered lane is emphasized together with its label.
 /// </summary>
 internal static class LogicWaveformRenderer
 {
@@ -56,6 +55,8 @@ internal static class LogicWaveformRenderer
     private static readonly IBrush DividerBrush = new SolidColorBrush(DividerColor);
     private static readonly Pen TracePen = new(new SolidColorBrush(TraceColor), TraceThickness);
     private static readonly Pen DividerPen = new(DividerBrush, 1);
+    private static readonly IBrush HoverBackground = new SolidColorBrush(Color.FromArgb(35, 100, 180, 255));
+    private static readonly Pen HoverPen = new(Brushes.White, 2.5);
     private static readonly Pen CursorPen = new(new SolidColorBrush(CursorColor), 1);
 
     /// <summary>The strip's natural height for a model: header band + one band per lane.</summary>
@@ -92,14 +93,14 @@ internal static class LogicWaveformRenderer
     /// <param name="context">Drawing context.</param>
     /// <param name="model">The waveform model to project; empty models draw nothing.</param>
     /// <param name="bounds">The strip's pixel size.</param>
-    public static void Render(DrawingContext context, LogicWaveformModel model, Size bounds)
+    public static void Render(DrawingContext context, LogicWaveformModel model, Size bounds, int hoveredLaneIndex = -1)
     {
         if (model.Lanes.Count == 0)
             return;
         foreach (var divider in model.Dividers)
             DrawDivider(context, divider, bounds);
         for (var i = 0; i < model.Lanes.Count; i++)
-            DrawLane(context, model.Lanes[i], i, bounds);
+            DrawLane(context, model.Lanes[i], i, bounds, i == hoveredLaneIndex);
         if (model.CursorXFraction.HasValue)
         {
             var x = SnapToPixelCenter(MapX(model.CursorXFraction.Value, bounds.Width));
@@ -126,16 +127,18 @@ internal static class LogicWaveformRenderer
 
     /// <summary>Draws one lane: its signal name in the label column and its step trace.</summary>
     private static void DrawLane(
-        DrawingContext context, LogicWaveformLane lane, int laneIndex, Size bounds)
+        DrawingContext context, LogicWaveformLane lane, int laneIndex, Size bounds, bool highlighted)
     {
         var bandTop = LaneBandTop(laneIndex);
+        if (highlighted)
+            context.FillRectangle(HoverBackground, new Rect(0, bandTop, bounds.Width, LaneHeight));
         var label = new FormattedText(
             lane.SignalName,
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             Typeface.Default,
             LabelFontSize,
-            LabelBrush);
+            highlighted ? Brushes.White : LabelBrush);
         context.DrawText(label, new Point(LabelLeft, bandTop + (LaneHeight - label.Height) / 2));
 
         var yHigh = bandTop + LaneHighInset;
@@ -155,6 +158,6 @@ internal static class LogicWaveformRenderer
             ctx.LineTo(new Point(TraceLeft + TraceWidth(bounds.Width), y));
             ctx.EndFigure(false);
         }
-        context.DrawGeometry(null, TracePen, geometry);
+        context.DrawGeometry(null, highlighted ? HoverPen : TracePen, geometry);
     }
 }
