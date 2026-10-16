@@ -174,6 +174,27 @@ public class LogicWaveformStripRenderTests
             .ShouldBeGreaterThan(4, "the replay cursor draws its line across the strip");
     }
 
+    [AvaloniaFact]
+    public void HighlightedLane_PaintsBackgroundAcrossLabelAndTrace_WithoutChangingOtherLanes()
+    {
+        var model = new LogicWaveformModel(
+            new[]
+            {
+                new LogicWaveformLane("C1", false, Array.Empty<LogicWaveformEdge>(), false),
+                new LogicWaveformLane("S", false, Array.Empty<LogicWaveformEdge>(), false),
+            }, Array.Empty<LogicWaveformClockDivider>(), null, 0, 10);
+        const int width = 320;
+        var normal = RenderStrip(model, width, out _);
+        var hover = RenderStrip(model, width, out _, hoveredLaneIndex: 1);
+        foreach (var x in new[] { 1, 150 })
+        {
+            var firstLane = ((int)LogicWaveformRenderer.LaneBandTop(0) * width + x) * 4;
+            var secondLane = ((int)LogicWaveformRenderer.LaneBandTop(1) * width + x) * 4;
+            hover[firstLane].ShouldBe(normal[firstLane]);
+            hover[secondLane].ShouldBeGreaterThan(normal[secondLane], "hover spans the signal label and its trace row");
+        }
+    }
+
     /// <summary>Builds the latch's network on the fixture canvas and rests both active-low inputs high.</summary>
     private async Task<LogicPanelViewModel> BuildLatchAtRest()
     {
@@ -187,14 +208,14 @@ public class LogicWaveformStripRenderTests
     }
 
     /// <summary>Renders the strip on a black backing and returns the BGRA pixels.</summary>
-    private static byte[] RenderStrip(LogicWaveformModel model, int width, out int height)
+    private static byte[] RenderStrip(LogicWaveformModel model, int width, out int height, int hoveredLaneIndex = -1)
     {
         height = (int)LogicWaveformRenderer.DesiredHeight(model);
         using var bitmap = new RenderTargetBitmap(new PixelSize(width, height));
         using (var ctx = bitmap.CreateDrawingContext())
         {
             ctx.FillRectangle(Brushes.Black, new Rect(0, 0, width, height));
-            LogicWaveformRenderer.Render(ctx, model, new Size(width, height));
+            LogicWaveformRenderer.Render(ctx, model, new Size(width, height), hoveredLaneIndex);
         }
         return ReadPixels(bitmap, width, height);
     }
