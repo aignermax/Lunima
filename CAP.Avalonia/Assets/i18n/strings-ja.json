@@ -2184,5 +2184,7 @@
   "RunProgramTour.Action6.Cue": "チップで3回の加算を実行しました",
   "RunProgramTour.ActionOpen.Button": "ISAプレイグラウンドを開く",
   "RunProgramTour.ActionDone.Button": "完了",
-  "RunProgramTour.ActionOpen.Cue": "ISAプレイグラウンドを開く"
+  "RunProgramTour.ActionOpen.Cue": "ISAプレイグラウンドを開く",
+  "LogicPanel.FanOutWarning.ReportCount": "警告件数：",
+  "LogicPanel.FanOutWarning.Details": "詳細"
 }

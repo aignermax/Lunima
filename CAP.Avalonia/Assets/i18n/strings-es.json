@@ -2184,5 +2184,7 @@
   "RunProgramTour.Action6.Cue": "Tres sumas se ejecutaron en tu chip",
   "RunProgramTour.ActionOpen.Button": "Abrir el entorno ISA",
   "RunProgramTour.ActionDone.Button": "Listo",
-  "RunProgramTour.ActionOpen.Cue": "Abrir el entorno ISA"
+  "RunProgramTour.ActionOpen.Cue": "Abrir el entorno ISA",
+  "LogicPanel.FanOutWarning.ReportCount": "Advertencias:",
+  "LogicPanel.FanOutWarning.Details": "Detalles"
 }

@@ -155,6 +155,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 7. Simulation & S-matrix
 
+- [ ] **auto** Optical level warnings retain their amber title and exact report count in a compact card. Details start collapsed; opening them shows every unchanged warning, level calculation and receiving-pin verdict; closing restores the compact view (`LogicWarningSummaryTests`).
+
 - [ ] Run CW simulation → optical power reaches the expected output ports. `(auto: SimulationModeTests, LightCalculation/TransitiveSMatrixCalculatorTests)`
 - [ ] Run Transient simulation → time-domain output appears in the analysis dock. `(auto: TimeDomainSimulation/TimeDomainSimulatorTests)`
 - [ ] Toggle simulation mode (CW / Transient) from the toolbar combo box. `(auto: SimulationModeTests)`

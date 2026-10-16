@@ -2184,5 +2184,7 @@
   "RunProgramTour.Action6.Cue": "芯片已执行三次加法",
   "RunProgramTour.ActionOpen.Button": "打开 ISA 演练场",
   "RunProgramTour.ActionDone.Button": "完成",
-  "RunProgramTour.ActionOpen.Cue": "打开 ISA 演练场"
+  "RunProgramTour.ActionOpen.Cue": "打开 ISA 演练场",
+  "LogicPanel.FanOutWarning.ReportCount": "警告数量：",
+  "LogicPanel.FanOutWarning.Details": "详情"
 }

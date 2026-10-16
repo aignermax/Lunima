@@ -146,7 +146,7 @@
 
         <!-- Fan-out warnings sit outside the sideways-scrolling columns so they stay in
              view on a narrow dock, and show whenever warnings exist. -->
-        <Border Grid.Row="2" Grid.Column="1" Classes="logicColumn" Width="320" Margin="12,6,0,0"
+        <Border Grid.Row="2" Grid.Column="1" Classes="logicColumn" Width="320" Margin="12,6,0,0" VerticalAlignment="Top"
                 IsVisible="{Binding RightPanel.Logic.HasFanOutWarnings}">
             <logicTab:LogicFanOutColumn/>
         </Border>

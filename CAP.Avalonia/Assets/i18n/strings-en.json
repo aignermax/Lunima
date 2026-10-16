@@ -2184,5 +2184,7 @@
   "RunProgramTour.Action6.Cue": "Three additions ran on your chip",
   "RunProgramTour.ActionOpen.Button": "Open ISA playground",
   "RunProgramTour.ActionDone.Button": "Done",
-  "RunProgramTour.ActionOpen.Cue": "Open the ISA playground"
+  "RunProgramTour.ActionOpen.Cue": "Open the ISA playground",
+  "LogicPanel.FanOutWarning.ReportCount": "Warnings:",
+  "LogicPanel.FanOutWarning.Details": "Details"
 }
