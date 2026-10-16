@@ -2118,5 +2118,9 @@
   "Context.ShowInLayout": "Im Layout zeigen",
   "Context.ShowInLayoutTip": "Wechselt ins Layout, zentriert auf dieses Element",
   "Context.EditGate": "Gatter bearbeiten…",
-  "Context.EditGateTip": "Öffnet die Gatter-Schritte für dieses Gatter: Pin-Rollen, Simulation, Schwelle, Speichern."
+  "Context.EditGateTip": "Öffnet die Gatter-Schritte für dieses Gatter: Pin-Rollen, Simulation, Schwelle, Speichern.",
+  "Dies.ProcessChange.Title": "Die-Prozess ändern?",
+  "Dies.ProcessChange.Preview": "Zu {0} wechseln? Dabei werden {1} inkompatible Bauteile und {2} verbundene Leitungen entfernt. Kompatible Bauteile bleiben erhalten. Mit Rückgängig wird alles wiederhergestellt.",
+  "Dies.ProcessChange.Cancel": "Abbrechen",
+  "Dies.ProcessChange.Confirm": "Prozess ändern"
 }

@@ -2118,5 +2118,9 @@
   "Context.ShowInLayout": "Show in Layout",
   "Context.ShowInLayoutTip": "Switches to Layout, centred on this element",
   "Context.EditGate": "Edit gate…",
-  "Context.EditGateTip": "Opens the Make-gate steps for this gate: pin roles, simulate, threshold, save."
+  "Context.EditGateTip": "Opens the Make-gate steps for this gate: pin roles, simulate, threshold, save.",
+  "Dies.ProcessChange.Title": "Change die process?",
+  "Dies.ProcessChange.Preview": "Change to {0}? This removes {1} incompatible components and {2} connected wires. Compatible components stay. One Undo restores everything.",
+  "Dies.ProcessChange.Cancel": "Cancel",
+  "Dies.ProcessChange.Confirm": "Change process"
 }
