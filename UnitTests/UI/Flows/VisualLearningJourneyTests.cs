@@ -36,7 +36,7 @@ public class VisualLearningJourneyTests
         Assert.Equal(0, vm.Tutorial.CurrentStepIndex);
         Assert.NotNull(vm.Tutorial.CurrentTargetItem);
         var canvas = UiInput.Descendants<DesignCanvas>(window).First();
-        var overlay = UiInput.Descendants<TourAnchorOverlay>(window).Single(o => o.Demonstrate);
+        var overlay = UiInput.Descendants<TourAnchorOverlay>(window).Single(o => o.Card is CAP.Avalonia.Views.Panels.FirstStepsTutorialPanel);
 
         async Task RefreshTarget()
         {
