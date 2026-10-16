@@ -62,7 +62,7 @@ public partial class HierarchyPanelViewModel : ObservableObject
         _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
 
         // Subscribe to canvas changes
-        _canvas.Components.CollectionChanged += (s, e) => RebuildTree();
+        _canvas.Components.CollectionChanged += OnComponentsChanged;
 
         // Parts placed on or removed from a die, and die process changes, leave the top-level
         // collection untouched — the die's node must still follow.
@@ -98,6 +98,8 @@ public partial class HierarchyPanelViewModel : ObservableObject
     public void RebuildTree()
     {
         _dieSignature = DieSignature();
+        foreach (var node in RootNodes)
+            node.Dispose();
         RootNodes.Clear();
 
         // Build tree from canvas components (only top-level components, not children of groups)

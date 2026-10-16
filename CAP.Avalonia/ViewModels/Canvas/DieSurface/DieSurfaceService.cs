@@ -25,6 +25,7 @@ public sealed class DieSurfaceService
     {
         _components = components;
         _groups = groups;
+        _components.CollectionChanged += (_, _) => Prune();
     }
 
     /// <summary>
@@ -58,9 +59,9 @@ public sealed class DieSurfaceService
     {
         get
         {
+            Prune();
             if (!IsActive)
                 return Array.Empty<ComponentViewModel>();
-            Prune();
             return Dies.SelectMany(d => d.ChildComponents).Select(ViewModelFor).ToList();
         }
     }
@@ -169,7 +170,12 @@ public sealed class DieSurfaceService
     /// <summary>Forgets view models of parts that left their die (deleted, grouped, moved into a group).</summary>
     public void Prune()
     {
-        foreach (var stale in _viewModels.Keys.Where(p => p.ParentGroup is not ComponentGroup { IsDie: true }).ToList())
+        var roots = _groups.RootComponents.Select(vm => vm.Component)
+            .OfType<ComponentGroup>().Where(g => g.IsDie).ToHashSet();
+        foreach (var stale in _viewModels.Keys.Where(p => p.ParentGroup is not ComponentGroup parent
+                     || !roots.Contains(parent) || !parent.ChildComponents.Contains(p)).ToList())
             _viewModels.Remove(stale);
+        if (LastWorkedDie != null && !roots.Contains(LastWorkedDie))
+            LastWorkedDie = null;
     }
 }
