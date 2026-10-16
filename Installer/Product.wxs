@@ -4,7 +4,7 @@
 
   This file defines:
     - Package metadata (name, version, upgrade code)
-    - .NET 8 Desktop Runtime prerequisite check
+    - .NET 10 core Runtime prerequisite check
     - Installation directory: %ProgramFiles%\Lunima
     - Desktop shortcut with Lunima icon
     - Start Menu shortcut with Lunima icon
