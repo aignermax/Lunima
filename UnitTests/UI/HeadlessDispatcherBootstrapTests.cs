@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Headless;
+using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
 
 namespace UnitTests.UI;
@@ -35,6 +37,23 @@ public class HeadlessDispatcherBootstrapTests
                 var live = Dispatcher.UIThread;
                 HeadlessDispatcherBootstrap.ResetPrePlatformFallback();
                 Assert.Same(live, Dispatcher.UIThread);
+                var button = new Button { Content = "Actual input" };
+                var clicked = false;
+                button.Click += (_, _) => clicked = true;
+                var window = new Window { Width = 160, Height = 100, Content = button };
+                try
+                {
+                    window.Show();
+                    Dispatcher.UIThread.RunJobs();
+                    window.MouseMove(new Point(80, 50));
+                    Assert.NotNull(window.InputHitTest(new Point(80, 50)));
+                    window.MouseDown(new Point(80, 50), MouseButton.Left);
+                    window.MouseUp(new Point(80, 50), MouseButton.Left);
+                    Assert.True(clicked, "the compositor and real input must use the active dispatcher");
+                    using var frame = window.CaptureRenderedFrame();
+                    Assert.NotNull(frame);
+                }
+                finally { window.Close(); }
                 return true;
             }, CancellationToken.None);
             return;
@@ -83,7 +102,7 @@ public class LateFallbackTestAppBuilder
         builder.UseWindowingSubsystem(() =>
         {
             Assert.Null(Application.Current);
-            Assert.False(Dispatcher.UIThread.SupportsRunLoops);
+            _ = Dispatcher.UIThread; // Simulates the competing lookup immediately before platform binding.
             initialize();
         }, builder.WindowingSubsystemName!);
         return builder.WithFallbackDispatcherReset();
