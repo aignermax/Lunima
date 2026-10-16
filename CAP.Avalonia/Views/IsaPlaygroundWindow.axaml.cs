@@ -27,7 +27,14 @@ public partial class IsaPlaygroundWindow : Window
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
-        Closed += (_, _) => _runTimer?.Stop();
+        Closed += (_, _) =>
+        {
+            _runTimer?.Stop();
+            if (_playground != null)
+                _playground.PropertyChanged -= OnPlaygroundPropertyChanged;
+            _playground = null;
+            DataContextChanged -= OnDataContextChanged;
+        };
         Opened += (_, _) => _tour?.NotifyPlaygroundOpened();
         Closed += (_, _) => _tour?.NotifyPlaygroundClosed();
     }

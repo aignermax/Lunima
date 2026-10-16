@@ -2165,5 +2165,14 @@
   "Tutorial.NoPlacementSpace": "チップの空いている場所を選ぶか、スペースを確保してください。",
   "Tutorial.ActionOptics.Title": "光学ワークスペースを開く",
   "Tutorial.ActionOptics.Body": "光学に切り替えて、作成した回路をシミュレーションします。",
-  "Tutorial.ActionOptics.Cue": "光学をクリック"
+  "Tutorial.ActionOptics.Cue": "光学をクリック",
+  "RunProgramTour.Action1.Cue": "論理ネットワークを構築",
+  "RunProgramTour.Action2.Cue": "ISAプレイグラウンドを開く",
+  "RunProgramTour.Action3.Cue": "「3に4を掛ける」を選択",
+  "RunProgramTour.Action4.Cue": "フォトニックADDを有効にする",
+  "RunProgramTour.Action5.Cue": "ステップで3回のADDを確認",
+  "RunProgramTour.Action6.Cue": "チップで3回の加算を実行しました",
+  "RunProgramTour.ActionOpen.Button": "ISAプレイグラウンドを開く",
+  "RunProgramTour.ActionDone.Button": "完了",
+  "RunProgramTour.ActionOpen.Cue": "ISAプレイグラウンドを開く"
 }

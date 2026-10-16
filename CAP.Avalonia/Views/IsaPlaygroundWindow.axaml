@@ -174,7 +174,7 @@
          the steps anchored in this window (sample picker, photonic toggle,
          Step button). The DataContext is the tour ViewModel, assigned by the
          code-behind via the Tour property; without a tour it stays hidden. -->
-    <tour:TourAnchorOverlay x:Name="RunProgramTourOverlay"
+    <tour:TourAnchorOverlay x:Name="RunProgramTourOverlay" Demonstrate="True"
                             IsVisible="{Binding ShowCardInPlayground, FallbackValue=False}"
                             TargetName="{Binding CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
