@@ -949,8 +949,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         if (_movingComponent != null)
         {
-            _canvas.EndDragComponent(_movingComponent);
-
             if (Math.Abs(_movingComponent.X - _moveStartX) > 0.001 ||
                 Math.Abs(_movingComponent.Y - _moveStartY) > 0.001)
             {
@@ -963,6 +961,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
                     _movingComponent.Y);
                 _commandManager.ExecuteCommand(cmd);
             }
+            _canvas.EndDragComponent(_movingComponent);
         }
         _movingComponent = null;
     }
@@ -979,8 +978,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
         if (firstComp == null)
             return;
 
-        _canvas.EndDragComponent(firstComp);
-
         var startPos = _groupMoveStartPositions[firstComp];
         double deltaX = firstComp.X - startPos.x;
         double deltaY = firstComp.Y - startPos.y;
@@ -995,6 +992,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
             _commandManager.ExecuteCommand(cmd);
         }
 
+        _canvas.EndDragComponent(firstComp);
         _groupMoveStartPositions = null;
     }
 

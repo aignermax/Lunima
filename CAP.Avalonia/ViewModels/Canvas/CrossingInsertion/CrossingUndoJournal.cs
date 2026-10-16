@@ -19,7 +19,11 @@ public sealed class CrossingUndoJournal
     private readonly Action<Component> _crossingDropped;
     private readonly Dictionary<IUndoableCommand, List<CrossingChange>> _changes = new();
     private readonly object _sync = new();
-    private IUndoableCommand? _current;
+    // Task.Run inherits the command that started its pass. A later UI edit must not
+    // steal crossing changes from the still-finishing previous routing worker.
+    private readonly AsyncLocal<PassOwner?> _current = new();
+    private int _historyGeneration;
+    private sealed record PassOwner(IUndoableCommand Command, int Generation);
 
     /// <summary>More history entries than the undo history keeps (100).</summary>
     private const int MaxTrackedCommands = 128;
@@ -49,9 +53,10 @@ public sealed class CrossingUndoJournal
     {
         lock (_sync)
         {
-            if (_current == null) return;
-            if (!_changes.TryGetValue(_current, out var list))
-                _changes[_current] = list = new List<CrossingChange>();
+            if (_current.Value is not { } owner || owner.Generation != _historyGeneration) return;
+            var command = owner.Command;
+            if (!_changes.TryGetValue(command, out var list))
+                _changes[command] = list = new List<CrossingChange>();
             list.Add(change);
         }
     }
@@ -67,7 +72,7 @@ public sealed class CrossingUndoJournal
     {
         lock (_sync)
         {
-            _current = command;
+            _current.Value = new(command, _historyGeneration);
             // Entries of commands the history already trimmed are never undone; keep the maps bounded.
             if (_changes.Count > MaxTrackedCommands || _orders.Count > MaxTrackedCommands)
             {
@@ -89,7 +94,7 @@ public sealed class CrossingUndoJournal
         List<CAP_Core.Components.Connections.WaveguideConnection>? order;
         lock (_sync)
         {
-            _current = null;
+            _current.Value = null;
             _changes.Remove(command, out changes);
             _orders.Remove(command, out order);
         }
@@ -119,9 +124,12 @@ public sealed class CrossingUndoJournal
     {
         lock (_sync)
         {
+            // A finishing worker retains its execution context; it must not recreate
+            // discarded history after a load or history reset.
+            _historyGeneration++;
             _changes.Clear();
             _orders.Clear();
-            _current = null;
+            _current.Value = null;
         }
     }
 }
