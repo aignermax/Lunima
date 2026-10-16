@@ -7,6 +7,21 @@ namespace UnitTests.Update;
 public class WindowsInstallerWorkflowTests
 {
     [Fact]
+    public void Msi_IsExplicitlyX64_AndDoesNotSuppressArchitectureValidation()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root != null && !File.Exists(Path.Combine(root.FullName, "Installer", "Installer.wixproj")))
+            root = root.Parent;
+        root.ShouldNotBeNull();
+        var project = XDocument.Load(Path.Combine(root!.FullName, "Installer", "Installer.wixproj"));
+        var platform = project.Descendants("InstallerPlatform").SingleOrDefault()?.Value;
+        platform.ShouldBe("x64",
+            "the published app, ProgramFiles64Folder and HKLM64 install marker require an x64 package");
+        project.Descendants("SuppressIces").ShouldNotContain(e => e.Value.Split(';').Contains("ICE80"),
+            "ICE80 catches 64-bit components in a 32-bit package and must stay enabled");
+    }
+
+    [Fact]
     public void Msi_RuntimePrerequisiteMatchesDesktopTarget_AndRequiresSuccessfulCheck()
     {
         var root = new DirectoryInfo(AppContext.BaseDirectory);
