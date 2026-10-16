@@ -273,11 +273,9 @@ public partial class MainWindow : Window
                 // Wire up clipboard for the Netlist panel (#687)
                 vm.RightPanel.Netlist.CopyToClipboard = async (text) =>
                 {
-                    var clipboard = Clipboard;
-                    if (clipboard != null)
-                    {
-                        await clipboard.SetTextAsync(text);
-                    }
+                    var clipboard = Clipboard ?? throw new InvalidOperationException(
+                        Services.Localization.LocalizationService.Instance.Translate("Netlist.ClipboardNotAvailable"));
+                    await clipboard.SetTextAsync(text);
                 };
 
                 // Wire up clipboard for DimensionValidator
@@ -788,6 +786,20 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainViewModel vm)
             vm.BottomPanel.Analysis.OpenChecks();
+    }
+
+    private async void ExportMenuItem_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: ViewModels.Export.Formats.NetlistClipboardExportFormat format }
+            || DataContext is not MainViewModel vm)
+            return;
+
+        // Handle activation ourselves so the command runs once and the flyout stays bound while copying.
+        e.Handled = true;
+        if (!format.ExportCommand.CanExecute(null)) return;
+        await format.ExportCommand.ExecuteAsync(null);
+        if (vm.RightPanel.Netlist.LastCopySucceeded)
+            ExportMenuButton.Flyout?.Hide();
     }
 
     /// <summary>

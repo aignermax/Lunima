@@ -41,6 +41,9 @@ public partial class NetlistViewModel : ObservableObject
     /// </summary>
     public Func<string, Task>? CopyToClipboard { get; set; }
 
+    /// <summary>True only after the most recent copy completed successfully.</summary>
+    public bool LastCopySucceeded { get; private set; }
+
     /// <summary>Initializes a new instance of <see cref="NetlistViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
     public NetlistViewModel(ErrorConsoleService? errorConsole = null)
@@ -59,14 +62,24 @@ public partial class NetlistViewModel : ObservableObject
     [RelayCommand]
     private async Task CopyYaml()
     {
+        LastCopySucceeded = false;
         if (!TryGenerate()) return;
         if (CopyToClipboard == null)
         {
             StatusText = LocalizationService.Instance.Translate("Netlist.ClipboardNotAvailable");
             return;
         }
-        await CopyToClipboard(NetlistYaml);
-        StatusText = LocalizationService.Instance.Translate("Netlist.Copied");
+        try
+        {
+            await CopyToClipboard(NetlistYaml);
+            LastCopySucceeded = true;
+            StatusText = LocalizationService.Instance.Translate("Netlist.Copied");
+        }
+        catch (Exception ex)
+        {
+            _errorConsole?.LogError($"Failed to copy netlist: {ex.Message}", ex);
+            StatusText = string.Format(LocalizationService.Instance.Translate("Netlist.ExportFailed"), ex.Message);
+        }
     }
 
     /// <summary>Saves the current netlist YAML to a .yml file chosen by the user.</summary>

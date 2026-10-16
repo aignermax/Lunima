@@ -241,6 +241,23 @@ public class ExportMenuViewModelTests
     }
 
     [Fact]
+    public async Task NetlistClipboardUnavailable_AfterSuccess_DoesNotRetainSuccess()
+    {
+        var vm = MainViewModelTestHelper.CreateMainViewModel();
+        vm.Canvas.AddComponent(TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins(), "Waveguide");
+        var entry = vm.ExportMenu.Formats.OfType<NetlistClipboardExportFormat>().Single();
+        vm.RightPanel.Netlist.CopyToClipboard = _ => Task.CompletedTask;
+        await entry.ExportCommand.ExecuteAsync(null);
+        vm.RightPanel.Netlist.LastCopySucceeded.ShouldBeTrue();
+
+        vm.RightPanel.Netlist.CopyToClipboard = null;
+        await entry.ExportCommand.ExecuteAsync(null);
+
+        vm.RightPanel.Netlist.LastCopySucceeded.ShouldBeFalse();
+        vm.StatusText.ShouldBe(LocalizationService.Instance.Translate("Netlist.ClipboardNotAvailable"));
+    }
+
+    [Fact]
     public async Task NetlistFileEntry_SavesTheYaml_AndReportsInTheStatusBar()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
