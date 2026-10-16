@@ -1,7 +1,6 @@
 {
   "Preview.Unavailable": "Algunas vistas previas de componentes no están disponibles.",
   "Preview.ErrorDetails": "Detalles del error",
-
   "AgentBridge.Prompt.Body": "Claude Code está instalado. Un clic activa el puente de agentes local de Lunima y lo registra, para que Claude pueda inspeccionar y editar tu diseño abierto; cada edición se puede deshacer.",
   "AgentBridge.Prompt.Close": "Cerrar",
   "AgentBridge.Prompt.Connect": "Conectar Claude Code",
@@ -2131,5 +2130,29 @@
   "IsaPlayground.ExampleMissing": "No hay un ejemplo compatible en esta instalación.",
   "IsaPlayground.ExampleReady": "Ejemplo abierto. Ahora construye su red lógica.",
   "IsaPlayground.ExampleActionFailed": "No se pudo abrir el ejemplo.",
-  "IsaPlayground.ExampleBuildFailed": "No se pudo construir la red. Revisa los mensajes del análisis lógico e inténtalo de nuevo."
+  "IsaPlayground.ExampleBuildFailed": "No se pudo construir la red. Revisa los mensajes del análisis lógico e inténtalo de nuevo.",
+  "Tutorial.ActionSelectSource.Title": "Elige una fuente de luz",
+  "Tutorial.ActionSelectSource.Body": "Elige un acoplador de rejilla o de borde en la biblioteca para introducir luz.",
+  "Tutorial.ActionSelectSource.Cue": "Haz clic en esta fuente",
+  "Tutorial.ActionPlaceSource.Title": "Coloca la fuente",
+  "Tutorial.ActionPlaceSource.Body": "Haz clic en un espacio libre del chip.",
+  "Tutorial.ActionPlaceSource.Cue": "Haz clic aquí para colocarla",
+  "Tutorial.ActionSelectReceiver.Title": "Elige otro componente",
+  "Tutorial.ActionSelectReceiver.Body": "Elige un componente óptico pasivo compatible. Una conexión necesita dos componentes.",
+  "Tutorial.ActionSelectReceiver.Cue": "Elige este componente óptico",
+  "Tutorial.ActionPlaceReceiver.Title": "Coloca el segundo componente",
+  "Tutorial.ActionPlaceReceiver.Body": "Colócalo junto a la fuente, dejando espacio para una guía de ondas.",
+  "Tutorial.ActionPlaceReceiver.Cue": "Coloca aquí el segundo componente",
+  "Tutorial.ActionConnectMode.Title": "Selecciona Conectar",
+  "Tutorial.ActionConnectMode.Body": "Selecciona la herramienta Conectar o pulsa C.",
+  "Tutorial.ActionConnectMode.Cue": "Haz clic en Conectar",
+  "Tutorial.ActionConnectPins.Title": "Conecta estos pines",
+  "Tutorial.ActionConnectPins.Body": "Empieza en el pin resaltado de la fuente y conéctalo al pin del segundo componente.",
+  "Tutorial.ActionConnectPins.Cue": "Conecta estos dos pines",
+  "Tutorial.ActionSimulate.Title": "Simula la luz",
+  "Tutorial.ActionSimulate.Body": "Pulsa Ejecutar para ver la luz recorrer el circuito conectado.",
+  "Tutorial.ActionSimulate.Cue": "Haz clic en Ejecutar",
+  "Tutorial.NoCompatibleTemplate": "No hay un componente compatible visible. Abre la biblioteca óptica o ajusta el filtro.",
+  "Tutorial.CompletedCue": "¡Tu circuito óptico está conectado!",
+  "Tutorial.NoPlacementSpace": "Elige un espacio libre en el chip o deja más espacio."
 }

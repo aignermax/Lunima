@@ -1,7 +1,6 @@
 {
   "Preview.Unavailable": "Some component previews are unavailable.",
   "Preview.ErrorDetails": "Error details",
-
   "AgentBridge.Prompt.Body": "Claude Code is installed. One click turns on Lunima's local agent bridge and registers it, so Claude can inspect and edit your open design — every edit is undoable.",
   "AgentBridge.Prompt.Close": "Close",
   "AgentBridge.Prompt.Connect": "Connect Claude Code",
@@ -2131,5 +2130,29 @@
   "IsaPlayground.ExampleMissing": "No suitable example is available in this installation.",
   "IsaPlayground.ExampleReady": "Example opened. Build its logic network next.",
   "IsaPlayground.ExampleActionFailed": "The example could not be opened.",
-  "IsaPlayground.ExampleBuildFailed": "The network could not be built. Check the Logic analysis messages and try again."
+  "IsaPlayground.ExampleBuildFailed": "The network could not be built. Check the Logic analysis messages and try again.",
+  "Tutorial.ActionSelectSource.Title": "Choose a light source",
+  "Tutorial.ActionSelectSource.Body": "Choose a grating or edge coupler from the library. It will inject light into your circuit.",
+  "Tutorial.ActionSelectSource.Cue": "Click this light source",
+  "Tutorial.ActionPlaceSource.Title": "Place the source",
+  "Tutorial.ActionPlaceSource.Body": "Click free space on the chip to place your source.",
+  "Tutorial.ActionPlaceSource.Cue": "Click here to place it",
+  "Tutorial.ActionSelectReceiver.Title": "Choose a second component",
+  "Tutorial.ActionSelectReceiver.Body": "Choose a compatible passive optical component. Two components are needed for a connection.",
+  "Tutorial.ActionSelectReceiver.Cue": "Choose this optical component",
+  "Tutorial.ActionPlaceReceiver.Title": "Place the second component",
+  "Tutorial.ActionPlaceReceiver.Body": "Place it beside the source, leaving space for a waveguide.",
+  "Tutorial.ActionPlaceReceiver.Cue": "Click here for the second part",
+  "Tutorial.ActionConnectMode.Title": "Choose Connect",
+  "Tutorial.ActionConnectMode.Body": "Use the Connect tool, or press C.",
+  "Tutorial.ActionConnectMode.Cue": "Click Connect",
+  "Tutorial.ActionConnectPins.Title": "Connect these pins",
+  "Tutorial.ActionConnectPins.Body": "Start at the highlighted source pin, then connect to the pin on the second component.",
+  "Tutorial.ActionConnectPins.Cue": "Connect these two pins",
+  "Tutorial.ActionSimulate.Title": "Run the light simulation",
+  "Tutorial.ActionSimulate.Body": "Press Run to see light travel through your connected circuit.",
+  "Tutorial.ActionSimulate.Cue": "Click Run",
+  "Tutorial.NoCompatibleTemplate": "No compatible component is visible. Open the optical library or adjust its filter.",
+  "Tutorial.CompletedCue": "Your light circuit is connected!",
+  "Tutorial.NoPlacementSpace": "Choose a free spot on the chip, or make more room."
 }

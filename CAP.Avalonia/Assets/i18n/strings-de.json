@@ -1,7 +1,6 @@
 {
   "Preview.Unavailable": "Einige Bauteilvorschauen sind nicht verfügbar.",
   "Preview.ErrorDetails": "Fehlerdetails",
-
   "AgentBridge.Prompt.Body": "Claude Code ist installiert. Ein Klick schaltet Lunimas lokale Agenten-Brücke ein und registriert sie, damit Claude dein geöffnetes Design untersuchen und bearbeiten kann — jede Änderung lässt sich rückgängig machen.",
   "AgentBridge.Prompt.Close": "Schließen",
   "AgentBridge.Prompt.Connect": "Claude Code verbinden",
@@ -2131,5 +2130,29 @@
   "IsaPlayground.ExampleMissing": "In dieser Installation ist kein passendes Beispiel verfügbar.",
   "IsaPlayground.ExampleReady": "Beispiel geöffnet. Als Nächstes das Logiknetz aufbauen.",
   "IsaPlayground.ExampleActionFailed": "Das Beispiel konnte nicht geöffnet werden.",
-  "IsaPlayground.ExampleBuildFailed": "Das Logiknetz konnte nicht aufgebaut werden. Bitte die Meldungen der Logikanalyse prüfen und erneut versuchen."
+  "IsaPlayground.ExampleBuildFailed": "Das Logiknetz konnte nicht aufgebaut werden. Bitte die Meldungen der Logikanalyse prüfen und erneut versuchen.",
+  "Tutorial.ActionSelectSource.Title": "Lichtquelle auswählen",
+  "Tutorial.ActionSelectSource.Body": "Wähle einen Gitter- oder Kantenkoppler aus der Bibliothek. Er speist Licht in deine Schaltung ein.",
+  "Tutorial.ActionSelectSource.Cue": "Klicke auf diese Lichtquelle",
+  "Tutorial.ActionPlaceSource.Title": "Lichtquelle platzieren",
+  "Tutorial.ActionPlaceSource.Body": "Klicke auf eine freie Stelle auf dem Chip.",
+  "Tutorial.ActionPlaceSource.Cue": "Hier klicken und platzieren",
+  "Tutorial.ActionSelectReceiver.Title": "Zweites Bauteil auswählen",
+  "Tutorial.ActionSelectReceiver.Body": "Wähle ein passendes passives optisches Bauteil. Eine Verbindung braucht zwei Bauteile.",
+  "Tutorial.ActionSelectReceiver.Cue": "Dieses optische Bauteil wählen",
+  "Tutorial.ActionPlaceReceiver.Title": "Zweites Bauteil platzieren",
+  "Tutorial.ActionPlaceReceiver.Body": "Platziere es neben der Quelle und lasse Platz für einen Wellenleiter.",
+  "Tutorial.ActionPlaceReceiver.Cue": "Hier das zweite Bauteil platzieren",
+  "Tutorial.ActionConnectMode.Title": "Verbinden auswählen",
+  "Tutorial.ActionConnectMode.Body": "Wähle das Verbinden-Werkzeug oder drücke C.",
+  "Tutorial.ActionConnectMode.Cue": "Auf Verbinden klicken",
+  "Tutorial.ActionConnectPins.Title": "Diese Pins verbinden",
+  "Tutorial.ActionConnectPins.Body": "Beginne am markierten Pin der Quelle und verbinde ihn mit dem Pin des zweiten Bauteils.",
+  "Tutorial.ActionConnectPins.Cue": "Diese beiden Pins verbinden",
+  "Tutorial.ActionSimulate.Title": "Lichtsimulation starten",
+  "Tutorial.ActionSimulate.Body": "Drücke Start, um Licht durch deine verbundene Schaltung fließen zu sehen.",
+  "Tutorial.ActionSimulate.Cue": "Auf Start klicken",
+  "Tutorial.NoCompatibleTemplate": "Kein passendes Bauteil sichtbar. Öffne die optische Bibliothek oder passe den Filter an.",
+  "Tutorial.CompletedCue": "Deine Lichtschaltung ist verbunden!",
+  "Tutorial.NoPlacementSpace": "Wähle eine freie Stelle auf dem Chip oder schaffe mehr Platz."
 }

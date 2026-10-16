@@ -1,146 +1,141 @@
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
+using Avalonia;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Library;
+using CAP.Avalonia.ViewModels.Panels;
+using CAP_Core.Components.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace CAP.Avalonia.ViewModels.Onboarding.FirstStepsTutorial;
 
-/// <summary>
-/// Step engine for the "Learn Lunima" first-steps tour (issue #1080, slice 1 of #769).
-/// An ordered list of steps observes live canvas state — component count, connection
-/// count, and the light-propagation overlay — and advances automatically as each task
-/// is completed. Plain observable state with no view dependency, so the whole tour can
-/// be driven headlessly from unit tests against a real <see cref="DesignCanvasViewModel"/>.
-/// </summary>
+/// <summary>Observes actual optical construction actions; guidance never changes the design.</summary>
 public partial class TutorialViewModel : ObservableObject
 {
     private readonly DesignCanvasViewModel _canvas;
+    private CanvasInteractionViewModel? _interaction;
+    private ObservableCollection<ComponentTemplate>? _templates;
+    private readonly List<INotifyPropertyChanged> _observed = new();
+    private OpticalTutorialState _state = new();
+    [ObservableProperty] private bool _isActive;
+    [ObservableProperty] private int _currentStepIndex;
+    [ObservableProperty] private bool _isCompleted;
 
-    /// <summary>True while the tour overlay is shown and the engine is observing the canvas.</summary>
-    [ObservableProperty]
-    private bool _isActive;
-
-    /// <summary>Zero-based index of the step the user is currently asked to perform.</summary>
-    [ObservableProperty]
-    private int _currentStepIndex;
-
-    /// <summary>True once the final step was completed (or Next was pressed on it).</summary>
-    [ObservableProperty]
-    private bool _isCompleted;
-
-    /// <summary>
-    /// Builds the three first-steps tasks against the given canvas:
-    /// place any component, connect two pins, run the light simulation.
-    /// </summary>
     public TutorialViewModel(DesignCanvasViewModel canvas)
     {
         _canvas = canvas;
-        Steps = new List<TutorialStep>
-        {
-            new("Tutorial.Step1Title", "Tutorial.Step1Body", () => _canvas.Components.Count > 0, "ComponentLibraryList"),
-            new("Tutorial.Step2Title", "Tutorial.Step2Body", () => _canvas.Connections.Count > 0, "DesignCanvasControl"),
-            new("Tutorial.Step3Title", "Tutorial.Step3Body", () => _canvas.ShowPowerFlow, "RunSimulationButton"),
-        };
+        string[] actions = ["SelectSource", "PlaceSource", "SelectReceiver", "PlaceReceiver", "ConnectMode", "ConnectPins", "Simulate"];
+        string[] targets = ["ComponentLibraryList", "DesignCanvasControl", "ComponentLibraryList", "DesignCanvasControl", "ConnectModeButton", "DesignCanvasControl", "RunSimulationButton"];
+        Steps = actions.Select((action, i) => new TutorialStep($"Tutorial.Action{action}.Title",
+            $"Tutorial.Action{action}.Body", () => _state.Stage > i || (i == 6 && _state.Connected && _canvas.ShowPowerFlow), targets[i])).ToList();
     }
 
-    /// <summary>The ordered steps of this tour chapter.</summary>
+    /// <summary>Attaches to the actual editor and its visible library; subscriptions live only during guidance.</summary>
+    public void AttachInteraction(CanvasInteractionViewModel interaction, ObservableCollection<ComponentTemplate> visibleTemplates)
+    {
+        Detach();
+        _interaction = interaction;
+        _templates = visibleTemplates;
+        if (IsActive) { Observe(); Evaluate(); }
+    }
+
     public IReadOnlyList<TutorialStep> Steps { get; }
-
-    /// <summary>The step the user is currently asked to perform.</summary>
     public TutorialStep CurrentStep => Steps[CurrentStepIndex];
-
-    /// <summary>Localized title of the current step.</summary>
     public string CurrentTitle => LocalizationService.Instance.Translate(CurrentStep.TitleKey);
-
-    /// <summary>Localized body text of the current step.</summary>
     public string CurrentBody => LocalizationService.Instance.Translate(CurrentStep.BodyKey);
+    public string? CurrentTargetName => CurrentStepIndex is 0 or 2 && _state.Template == null
+        || CurrentStepIndex is 1 or 3 && _state.PlacementPoint == null ? null : CurrentStep.TargetName;
+    public object? CurrentTargetItem => CurrentStepIndex is 0 or 2 ? _state.Template : null;
+    public PhysicalPin? CurrentTargetPin => CurrentStepIndex == 5 ? _state.StartPin : null;
+    public PhysicalPin? ConnectionTargetPin => CurrentStepIndex == 5 ? _state.EndPin : null;
+    public Point? CurrentCanvasPoint => CurrentStepIndex is 1 or 3 ? _state.PlacementPoint
+        : CurrentTargetPin is { } pin ? new Point(pin.GetAbsolutePosition().x, pin.GetAbsolutePosition().y) : null;
+    public string CurrentCue => LocalizationService.Instance.Translate(
+        CurrentStepIndex is 0 or 2 && _state.Template == null ? "Tutorial.NoCompatibleTemplate"
+            : CurrentStepIndex is 1 or 3 && _state.PlacementPoint == null ? "Tutorial.NoPlacementSpace"
+            : CurrentStep.TitleKey.Replace(".Title", ".Cue", StringComparison.Ordinal));
+    public string ProgressText => string.Format(CultureInfo.InvariantCulture, "{0} {1}/{2}",
+        LocalizationService.Instance.Translate("Tutorial.Step"), CurrentStepIndex + 1, Steps.Count);
 
-    /// <summary><c>x:Name</c> of the control the current step spotlights, or null for a floating card.</summary>
-    public string? CurrentTargetName => CurrentStep.TargetName;
-
-    /// <summary>Localized position label, e.g. "Step 2/3".</summary>
-    public string ProgressText => string.Format(
-        CultureInfo.InvariantCulture, "{0} {1}/{2}",
-        LocalizationService.Instance.Translate("Tutorial.Step"),
-        CurrentStepIndex + 1, Steps.Count);
-
-    /// <summary>Starts the tour at the first step and begins observing the canvas.</summary>
     public void Start()
     {
         Detach();
-        CurrentStepIndex = 0;
         IsCompleted = false;
         IsActive = true;
-        _canvas.Components.CollectionChanged += OnCanvasChanged;
-        _canvas.Connections.CollectionChanged += OnCanvasChanged;
-        _canvas.PropertyChanged += OnCanvasPropertyChanged;
-        EvaluateCurrentStep();
+        Observe();
+        Evaluate();
     }
 
-    /// <summary>Advances to the next step manually; on the last step the tour completes.</summary>
-    [RelayCommand]
-    public void Next()
+    /// <summary>Rechecks the action, never bypasses it.</summary>
+    [RelayCommand] public void Next() => Evaluate();
+    [RelayCommand] public void Skip() { IsActive = false; Detach(); }
+
+    private void Observe()
     {
-        if (!IsActive)
-            return;
-        Advance();
+        _canvas.Components.CollectionChanged += OnCollectionChanged;
+        _canvas.Connections.CollectionChanged += OnCollectionChanged;
+        _canvas.PropertyChanged += OnChanged;
+        _canvas.DiesChanged += OnDiesChanged;
+        if (_interaction != null) _interaction.PropertyChanged += OnChanged;
+        if (_templates != null) _templates.CollectionChanged += OnCollectionChanged;
+        ObserveChildren();
     }
 
-    /// <summary>Exits the tour without completing it.</summary>
-    [RelayCommand]
-    public void Skip()
+    private void ObserveChildren()
     {
-        IsActive = false;
-        Detach();
+        foreach (var item in _observed) item.PropertyChanged -= OnChanged;
+        _observed.Clear();
+        _observed.AddRange(_canvas.Components);
+        _observed.AddRange(_canvas.Surface.Items);
+        _observed.AddRange(_canvas.Connections);
+        foreach (var item in _observed) item.PropertyChanged += OnChanged;
     }
 
-    private void OnCanvasChanged(object? sender, NotifyCollectionChangedEventArgs e) => EvaluateCurrentStep();
-
-    private void OnCanvasPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) { ObserveChildren(); Evaluate(); }
+    private void OnDiesChanged() { ObserveChildren(); Evaluate(); }
+    private void OnChanged(object? sender, PropertyChangedEventArgs e) => Evaluate();
+    private void Evaluate()
     {
-        if (e.PropertyName is nameof(DesignCanvasViewModel.ShowPowerFlow))
-            EvaluateCurrentStep();
-    }
-
-    /// <summary>
-    /// Advances past every already-satisfied step, so a state change that fulfils
-    /// several conditions at once (e.g. loading a design) cannot stall the tour.
-    /// </summary>
-    private void EvaluateCurrentStep()
-    {
-        while (IsActive && CurrentStep.IsCompleted())
-            Advance();
-    }
-
-    private void Advance()
-    {
-        if (CurrentStepIndex < Steps.Count - 1)
+        if (!IsActive) return;
+        _state = OpticalTutorialState.Read(_canvas, _interaction, _templates);
+        CurrentStepIndex = _state.Stage;
+        NotifyCurrent();
+        if (_state.Connected && _canvas.ShowPowerFlow)
         {
-            CurrentStepIndex++;
-            return;
+            IsCompleted = true;
+            IsActive = false;
+            Detach();
         }
-
-        IsCompleted = true;
-        IsActive = false;
-        Detach();
     }
 
     private void Detach()
     {
-        _canvas.Components.CollectionChanged -= OnCanvasChanged;
-        _canvas.Connections.CollectionChanged -= OnCanvasChanged;
-        _canvas.PropertyChanged -= OnCanvasPropertyChanged;
+        _canvas.Components.CollectionChanged -= OnCollectionChanged;
+        _canvas.Connections.CollectionChanged -= OnCollectionChanged;
+        _canvas.PropertyChanged -= OnChanged;
+        _canvas.DiesChanged -= OnDiesChanged;
+        if (_interaction != null) _interaction.PropertyChanged -= OnChanged;
+        if (_templates != null) _templates.CollectionChanged -= OnCollectionChanged;
+        foreach (var item in _observed) item.PropertyChanged -= OnChanged;
+        _observed.Clear();
     }
 
-    partial void OnCurrentStepIndexChanged(int value)
+    partial void OnCurrentStepIndexChanged(int value) => NotifyCurrent();
+    private void NotifyCurrent()
     {
         OnPropertyChanged(nameof(CurrentStep));
         OnPropertyChanged(nameof(CurrentTitle));
         OnPropertyChanged(nameof(CurrentBody));
+        OnPropertyChanged(nameof(CurrentCue));
         OnPropertyChanged(nameof(CurrentTargetName));
+        OnPropertyChanged(nameof(CurrentTargetItem));
+        OnPropertyChanged(nameof(CurrentTargetPin));
+        OnPropertyChanged(nameof(ConnectionTargetPin));
+        OnPropertyChanged(nameof(CurrentCanvasPoint));
         OnPropertyChanged(nameof(ProgressText));
     }
 }

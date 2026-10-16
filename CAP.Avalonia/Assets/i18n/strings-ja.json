@@ -1,7 +1,6 @@
 {
   "Preview.Unavailable": "一部の部品プレビューを表示できません。",
   "Preview.ErrorDetails": "エラーの詳細",
-
   "AgentBridge.Prompt.Body": "Claude Code がインストールされています。ワンクリックで Lunima のローカルエージェントブリッジをオンにして登録し、Claude が開いている設計を調査・編集できるようにします。すべての編集は元に戻せます。",
   "AgentBridge.Prompt.Close": "閉じる",
   "AgentBridge.Prompt.Connect": "Claude Code を接続",
@@ -2131,5 +2130,29 @@
   "IsaPlayground.ExampleMissing": "このインストールには対応するサンプルがありません。",
   "IsaPlayground.ExampleReady": "サンプルを開きました。次に論理ネットワークを構築してください。",
   "IsaPlayground.ExampleActionFailed": "サンプルを開けませんでした。",
-  "IsaPlayground.ExampleBuildFailed": "ネットワークを構築できませんでした。論理解析のメッセージを確認して、もう一度お試しください。"
+  "IsaPlayground.ExampleBuildFailed": "ネットワークを構築できませんでした。論理解析のメッセージを確認して、もう一度お試しください。",
+  "Tutorial.ActionSelectSource.Title": "光源を選ぶ",
+  "Tutorial.ActionSelectSource.Body": "ライブラリからグレーティングカプラまたはエッジカプラを選びます。回路に光を入れる部品です。",
+  "Tutorial.ActionSelectSource.Cue": "この光源をクリック",
+  "Tutorial.ActionPlaceSource.Title": "光源を配置する",
+  "Tutorial.ActionPlaceSource.Body": "チップの空いている場所をクリックします。",
+  "Tutorial.ActionPlaceSource.Cue": "ここをクリックして配置",
+  "Tutorial.ActionSelectReceiver.Title": "2つ目の部品を選ぶ",
+  "Tutorial.ActionSelectReceiver.Body": "互換性のある受動光部品を選びます。接続には2つの部品が必要です。",
+  "Tutorial.ActionSelectReceiver.Cue": "この光部品を選択",
+  "Tutorial.ActionPlaceReceiver.Title": "2つ目の部品を配置する",
+  "Tutorial.ActionPlaceReceiver.Body": "導波路のスペースを空けて光源の隣に配置します。",
+  "Tutorial.ActionPlaceReceiver.Cue": "ここに2つ目の部品を配置",
+  "Tutorial.ActionConnectMode.Title": "接続ツールを選ぶ",
+  "Tutorial.ActionConnectMode.Body": "接続ツールを選ぶか、Cキーを押します。",
+  "Tutorial.ActionConnectMode.Cue": "接続をクリック",
+  "Tutorial.ActionConnectPins.Title": "このピンを接続する",
+  "Tutorial.ActionConnectPins.Body": "光源の強調表示されたピンから、2つ目の部品のピンへ接続します。",
+  "Tutorial.ActionConnectPins.Cue": "この2つのピンを接続",
+  "Tutorial.ActionSimulate.Title": "光をシミュレーションする",
+  "Tutorial.ActionSimulate.Body": "実行を押して、接続した回路を光が進む様子を確認します。",
+  "Tutorial.ActionSimulate.Cue": "実行をクリック",
+  "Tutorial.NoCompatibleTemplate": "互換性のある部品が表示されていません。光部品ライブラリを開くか、フィルターを変更してください。",
+  "Tutorial.CompletedCue": "光回路を接続できました！",
+  "Tutorial.NoPlacementSpace": "チップの空いている場所を選ぶか、スペースを確保してください。"
 }

@@ -1,7 +1,6 @@
 {
   "Preview.Unavailable": "部分元件预览不可用。",
   "Preview.ErrorDetails": "错误详情",
-
   "AgentBridge.Prompt.Body": "已安装 Claude Code。一键开启 Lunima 的本地智能体桥接并完成注册，Claude 即可查看和编辑你打开的设计 — 每次编辑都可撤销。",
   "AgentBridge.Prompt.Close": "关闭",
   "AgentBridge.Prompt.Connect": "连接 Claude Code",
@@ -2131,5 +2130,29 @@
   "IsaPlayground.ExampleMissing": "此安装中没有适用的示例。",
   "IsaPlayground.ExampleReady": "示例已打开。下一步请构建逻辑网络。",
   "IsaPlayground.ExampleActionFailed": "无法打开示例。",
-  "IsaPlayground.ExampleBuildFailed": "无法构建网络。请检查逻辑分析消息后重试。"
+  "IsaPlayground.ExampleBuildFailed": "无法构建网络。请检查逻辑分析消息后重试。",
+  "Tutorial.ActionSelectSource.Title": "选择光源",
+  "Tutorial.ActionSelectSource.Body": "从元件库选择光栅耦合器或边缘耦合器，为电路输入光。",
+  "Tutorial.ActionSelectSource.Cue": "点击这个光源",
+  "Tutorial.ActionPlaceSource.Title": "放置光源",
+  "Tutorial.ActionPlaceSource.Body": "点击芯片上的空白位置。",
+  "Tutorial.ActionPlaceSource.Cue": "点击这里放置",
+  "Tutorial.ActionSelectReceiver.Title": "选择第二个元件",
+  "Tutorial.ActionSelectReceiver.Body": "选择兼容的无源光学元件。建立连接需要两个元件。",
+  "Tutorial.ActionSelectReceiver.Cue": "选择这个光学元件",
+  "Tutorial.ActionPlaceReceiver.Title": "放置第二个元件",
+  "Tutorial.ActionPlaceReceiver.Body": "将它放在光源旁，为波导留出空间。",
+  "Tutorial.ActionPlaceReceiver.Cue": "在这里放置第二个元件",
+  "Tutorial.ActionConnectMode.Title": "选择连接工具",
+  "Tutorial.ActionConnectMode.Body": "选择连接工具，或按 C 键。",
+  "Tutorial.ActionConnectMode.Cue": "点击连接",
+  "Tutorial.ActionConnectPins.Title": "连接这些引脚",
+  "Tutorial.ActionConnectPins.Body": "从光源高亮的引脚开始，连接到第二个元件的引脚。",
+  "Tutorial.ActionConnectPins.Cue": "连接这两个引脚",
+  "Tutorial.ActionSimulate.Title": "运行光学仿真",
+  "Tutorial.ActionSimulate.Body": "点击运行，观察光在已连接的电路中传播。",
+  "Tutorial.ActionSimulate.Cue": "点击运行",
+  "Tutorial.NoCompatibleTemplate": "没有可见的兼容元件。请打开光学元件库或调整筛选条件。",
+  "Tutorial.CompletedCue": "你的光路已连接成功！",
+  "Tutorial.NoPlacementSpace": "请选择芯片上的空白位置，或腾出更多空间。"
 }
