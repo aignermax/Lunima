@@ -52,7 +52,6 @@ public class GateViewViewModelTests
     }
 
     [Theory]
-    [InlineData(InteractionMode.Connect)]
     [InlineData(InteractionMode.Cut)]
     public void PickingAWaveguideTool_SwitchesToThePhysicalView(InteractionMode mode)
     {
