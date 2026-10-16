@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using CAP.Avalonia.Controls.Rendering;
 using CAP_Core.Components.Core;
@@ -45,7 +46,7 @@ public class OutlineLayerPaletteTests
         OutlineLayerPalette.ColorFor(200, 7).ShouldBe(OutlineLayerPalette.ColorFor(200, 7));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void OutlineStyleFor_KeepsHistoricalAlphaConventions()
     {
         var (fill, outline) = OutlineLayerPalette.OutlineStyleFor(11, 0);
@@ -56,7 +57,7 @@ public class OutlineLayerPaletteTests
         outline.Thickness.ShouldBe(1.0);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SelectFrozenPathPen_TaggedPath_DrawsInLayerColor()
     {
         var path = new FrozenWaveguidePath

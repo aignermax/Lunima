@@ -15,33 +15,6 @@ namespace UnitTests.UI;
 public class VisualGuideOverlayTests
 {
     [AvaloniaFact]
-    public void RevealTarget_RemainsClickableDuringAnchorRefresh()
-    {
-        var vm = new DesignCanvasViewModel();
-        var canvas = new DesignCanvas { Name = "Canvas", ViewModel = vm };
-        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = "Canvas", TargetCanvasPoint = new Point(9000, 8000) };
-        var window = new Window { Width = 800, Height = 600, Content = new global::Avalonia.Controls.Grid { Children = { canvas, overlay } } };
-        try
-        {
-            window.Show();
-            Dispatcher.UIThread.RunJobs();
-            var refresh = typeof(TourAnchorOverlay).GetMethod("RefreshAnchor", BindingFlags.NonPublic | BindingFlags.Instance)!;
-            refresh.Invoke(overlay, null);
-            Dispatcher.UIThread.RunJobs();
-            var reveal = overlay.FindControl<Button>("GuideShowTarget")!;
-            Assert.True(reveal.IsVisible);
-            var visibilityDrops = 0;
-            reveal.PropertyChanged += (_, e) => { if (e.Property == Visual.IsVisibleProperty && !reveal.IsVisible) visibilityDrops++; };
-            refresh.Invoke(overlay, null);
-            Assert.Equal(0, visibilityDrops);
-            UnitTests.UI.Flows.UiInput.Click(window, reveal);
-            Assert.False(reveal.IsVisible);
-            Assert.Empty(vm.Components);
-        }
-        finally { window.Close(); }
-    }
-
-    [AvaloniaFact]
     public void NestedSignalTarget_PointsAtExactCheckbox_WithoutTogglingIt()
     {
         var first = new object();
@@ -66,6 +39,111 @@ public class VisualGuideOverlayTests
             Assert.False(wantedBox.IsChecked == true);
             overlay.TargetItem = new object();
             Assert.False(pointer.IsVisible);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void NestedScrollTarget_ManualInnerScroll_IsNotRevealedAgain()
+    {
+        var target = new Button { Name = "NestedAction", Height = 40, Content = "Save" };
+        var inner = new ScrollViewer { Height = 100, Content = new StackPanel
+            { Children = { new Border { Height = 190 }, target, new Border { Height = 500 } } } };
+        var outer = new ScrollViewer { Height = 300, Width = 220, Content = new StackPanel
+            { Children = { inner, new Border { Height = 500 } } } };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = target.Name };
+        var window = new Window { Width = 800, Height = 600,
+            Content = new Avalonia.Controls.Grid { Children = { outer, overlay } } };
+        try
+        {
+            window.Show();
+            Settle();
+            Assert.True(inner.Offset.Y > 0);
+            inner.Offset = default;
+            var outerOffset = outer.Offset;
+            Settle();
+            Assert.Equal(0, inner.Offset.Y);
+            Assert.Equal(outerOffset, outer.Offset);
+        }
+        finally { window.Close(); }
+
+        void Settle()
+        {
+            for (var i = 0; i < 4; i++)
+            {
+                window.UpdateLayout();
+                Dispatcher.UIThread.RunJobs();
+                typeof(TourAnchorOverlay).GetMethod("RefreshAnchor", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(overlay, null);
+            }
+        }
+    }
+
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ScrollTarget_AfterLayoutChanges_RevealsOnce_AndRespectsManualScroll(bool shrinkViewport)
+    {
+        var spacer = new Border { Height = 100 };
+        var target = new Button { Name = "LateAction", Height = 40, Content = "Save" };
+        var content = new StackPanel { Children = { spacer, target, new Border { Height = 500 } } };
+        var scroll = new ScrollViewer { Height = 200, Width = 220, Content = content };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = target.Name };
+        var window = new Window { Width = 800, Height = 600,
+            Content = new Avalonia.Controls.Grid { Children = { scroll, overlay } } };
+        try
+        {
+            window.Show();
+            Settle();
+            if (shrinkViewport) scroll.Height = 110;
+            else spacer.Height = 190;
+            Settle();
+            var point = target.TranslatePoint(default, content)!.Value;
+            Assert.True(point.Y >= scroll.Offset.Y - 0.1);
+            Assert.True(point.Y + target.Bounds.Height <= scroll.Offset.Y + scroll.Viewport.Height + 0.1,
+                "The entire action must remain reachable after viewport or target layout changes.");
+
+            scroll.Offset = default; // A user's scroll must not be undone by recurring polls.
+            Settle();
+            Assert.Equal(0, scroll.Offset.Y);
+        }
+        finally { window.Close(); }
+
+        void Settle()
+        {
+            for (var i = 0; i < 4; i++)
+            {
+                window.UpdateLayout();
+                Dispatcher.UIThread.RunJobs();
+                typeof(TourAnchorOverlay).GetMethod("RefreshAnchor", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(overlay, null);
+            }
+        }
+    }
+
+    [AvaloniaFact]
+    public void RevealTarget_RemainsClickableDuringAnchorRefresh()
+    {
+        var vm = new DesignCanvasViewModel();
+        var canvas = new DesignCanvas { Name = "Canvas", ViewModel = vm };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = "Canvas", TargetCanvasPoint = new Point(9000, 8000) };
+        var window = new Window { Width = 800, Height = 600, Content = new global::Avalonia.Controls.Grid { Children = { canvas, overlay } } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            var refresh = typeof(TourAnchorOverlay).GetMethod("RefreshAnchor", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            refresh.Invoke(overlay, null);
+            Dispatcher.UIThread.RunJobs();
+            var reveal = overlay.FindControl<Button>("GuideShowTarget")!;
+            Assert.True(reveal.IsVisible);
+            var visibilityDrops = 0;
+            reveal.PropertyChanged += (_, e) => { if (e.Property == Visual.IsVisibleProperty && !reveal.IsVisible) visibilityDrops++; };
+            refresh.Invoke(overlay, null);
+            Assert.Equal(0, visibilityDrops);
+            UnitTests.UI.Flows.UiInput.Click(window, reveal);
+            Assert.False(reveal.IsVisible);
+            Assert.Empty(vm.Components);
         }
         finally { window.Close(); }
     }
