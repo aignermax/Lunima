@@ -458,8 +458,10 @@ public partial class MainViewModel : ObservableObject
         // The gate tour observes the Make-gate steps and Logic panel the window shows.
         FirstGateTour = firstGateTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel(
-                Canvas, RightPanel.MakeGate, RightPanel.Logic);
+                Canvas, RightPanel.MakeGate, RightPanel.Logic, CommandManager);
         Home.FirstGateTourRequested = StartFirstGateTourAsync;
+        FirstGateTour.AttachUi(WorkspaceSwitch, BottomPanel.Analysis, CanvasInteraction);
+        FirstGateTour.RevealGateRequested = SelectGroupAndOpenMakeGate;
         WireMakeGate();
 
         // Keep the window title in sync with the open file and dirty state

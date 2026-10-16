@@ -22,6 +22,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 1. Application startup & project lifecycle
 
+- [ ] **auto** First-gate guidance demonstrates real kit marquee selection, Group, Make gate, Simulate, NAND, Save and Build. Next cannot skip actions; dies/unrelated groups cannot satisfy them. Closing the editor, losing selection, changing the function and undoing Save expose a valid recovery action; observers detach when dismissed (`FirstGateTourViewModelTests`, `FirstGateVisualJourneyTests`).
+
 - [ ] **auto** First-use optical guidance demonstrates the real compatible library item, placement, pin drag and simulation controls; actions advance only when performed, dismissal is remembered, resume preserves work, and Show target reveals offscreen targets without editing the design. Hidden guidance stops polling and animation. (`VisualLearningJourneyTests`, `VisualGuideOverlayTests`, `OpticalTutorialActionTests`, first-steps onboarding tests.)
 
 - [ ] **auto** Run-program guidance advances only after building/opening/selecting/enabling and three actual photonic ADD results; status text or Next cannot bypass actions. The compact English/German cues point to real ISA controls, an explicit button opens/reopens the ISA window without losing progress, lost prerequisites lead back to the required action, Done acknowledges success, and closed windows release their playback subscription (`RunProgramTourViewModelTests`, `IsaVisualJourneyTests`).
@@ -97,6 +99,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Create a group from selected components with `Ctrl + G`. `(auto: GroupingWorkflowTests)`
 - [ ] A new group's external pins read by direction — IN1, IN2… (west, top to bottom), OUT1… (east), N…/S… (north/south), E… (electrical) — while saved files keep their pin names. `(auto: GroupPinNamerTests)`
 - [ ] The right panel's gate section (truth table) appears only while exactly one group is selected; nothing renders otherwise. `(auto: TruthTablePanelRenderTests)`
+- [ ] Saving a gate definition updates the Logic canvas automatically: the NAND symbol and current name appear without toggling views; Undo removes the definition, Redo restores it, and renaming updates the displayed name. `(auto: GateDefinitionGraphRefreshTests)`
 - [ ] "Make gate…" in the gate section: role chips (in/out/bias/–) with suggested roles and short names, Simulate shows power bars, picking NAND/AND/OR/NOR/XOR/NOT moves the threshold midway between the levels with the margin in dB (overlap warning for a wrong function, manual override + "Use suggested"), Save as gate renames the pins (undoable); Save → Undo → Save still builds a valid gate and Save to library persists the current editor choices after undo; Save to library adds it under Saved Groups, then "Open in Logic ›" opens the Logic tab; (?) help animates roles and threshold. `(auto: MakeGateViewModelTests, GatePinRoleSuggesterTests, GateThresholdAdvisorTests, MakeGateScreenshotTests)`
 - [ ] Plain truth-table extraction shows the automatic threshold suggestion (largest power step, margin in dB) with "Use" and an "Open in Logic ›" link. `(auto: GateLinkingTests)`
 - [ ] Ungroup a group with `Ctrl + Shift + G`. `(auto: GroupingWorkflowTests)`

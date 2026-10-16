@@ -55,7 +55,7 @@
                         <Border Classes="divider"/>
 
                         <!-- Canvas modes: one segmented group, the active mode carries .active -->
-                        <Button Classes="toolbar" Command="{Binding SetSelectModeCommand}"
+                        <Button x:Name="SelectModeButton" Classes="toolbar" Command="{Binding SetSelectModeCommand}"
                                 Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Select}"
                                 ToolTip.Tip="{loc:Localize Toolbar.SelectModeTip}">
                             <controls:Icon Data="{StaticResource Icon.MousePointer2}"/>
@@ -163,7 +163,7 @@
                         <!-- Workspace switch: decides what Run does and which dock tabs show (Ctrl+1..4). -->
                         <Border x:Name="WorkspaceSwitchBar" Classes="segmented">
                             <StackPanel Orientation="Horizontal" Spacing="2">
-                                <Button Classes="toolbar segment" Content="{loc:Localize Workspace.Layout}"
+                                <Button x:Name="LayoutWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.Layout}"
                                         Classes.active="{Binding WorkspaceSwitch.IsLayout}"
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.Layout}"
@@ -173,7 +173,7 @@
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.Optics}"
                                         ToolTip.Tip="{loc:Localize Workspace.OpticsTip}"/>
-                                <Button Classes="toolbar segment" Content="{loc:Localize Workspace.Logic}"
+                                <Button x:Name="LogicWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.Logic}"
                                         Classes.active="{Binding WorkspaceSwitch.IsLogic}"
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.Logic}"
@@ -267,7 +267,7 @@
                                 ToolTip.Tip="{loc:Localize Toolbar.RedoTip}">
                             <controls:Icon Data="{StaticResource Icon.Redo2}"/>
                         </Button>
-                        <Button Classes="toolbar" Command="{Binding CreateGroupCommand}"
+                        <Button x:Name="CreateGroupButton" Classes="toolbar" Command="{Binding CreateGroupCommand}"
                                 ToolTip.Tip="{loc:Localize Toolbar.CreateGroupTip}">
                             <controls:Icon Data="{StaticResource Icon.Group}"/>
                         </Button>
@@ -1283,6 +1283,9 @@
     </tour:TourAnchorOverlay>
 
     <tour:TourAnchorOverlay IsVisible="{Binding FirstGateTour.IsActive, FallbackValue=False}"
+                                Demonstrate="True"
+                                TargetCanvasPoint="{Binding FirstGateTour.CurrentCanvasPoint}"
+                                TargetCanvasDestinationPoint="{Binding FirstGateTour.CurrentCanvasDestinationPoint}"
                                 TargetName="{Binding FirstGateTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
             <panels:FirstGateTourPanel DataContext="{Binding FirstGateTour}"/>
