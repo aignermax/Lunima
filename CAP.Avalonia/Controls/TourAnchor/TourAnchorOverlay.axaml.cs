@@ -30,6 +30,9 @@ public partial class TourAnchorOverlay : UserControl
 
     private readonly DispatcherTimer _poll;
     private string? _broughtIntoView;
+    private Control? _cachedTarget;
+    private readonly List<Visual> _visibilityAncestors = new();
+    private bool _attached;
 
     /// <summary>Creates the overlay and starts the bounds poll timer.</summary>
     public TourAnchorOverlay()
@@ -61,28 +64,67 @@ public partial class TourAnchorOverlay : UserControl
         if (change.Property == CardProperty)
             CardHost.Content = change.NewValue;
         else if (change.Property == TargetNameProperty)
+        {
+            _cachedTarget = null;
+            _broughtIntoView = null;
             RefreshAnchor();
+        }
         else if (change.Property == IsVisibleProperty)
-            RefreshAnchor();
+            UpdatePolling();
     }
 
     /// <inheritdoc/>
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        _poll.Start();
+        _attached = true;
+        foreach (var ancestor in this.GetVisualAncestors())
+        {
+            _visibilityAncestors.Add(ancestor);
+            ancestor.PropertyChanged += OnAncestorPropertyChanged;
+        }
+        UpdatePolling();
     }
 
     /// <inheritdoc/>
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _attached = false;
         _poll.Stop();
+        foreach (var ancestor in _visibilityAncestors)
+            ancestor.PropertyChanged -= OnAncestorPropertyChanged;
+        _visibilityAncestors.Clear();
+        _cachedTarget = null;
+        _broughtIntoView = null;
         base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnAncestorPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs change)
+    {
+        if (change.Property == IsVisibleProperty)
+            UpdatePolling();
+    }
+
+    private void UpdatePolling()
+    {
+        // Visibility changes can arrive during InitializeComponent, before the timer exists.
+        if (_poll == null)
+            return;
+        if (_attached && IsVisible && _visibilityAncestors.All(v => v.IsVisible))
+        {
+            _poll.Start();
+            RefreshAnchor();
+        }
+        else
+        {
+            _poll.Stop();
+            _cachedTarget = null;
+        }
     }
 
     private void RefreshAnchor()
     {
-        if (!IsVisible)
+        if (!_attached || !IsEffectivelyVisible)
             return;
 
         var viewport = RootCanvas.Bounds.Size;
@@ -113,9 +155,13 @@ public partial class TourAnchorOverlay : UserControl
         if (string.IsNullOrEmpty(TargetName))
             return null;
         var top = TopLevel.GetTopLevel(this) as Visual;
-        return top?.GetVisualDescendants()
+        if (_cachedTarget is { IsEffectivelyVisible: true } cached && cached.Name == TargetName &&
+            TopLevel.GetTopLevel(cached) == top)
+            return cached;
+        _cachedTarget = top?.GetVisualDescendants()
             .OfType<Control>()
             .FirstOrDefault(c => c.Name == TargetName && c.IsEffectivelyVisible);
+        return _cachedTarget;
     }
 
     private Rect TargetRectInOverlay(Control target)
