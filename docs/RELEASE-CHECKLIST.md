@@ -306,3 +306,5 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - **Date:** ___________________
 - **Blockers:** ___________________
 - **Approved for release:** ☐ Yes  ☐ No
+
+- [ ] Connect two chiplets guidance: Skip/completion releases the receiver position subscription; restarting records a fresh baseline without duplicate handlers.
