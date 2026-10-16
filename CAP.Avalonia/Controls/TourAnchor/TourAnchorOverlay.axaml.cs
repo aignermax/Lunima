@@ -30,6 +30,8 @@ public partial class TourAnchorOverlay : UserControl
 
     private readonly DispatcherTimer _poll;
     private string? _broughtIntoView;
+    private Control? _revealedControl;
+    private (ScrollViewer Scroll, Rect Target, Size Viewport)[] _revealGeometry = [];
     private Control? _cachedTarget;
     private readonly List<Visual> _visibilityAncestors = new();
     private bool _attached;
@@ -72,6 +74,8 @@ public partial class TourAnchorOverlay : UserControl
         {
             _cachedTarget = null;
             _broughtIntoView = null;
+            _revealedControl = null;
+            _revealGeometry = [];
             _scrolledItem = null;
             _scrolledList = null;
             RefreshAnchor();
@@ -110,6 +114,8 @@ public partial class TourAnchorOverlay : UserControl
         _visibilityAncestors.Clear();
         _cachedTarget = null;
         _broughtIntoView = null;
+        _revealedControl = null;
+        _revealGeometry = [];
         _scrolledItem = null;
         _scrolledList = null;
         base.OnDetachedFromVisualTree(e);
@@ -137,6 +143,8 @@ public partial class TourAnchorOverlay : UserControl
             StopDemonstration();
             ClearOffscreenTarget();
             _cachedTarget = null;
+            _revealedControl = null;
+            _revealGeometry = [];
         }
     }
 
@@ -165,11 +173,7 @@ public partial class TourAnchorOverlay : UserControl
         if (Demonstrate && target != null)
             targetRect = ResolveDemonstrationRect(target, targetRect);
 
-        if (target != null && _broughtIntoView != TargetName)
-        {
-            target.BringIntoView();
-            _broughtIntoView = TargetName;
-        }
+        if (target != null) RevealAfterLayoutChange(target);
 
         var hasSpotlight = targetRect.Width > 0 && targetRect.Height > 0;
         ApplyDim(viewport, hasSpotlight ? targetRect : default);
@@ -197,6 +201,33 @@ public partial class TourAnchorOverlay : UserControl
             ApplyDim(viewport, default);
             Arrow.IsVisible = false;
         }
+    }
+
+    private void RevealAfterLayoutChange(Control target)
+    {
+        if (target.Bounds.Width <= 0 || target.Bounds.Height <= 0) return;
+        var geometry = new List<(ScrollViewer Scroll, Rect Target, Size Viewport)>();
+        var nestedOffsets = default(Vector);
+        foreach (var scroll in target.GetVisualAncestors().OfType<ScrollViewer>())
+        {
+            if (scroll.Content is not Visual content || scroll.Viewport.Width <= 0 || scroll.Viewport.Height <= 0)
+                return; // Do not consume the reveal before the scroll content is arranged.
+            var origin = target.TranslatePoint(default, content);
+            if (origin == null) return;
+            // Content coordinates exclude scrolling. Repeated polls and manual
+            // offsets therefore cannot cause a scroll fight, but late layout can
+            // reveal the action once again after its geometry actually changes.
+            geometry.Add((scroll, new Rect(origin.Value + nestedOffsets, target.Bounds.Size), scroll.Viewport));
+            // An outer content transform includes every inner scroll offset.
+            // Remove those too, so nested lists retain the user's scroll position.
+            nestedOffsets += scroll.Offset;
+        }
+        if (_broughtIntoView == TargetName && ReferenceEquals(_revealedControl, target)
+            && _revealGeometry.SequenceEqual(geometry)) return;
+        _broughtIntoView = TargetName;
+        _revealedControl = target;
+        _revealGeometry = geometry.ToArray();
+        target.BringIntoView();
     }
 
     private Control? FindTarget()
