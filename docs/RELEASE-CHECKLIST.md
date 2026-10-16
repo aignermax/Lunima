@@ -322,6 +322,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Connect two chiplets guidance: Skip/completion releases the receiver position subscription; restarting records a fresh baseline without duplicate handlers.
 
 - [ ] System chiplet guide: real simulation, receiver move, checks, alignment and New die actions drive progress; Next cannot bypass them. Verify receiver drag demonstration, System/Chiplets/New die targets, EN/DE concise cues, undo recovery, and canceled unsaved-work prompt.
+- [ ] Store a number guidance points at the actual D0, LOAD and A checkboxes; a fresh clock write (including the same word), LOAD off and address away/back are required. Missing controls offer explicit recovery; Skip and input Reset release observers. Verify English/German real-click flow and unsaved-example cancellation. Store/Watch/ISA example starts fit once after the analysis dock opens; cancelled or superseded starts preserve the current viewport.
+
 ### Watch it compute: real control actions
 
 - [ ] Start Watch it compute in English and German. The compact cue and animated pointer identify Build logic network, Step clock, Run and Stop; no Next button can skip these actions.
