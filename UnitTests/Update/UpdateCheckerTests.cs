@@ -149,8 +149,9 @@ public class UpdateCheckerTests
 
         if (OperatingSystem.IsWindows())
         {
-            // Windows in-place self-update is deferred; the ViewModel falls back to the manual MSI.
-            asset.ShouldBeNull();
+            // The installer separately gates this on a matching registered MSI location.
+            asset.ShouldNotBeNull();
+            asset!.Name.EndsWith(".msi").ShouldBeTrue();
         }
         else if (OperatingSystem.IsMacOS())
         {
