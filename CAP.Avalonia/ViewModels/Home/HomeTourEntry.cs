@@ -24,6 +24,9 @@ public record HomeTourEntry(
     string TipKey,
     ICommand Command)
 {
+    /// <summary>The first chapter teaches placing and connecting a light circuit.</summary>
+    public bool IsOpticalStart => Number == 1;
+
     /// <summary>
     /// Localized display name. Resolved lazily so it follows the active UI
     /// language whenever the list is rebuilt (same pattern as

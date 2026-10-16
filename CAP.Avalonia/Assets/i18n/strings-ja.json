@@ -615,7 +615,7 @@
   "Home.StoreNumberTourTip": "RAM 2x4 の例でガイドツアー：4 ビットワードをメモリセルに書き込み、読み戻す",
   "Home.WatchComputeTour": "計算する様子を見る",
   "Home.WatchComputeTourTip": "2 ビットカウンタの例でガイドツアー：ロジックネットワークを構築し、クロックを進め、回路が数える様子を見る",
-  "Home.Learn.FirstSteps": "最初のステップ",
+  "Home.Learn.FirstSteps": "初めての光回路を作る",
   "Home.Learn.FirstStepsDescription": "コンポーネントを配置してピンを接続し、光を確認",
   "Home.Learn.WatchComputeDescription": "2 ビットカウンタを作り、光が数える様子を見る",
   "Home.Learn.StoreNumberDescription": "フォトニック RAM に数値を書き込んで読み戻す",
@@ -2174,5 +2174,8 @@
   "RunProgramTour.Action6.Cue": "チップで3回の加算を実行しました",
   "RunProgramTour.ActionOpen.Button": "ISAプレイグラウンドを開く",
   "RunProgramTour.ActionDone.Button": "完了",
-  "RunProgramTour.ActionOpen.Cue": "ISAプレイグラウンドを開く"
+  "RunProgramTour.ActionOpen.Cue": "ISAプレイグラウンドを開く",
+  "Home.Optical.Place": "配置",
+  "Home.Optical.Connect": "接続",
+  "Home.Optical.Light": "光"
 }

@@ -615,7 +615,7 @@
   "Home.StoreNumberTourTip": "Recorrido guiado sobre el ejemplo RAM 2x4: escribe una palabra de 4 bits en una celda de memoria y vuelve a leerla",
   "Home.WatchComputeTour": "Míralo calcular",
   "Home.WatchComputeTourTip": "Recorrido guiado sobre el ejemplo del contador de 2 bits: construye la red lógica, avanza el reloj y mira cómo cuenta el circuito",
-  "Home.Learn.FirstSteps": "Primeros pasos",
+  "Home.Learn.FirstSteps": "Crea tu primer circuito óptico",
   "Home.Learn.FirstStepsDescription": "Coloca un componente, conecta dos pines y ve la luz",
   "Home.Learn.WatchComputeDescription": "Construye un contador de 2 bits y mira cómo cuenta la luz",
   "Home.Learn.StoreNumberDescription": "Escribe un número en RAM fotónica y vuelve a leerlo",
@@ -2174,5 +2174,8 @@
   "RunProgramTour.Action6.Cue": "Tres sumas se ejecutaron en tu chip",
   "RunProgramTour.ActionOpen.Button": "Abrir el entorno ISA",
   "RunProgramTour.ActionDone.Button": "Listo",
-  "RunProgramTour.ActionOpen.Cue": "Abrir el entorno ISA"
+  "RunProgramTour.ActionOpen.Cue": "Abrir el entorno ISA",
+  "Home.Optical.Place": "Colocar",
+  "Home.Optical.Connect": "Conectar",
+  "Home.Optical.Light": "Luz"
 }
