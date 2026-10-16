@@ -134,7 +134,8 @@ public partial class MakeGateViewModel : ObservableObject
         {
             var role = saved == null ? suggestion.Role : PersistedRole(saved, suggestion.PinName);
             var name = saved == null ? suggestion.SuggestedName : suggestion.PinName;
-            return new GatePinRowViewModel(suggestion.PinName, role, name, suggestion.Role);
+            return new GatePinRowViewModel(suggestion.PinName, role, name, suggestion.Role,
+                _group.ExternalPins.Single(p => p.Name == suggestion.PinName));
         });
         // The gate interface first (inputs in bit order, outputs, bias), unused pins last.
         foreach (var row in rows.OrderBy(r => (int)r.Role).ThenBy(r => BitOrder(saved, r)))

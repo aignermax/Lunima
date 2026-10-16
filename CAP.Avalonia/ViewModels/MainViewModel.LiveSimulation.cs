@@ -43,8 +43,10 @@ public partial class MainViewModel
     /// </summary>
     private void OnProjectOpened()
     {
+        var cameFromHome = Home.IsHomeVisible;
         Home.OnProjectOpened();
         ResetWorkspacePresentationForNewDesign();
+        UpdateGuidanceForOpenedProject(cameFromHome);
         if (!Canvas.ShowPowerFlow)
             return;
         if (Canvas.Components.Count == 0)

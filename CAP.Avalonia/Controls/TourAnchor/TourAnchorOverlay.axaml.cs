@@ -30,6 +30,12 @@ public partial class TourAnchorOverlay : UserControl
 
     private readonly DispatcherTimer _poll;
     private string? _broughtIntoView;
+    private Control? _revealedControl;
+    private (ScrollViewer Scroll, Rect Target, Size Viewport)[] _revealGeometry = [];
+    private Control? _cachedTarget;
+    private readonly List<Visual> _visibilityAncestors = new();
+    private bool _attached;
+    private bool _refreshingAnchor;
 
     /// <summary>Creates the overlay and starts the bounds poll timer.</summary>
     public TourAnchorOverlay()
@@ -38,6 +44,10 @@ public partial class TourAnchorOverlay : UserControl
         _poll = new DispatcherTimer { Interval = PollInterval };
         _poll.Tick += (_, _) => RefreshAnchor();
         CardHost.Content = Card;
+        // Card content and the viewport can change in the same layout as a
+        // target switch. Do not leave buttons at the old position until a poll.
+        CardHost.SizeChanged += (_, _) => RefreshAnchor();
+        RootCanvas.SizeChanged += (_, _) => RefreshAnchor();
     }
 
     /// <summary>The tour card content placed next to the target.</summary>
@@ -61,8 +71,21 @@ public partial class TourAnchorOverlay : UserControl
         if (change.Property == CardProperty)
             CardHost.Content = change.NewValue;
         else if (change.Property == TargetNameProperty)
+        {
+            _cachedTarget = null;
+            _broughtIntoView = null;
+            _revealedControl = null;
+            _revealGeometry = [];
+            _scrolledItem = null;
+            _scrolledList = null;
             RefreshAnchor();
+        }
         else if (change.Property == IsVisibleProperty)
+            UpdatePolling();
+        else if (change.Property == DemonstrateProperty || change.Property == TargetItemProperty ||
+                 change.Property == TargetCanvasPointProperty || change.Property == TargetPinProperty ||
+                 change.Property == TargetCanvasDestinationPointProperty ||
+                 change.Property == ConnectionTargetPinProperty)
             RefreshAnchor();
     }
 
@@ -70,42 +93,141 @@ public partial class TourAnchorOverlay : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        _poll.Start();
+        _attached = true;
+        foreach (var ancestor in this.GetVisualAncestors())
+        {
+            _visibilityAncestors.Add(ancestor);
+            ancestor.PropertyChanged += OnAncestorPropertyChanged;
+        }
+        UpdatePolling();
     }
 
     /// <inheritdoc/>
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _attached = false;
         _poll.Stop();
+        StopDemonstration();
+        ClearOffscreenTarget();
+        foreach (var ancestor in _visibilityAncestors)
+            ancestor.PropertyChanged -= OnAncestorPropertyChanged;
+        _visibilityAncestors.Clear();
+        _cachedTarget = null;
+        _broughtIntoView = null;
+        _revealedControl = null;
+        _revealGeometry = [];
+        _scrolledItem = null;
+        _scrolledList = null;
         base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnAncestorPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs change)
+    {
+        if (change.Property == IsVisibleProperty)
+            UpdatePolling();
+    }
+
+    private void UpdatePolling()
+    {
+        // Visibility changes can arrive during InitializeComponent, before the timer exists.
+        if (_poll == null)
+            return;
+        if (_attached && IsVisible && _visibilityAncestors.All(v => v.IsVisible))
+        {
+            _poll.Start();
+            RefreshAnchor();
+        }
+        else
+        {
+            _poll.Stop();
+            StopDemonstration();
+            ClearOffscreenTarget();
+            _cachedTarget = null;
+            _revealedControl = null;
+            _revealGeometry = [];
+        }
     }
 
     private void RefreshAnchor()
     {
-        if (!IsVisible)
+        if (!_attached || !IsEffectivelyVisible || _refreshingAnchor)
             return;
+        _refreshingAnchor = true;
+        try { RefreshAnchorCore(); }
+        finally { _refreshingAnchor = false; }
+    }
 
+    private void RefreshAnchorCore()
+    {
         var viewport = RootCanvas.Bounds.Size;
+        if (!double.IsFinite(viewport.Width) || !double.IsFinite(viewport.Height)
+            || viewport.Width <= 0 || viewport.Height <= 0)
+            return;
+        // Keep the reveal button alive across polling/layout refreshes: briefly
+        // hiding it cancels a mouse press before release can produce a click.
+        _offscreenCanvas = null;
+        _offscreenPoint = null;
         var target = FindTarget();
+        target = ResolveItemTarget(target);
         var targetRect = target == null ? default : TargetRectInOverlay(target);
+        if (Demonstrate && target != null)
+            targetRect = ResolveDemonstrationRect(target, targetRect);
 
-        if (target != null && _broughtIntoView != TargetName)
-        {
-            target.BringIntoView();
-            _broughtIntoView = TargetName;
-        }
+        if (target != null) RevealAfterLayoutChange(target);
 
         var hasSpotlight = targetRect.Width > 0 && targetRect.Height > 0;
         ApplyDim(viewport, hasSpotlight ? targetRect : default);
 
         CardHost.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         var cardSize = CardHost.DesiredSize;
+        if (!double.IsFinite(cardSize.Width) || !double.IsFinite(cardSize.Height))
+            return;
         var pos = TourCardPlacement.Place(viewport, targetRect, cardSize, out var side);
         ACanvas.SetLeft(CardHost, pos.X);
         ACanvas.SetTop(CardHost, pos.Y);
+        GuideShowTarget.IsVisible = _offscreenPoint != null;
+        if (GuideShowTarget.IsVisible)
+        {
+            GuideShowTarget.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            ACanvas.SetLeft(GuideShowTarget, Math.Max(8, pos.X));
+            ACanvas.SetTop(GuideShowTarget, Math.Max(8, pos.Y - GuideShowTarget.DesiredSize.Height - 8));
+        }
 
         UpdateSpotlight(targetRect, hasSpotlight);
         UpdateArrow(targetRect, side, hasSpotlight);
+        UpdateDemonstration(hasSpotlight ? targetRect.Center : null);
+        if (Demonstrate)
+        {
+            ApplyDim(viewport, default);
+            Arrow.IsVisible = false;
+        }
+    }
+
+    private void RevealAfterLayoutChange(Control target)
+    {
+        if (target.Bounds.Width <= 0 || target.Bounds.Height <= 0) return;
+        var geometry = new List<(ScrollViewer Scroll, Rect Target, Size Viewport)>();
+        var nestedOffsets = default(Vector);
+        foreach (var scroll in target.GetVisualAncestors().OfType<ScrollViewer>())
+        {
+            if (scroll.Content is not Visual content || scroll.Viewport.Width <= 0 || scroll.Viewport.Height <= 0)
+                return; // Do not consume the reveal before the scroll content is arranged.
+            var origin = target.TranslatePoint(default, content);
+            if (origin == null) return;
+            // Content coordinates exclude scrolling. Repeated polls and manual
+            // offsets therefore cannot cause a scroll fight, but late layout can
+            // reveal the action once again after its geometry actually changes.
+            geometry.Add((scroll, new Rect(origin.Value + nestedOffsets, target.Bounds.Size), scroll.Viewport));
+            // An outer content transform includes every inner scroll offset.
+            // Remove those too, so nested lists retain the user's scroll position.
+            nestedOffsets += scroll.Offset;
+        }
+        if (_broughtIntoView == TargetName && ReferenceEquals(_revealedControl, target)
+            && _revealGeometry.SequenceEqual(geometry)) return;
+        _broughtIntoView = TargetName;
+        _revealedControl = target;
+        _revealGeometry = geometry.ToArray();
+        target.BringIntoView();
     }
 
     private Control? FindTarget()
@@ -113,9 +235,13 @@ public partial class TourAnchorOverlay : UserControl
         if (string.IsNullOrEmpty(TargetName))
             return null;
         var top = TopLevel.GetTopLevel(this) as Visual;
-        return top?.GetVisualDescendants()
+        if (_cachedTarget is { IsEffectivelyVisible: true } cached && cached.Name == TargetName &&
+            TopLevel.GetTopLevel(cached) == top)
+            return cached;
+        _cachedTarget = top?.GetVisualDescendants()
             .OfType<Control>()
             .FirstOrDefault(c => c.Name == TargetName && c.IsEffectivelyVisible);
+        return _cachedTarget;
     }
 
     private Rect TargetRectInOverlay(Control target)
@@ -123,7 +249,19 @@ public partial class TourAnchorOverlay : UserControl
         var origin = target.TranslatePoint(new Point(0, 0), RootCanvas);
         if (origin == null)
             return default;
-        return new Rect(origin.Value, target.Bounds.Size).Inflate(SpotlightPadding);
+        var rect = new Rect(origin.Value, target.Bounds.Size);
+        if (Demonstrate)
+        {
+            rect = rect.Intersect(new Rect(RootCanvas.Bounds.Size));
+            foreach (var ancestor in target.GetVisualAncestors().Where(v => v.ClipToBounds))
+            {
+                var clipOrigin = ancestor.TranslatePoint(default, RootCanvas);
+                if (clipOrigin == null) return default;
+                rect = rect.Intersect(new Rect(clipOrigin.Value, ancestor.Bounds.Size));
+            }
+            if (rect.Width <= 0 || rect.Height <= 0) return default;
+        }
+        return rect.Inflate(SpotlightPadding);
     }
 
     private void ApplyDim(Size viewport, Rect hole)
