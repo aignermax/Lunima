@@ -22,6 +22,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 1. Application startup & project lifecycle
 
+- [ ] **auto** First-gate guidance demonstrates real kit marquee selection, Group, Make gate, Simulate, NAND, Save and Build. Next cannot skip actions; dies/unrelated groups cannot satisfy them. Closing the editor, losing selection, changing the function and undoing Save expose a valid recovery action; observers detach when dismissed (`FirstGateTourViewModelTests`, `FirstGateVisualJourneyTests`).
+
 - [ ] **auto** First-use optical guidance demonstrates the real compatible library item, placement, pin drag and simulation controls; actions advance only when performed, dismissal is remembered, resume preserves work, and Show target reveals offscreen targets without editing the design. Hidden guidance stops polling and animation. (`VisualLearningJourneyTests`, `VisualGuideOverlayTests`, `OpticalTutorialActionTests`, first-steps onboarding tests.)
 
 - [ ] **auto** Adaptive crossings default to enabled for fresh/unset preferences; saved true/false values survive restart. Restoring the policy on startup does not start routing or repair (`RoutingSettingsPreferencesTests`, `RoutingSettingsPersistenceTests`, `AdaptiveCrossingToggleTests`).

@@ -2162,5 +2162,14 @@
   "Tutorial.NoPlacementSpace": "Choose a free spot on the chip, or make more room.",
   "Tutorial.ActionOptics.Title": "Open Optics",
   "Tutorial.ActionOptics.Body": "Switch to Optics to simulate the circuit you built.",
-  "Tutorial.ActionOptics.Cue": "Click Optics"
+  "Tutorial.ActionOptics.Cue": "Click Optics",
+  "FirstGateTour.Cue.Start": "Build your own NAND gate",
+  "FirstGateTour.Cue.SelectMode": "Select tool",
+  "FirstGateTour.Cue.Group": "Group these parts",
+  "FirstGateTour.Cue.SelectParts": "Drag around the four parts",
+  "FirstGateTour.Cue.Logic": "Open Logic",
+  "FirstGateTour.Cue.Nand": "Choose NAND",
+  "FirstGateTour.Cue.Build": "Build logic",
+  "FirstGateTour.Begin": "Start",
+  "FirstGateTour.RevealGate": "Open your gate again"
 }

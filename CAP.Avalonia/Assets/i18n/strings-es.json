@@ -2162,5 +2162,14 @@
   "Tutorial.NoPlacementSpace": "Elige un espacio libre en el chip o deja más espacio.",
   "Tutorial.ActionOptics.Title": "Abre Óptica",
   "Tutorial.ActionOptics.Body": "Cambia a Óptica para simular el circuito que has construido.",
-  "Tutorial.ActionOptics.Cue": "Haz clic en Óptica"
+  "Tutorial.ActionOptics.Cue": "Haz clic en Óptica",
+  "FirstGateTour.Cue.Start": "Crea tu propia puerta NAND",
+  "FirstGateTour.Cue.SelectMode": "Herramienta de selección",
+  "FirstGateTour.Cue.Group": "Agrupa estos componentes",
+  "FirstGateTour.Cue.SelectParts": "Arrastra alrededor de los cuatro componentes",
+  "FirstGateTour.Cue.Logic": "Abre Lógica",
+  "FirstGateTour.Cue.Nand": "Elige NAND",
+  "FirstGateTour.Cue.Build": "Construye la lógica",
+  "FirstGateTour.Begin": "Empezar",
+  "FirstGateTour.RevealGate": "Volver a abrir tu puerta lógica"
 }

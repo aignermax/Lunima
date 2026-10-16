@@ -26,6 +26,9 @@ public partial class MakeGateViewModel : ObservableObject
     private readonly GatePinRoleSuggester _suggester = new();
     private readonly GateThresholdAdvisor _advisor = new();
     private ComponentGroup? _group;
+
+    /// <summary>The exact group whose current editor state is being displayed.</summary>
+    internal ComponentGroup? ConfiguredGroup => _group;
     private DesignCanvasViewModel? _canvas;
     private CancellationTokenSource? _simulateCts;
     private TruthTable? _table;

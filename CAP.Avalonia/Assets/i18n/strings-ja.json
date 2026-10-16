@@ -2162,5 +2162,14 @@
   "Tutorial.NoPlacementSpace": "チップの空いている場所を選ぶか、スペースを確保してください。",
   "Tutorial.ActionOptics.Title": "光学ワークスペースを開く",
   "Tutorial.ActionOptics.Body": "光学に切り替えて、作成した回路をシミュレーションします。",
-  "Tutorial.ActionOptics.Cue": "光学をクリック"
+  "Tutorial.ActionOptics.Cue": "光学をクリック",
+  "FirstGateTour.Cue.Start": "自分のNANDゲートを作ろう",
+  "FirstGateTour.Cue.SelectMode": "選択ツール",
+  "FirstGateTour.Cue.Group": "部品をグループ化",
+  "FirstGateTour.Cue.SelectParts": "4つの部品を囲むようにドラッグ",
+  "FirstGateTour.Cue.Logic": "ロジックを開く",
+  "FirstGateTour.Cue.Nand": "NANDを選択",
+  "FirstGateTour.Cue.Build": "ロジックを構築",
+  "FirstGateTour.Begin": "始める",
+  "FirstGateTour.RevealGate": "作成中のゲートを再度開く"
 }

@@ -2162,5 +2162,14 @@
   "Tutorial.NoPlacementSpace": "Wähle eine freie Stelle auf dem Chip oder schaffe mehr Platz.",
   "Tutorial.ActionOptics.Title": "Optik öffnen",
   "Tutorial.ActionOptics.Body": "Wechsle zu Optik, um deine aufgebaute Schaltung zu simulieren.",
-  "Tutorial.ActionOptics.Cue": "Auf Optik klicken"
+  "Tutorial.ActionOptics.Cue": "Auf Optik klicken",
+  "FirstGateTour.Cue.Start": "Baue dein eigenes NAND-Gatter",
+  "FirstGateTour.Cue.SelectMode": "Auswahlwerkzeug",
+  "FirstGateTour.Cue.Group": "Diese Bauteile gruppieren",
+  "FirstGateTour.Cue.SelectParts": "Ziehe um die vier Bauteile",
+  "FirstGateTour.Cue.Logic": "Logik öffnen",
+  "FirstGateTour.Cue.Nand": "NAND wählen",
+  "FirstGateTour.Cue.Build": "Logik aufbauen",
+  "FirstGateTour.Begin": "Los geht’s",
+  "FirstGateTour.RevealGate": "Dein Gatter wieder öffnen"
 }

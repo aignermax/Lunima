@@ -20,6 +20,103 @@ namespace UnitTests.Onboarding.FirstStepsTutorial;
 public class FirstGateTourViewModelTests
 {
     [Fact]
+    public async Task ClosingMakeGate_ReturnsToOpeningIt()
+    {
+        var (canvas, group) = await GateKitFixture.GroupedKitAsync();
+        canvas.Selection.SelectSingle(group);
+        var makeGate = new MakeGateViewModel();
+        makeGate.ConfigureForSelection(group, canvas);
+        makeGate.OpenCommand.Execute(null);
+        var tour = new FirstGateTourViewModel(canvas, makeGate, new LogicPanelViewModel());
+        tour.Start();
+        tour.Next();
+        tour.CurrentStepIndex.ShouldBe(3);
+        makeGate.CloseCommand.Execute(null);
+        tour.CurrentStepIndex.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task ChangingFunctionBeforeSave_ReturnsToNandSelection()
+    {
+        var (canvas, group) = await GateKitFixture.GroupedKitAsync();
+        canvas.Selection.SelectSingle(group);
+        var makeGate = new MakeGateViewModel();
+        makeGate.ConfigureForSelection(group, canvas);
+        makeGate.OpenCommand.Execute(null);
+        await makeGate.SimulateCommand.ExecuteAsync(null);
+        makeGate.SelectedFunction = makeGate.Functions.Single(f => f.Function == GateFunction.Nand);
+        var tour = new FirstGateTourViewModel(canvas, makeGate, new LogicPanelViewModel());
+        tour.Start();
+        tour.Next();
+        tour.CurrentStepIndex.ShouldBe(5);
+        makeGate.SelectedFunction = makeGate.Functions.Single(f => f.Function == GateFunction.And);
+        tour.CurrentStepIndex.ShouldBe(4);
+        tour.IsCompleted.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task UndoSavedDefinition_ReturnsToSaveAndRedoRestoresBuildStep()
+    {
+        var (canvas, group) = await GateKitFixture.GroupedKitAsync();
+        canvas.Selection.SelectSingle(group);
+        var commands = new CAP.Avalonia.Commands.CommandManager();
+        var makeGate = new MakeGateViewModel { ExecuteCommand = commands.ExecuteCommand };
+        makeGate.ConfigureForSelection(group, canvas);
+        makeGate.OpenCommand.Execute(null);
+        await makeGate.SimulateCommand.ExecuteAsync(null);
+        makeGate.SelectedFunction = makeGate.Functions.Single(f => f.Function == GateFunction.Nand);
+        var tour = new FirstGateTourViewModel(canvas, makeGate, new LogicPanelViewModel(), commands);
+        tour.Start();
+        tour.Next();
+        makeGate.SaveCommand.Execute(null);
+        tour.CurrentStepIndex.ShouldBe(6);
+        commands.Undo().ShouldBeTrue();
+        ((ComponentGroup)group.Component).TruthTablePinAssignment.ShouldBeNull();
+        tour.CurrentStepIndex.ShouldBe(5);
+        commands.Redo().ShouldBeTrue();
+        tour.CurrentStepIndex.ShouldBe(6);
+        tour.Skip();
+    }
+
+    [Fact]
+    public async Task AnotherGroupsEditor_CannotCompleteTheKitActions()
+    {
+        var (canvas, group) = await GateKitFixture.GroupedKitAsync();
+        var makeGate = new MakeGateViewModel();
+        var tour = new FirstGateTourViewModel(canvas, makeGate, new LogicPanelViewModel());
+        tour.Start();
+        tour.Next();
+        var unrelated = canvas.AddComponent(new ComponentGroup("Other gate"));
+        canvas.Selection.SelectSingle(unrelated);
+        makeGate.ConfigureForSelection(unrelated, canvas);
+        makeGate.OpenCommand.Execute(null);
+        tour.CurrentStepIndex.ShouldBe(2);
+        tour.IsCompleted.ShouldBeFalse();
+        tour.Skip();
+    }
+
+    [Fact]
+    public void Next_CannotSkipActualGateConstruction()
+    {
+        var tour = new FirstGateTourViewModel(new DesignCanvasViewModel(), new MakeGateViewModel(), new LogicPanelViewModel());
+        tour.Start();
+        for (var i = 0; i < 20; i++) tour.Next();
+        tour.CurrentStepIndex.ShouldBe(1);
+        tour.IsCompleted.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Die_IsNotAConstructedLogicGate()
+    {
+        var canvas = new DesignCanvasViewModel();
+        canvas.AddComponent(new ComponentGroup("Chip") { Die = new CAP_Core.Components.Dies.DieDefinition(1000, 1000) });
+        var tour = new FirstGateTourViewModel(canvas, new MakeGateViewModel(), new LogicPanelViewModel());
+        tour.Start();
+        tour.Next();
+        tour.CurrentStepIndex.ShouldBe(1);
+    }
+
+    [Fact]
     public void InitialState_IsInactive_WithSevenSteps()
     {
         var tour = new FirstGateTourViewModel(new DesignCanvasViewModel(), new MakeGateViewModel(), new LogicPanelViewModel());
