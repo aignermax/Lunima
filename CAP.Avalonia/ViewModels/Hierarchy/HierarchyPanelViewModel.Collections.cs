@@ -32,7 +32,8 @@ public partial class HierarchyPanelViewModel
             RebuildTree();
             return;
         }
-        _dieSignature = DieSignature();
+        // Root changes do not reconcile retained die subtrees. Their content can change
+        // during a lift/delete command; DiesChanged must still detect that difference.
     }
 
     private bool IsHierarchyRoot(ComponentViewModel vm) =>

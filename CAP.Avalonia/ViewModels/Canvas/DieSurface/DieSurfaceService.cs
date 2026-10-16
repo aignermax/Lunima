@@ -172,8 +172,11 @@ public sealed class DieSurfaceService
     {
         var roots = _groups.RootComponents.Select(vm => vm.Component)
             .OfType<ComponentGroup>().Where(g => g.IsDie).ToHashSet();
+        var liveParts = roots.SelectMany(d => d.ChildComponents)
+            .Where(p => p.ParentGroup is ComponentGroup parent && roots.Contains(parent))
+            .ToHashSet();
         foreach (var stale in _viewModels.Keys.Where(p => p.ParentGroup is not ComponentGroup parent
-                     || !roots.Contains(parent) || !parent.ChildComponents.Contains(p)).ToList())
+                     || !roots.Contains(parent) || !liveParts.Contains(p)).ToList())
             _viewModels.Remove(stale);
         if (LastWorkedDie != null && !roots.Contains(LastWorkedDie))
             LastWorkedDie = null;

@@ -11,6 +11,23 @@ namespace UnitTests.ViewModels;
 public class HierarchyLifecycleTests
 {
     [Fact]
+    public void DeletingDiePart_RefreshesRetainedDieSubtree_AndUndoRestoresIt()
+    {
+        var w = new UnitTests.Dies.WorkSurface.WorkSurfaceCanvas();
+        var hierarchy = new HierarchyPanelViewModel(w.Canvas);
+        hierarchy.RebuildTree();
+        var vm = w.Vm(w.A);
+        w.Commands.ExecuteCommand(new CAP.Avalonia.Commands.Dies.DieSurfaceCommand(
+            w.Canvas, () => new CAP.Avalonia.Commands.DeleteComponentCommand(w.Canvas, vm),
+            new[] { vm }, w.Die1, "delete"));
+        hierarchy.RootNodes.Single(n => n.Component == w.Die1).Children
+            .ShouldNotContain(n => n.Component == w.A);
+        w.Commands.Undo();
+        hierarchy.RootNodes.Single(n => n.Component == w.Die1).Children
+            .Count(n => n.Component == w.A).ShouldBe(1);
+    }
+
+    [Fact]
     public void AddingAndRemovingRoots_DoesNotRebuildUnchangedHierarchy()
     {
         var canvas = new DesignCanvasViewModel();
