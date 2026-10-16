@@ -33,6 +33,7 @@ public partial class TourAnchorOverlay : UserControl
     private Control? _cachedTarget;
     private readonly List<Visual> _visibilityAncestors = new();
     private bool _attached;
+    private bool _refreshingAnchor;
 
     /// <summary>Creates the overlay and starts the bounds poll timer.</summary>
     public TourAnchorOverlay()
@@ -41,6 +42,10 @@ public partial class TourAnchorOverlay : UserControl
         _poll = new DispatcherTimer { Interval = PollInterval };
         _poll.Tick += (_, _) => RefreshAnchor();
         CardHost.Content = Card;
+        // Card content and the viewport can change in the same layout as a
+        // target switch. Do not leave buttons at the old position until a poll.
+        CardHost.SizeChanged += (_, _) => RefreshAnchor();
+        RootCanvas.SizeChanged += (_, _) => RefreshAnchor();
     }
 
     /// <summary>The tour card content placed next to the target.</summary>
@@ -137,10 +142,19 @@ public partial class TourAnchorOverlay : UserControl
 
     private void RefreshAnchor()
     {
-        if (!_attached || !IsEffectivelyVisible)
+        if (!_attached || !IsEffectivelyVisible || _refreshingAnchor)
             return;
+        _refreshingAnchor = true;
+        try { RefreshAnchorCore(); }
+        finally { _refreshingAnchor = false; }
+    }
 
+    private void RefreshAnchorCore()
+    {
         var viewport = RootCanvas.Bounds.Size;
+        if (!double.IsFinite(viewport.Width) || !double.IsFinite(viewport.Height)
+            || viewport.Width <= 0 || viewport.Height <= 0)
+            return;
         ClearOffscreenTarget();
         var target = FindTarget();
         target = ResolveItemTarget(target);
@@ -159,6 +173,8 @@ public partial class TourAnchorOverlay : UserControl
 
         CardHost.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         var cardSize = CardHost.DesiredSize;
+        if (!double.IsFinite(cardSize.Width) || !double.IsFinite(cardSize.Height))
+            return;
         var pos = TourCardPlacement.Place(viewport, targetRect, cardSize, out var side);
         ACanvas.SetLeft(CardHost, pos.X);
         ACanvas.SetTop(CardHost, pos.Y);
