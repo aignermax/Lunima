@@ -86,6 +86,9 @@ public partial class MakeGateViewModel : ObservableObject
     /// <summary>Raised after a group was saved as a gate.</summary>
     public event EventHandler? GateSaved;
 
+    /// <summary>Raised when a saved definition is applied, undone, or redone.</summary>
+    public event EventHandler? GateDefinitionChanged;
+
     /// <summary>
     /// Follows the canvas selection: exactly one selected group enables the entry; a
     /// different group (or none) closes the steps and cancels a running simulation.

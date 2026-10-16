@@ -38,6 +38,7 @@ public partial class MakeGateViewModel
                     foreach (var row in Pins) row.RefreshPinName();
                     IsSaved = IsCurrentDefinitionSaved(savedGroup);
                 }
+                GateDefinitionChanged?.Invoke(this, EventArgs.Empty);
                 _canvas?.RepaintRequested?.Invoke();
             });
         if (ExecuteCommand != null)
