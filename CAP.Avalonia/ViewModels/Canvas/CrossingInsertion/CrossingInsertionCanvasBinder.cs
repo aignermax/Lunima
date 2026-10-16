@@ -131,9 +131,11 @@ public class CrossingInsertionCanvasBinder : System.ComponentModel.INotifyProper
     /// </summary>
     private void OnCrossingAdded(Component crossing)
     {
+        var generation = _canvas.Routing.MutationGeneration;
         var connections = CrossingCanvasSync.SnapshotConnections(_canvas);
         _dispatch(() =>
         {
+            if (generation != _canvas.Routing.MutationGeneration) return;
             // A chain put back after a dissolution keeps the template it was shown with.
             var (templateName, pdkSource) = _removedTemplates.Remove(crossing, out var known)
                 ? known
@@ -146,9 +148,11 @@ public class CrossingInsertionCanvasBinder : System.ComponentModel.INotifyProper
     /// <summary>Called by the service after a crossing was dissolved.</summary>
     private void OnCrossingRemoved(Component crossing)
     {
+        var generation = _canvas.Routing.MutationGeneration;
         var connections = CrossingCanvasSync.SnapshotConnections(_canvas);
         _dispatch(() =>
         {
+            if (generation != _canvas.Routing.MutationGeneration) return;
             if (CrossingCanvasSync.RemoveCrossing(_canvas, crossing) is { } vm)
             {
                 if (_removedTemplates.Count >= MaxRememberedTemplates)

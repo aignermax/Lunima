@@ -41,9 +41,12 @@ public static class RepairEdit
     /// <summary>Undoes the most recent step and waits for routing.</summary>
     public static async Task<bool> UndoAndRouteAsync(AgentDesignSession session)
     {
-        if (!session.Commands.Undo())
+        var routing = session.Canvas.Routing;
+        var restoredBefore = routing.RestoredGeometryVersion;
+        if (!await routing.ExecuteHistoryChangeAsync(session.Commands.Undo, () => session.Commands.CanUndo))
             return true;
-        var routed = await RoutingAwaiter.RerouteAndWaitAsync(session.Canvas);
+        var routed = routing.RestoredGeometryVersion != restoredBefore
+            || await RoutingAwaiter.RerouteAndWaitAsync(session.Canvas);
         session.Canvas.InvalidateSimulation();
         return routed;
     }

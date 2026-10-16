@@ -1339,9 +1339,9 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(CanUndo))]
-    private void Undo()
+    private async Task Undo()
     {
-        if (CommandManager.Undo())
+        if (await Canvas.Routing.ExecuteHistoryChangeAsync(CommandManager.Undo, () => CommandManager.CanUndo))
         {
             StatusText = string.Format(LocalizationService.Instance.Translate("Status.Undone"), CommandManager.RedoDescription ?? "action");
         }
@@ -1354,9 +1354,9 @@ public partial class MainViewModel : ObservableObject
     private bool CanUndo() => CommandManager.CanUndo;
 
     [RelayCommand(CanExecute = nameof(CanRedo))]
-    private void Redo()
+    private async Task Redo()
     {
-        if (CommandManager.Redo())
+        if (await Canvas.Routing.ExecuteHistoryChangeAsync(CommandManager.Redo, () => CommandManager.CanRedo))
         {
             StatusText = string.Format(LocalizationService.Instance.Translate("Status.Redone"), CommandManager.UndoDescription ?? "action");
         }

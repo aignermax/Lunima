@@ -1,4 +1,5 @@
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Canvas.Services;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 
@@ -12,6 +13,7 @@ namespace CAP.Avalonia.Commands;
 public class GroupMoveCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
+    private readonly RouteGeometrySnapshot _routesBefore;
     private readonly List<Component> _components;
     private readonly double _deltaX;
     private readonly double _deltaY;
@@ -31,6 +33,7 @@ public class GroupMoveCommand : IUndoableCommand
         double deltaY)
     {
         _canvas = canvas;
+        _routesBefore = canvas.DragRouteSnapshot ?? RouteGeometrySnapshot.Capture(canvas);
         _components = components.Select(c => c.Component).ToList();
         _deltaX = deltaX;
         _deltaY = deltaY;
@@ -63,11 +66,16 @@ public class GroupMoveCommand : IUndoableCommand
 
     /// <inheritdoc />
     public void Undo()
+        => _canvas.Routing.RestoreMove(UndoPositions, () => _routesBefore.Restore(_canvas));
+
+    private void UndoPositions()
     {
         try
         {
             _canvas.BeginCommandExecution();
             MoveAll(-_deltaX, -_deltaY);
+            foreach (var component in _components)
+                _canvas.Router.PathfindingGrid?.UpdateComponentObstacle(component);
         }
         finally
         {

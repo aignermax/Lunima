@@ -65,7 +65,7 @@ public sealed class ShiftSegmentTool : IAgentBridgeTool
         _session.Commands.ExecuteCommand(command);
         if (Math.Abs(CurrentOffset(vm.Connection, (int)index.Value) - target) > OffsetTolerance)
         {
-            _session.Commands.Undo();
+            await _session.Canvas.Routing.ExecuteHistoryChangeAsync(_session.Commands.Undo, () => _session.Commands.CanUndo);
             return AgentToolResult.Error("The shift was rejected: an adjoining segment would collapse or invert. Try a smaller offset.");
         }
         var routed = await RoutingAwaiter.RerouteAndWaitAsync(_session.Canvas);
