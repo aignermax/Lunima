@@ -11,6 +11,21 @@ namespace UnitTests.ViewModels;
 public class HierarchyLifecycleTests
 {
     [Fact]
+    public void AttachingToPopulatedCanvas_ShowsExistingRoots_AndHandlesLaterEdits()
+    {
+        var canvas = new DesignCanvasViewModel();
+        canvas.AddComponent(new ComponentGroup("existing"));
+        var hierarchy = new HierarchyPanelViewModel(canvas);
+        var existing = hierarchy.RootNodes.ShouldHaveSingleItem();
+
+        canvas.AddComponent(new ComponentGroup("later"));
+        hierarchy.RootNodes.Select(n => n.Component).ShouldBe(canvas.Components.Select(vm => vm.Component));
+        hierarchy.RootNodes[0].ShouldBeSameAs(existing);
+        canvas.Components.RemoveAt(0);
+        hierarchy.RootNodes.ShouldHaveSingleItem().Component.ShouldBeSameAs(canvas.Components[0].Component);
+    }
+
+    [Fact]
     public void DeletingDiePart_RefreshesRetainedDieSubtree_AndUndoRestoresIt()
     {
         var w = new UnitTests.Dies.WorkSurface.WorkSurfaceCanvas();

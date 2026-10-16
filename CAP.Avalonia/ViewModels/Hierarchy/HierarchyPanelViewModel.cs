@@ -73,6 +73,10 @@ public partial class HierarchyPanelViewModel : ObservableObject
 
         // Canvas → Hierarchy: mirror the multi-selection set (box selection, Ctrl+click).
         _canvas.Selection.SelectedComponents.CollectionChanged += OnCanvasSelectionSetChanged;
+
+        // The editor may attach after a design has already loaded. Incremental updates
+        // must start from the existing roots, not an empty tree with canvas-sized indexes.
+        RebuildTree();
     }
 
     /// <summary>
