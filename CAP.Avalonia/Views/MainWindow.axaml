@@ -1292,19 +1292,20 @@
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}"
+    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}" Demonstrate="True"
                                 TargetName="{Binding WatchTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
             <panels:WatchComputeTourPanel DataContext="{Binding WatchTour}"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <!-- Hosts the steps that anchor in this window (Logic Build, Tools menu); the
+    <!-- Hosts Logic Build and the direct ISA-open action in this window; the
          playground steps are hosted by the overlay in IsaPlaygroundWindow. -->
     <tour:TourAnchorOverlay IsVisible="{Binding RunProgramTour.ShowCardInMainWindow, FallbackValue=False}"
-                                TargetName="{Binding RunProgramTour.CurrentTargetName}">
+                                TargetName="{Binding RunProgramTour.CurrentTargetName}" Demonstrate="True">
         <tour:TourAnchorOverlay.Card>
-            <panels:RunProgramTourPanel DataContext="{Binding RunProgramTour}"/>
+            <panels:RunProgramTourPanel DataContext="{Binding RunProgramTour}"
+                                        OpenPlaygroundRequested="OpenIsaPlayground_Click"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 

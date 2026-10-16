@@ -438,6 +438,7 @@ public partial class MainViewModel : ObservableObject
         // The tour must observe the panel instance the user actually clicks.
         WatchTour = watchComputeTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
+        WatchTour.AttachWorkspace(WorkspaceSwitch);
         // Same for the ISA playground: the tour must observe the singleton the
         // playground window shows, not a private instance.
         RunProgramTour = runProgramTourViewModel

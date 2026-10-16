@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using CAP.Avalonia.ViewModels.Workspaces;
 using System.Globalization;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
@@ -21,6 +22,67 @@ public partial class WatchComputeTourViewModel : ObservableObject
 {
     /// <summary>File name of the shipped example the tour opens.</summary>
     public const string CounterExampleFileName = "Logic Gate Counter 2-bit.lun";
+
+    private WorkspaceViewModel? _workspace;
+
+    public void AttachWorkspace(WorkspaceViewModel workspace)
+    {
+        Detach();
+        _workspace = workspace;
+        if (IsActive) { Observe(); RefreshContext(); }
+    }
+
+    public bool NeedsControlsRecovery => IsActive && !IsClosing &&
+        (_workspace is { IsLogic: false } || !_dock.IsVisible || _dock.SelectedTabIndex != 7);
+    public bool IsClosing => CurrentStepIndex == Steps.Count - 1;
+    public string CurrentCue => LocalizationService.Instance.Translate(NeedsControlsRecovery
+        ? "WatchTour.ReturnToControls" : CurrentStepIndex switch
+        {
+            0 => "LogicPanel.Build", 1 => "LogicPanel.StepClock", 2 => "LogicPanel.Run",
+            3 => "LogicPanel.RunStop", _ => "WatchTour.Step5Title"
+        });
+
+    [RelayCommand]
+    private void ShowControls()
+    {
+        if (!IsActive) return;
+        if (_workspace != null) _workspace.Current = Workspace.Logic;
+        _dock.OpenLogic();
+        RefreshContext();
+    }
+
+    private void Observe()
+    {
+        _logic.PropertyChanged += OnLogicPropertyChanged;
+        _dock.PropertyChanged += OnContextChanged;
+        if (_workspace != null) _workspace.PropertyChanged += OnContextChanged;
+    }
+
+    private void OnContextChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(WorkspaceViewModel.Current)
+            or nameof(AnalysisDockViewModel.IsVisible) or nameof(AnalysisDockViewModel.SelectedTabIndex))
+            RefreshContext();
+    }
+
+    private void RefreshContext()
+    {
+        // Leaving the dock can stop its clock as part of view teardown. That is
+        // not the requested Stop action; ask for Run again after returning.
+        if (NeedsControlsRecovery && CurrentStepIndex == 3)
+        {
+            _sawRunStarted = false;
+            CurrentStepIndex = 2;
+        }
+        OnPropertyChanged(nameof(NeedsControlsRecovery));
+        OnPropertyChanged(nameof(CurrentTargetName));
+        OnPropertyChanged(nameof(CurrentCue));
+        if (!NeedsControlsRecovery)
+        {
+            _sawRunStarted |= _logic.IsRunning;
+            EvaluateCurrentStep();
+        }
+    }
 
     private readonly LogicPanelViewModel _logic;
     private readonly AnalysisDockViewModel _dock;
@@ -50,6 +112,7 @@ public partial class WatchComputeTourViewModel : ObservableObject
     {
         _logic = logic;
         _dock = dock;
+        LocalizationWeakSubscription.Subscribe(this, static (self, _) => self.OnCurrentStepIndexChanged(self.CurrentStepIndex));
         Steps = new List<TutorialStep>
         {
             new("WatchTour.Step1Title", "WatchTour.Step1Body", () => _logic.HasNetwork, "LogicBuildButton"),
@@ -73,7 +136,7 @@ public partial class WatchComputeTourViewModel : ObservableObject
     public string CurrentBody => LocalizationService.Instance.Translate(CurrentStep.BodyKey);
 
     /// <summary><c>x:Name</c> of the control the current step spotlights, or null for a floating card.</summary>
-    public string? CurrentTargetName => CurrentStep.TargetName;
+    public string? CurrentTargetName => NeedsControlsRecovery ? null : CurrentStep.TargetName;
 
     /// <summary>Localized position label, e.g. "Step 2/5".</summary>
     public string ProgressText => string.Format(
@@ -87,20 +150,19 @@ public partial class WatchComputeTourViewModel : ObservableObject
         Detach();
         CurrentStepIndex = 0;
         IsCompleted = false;
-        _sawRunStarted = false;
+        _sawRunStarted = _logic.IsRunning;
         IsActive = true;
-        _dock.OpenLogic();
-        _logic.PropertyChanged += OnLogicPropertyChanged;
+        ShowControls();
+        Observe();
         EvaluateCurrentStep();
     }
 
-    /// <summary>Advances to the next step manually; on the last step the tour completes.</summary>
+    /// <summary>Acknowledges the closing summary; action stages cannot be skipped.</summary>
     [RelayCommand]
     public void Next()
     {
-        if (!IsActive)
-            return;
-        Advance();
+        if (IsActive && IsClosing)
+            Advance();
     }
 
     /// <summary>Exits the tour without completing it.</summary>
@@ -129,6 +191,19 @@ public partial class WatchComputeTourViewModel : ObservableObject
     /// </summary>
     private void EvaluateCurrentStep()
     {
+        if (!IsActive) return;
+        if (!_logic.HasNetwork)
+        {
+            _sawRunStarted = false;
+            CurrentStepIndex = 0;
+            return;
+        }
+        if (NeedsControlsRecovery) return;
+        if (_logic.ClockStepCount == 0 && CurrentStepIndex > 1)
+        {
+            _sawRunStarted = _logic.IsRunning;
+            CurrentStepIndex = 1;
+        }
         while (IsActive && CurrentStep.IsCompleted())
             Advance();
     }
@@ -149,10 +224,15 @@ public partial class WatchComputeTourViewModel : ObservableObject
     private void Detach()
     {
         _logic.PropertyChanged -= OnLogicPropertyChanged;
+        _dock.PropertyChanged -= OnContextChanged;
+        if (_workspace != null) _workspace.PropertyChanged -= OnContextChanged;
     }
 
     partial void OnCurrentStepIndexChanged(int value)
     {
+        OnPropertyChanged(nameof(IsClosing));
+        OnPropertyChanged(nameof(NeedsControlsRecovery));
+        OnPropertyChanged(nameof(CurrentCue));
         OnPropertyChanged(nameof(CurrentStep));
         OnPropertyChanged(nameof(CurrentTitle));
         OnPropertyChanged(nameof(CurrentBody));

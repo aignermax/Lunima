@@ -1,4 +1,5 @@
 using CAP.Avalonia.Commands;
+using CAP.Avalonia.ViewModels.Workspaces;
 using CAP.Avalonia.ViewModels.Analysis;
 using CAP.Avalonia.ViewModels.Analysis.AnalysisOutput;
 using CAP.Avalonia.ViewModels.Analysis.CircuitOptimization;
@@ -133,7 +134,7 @@ public class WatchComputeTourViewModelTests
         // network while stopped): no false advance to the closing step.
         logic.HasNetwork = false;
 
-        tour.CurrentStepIndex.ShouldBe(2, "the stop step must only complete after Run was actually started");
+        tour.CurrentStepIndex.ShouldBe(0, "an invalidated network must return to the real Build action");
     }
 
     [Fact]
@@ -165,29 +166,40 @@ public class WatchComputeTourViewModelTests
     }
 
     [Fact]
-    public void Next_AdvancesManually_WithoutCompletionCondition()
+    public void Next_CannotBypassActions()
     {
         var tour = CreateTour(out _);
         tour.Start();
 
         tour.NextCommand.Execute(null);
-        tour.CurrentStepIndex.ShouldBe(1);
+        tour.CurrentStepIndex.ShouldBe(0);
 
         tour.NextCommand.Execute(null);
-        tour.CurrentStepIndex.ShouldBe(2);
+        tour.CurrentStepIndex.ShouldBe(0);
         tour.IsCompleted.ShouldBeFalse();
     }
 
     [Fact]
-    public void Next_OnLastStep_CompletesTour()
+    public void HiddenControls_OfferExplicitRecovery_WithoutMovingWorkspaceAutomatically()
     {
-        var tour = CreateTour(out _);
+        var dock = MakeDock();
+        var workspace = new WorkspaceViewModel(dock);
+        var tour = new WatchComputeTourViewModel(new LogicPanelViewModel(new FakeLogicRunClock()), dock);
+        tour.AttachWorkspace(workspace);
         tour.Start();
-
-        for (var i = 0; i < 5; i++)
-            tour.NextCommand.Execute(null);
-
-        tour.IsCompleted.ShouldBeTrue();
+        workspace.Current.ShouldBe(Workspace.Logic);
+        workspace.Current = Workspace.Layout;
+        dock.IsVisible = false;
+        tour.NeedsControlsRecovery.ShouldBeTrue();
+        tour.CurrentTargetName.ShouldBeNull();
+        workspace.Current.ShouldBe(Workspace.Layout);
+        tour.ShowControlsCommand.Execute(null);
+        workspace.Current.ShouldBe(Workspace.Logic);
+        dock.IsVisible.ShouldBeTrue();
+        dock.SelectedTabIndex.ShouldBe(7);
+        tour.CurrentTargetName.ShouldBe("LogicBuildButton");
+        tour.Skip();
+        tour.ShowControlsCommand.Execute(null);
         tour.IsActive.ShouldBeFalse();
     }
 
@@ -214,8 +226,11 @@ public class WatchComputeTourViewModelTests
     {
         var (logic, tour) = await CreateBuiltFixture();
         tour.Start();
-        for (var i = 0; i < 5; i++)
-            tour.NextCommand.Execute(null);
+        logic.Inputs.Single(i => i.PinName == "R1.b").IsOn = true;
+        logic.StepClockCommand.Execute(null);
+        logic.ToggleRunCommand.Execute(null);
+        logic.ToggleRunCommand.Execute(null);
+        tour.NextCommand.Execute(null);
 
         logic.Inputs.Single(i => i.PinName == "R1.b").IsOn = true;
         logic.StepClockCommand.Execute(null);
@@ -240,6 +255,31 @@ public class WatchComputeTourViewModelTests
         tour.IsCompleted.ShouldBeFalse();
         tour.CurrentStepIndex.ShouldBe(2,
             "the built network and the elapsed clock step still satisfy the first two steps");
+    }
+
+    [Fact]
+    public async Task RunningEntry_ShowsStop_AndHiddenDockStopIsNotCompletion()
+    {
+        var canvas = RingCanvas();
+        var logic = new LogicPanelViewModel(new FakeLogicRunClock());
+        logic.Configure(canvas);
+        await logic.BuildNetworkCommand.ExecuteAsync(null);
+        logic.Inputs.Single(i => i.PinName == "R1.b").IsOn = true;
+        logic.StepClockCommand.Execute(null);
+        logic.ToggleRunCommand.Execute(null);
+        var dock = MakeDock();
+        var tour = new WatchComputeTourViewModel(logic, dock);
+        tour.Start();
+        tour.CurrentStepIndex.ShouldBe(3);
+        dock.IsVisible = false;
+        logic.StopRun(); // The actual Logic tab does this when detached.
+        tour.CurrentStepIndex.ShouldBe(2);
+        tour.ShowControlsCommand.Execute(null);
+        tour.CurrentStepIndex.ShouldBe(2);
+        logic.ToggleRunCommand.Execute(null);
+        tour.CurrentStepIndex.ShouldBe(3);
+        logic.ToggleRunCommand.Execute(null);
+        tour.CurrentStepIndex.ShouldBe(4);
     }
 
     /// <summary>

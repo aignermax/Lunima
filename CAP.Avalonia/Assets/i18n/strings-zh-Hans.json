@@ -1761,6 +1761,8 @@
   "Tutorial.Step2Title": "连接两个引脚",
   "Tutorial.Step3Body": "打开激光输入，然后点击工具栏上的运行按钮（按 L 键）进行仿真，观看光在你的电路中传播。",
   "Tutorial.Step3Title": "运行仿真",
+  "WatchTour.ReturnToControls": "显示逻辑控件",
+  "WatchTour.Finish": "完成",
   "WatchTour.Step1Body": "2 位计数器示例已在画布上打开。在底部分析停靠栏的“逻辑”标签页中点击“构建逻辑网络”——Lunima 会从每个门的光学仿真中读取真值表，并将各个门连接成可执行的网络。",
   "WatchTour.Step1Title": "构建逻辑网络",
   "WatchTour.Step2Body": "在 Logic 面板中点击一次“时钟单步”。两个寄存器门同时提交新值，C 总线行（C1C0）现在读数为 1——电路刚刚完成了一次计数。",
@@ -2172,5 +2174,14 @@
   "FirstGateTour.Cue.Nand": "选择 NAND",
   "FirstGateTour.Cue.Build": "构建逻辑",
   "FirstGateTour.Begin": "开始",
-  "FirstGateTour.RevealGate": "重新打开你的逻辑门"
+  "FirstGateTour.RevealGate": "重新打开你的逻辑门",
+  "RunProgramTour.Action1.Cue": "构建逻辑网络",
+  "RunProgramTour.Action2.Cue": "打开 ISA 演练场",
+  "RunProgramTour.Action3.Cue": "选择“3 乘以 4”",
+  "RunProgramTour.Action4.Cue": "启用光子 ADD",
+  "RunProgramTour.Action5.Cue": "点击单步，观察三次 ADD",
+  "RunProgramTour.Action6.Cue": "芯片已执行三次加法",
+  "RunProgramTour.ActionOpen.Button": "打开 ISA 演练场",
+  "RunProgramTour.ActionDone.Button": "完成",
+  "RunProgramTour.ActionOpen.Cue": "打开 ISA 演练场"
 }
