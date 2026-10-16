@@ -14,7 +14,7 @@ namespace CAP.Avalonia.ViewModels.Logic.GateView;
 /// signal nets, coloured by live logic levels) and the physical view (MMIs and
 /// waveguides). Entering Logic starts in the gate view; other workspaces always show the
 /// physical design. The gate view edits only what makes sense at gate level — select and
-/// move whole gates — so picking a waveguide tool (Connect, Cut, Probe) flips back to the
+/// move and connect whole gates — so picking a waveguide tool (Cut, Probe) flips back to the
 /// physical view instead of failing silently. Selection is the canvas selection itself,
 /// so Properties and every other workspace stay in sync.
 /// </summary>
@@ -115,7 +115,7 @@ public partial class GateViewViewModel : ObservableObject
     /// <returns>True when the view switched to physical.</returns>
     public bool OnInteractionModeChanged(InteractionMode mode)
     {
-        if (!IsShown || mode is not (InteractionMode.Connect or InteractionMode.Cut
+        if (!IsShown || mode is not (InteractionMode.Cut
                 or InteractionMode.Probe or InteractionMode.PickAnalysisOutput))
             return false;
         IsGateViewPreferred = false;

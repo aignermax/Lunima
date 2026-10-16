@@ -1933,6 +1933,7 @@
   "Workspace.Action.BuildLogic": "构建逻辑网络",
   "Workspace.Action.LogicStep": "逻辑步进",
   "Workspace.Action.RunSystem": "运行系统",
+  "GateView.ConnectDirection": "请将逻辑门输出连接到逻辑门输入。",
   "GateView.Gates": "门",
   "GateView.Physical": "物理",
   "GateView.ShowPhysicalTip": "正在显示门和信号。切换到物理 MMI 和波导以编辑波导 (V)。",
