@@ -4,6 +4,10 @@ using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Themes.Fluent;
 
 [assembly: AvaloniaTestApplication(typeof(UnitTests.UI.ScreenshotTestAppBuilder))]
+// The suite is serialized by xunit.runner.json and shares production singletons.
+// Keep its renderer/font services alive for the same lifetime. Per-test teardown
+// disposes FontManager while queued rendering from those singletons can remain.
+[assembly: AvaloniaTestIsolation(AvaloniaTestIsolationLevel.PerAssembly)]
 
 namespace UnitTests.UI;
 
