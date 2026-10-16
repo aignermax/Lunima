@@ -30,7 +30,9 @@ public partial class TourAnchorOverlay
     private DispatcherTimer? _pointerTimer;
     private readonly Stopwatch _pointerClock = new();
     private Point? _pointerTarget;
+    private Point? _pointerDestination;
     private object? _scrolledItem;
+    private ListBox? _scrolledList;
 
     private Control? ResolveItemTarget(Control? target)
     {
@@ -38,16 +40,18 @@ public partial class TourAnchorOverlay
             return target;
         if (target is not ListBox list || !list.Items.Contains(TargetItem))
             return null;
-        if (!ReferenceEquals(_scrolledItem, TargetItem))
+        if (!ReferenceEquals(_scrolledItem, TargetItem) || !ReferenceEquals(_scrolledList, list))
         {
             list.ScrollIntoView(TargetItem);
             _scrolledItem = TargetItem;
+            _scrolledList = list;
         }
         return list.ContainerFromItem(TargetItem);
     }
 
     private Rect ResolveDemonstrationRect(Control target, Rect fallback)
     {
+        _pointerDestination = null;
         if (target is not DesignCanvas canvas || canvas.ViewModel == null)
             return fallback;
         var point = TargetCanvasPoint;
@@ -57,6 +61,14 @@ public partial class TourAnchorOverlay
                 ? ConnectionTargetPin ?? first : first;
             var position = pin.GetAbsolutePosition();
             point = new Point(position.x, position.y);
+            if (canvas.InteractionState.ConnectionDragStartPin == null && ConnectionTargetPin is { } endPin)
+            {
+                var end = endPin.GetAbsolutePosition();
+                var endLocal = new Point(end.x * canvas.Zoom + canvas.ViewModel.PanX,
+                    end.y * canvas.Zoom + canvas.ViewModel.PanY);
+                if (new Rect(canvas.Bounds.Size).Contains(endLocal))
+                    _pointerDestination = canvas.TranslatePoint(endLocal, RootCanvas);
+            }
         }
         if (point == null)
             return default; // A generic canvas centre would demonstrate an unrelated action.
@@ -82,6 +94,14 @@ public partial class TourAnchorOverlay
         }
         GuidePointer.IsVisible = true;
         GuideClick.IsVisible = true;
+        GuideTrail.IsVisible = GuideDestination.IsVisible = _pointerDestination != null;
+        if (_pointerDestination is { } destination)
+        {
+            GuideTrail.StartPoint = target.Value;
+            GuideTrail.EndPoint = destination;
+            ACanvas.SetLeft(GuideDestination, destination.X - 7);
+            ACanvas.SetTop(GuideDestination, destination.Y - 7);
+        }
         PaintPointer();
         if (MotionPreferences.ReduceMotion)
         {
@@ -100,13 +120,15 @@ public partial class TourAnchorOverlay
     {
         if (_pointerTarget is not { } target)
             return;
-        var pose = GuidePointerMotion.Sample(target, _pointerClock.Elapsed.TotalSeconds, MotionPreferences.ReduceMotion);
+        var pose = _pointerDestination is { } destination
+            ? GuidePointerMotion.SampleConnection(target, destination, _pointerClock.Elapsed.TotalSeconds, MotionPreferences.ReduceMotion)
+            : GuidePointerMotion.Sample(target, _pointerClock.Elapsed.TotalSeconds, MotionPreferences.ReduceMotion);
         ACanvas.SetLeft(GuidePointer, pose.Position.X);
         ACanvas.SetTop(GuidePointer, pose.Position.Y);
         GuideClick.Width = GuideClick.Height = pose.ClickRadius * 2;
         GuideClick.Opacity = pose.ClickOpacity;
-        ACanvas.SetLeft(GuideClick, target.X - pose.ClickRadius);
-        ACanvas.SetTop(GuideClick, target.Y - pose.ClickRadius);
+        ACanvas.SetLeft(GuideClick, pose.Position.X - pose.ClickRadius);
+        ACanvas.SetTop(GuideClick, pose.Position.Y - pose.ClickRadius);
     }
 
     private void StopDemonstration()
@@ -114,8 +136,10 @@ public partial class TourAnchorOverlay
         _pointerTimer?.Stop();
         _pointerClock.Stop();
         _pointerTarget = null;
-        _scrolledItem = null;
+        _pointerDestination = null;
         if (GuidePointer != null) GuidePointer.IsVisible = false;
         if (GuideClick != null) GuideClick.IsVisible = false;
+        if (GuideTrail != null) GuideTrail.IsVisible = false;
+        if (GuideDestination != null) GuideDestination.IsVisible = false;
     }
 }

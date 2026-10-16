@@ -5,6 +5,9 @@ namespace CAP.Avalonia.Services;
 /// </summary>
 public class UserPreferences
 {
+    /// <summary>Offer visual first-use guidance until it is completed or explicitly dismissed.</summary>
+    public bool GuidedLearningEnabled { get; set; } = true;
+
     /// <summary>
     /// List of PDK names that are currently enabled (visible in library).
     /// </summary>

@@ -1,4 +1,5 @@
 using System.Reflection;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -10,6 +11,25 @@ namespace UnitTests.UI;
 
 public class VisualGuideOverlayTests
 {
+    [AvaloniaFact]
+    public void ClippedTarget_DoesNotPointAtUnrelatedVisibleSurface()
+    {
+        var target = new Button { Name = "ClippedAction", Width = 80, Height = 30, Margin = new Thickness(120, 0, 0, 0) };
+        var clipped = new Border { Width = 100, Height = 50, ClipToBounds = true, Child = target };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = target.Name };
+        var window = new Window { Width = 800, Height = 600, Content = new Avalonia.Controls.Grid { Children = { clipped, overlay } } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            overlay.TargetName = null;
+            overlay.TargetName = target.Name;
+            var pointer = overlay.GetVisualDescendants().OfType<Control>().Single(c => c.Name == "GuidePointer");
+            Assert.False(pointer.IsVisible);
+        }
+        finally { window.Close(); }
+    }
+
     [AvaloniaFact]
     public void Demonstration_PointsAtRealControl_WithoutInterceptingInput()
     {

@@ -422,7 +422,7 @@ public partial class MainViewModel : ObservableObject
         InitializeGateView();
         InitializeRunHint();
         InitializeWorkspaceToolSets();
-        Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
+        Home.LearnTutorialRequested = StartVisualTutorialAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
         Home.ConnectChipletsTourRequested = StartConnectChipletsTourAsync;
@@ -430,6 +430,9 @@ public partial class MainViewModel : ObservableObject
         FileOperations.ProjectOpened = OnProjectOpened;
 
         Tutorial = tutorialViewModel ?? new ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel(canvas);
+        Tutorial.AttachInteraction(CanvasInteraction, LeftPanel.FilteredTemplates);
+        Tutorial.AttachWorkspace(WorkspaceSwitch);
+        InitializeVisualLearning(preferencesService);
         // The tour must observe the panel instance the user actually clicks.
         WatchTour = watchComputeTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
@@ -1083,18 +1086,13 @@ public partial class MainViewModel : ObservableObject
     private async Task SaveDesign() => await FileOperations.SaveDesignCommand.ExecuteAsync(null);
 
     /// <summary>
-    /// Starts the first-steps tour on a fresh design (Home "Learn Lunima" card).
-    /// When the user cancels the unsaved-changes prompt, the tour does not start
-    /// and the current design stays open.
+    /// Starts or resumes guidance in the current design without discarding work.
     /// </summary>
-    private async Task StartTutorialOnFreshDesignAsync()
+    private Task StartVisualTutorialAsync()
     {
-        if (!await FileOperations.TryNewProjectAsync())
-            return;
-
-        // The tour's Run step expects the CW power-flow overlay.
-        WorkspaceSwitch.Current = ViewModels.Workspaces.Workspace.Optics;
-        Tutorial.Start();
+        _guidancePreferences?.SetGuidedLearningEnabled(true);
+        StartVisualLearning();
+        return Task.CompletedTask;
     }
 
     /// <summary>

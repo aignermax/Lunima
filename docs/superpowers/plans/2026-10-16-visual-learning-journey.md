@@ -62,3 +62,9 @@
 
 - Initial inspection: current tour accepts one component then asks to connect; hidden overlay timers remain running. No implementation changes yet.
 - User explicitly requested autonomous completion; execute inline without another design approval round.
+- Overlay lifecycle RED 2/2 confirmed; initial lifecycle/anchor/hit-test GREEN 17/17. Motion RED 3/3 then GREEN. Live pointer/decorations, hidden and reduced-motion tests pass.
+- Real English/German UI exposed a blocked chapter: Optics library does not contain every circuit part. Ruling: build in Layout and explicitly show the Optics tab before simulation; 8 action stages.
+- Engine review fixed external fiber-pin targeting, tight placement space, missing compatible receiver, unnecessary reevaluation on pan/selection, and retained references after dismissal.
+- Combined onboarding, legacy screenshot, first-use and actual UI-action tests: 43/43 passed. Follow-up animated drag, target clipping, visibility, retained-work and real nonzero receiver-power checks: 14/14 passed.
+- Actual screenshots inspected: German select, place, connect and simulation. A screenshot initially captured before virtualized-item layout; the UI test now waits for and asserts a visible pointer before capture.
+- First-use guidance starts on an empty project from Home. Explicit resume preserves the design; dismissal persists. Completion shows a brief smile beside Run. Logic/System tour refinements remain a follow-up under task 3.

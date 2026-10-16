@@ -2,7 +2,7 @@
 
 The novice builds a small circuit with the real tools. Guidance demonstrates the next action beside its actual target rather than describing it in a remote text box. A repeating ghost pointer approaches the target and shows a click pulse; it never performs input. One short localized phrase accompanies it. Real user actions advance the journey; completion gets a brief positive acknowledgement.
 
-Start with choosing and placing two compatible optical components, then show connection mode and the actual pins, then simulation. A die alone does not count as a component. Never suggest connecting after only one component. Do not claim success from a Next button. Wrong actions, undo, existing projects and unavailable targets must not strand the user or fabricate progress.
+Start in Layout with choosing and placing two compatible optical components, then show connection mode and the actual pins, then explicitly demonstrate switching to Optics and running simulation. Prefer a grating coupler and photodetector when the selected process allows them. A die alone does not count as a component. Never suggest connecting after only one component. Do not claim success from a Next button. Wrong actions, undo, existing projects and unavailable targets must not strand the user or fabricate progress.
 
 Guidance is nonmodal and dismissible. Preserve ordinary editing and unsaved work. Offer a clear way back to guidance. First-use guidance is enabled unless the user declines; remember that choice. Details remain optional. Existing logic and system journeys should gain the same visual demonstration without breaking their action predicates.
 

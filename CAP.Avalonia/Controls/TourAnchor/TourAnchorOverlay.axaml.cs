@@ -67,6 +67,8 @@ public partial class TourAnchorOverlay : UserControl
         {
             _cachedTarget = null;
             _broughtIntoView = null;
+            _scrolledItem = null;
+            _scrolledList = null;
             RefreshAnchor();
         }
         else if (change.Property == IsVisibleProperty)
@@ -101,6 +103,8 @@ public partial class TourAnchorOverlay : UserControl
         _visibilityAncestors.Clear();
         _cachedTarget = null;
         _broughtIntoView = null;
+        _scrolledItem = null;
+        _scrolledList = null;
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -184,7 +188,19 @@ public partial class TourAnchorOverlay : UserControl
         var origin = target.TranslatePoint(new Point(0, 0), RootCanvas);
         if (origin == null)
             return default;
-        return new Rect(origin.Value, target.Bounds.Size).Inflate(SpotlightPadding);
+        var rect = new Rect(origin.Value, target.Bounds.Size);
+        if (Demonstrate)
+        {
+            rect = rect.Intersect(new Rect(RootCanvas.Bounds.Size));
+            foreach (var ancestor in target.GetVisualAncestors().Where(v => v.ClipToBounds))
+            {
+                var clipOrigin = ancestor.TranslatePoint(default, RootCanvas);
+                if (clipOrigin == null) return default;
+                rect = rect.Intersect(new Rect(clipOrigin.Value, ancestor.Bounds.Size));
+            }
+            if (rect.Width <= 0 || rect.Height <= 0) return default;
+        }
+        return rect.Inflate(SpotlightPadding);
     }
 
     private void ApplyDim(Size viewport, Rect hole)

@@ -6,6 +6,19 @@ namespace UnitTests.Onboarding.FirstStepsTutorial;
 public class GuidePointerMotionTests
 {
     [Fact]
+    public void ConnectionGesture_PressesAtSource_DragsToReceiver_AndReleases()
+    {
+        var start = new Point(100, 150);
+        var end = new Point(400, 250);
+        Assert.Equal(start, GuidePointerMotion.SampleConnection(start, end, 1.1, false).Position);
+        var middle = GuidePointerMotion.SampleConnection(start, end, 1.9, false);
+        Assert.True(middle.Position.X > start.X && middle.Position.X < end.X);
+        var release = GuidePointerMotion.SampleConnection(start, end, 2.7, false);
+        Assert.Equal(end, release.Position);
+        Assert.True(release.ClickOpacity > 0);
+    }
+
+    [Fact]
     public void Pointer_ApproachesTarget_ThenShowsClickAtTarget()
     {
         var target = new Point(200, 100);
