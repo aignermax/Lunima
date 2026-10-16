@@ -1,4 +1,8 @@
 {
+  "PythonStartup.Preparing": "正在后台准备 Python 预览。您可以继续工作。",
+  "PythonStartup.Working": "Python 设置已在后台运行。",
+  "PythonStartup.Failed": "Python 设置未能完成。您可以继续工作，稍后重试。",
+  "PythonStartup.Retry": "重试设置",
   "Preview.Unavailable": "部分元件预览不可用。",
   "Preview.ErrorDetails": "错误详情",
 

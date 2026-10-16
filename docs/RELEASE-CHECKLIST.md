@@ -10,6 +10,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## How to use at release time
 
+- [ ] Fresh profile: the first desktop start prepares managed Python and the same preview/export packages as Settings in the background, with an unobtrusive progress indicator. Editing remains available; failure exposes Retry and details; only full health activates the environment and refreshes previews. Reopening retries a failed setup, explicit external interpreters remain unchanged, and exit cancels owned setup processes. `(auto: PythonStartupTests, PythonStartupJourneyTests, ManagedPythonProvisionerTests, UvBootstrapperTests; manual: fresh-machine online download on supported OSes)`
+
 1. Open a release issue / draft PR and paste the checklist below into it.
 2. Walk through every manual item in a fresh build on each supported OS (Windows, Linux, macOS) where feasible.
 3. Tick an item only after you have observed the expected result.

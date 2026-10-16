@@ -10,6 +10,28 @@ namespace UnitTests.Export.PythonEnvironmentManager;
 /// </summary>
 public class UvBootstrapperTests
 {
+    [Fact]
+    public void ShutdownCancellation_KillsOwnedProcessWithoutAwaitingAnyContinuation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var start = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = OperatingSystem.IsWindows() ? "ping.exe" : "sleep",
+            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true
+        };
+        foreach (var arg in OperatingSystem.IsWindows() ? new[] { "-n", "30", "127.0.0.1" } : new[] { "30" })
+            start.ArgumentList.Add(arg);
+        using var child = System.Diagnostics.Process.Start(start)!;
+        try
+        {
+            using var registration = UvBootstrapper.KillOnCancellation(child, cancellation.Token);
+            cancellation.Cancel();
+            // No async continuation is pumped between cancellation and this assertion.
+            child.WaitForExit(2000).ShouldBeTrue();
+        }
+        finally { if (!child.HasExited) child.Kill(entireProcessTree: true); }
+    }
+
     private static readonly ProcessLaunchFactory Factory = ProcessLaunchFactory.CreateDefault();
 
     [Fact]

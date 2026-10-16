@@ -1,4 +1,8 @@
 {
+  "PythonStartup.Preparing": "Preparing Python previews in the background. You can keep working.",
+  "PythonStartup.Working": "Python setup is already running in the background.",
+  "PythonStartup.Failed": "Python setup could not finish. You can keep working and retry when ready.",
+  "PythonStartup.Retry": "Retry setup",
   "Preview.Unavailable": "Some component previews are unavailable.",
   "Preview.ErrorDetails": "Error details",
 

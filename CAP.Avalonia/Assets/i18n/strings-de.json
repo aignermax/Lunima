@@ -1,4 +1,8 @@
 {
+  "PythonStartup.Preparing": "Python-Vorschauen werden im Hintergrund vorbereitet. Sie können weiterarbeiten.",
+  "PythonStartup.Working": "Die Python-Einrichtung läuft bereits im Hintergrund.",
+  "PythonStartup.Failed": "Die Python-Einrichtung konnte nicht abgeschlossen werden. Sie können weiterarbeiten und es später erneut versuchen.",
+  "PythonStartup.Retry": "Einrichtung erneut versuchen",
   "Preview.Unavailable": "Einige Bauteilvorschauen sind nicht verfügbar.",
   "Preview.ErrorDetails": "Fehlerdetails",
 
