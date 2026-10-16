@@ -55,5 +55,6 @@ public class ScreenshotTestAppBuilder
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<ScreenshotTestApp>()
             .UseSkia()
-            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
+            .WithFallbackDispatcherReset();
 }

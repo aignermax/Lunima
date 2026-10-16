@@ -1932,6 +1932,7 @@
   "Workspace.Action.BuildLogic": "Construir red lógica",
   "Workspace.Action.LogicStep": "Paso lógico",
   "Workspace.Action.RunSystem": "Ejecutar sistema",
+  "GateView.ConnectDirection": "Conecta una salida de puerta con una entrada de puerta.",
   "GateView.Gates": "Puertas",
   "GateView.Physical": "Física",
   "GateView.ShowPhysicalTip": "Se muestran puertas y señales. Cambia a los MMI y guías de onda físicos para editar guías de onda (V).",

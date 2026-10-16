@@ -33,17 +33,17 @@
                 <TextBlock Grid.Row="0" Classes="label" VerticalAlignment="Center"
                            Text="{loc:Localize Properties.PositionLabel}"/>
                 <TextBlock Grid.Row="0" Grid.Column="1" Classes="mono">
-                    <Run Text="X "/><Run Text="{Binding CanvasInteraction.SelectedComponent.X, StringFormat={}{0:F1}, FallbackValue='-'}"/>
+                    <Run Text="X "/><Run Text="{Binding CanvasInteraction.SelectedComponent.X, Mode=OneWay, StringFormat={}{0:F1}, FallbackValue='-'}"/>
                     <Run Text="   "/>
-                    <Run Text="Y "/><Run Text="{Binding CanvasInteraction.SelectedComponent.Y, StringFormat={}{0:F1}, FallbackValue='-'}"/>
+                    <Run Text="Y "/><Run Text="{Binding CanvasInteraction.SelectedComponent.Y, Mode=OneWay, StringFormat={}{0:F1}, FallbackValue='-'}"/>
                     <Run Text=" µm"/>
                 </TextBlock>
                 <TextBlock Grid.Row="1" Classes="label" VerticalAlignment="Center" Margin="0,8,0,0"
                            Text="{loc:Localize Properties.Size}"/>
                 <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Margin="0,8,0,0">
-                    <Run Text="{Binding CanvasInteraction.SelectedComponent.Width, StringFormat={}{0:F0}, FallbackValue='-'}"/>
+                    <Run Text="{Binding CanvasInteraction.SelectedComponent.Width, Mode=OneWay, StringFormat={}{0:F0}, FallbackValue='-'}"/>
                     <Run Text=" × "/>
-                    <Run Text="{Binding CanvasInteraction.SelectedComponent.Height, StringFormat={}{0:F0}, FallbackValue='-'}"/>
+                    <Run Text="{Binding CanvasInteraction.SelectedComponent.Height, Mode=OneWay, StringFormat={}{0:F0}, FallbackValue='-'}"/>
                     <Run Text=" µm"/>
                 </TextBlock>
             </Grid>
@@ -174,7 +174,7 @@
                                 TickFrequency="0.1" IsSnapToTickEnabled="True"/>
                         <TextBlock Classes="caption mono">
                             <Run Text="{loc:Localize SelectedProps.Power}"/>
-                            <Run Text="{Binding LaserConfig.InputPower, StringFormat={}{0:F2}}"/>
+                            <Run Text="{Binding LaserConfig.InputPower, Mode=OneWay, StringFormat={}{0:F2}}"/>
                         </TextBlock>
 
                         <!-- Realistic source spectrum (#819): line shape + FWHM linewidth.
@@ -232,7 +232,7 @@
                                 IsEnabled="{Binding LaserConfig.IsEnabled}"
                                 TickFrequency="5" IsSnapToTickEnabled="True"/>
                         <TextBlock Classes="caption mono">
-                            <Run Text="{Binding LaserConfig.RinDbPerHz, StringFormat={}{0:F0}}"/>
+                            <Run Text="{Binding LaserConfig.RinDbPerHz, Mode=OneWay, StringFormat={}{0:F0}}"/>
                             <Run Text="dB/Hz"/>
                         </TextBlock>
                     </StackPanel>
