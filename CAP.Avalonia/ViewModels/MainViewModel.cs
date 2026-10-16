@@ -1115,6 +1115,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         WatchTour.Start();
+        FitStartedLearningJourney(() => WatchTour.IsActive);
     }
 
     /// <summary>
@@ -1134,6 +1135,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         RunProgramTour.Start();
+        FitStartedLearningJourney(() => RunProgramTour.IsActive);
     }
 
     /// <summary>
@@ -1172,6 +1174,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         StoreNumberTour.Start();
+        FitStartedLearningJourney(() => StoreNumberTour.IsActive);
     }
 
     /// <summary>
