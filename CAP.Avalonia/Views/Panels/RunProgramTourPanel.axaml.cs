@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 
 namespace CAP.Avalonia.Views.Panels;
 
@@ -10,6 +11,11 @@ namespace CAP.Avalonia.Views.Panels;
 /// </summary>
 public partial class RunProgramTourPanel : UserControl
 {
+    public event EventHandler<RoutedEventArgs>? OpenPlaygroundRequested;
+
+    private void OpenPlayground_Click(object? sender, RoutedEventArgs e) =>
+        OpenPlaygroundRequested?.Invoke(this, e);
+
     /// <summary>Initialises the panel.</summary>
     public RunProgramTourPanel()
     {

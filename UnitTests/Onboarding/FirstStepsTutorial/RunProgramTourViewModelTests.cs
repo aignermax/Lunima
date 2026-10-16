@@ -164,7 +164,7 @@ public class RunProgramTourViewModelTests
             s => s.FileName == RunProgramTourViewModel.MultiplySampleFileName);
         playground.UsePhotonicAdder = true;
         playground.UsePhotonicAdder = false;
-        tour.CurrentStepIndex.ShouldBe(4);
+        tour.CurrentStepIndex.ShouldBe(3);
 
         // Golden-model stepping leaves no photonic-ADD status line — the tour
         // must honestly keep waiting for photonic steps.
@@ -172,7 +172,7 @@ public class RunProgramTourViewModelTests
             playground.StepCommand.Execute(null);
 
         playground.PhotonicStatusText.ShouldBeEmpty();
-        tour.CurrentStepIndex.ShouldBe(4, "golden-model steps must not count as photonic steps");
+        tour.CurrentStepIndex.ShouldBe(3, "golden-model steps must not count as photonic steps");
 
         playground.UsePhotonicAdder = true;
         var stepGuard = 0;
@@ -215,7 +215,7 @@ public class RunProgramTourViewModelTests
     }
 
     [Fact]
-    public void Next_AdvancesManually_ThroughAllSteps()
+    public void Next_CannotBypassUnperformedActions()
     {
         var (_, _, tour) = CreateFixture();
         tour.Start();
@@ -223,8 +223,69 @@ public class RunProgramTourViewModelTests
         for (var i = 0; i < 6; i++)
             tour.NextCommand.Execute(null);
 
-        tour.IsCompleted.ShouldBeTrue();
-        tour.IsActive.ShouldBeFalse();
+        tour.IsCompleted.ShouldBeFalse();
+        tour.IsActive.ShouldBeTrue();
+        tour.CurrentStepIndex.ShouldBe(0);
+    }
+
+    [Fact]
+    public void StatusTextChanges_DoNotCountAsSuccessfulPhotonicAdds()
+    {
+        var (logic, playground, tour) = CreateFixture();
+        logic.HasNetwork = true;
+        tour.Start();
+        tour.NotifyPlaygroundOpened();
+        playground.SelectedSample = playground.Samples.Single(s => s.FileName == RunProgramTourViewModel.MultiplySampleFileName);
+        playground.UsePhotonicAdder = true;
+        tour.CurrentStepIndex.ShouldBe(4);
+        for (int i = 0; i < 3; i++) playground.PhotonicStatusText = "Unrelated status " + i;
+        tour.CurrentStepIndex.ShouldBe(4);
+    }
+
+    [Fact]
+    public void ClosingPlayground_ReturnsGuidanceToMainWindowWithoutLosingProgress()
+    {
+        var (logic, _, tour) = CreateFixture();
+        logic.HasNetwork = true;
+        tour.Start();
+        tour.NotifyPlaygroundOpened();
+        tour.CurrentStepIndex.ShouldBe(2);
+        tour.NotifyPlaygroundClosed();
+        tour.ShowCardInMainWindow.ShouldBeTrue();
+        tour.ShowCardInPlayground.ShouldBeFalse();
+        tour.CurrentStepIndex.ShouldBe(2);
+    }
+
+    [Theory]
+    [InlineData("toggle", 3)]
+    [InlineData("sample", 2)]
+    [InlineData("network", 0)]
+    public void LostPrerequisite_ReturnsToActionInsteadOfStrandingAtStep(string prerequisite, int expectedStep)
+    {
+        var (logic, playground, tour) = CreateFixture();
+        logic.HasNetwork = true;
+        tour.Start();
+        tour.NotifyPlaygroundOpened();
+        playground.SelectedSample = playground.Samples.Single(s => s.FileName == RunProgramTourViewModel.MultiplySampleFileName);
+        playground.UsePhotonicAdder = true;
+        tour.CurrentStepIndex.ShouldBe(4);
+        switch (prerequisite)
+        {
+            case "toggle": playground.UsePhotonicAdder = false; break;
+            case "sample": playground.SelectedSample = playground.Samples.First(s => s.FileName != RunProgramTourViewModel.MultiplySampleFileName); break;
+            case "network": logic.HasNetwork = false; break;
+        }
+        tour.CurrentStepIndex.ShouldBe(expectedStep);
+        tour.Next();
+        tour.CurrentStepIndex.ShouldBe(expectedStep);
+        tour.IsCompleted.ShouldBeFalse();
+
+        logic.HasNetwork = true;
+        playground.SelectedSample = playground.Samples.Single(s => s.FileName == RunProgramTourViewModel.MultiplySampleFileName);
+        playground.UsePhotonicAdder = true;
+        tour.CurrentStepIndex.ShouldBe(4);
+        for (var i = 0; i < 60 && tour.CurrentStepIndex == 4; i++) playground.StepCommand.Execute(null);
+        tour.CurrentStepIndex.ShouldBe(5, "restoring the prerequisite must leave a completable action");
     }
 
     [Fact]
@@ -233,14 +294,14 @@ public class RunProgramTourViewModelTests
         var (logic, playground, tour) = CreateFixture();
         logic.HasNetwork = true;
         tour.Start();
-        for (var i = 0; i < 6; i++)
-            tour.NextCommand.Execute(null);
-
         tour.NotifyPlaygroundOpened();
         playground.SelectedSample = playground.Samples.Single(
             s => s.FileName == RunProgramTourViewModel.MultiplySampleFileName);
         playground.UsePhotonicAdder = true;
-        playground.StepCommand.Execute(null);
+        for (int i = 0; i < 60 && tour.CurrentStepIndex < 5; i++) playground.StepCommand.Execute(null);
+        tour.NextCommand.Execute(null);
+
+        playground.PhotonicStatusText = "Later status";
 
         tour.IsCompleted.ShouldBeTrue();
     }

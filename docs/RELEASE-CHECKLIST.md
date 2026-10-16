@@ -24,6 +24,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 - [ ] **auto** First-use optical guidance demonstrates the real compatible library item, placement, pin drag and simulation controls; actions advance only when performed, dismissal is remembered, resume preserves work, and Show target reveals offscreen targets without editing the design. Hidden guidance stops polling and animation. (`VisualLearningJourneyTests`, `VisualGuideOverlayTests`, `OpticalTutorialActionTests`, first-steps onboarding tests.)
 
+- [ ] **auto** Run-program guidance advances only after building/opening/selecting/enabling and three actual photonic ADD results; status text or Next cannot bypass actions. The compact English/German cues point to real ISA controls, an explicit button opens/reopens the ISA window without losing progress, lost prerequisites lead back to the required action, Done acknowledges success, and closed windows release their playback subscription (`RunProgramTourViewModelTests`, `IsaVisualJourneyTests`).
+
 - [ ] **auto** Adaptive crossings default to enabled for fresh/unset preferences; saved true/false values survive restart. Restoring the policy on startup does not start routing or repair (`RoutingSettingsPreferencesTests`, `RoutingSettingsPersistenceTests`, `AdaptiveCrossingToggleTests`).
 
 - [ ] Reopen the 4-bit adder over an existing design, then switch Logic/System repeatedly: unchanged hierarchy subtrees stay intact, replaced nodes release model subscriptions, and removed die surfaces release cached parts even when old model parent links remain. `(auto: HierarchyLifecycleTests, DieSurfaceLifetimeTests, RepeatedExampleLoadTests [Slow])`

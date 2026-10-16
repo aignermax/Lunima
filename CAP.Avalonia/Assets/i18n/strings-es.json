@@ -2165,5 +2165,14 @@
   "Tutorial.NoPlacementSpace": "Elige un espacio libre en el chip o deja más espacio.",
   "Tutorial.ActionOptics.Title": "Abre Óptica",
   "Tutorial.ActionOptics.Body": "Cambia a Óptica para simular el circuito que has construido.",
-  "Tutorial.ActionOptics.Cue": "Haz clic en Óptica"
+  "Tutorial.ActionOptics.Cue": "Haz clic en Óptica",
+  "RunProgramTour.Action1.Cue": "Crear la red lógica",
+  "RunProgramTour.Action2.Cue": "Abrir el entorno ISA",
+  "RunProgramTour.Action3.Cue": "Selecciona «Multiplicar 3 por 4»",
+  "RunProgramTour.Action4.Cue": "Activar ADD fotónico",
+  "RunProgramTour.Action5.Cue": "Pulsa Paso para observar tres ADD",
+  "RunProgramTour.Action6.Cue": "Tres sumas se ejecutaron en tu chip",
+  "RunProgramTour.ActionOpen.Button": "Abrir el entorno ISA",
+  "RunProgramTour.ActionDone.Button": "Listo",
+  "RunProgramTour.ActionOpen.Cue": "Abrir el entorno ISA"
 }
