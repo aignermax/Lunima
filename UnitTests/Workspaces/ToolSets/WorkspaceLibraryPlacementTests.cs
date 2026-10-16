@@ -8,6 +8,9 @@ using Shouldly;
 using UnitTests.Analysis.LogicAnalysis;
 using UnitTests.Helpers;
 using Xunit;
+using Avalonia.Controls;
+using Avalonia.Data;
+using Avalonia.Headless.XUnit;
 
 namespace UnitTests.Workspaces.ToolSets;
 
@@ -20,6 +23,48 @@ namespace UnitTests.Workspaces.ToolSets;
 [Collection("LocalizationSingleton")]
 public class WorkspaceLibraryPlacementTests
 {
+    [AvaloniaTheory]
+    [InlineData(Workspace.System)]
+    [InlineData(Workspace.Optics)]
+    [InlineData(Workspace.Logic)]
+    public void WorkspaceSwitch_WithBoundLibrarySelection_DisarmsRefusedPlacement(Workspace target)
+    {
+        var vm = CreateWithLibrary("MMI 2x2");
+        var list = BoundLibrary(vm);
+        list.SelectedItem = vm.LeftPanel.FilteredTemplates.Single(t => t.Name == "MMI 2x2");
+        vm.CanvasInteraction.CurrentMode.ShouldBe(InteractionMode.PlaceComponent);
+
+        vm.WorkspaceSwitch.Current = target;
+
+        vm.CanvasInteraction.SelectedTemplate.ShouldBeNull();
+        vm.CanvasInteraction.CurrentMode.ShouldBe(InteractionMode.Select);
+    }
+
+    [AvaloniaFact]
+    public void WorkspaceSwitch_WithBoundLibrarySelection_KeepsAllowedEdgeCouplerArmed()
+    {
+        var vm = CreateWithLibrary("Test Edge Coupler", "MMI 2x2");
+        var list = BoundLibrary(vm);
+        var template = vm.LeftPanel.FilteredTemplates.Single(t => t.Name == "Test Edge Coupler");
+        list.SelectedItem = template;
+
+        vm.WorkspaceSwitch.Current = Workspace.System;
+
+        vm.CanvasInteraction.SelectedTemplate.ShouldBeSameAs(template);
+        vm.CanvasInteraction.CurrentMode.ShouldBe(InteractionMode.PlaceComponent);
+        list.SelectedItem.ShouldBeSameAs(template);
+    }
+
+    private static ListBox BoundLibrary(MainViewModel vm)
+    {
+        var list = new ListBox { ItemsSource = vm.LeftPanel.FilteredTemplates };
+        list.Bind(ListBox.SelectedItemProperty, new Binding("CanvasInteraction.SelectedTemplate")
+        {
+            Source = vm, Mode = BindingMode.TwoWay,
+        });
+        return list;
+    }
+
     private const string Pdk = "Demo";
 
     private static ComponentTemplate T(string name) => new() { Name = name, PdkSource = Pdk, Category = "Test" };
