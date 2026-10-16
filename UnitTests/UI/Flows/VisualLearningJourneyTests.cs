@@ -65,11 +65,24 @@ public class VisualLearningJourneyTests
             await RefreshTarget();
             var row = host.LibraryListBox.ContainerFromItem(item);
             Assert.NotNull(row);
+            var detectorTitle = row.GetVisualDescendants().OfType<TextBlock>()
+                .SingleOrDefault(text => text.Text == "Photodetector");
+            if (item is CAP.Avalonia.ViewModels.Library.ComponentTemplate template && template.Name == "Photodetector")
+            {
+                Assert.NotNull(detectorTitle);
+                Assert.Single(detectorTitle.TextLayout.TextLines);
+            }
             UiInput.Click(window, row, .35);
             Pump();
         }
 
         await RefreshTarget();
+        var realizedRows = host.LibraryListBox.GetVisualDescendants().OfType<ListBoxItem>()
+            .Where(row => row.IsEffectivelyVisible && row.Bounds.Height > 0).ToArray();
+        for (var first = 0; first < realizedRows.Length; first++)
+            for (var second = first + 1; second < realizedRows.Length; second++)
+                Assert.False(realizedRows[first].Bounds.Intersects(realizedRows[second].Bounds),
+                    $"Library rows overlap: index {host.LibraryListBox.IndexFromContainer(realizedRows[first])} {realizedRows[first].Bounds} / index {host.LibraryListBox.IndexFromContainer(realizedRows[second])} {realizedRows[second].Bounds}; realized {realizedRows.Length} / items {host.LibraryListBox.ItemCount}");
         Save(window, language, "select-source");
         await SelectIndicatedPart();
         Assert.Equal(1, vm.Tutorial.CurrentStepIndex);
@@ -154,8 +167,17 @@ public class VisualLearningJourneyTests
     {
         var directory = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "visual-learning");
         Directory.CreateDirectory(directory);
-        using var bitmap = new RenderTargetBitmap(new PixelSize((int)window.Bounds.Width, (int)window.Bounds.Height));
-        bitmap.Render(window);
-        bitmap.Save(Path.Combine(directory, $"{language}-{step}.png"));
+        Pump();
+        using var frame = window.CaptureRenderedFrame();
+        var path = Path.Combine(directory, $"{language}-{step}.png");
+        if (frame != null)
+            frame.Save(path);
+        else
+        {
+            using var bitmap = new RenderTargetBitmap(new PixelSize((int)window.Bounds.Width, (int)window.Bounds.Height));
+            bitmap.Render(window);
+            bitmap.Save(path);
+        }
+        File.WriteAllText(Path.ChangeExtension(path, ".capture.txt"), frame != null ? "compositor" : "bitmap fallback");
     }
 }

@@ -896,21 +896,6 @@
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="vmLib:ComponentTemplate">
                                                 <DockPanel>
-                                                    <!-- Edit/delete appear on hover or selection only: the palette
-                                                         stays calm but the actions remain discoverable. -->
-                                                    <StackPanel Classes="itemActions" DockPanel.Dock="Right"
-                                                                Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                                                        <Button Classes="rowAction" Click="TemplateEditComponent_Click"
-                                                                ToolTip.Tip="{loc:Localize LeftPanel.EditComponentTip}">
-                                                            <controls:Icon Data="{StaticResource Icon.Pencil}"/>
-                                                        </Button>
-                                                        <!-- Only where there is something to delete or restore. -->
-                                                        <Button Classes="rowAction danger" Click="TemplateDeleteComponent_Click"
-                                                                IsVisible="{Binding IsDeletable}"
-                                                                ToolTip.Tip="{loc:Localize LeftPanel.DeleteComponentTip}">
-                                                            <controls:Icon Data="{StaticResource Icon.Trash2}"/>
-                                                        </Button>
-                                                    </StackPanel>
                                                     <Border DockPanel.Dock="Left" Classes="previewFrame">
                                                         <controls:ComponentPreview
                                                             Width="52" Height="32"
@@ -938,8 +923,27 @@
                                                                        TextWrapping="Wrap" MaxLines="2"
                                                                        ToolTip.Tip="{Binding Name}"/>
                                                         </DockPanel>
-                                                        <TextBlock Classes="caption" Text="{Binding Category}"
-                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <!-- Actions share the category row, leaving the title its full width.
+                                                             Their reserved space does not change on hover/selection. -->
+                                                        <DockPanel>
+                                                            <!-- Edit/delete appear on hover or selection only: the palette
+                                                                 stays calm but the actions remain discoverable. -->
+                                                            <StackPanel Classes="itemActions" DockPanel.Dock="Right"
+                                                                        Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                                                <Button Classes="rowAction" Click="TemplateEditComponent_Click"
+                                                                        ToolTip.Tip="{loc:Localize LeftPanel.EditComponentTip}">
+                                                                    <controls:Icon Data="{StaticResource Icon.Pencil}"/>
+                                                                </Button>
+                                                                <!-- Only where there is something to delete or restore. -->
+                                                                <Button Classes="rowAction danger" Click="TemplateDeleteComponent_Click"
+                                                                        IsVisible="{Binding IsDeletable}"
+                                                                        ToolTip.Tip="{loc:Localize LeftPanel.DeleteComponentTip}">
+                                                                    <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                                                </Button>
+                                                            </StackPanel>
+                                                            <TextBlock Classes="caption" Text="{Binding Category}"
+                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                        </DockPanel>
                                                     </StackPanel>
                                                 </DockPanel>
                                             </DataTemplate>

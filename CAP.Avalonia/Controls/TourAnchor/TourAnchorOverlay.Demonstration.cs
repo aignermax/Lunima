@@ -99,9 +99,21 @@ public partial class TourAnchorOverlay
         if (!list.Items.Contains(TargetItem)) return null;
         if (!ReferenceEquals(_scrolledItem, TargetItem) || !ReferenceEquals(_scrolledList, list))
         {
-            list.ScrollIntoView(TargetItem);
-            _scrolledItem = TargetItem;
+            var item = TargetItem;
+            _scrolledItem = item;
             _scrolledList = list;
+            // ScrollIntoView forces layout while realizing an offscreen row. Calling
+            // it during the window's current layout can strand its temporary row
+            // beside the real virtualized container. Wait until layout has completed.
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!_attached || !IsEffectivelyVisible || !ReferenceEquals(TargetItem, item) ||
+                    !ReferenceEquals(_scrolledList, list) || !ReferenceEquals(_scrolledItem, item) ||
+                    !list.Items.Contains(item) || TopLevel.GetTopLevel(list) != TopLevel.GetTopLevel(this))
+                    return;
+                list.ScrollIntoView(item);
+                RefreshAnchor();
+            }, DispatcherPriority.Loaded);
         }
         return list.ContainerFromItem(TargetItem);
     }
