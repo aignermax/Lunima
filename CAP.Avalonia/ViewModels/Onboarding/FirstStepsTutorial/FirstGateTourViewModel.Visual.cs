@@ -89,7 +89,7 @@ public partial class FirstGateTourViewModel
         {
             if (_workspace?.IsLogic == true) return "LayoutWorkspaceButton";
             if (_interaction != null && _interaction.CurrentMode != InteractionMode.Select) return "SelectModeButton";
-            return HasKitSelection() ? "CreateGroupButton" : "Canvas";
+            return HasKitSelection() ? "CreateGroupButton" : "DesignCanvasControl";
         }
         if (CurrentStepIndex is >= 2 and <= 5 && _workspace?.ShowsGateTools == false)
             return "LogicWorkspaceButton";
@@ -101,7 +101,7 @@ public partial class FirstGateTourViewModel
 
     private Rect? SelectionBounds()
     {
-        if (!IsActive || CurrentStepIndex != 1 || CurrentTargetName != "Canvas") return null;
+        if (!IsActive || CurrentStepIndex != 1 || CurrentTargetName != "DesignCanvasControl") return null;
         var parts = _canvas.Components.Where(c => _kitParts.Contains(c.Component)).ToArray();
         if (parts.Length == 0) return null;
         var left = parts.Min(c => c.X);

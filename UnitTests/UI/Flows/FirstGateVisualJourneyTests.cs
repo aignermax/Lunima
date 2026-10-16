@@ -60,12 +60,17 @@ public class FirstGateVisualJourneyTests
             await Settle();
         }
 
-        if (tour.CurrentTargetName != "Canvas") await ClickTarget();
+        if (tour.CurrentTargetName != "DesignCanvasControl") await ClickTarget();
         await Settle();
         var reveal = overlay.FindControl<Button>("GuideShowTarget")!;
         if (reveal.IsVisible) { UiInput.Click(window, reveal); await Settle(); }
         Assert.NotNull(tour.CurrentCanvasPoint);
         Assert.NotNull(tour.CurrentCanvasDestinationPoint);
+        Assert.True(overlay.FindControl<Control>("GuidePointer")!.IsVisible, "The actual marquee start must be demonstrated.");
+        Assert.True(overlay.FindControl<Control>("GuideTrail")!.IsVisible, "The actual marquee drag must be demonstrated.");
+        var visibleCanvas = new Rect(canvas.TranslatePoint(default, window)!.Value, canvas.Bounds.Size);
+        Assert.True(visibleCanvas.Contains(Screen(tour.CurrentCanvasPoint!.Value)));
+        Assert.True(visibleCanvas.Contains(Screen(tour.CurrentCanvasDestinationPoint!.Value)));
         Save("select-parts");
         UiInput.DragMouse(window, Screen(tour.CurrentCanvasPoint!.Value), Screen(tour.CurrentCanvasDestinationPoint!.Value));
         Assert.Equal("CreateGroupButton", tour.CurrentTargetName);
