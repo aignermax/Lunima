@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Controls.TourAnchor.TourAnchorOverlay">
 
   <!-- Guided-tour anchor overlay (#1167): dims everything except the spotlighted
@@ -16,21 +17,9 @@
     <Rectangle x:Name="DimLeft" Fill="{DynamicResource Brush.Scrim}" IsHitTestVisible="False"/>
     <Rectangle x:Name="DimRight" Fill="{DynamicResource Brush.Scrim}" IsHitTestVisible="False"/>
 
-    <!-- Pulsing spotlight outline -->
+    <!-- Static target outline; only the active demonstration pointer animates. -->
     <Border x:Name="Spotlight" BorderBrush="{DynamicResource Brush.Success}" BorderThickness="2"
-            CornerRadius="{DynamicResource Radius.S}" IsHitTestVisible="False">
-      <Border.Styles>
-        <Style Selector="Border#Spotlight">
-          <Style.Animations>
-            <Animation Duration="0:0:1.2" IterationCount="Infinite">
-              <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
-              <KeyFrame Cue="50%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
-              <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/></KeyFrame>
-            </Animation>
-          </Style.Animations>
-        </Style>
-      </Border.Styles>
-    </Border>
+            CornerRadius="{DynamicResource Radius.S}" IsHitTestVisible="False"/>
 
     <!-- Arrow pointing from the card at the target -->
     <Path x:Name="Arrow" Fill="{DynamicResource Brush.Success}" Data="M0,0 L16,8 L0,16 Z"
@@ -38,6 +27,17 @@
           IsHitTestVisible="False"/>
 
     <!-- Tour card, positioned by the code-behind -->
+    <Line x:Name="GuideTrail" Stroke="{DynamicResource Brush.Success}" StrokeThickness="1.5"
+          StrokeDashArray="3,4" Opacity="0.5" IsVisible="False" IsHitTestVisible="False"/>
+    <Ellipse x:Name="GuideDestination" Stroke="{DynamicResource Brush.Success}" StrokeThickness="2"
+             Width="14" Height="14" IsVisible="False" IsHitTestVisible="False"/>
+    <Ellipse x:Name="GuideClick" Stroke="{DynamicResource Brush.Success}" StrokeThickness="2"
+             IsVisible="False" IsHitTestVisible="False"/>
+    <Path x:Name="GuidePointer" Data="M1,1 L1,28 L8,21 L14,33 L20,30 L14,19 L25,19 Z"
+          Fill="{DynamicResource Brush.Text.Primary}" Stroke="{DynamicResource Brush.Success}"
+          StrokeThickness="2" IsVisible="False" IsHitTestVisible="False"/>
     <ContentControl x:Name="CardHost" IsHitTestVisible="True"/>
+    <Button x:Name="GuideShowTarget" IsVisible="False"
+            Content="{loc:Localize Tutorial.ShowTarget}" Click="ShowTarget_Click"/>
   </Canvas>
 </UserControl>

@@ -95,6 +95,9 @@ public partial class HomeViewModel : ObservableObject
     /// </summary>
     public Func<Task>? LearnTutorialRequested { get; set; }
 
+    /// <summary>Offers contextual guidance when entering the empty editor directly.</summary>
+    public Action? ContinueWithoutProjectRequested { get; set; }
+
     /// <summary>
     /// Callback to start the "Watch it compute" guided tour (issue #1143):
     /// opens the shipped Counter example as an untitled copy and activates the
@@ -394,5 +397,6 @@ public partial class HomeViewModel : ObservableObject
     private void ContinueWithoutProject()
     {
         IsHomeVisible = false;
+        ContinueWithoutProjectRequested?.Invoke();
     }
 }

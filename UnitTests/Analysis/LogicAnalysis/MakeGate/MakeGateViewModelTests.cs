@@ -156,6 +156,42 @@ public class MakeGateViewModelTests
     }
 
     [Fact]
+    public async Task SaveAfterUndo_UsesRestoredPhysicalPinNames_AndBuildsValidGate()
+    {
+        var (canvas, groupVm) = await GateKitFixture.GroupedKitAsync();
+        var commands = new CommandManager();
+        var makeGate = OpenFor(canvas, groupVm);
+        makeGate.ExecuteCommand = commands.ExecuteCommand;
+        await makeGate.SimulateCommand.ExecuteAsync(null);
+        makeGate.SelectedFunction = makeGate.Functions.Single(f => f.Function == GateFunction.Nand);
+        makeGate.SaveCommand.Execute(null);
+        commands.Undo().ShouldBeTrue();
+        makeGate.SaveCommand.Execute(null);
+        await AssertLogicPanelReadsNand(canvas);
+        commands.Undo().ShouldBeTrue();
+        commands.Redo().ShouldBeTrue();
+        await AssertLogicPanelReadsNand(canvas);
+    }
+
+    [Fact]
+    public async Task UndoEditOfDefinedGate_SaveToLibraryPersistsCurrentEditorChoices()
+    {
+        var (canvas, groupVm) = await GateKitFixture.GroupedKitAsync();
+        var commands = new CommandManager();
+        var makeGate = OpenFor(canvas, groupVm);
+        makeGate.ExecuteCommand = commands.ExecuteCommand;
+        await makeGate.SimulateCommand.ExecuteAsync(null);
+        makeGate.SaveCommand.Execute(null);
+        makeGate.GateName = "EditedGate";
+        makeGate.SaveCommand.Execute(null);
+        commands.Undo().ShouldBeTrue();
+        string? libraryName = null;
+        makeGate.SaveToLibraryRequested = (group, _) => { libraryName = group.GroupName; return true; };
+        makeGate.SaveToLibraryCommand.Execute(null);
+        libraryName.ShouldBe("EditedGate");
+    }
+
+    [Fact]
     public async Task SaveToLibrary_SavesTheGateAndCallsTheLibrary()
     {
         var (canvas, groupVm) = await GateKitFixture.GroupedKitAsync();

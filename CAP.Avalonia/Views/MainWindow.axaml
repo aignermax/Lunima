@@ -45,6 +45,12 @@
                                 ToolTip.Tip="{loc:Localize Home.ToolbarTip}">
                             <controls:Icon Data="{StaticResource Icon.House}"/>
                         </Button>
+                        <Button x:Name="ResumeVisualGuideButton" Classes="toolbar"
+                                Command="{Binding Home.LearnTutorialCommand}"
+                                AutomationProperties.Name="{loc:Localize Home.LearnTutorial}"
+                                ToolTip.Tip="{loc:Localize Home.LearnTutorial}">
+                            <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
+                        </Button>
 
                         <Border Classes="divider"/>
 
@@ -54,7 +60,7 @@
                                 ToolTip.Tip="{loc:Localize Toolbar.SelectModeTip}">
                             <controls:Icon Data="{StaticResource Icon.MousePointer2}"/>
                         </Button>
-                        <Button Classes="toolbar" Command="{Binding SetConnectModeCommand}"
+                        <Button x:Name="ConnectModeButton" Classes="toolbar" Command="{Binding SetConnectModeCommand}"
                                 Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Connect}"
                                 ToolTip.Tip="{loc:Localize Toolbar.ConnectModeTip}">
                             <controls:Icon Data="{StaticResource Icon.Spline}"/>
@@ -162,7 +168,7 @@
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.Layout}"
                                         ToolTip.Tip="{loc:Localize Workspace.LayoutTip}"/>
-                                <Button Classes="toolbar segment" Content="{loc:Localize Workspace.Optics}"
+                                <Button x:Name="OpticsWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.Optics}"
                                         Classes.active="{Binding WorkspaceSwitch.IsOptics}"
                                         Command="{Binding WorkspaceSwitch.SelectCommand}"
                                         CommandParameter="{x:Static ws:Workspace.Optics}"
@@ -211,6 +217,17 @@
                                IsOpen="{Binding RunHint.IsVisible}">
                             <Border Classes="runHint">
                                 <TextBlock Text="{Binding RunHint.Text}"/>
+                            </Border>
+                        </Popup>
+                        <Popup PlacementTarget="{Binding #RunSimulationButton}" Placement="Bottom"
+                               VerticalOffset="8" IsOpen="{Binding ShowLearningSuccess}"
+                               IsLightDismissEnabled="False" IsHitTestVisible="False">
+                            <Border Classes="overlay" Padding="14,8" CornerRadius="12">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="☺" FontSize="30" Foreground="{DynamicResource Brush.Success}"/>
+                                    <TextBlock Text="{loc:Localize Tutorial.CompletedCue}" VerticalAlignment="Center"
+                                               FontWeight="SemiBold"/>
+                                </StackPanel>
                             </Border>
                         </Popup>
                         <!-- Logic sub-choice: gate-level view or physical design (V). -->
@@ -1254,7 +1271,12 @@
     <!-- Guided-tour overlays: the card docks to the control the current step acts on —
          spotlight, arrow, card beside it; non-modal so the canvas stays interactive. -->
     <tour:TourAnchorOverlay IsVisible="{Binding Tutorial.IsActive, FallbackValue=False}"
-                                TargetName="{Binding Tutorial.CurrentTargetName}">
+                           Demonstrate="True"
+                           TargetName="{Binding Tutorial.CurrentTargetName}"
+                           TargetItem="{Binding Tutorial.CurrentTargetItem}"
+                           TargetCanvasPoint="{Binding Tutorial.CurrentCanvasPoint}"
+                           TargetPin="{Binding Tutorial.CurrentTargetPin}"
+                           ConnectionTargetPin="{Binding Tutorial.ConnectionTargetPin}">
         <tour:TourAnchorOverlay.Card>
             <panels:FirstStepsTutorialPanel DataContext="{Binding Tutorial}"/>
         </tour:TourAnchorOverlay.Card>
@@ -1267,7 +1289,7 @@
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}"
+    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}" Demonstrate="True"
                                 TargetName="{Binding WatchTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
             <panels:WatchComputeTourPanel DataContext="{Binding WatchTour}"/>

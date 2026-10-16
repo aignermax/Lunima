@@ -28,8 +28,18 @@ public partial class MakeGateViewModel
             return;
         }
 
+        var savedGroup = _group;
         var command = new ApplyGateDefinitionCommand(
-            _group, BuildRenames(), BuildAssignment(), GateName, () => _canvas?.RepaintRequested?.Invoke());
+            savedGroup, BuildRenames(), BuildAssignment(), GateName, () =>
+            {
+                // The command can be undone after the editor has moved to another group.
+                if (ReferenceEquals(_group, savedGroup))
+                {
+                    foreach (var row in Pins) row.RefreshPinName();
+                    IsSaved = IsCurrentDefinitionSaved(savedGroup);
+                }
+                _canvas?.RepaintRequested?.Invoke();
+            });
         if (ExecuteCommand != null)
             ExecuteCommand(command);
         else
@@ -40,6 +50,13 @@ public partial class MakeGateViewModel
         StatusText = string.Format(Translate("MakeGate.Saved"), _group.GroupName);
         GateSaved?.Invoke(this, EventArgs.Empty);
     }
+
+    private bool IsCurrentDefinitionSaved(ComponentGroup group) =>
+        group.TruthTablePinAssignment is { } saved && group.GroupName == GateName.Trim() &&
+        saved.InputPinNames.SequenceEqual(InputRows.Select(FinalName)) &&
+        saved.OutputPinNames.SequenceEqual(OutputRows.Select(FinalName)) &&
+        saved.BiasPinNames.SequenceEqual(BiasRows.Select(FinalName)) &&
+        saved.Threshold == Math.Clamp(Threshold, GateThresholdAdvisor.MinThreshold, GateThresholdAdvisor.MaxThreshold);
 
     /// <summary>Saves the gate (if not saved yet) and adds it to the library's Saved Groups.</summary>
     [RelayCommand]

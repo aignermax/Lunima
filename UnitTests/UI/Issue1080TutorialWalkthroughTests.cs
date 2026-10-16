@@ -95,6 +95,7 @@ public class Issue1080TutorialWalkthroughTests
         SaveFrame(window, Path.Combine(outputDir, "02-tour-step1-place.png"));
 
         var startComp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        startComp.HumanReadableName = "Grating Coupler";
         startComp.WidthMicrometers = 250;
         startComp.HeightMicrometers = 250;
         var endComp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
@@ -104,14 +105,14 @@ public class Issue1080TutorialWalkthroughTests
         endComp.PhysicalY = 300;
         canvas.AddComponent(startComp);
         canvas.AddComponent(endComp);
-        tutorial.CurrentStepIndex.ShouldBe(1, "placing a component must advance the tour");
+        tutorial.CurrentStepIndex.ShouldBe(5, "two compatible placed parts reach the actual pin-connection action");
         Dispatcher.UIThread.RunJobs();
         SaveFrame(window, Path.Combine(outputDir, "03-tour-step2-connect.png"));
 
         var startPin = startComp.PhysicalPins.First(p => p.Name == "out");
         var endPin = endComp.PhysicalPins.First(p => p.Name == "in");
         (await canvas.ConnectPinsAsync(startPin, endPin)).ShouldNotBeNull();
-        tutorial.CurrentStepIndex.ShouldBe(2, "connecting two pins must advance the tour");
+        tutorial.CurrentStepIndex.ShouldBe(7, "a valid source connection reaches simulation");
         Dispatcher.UIThread.RunJobs();
         SaveFrame(window, Path.Combine(outputDir, "04-tour-step3-simulate.png"));
 
@@ -149,9 +150,9 @@ public class Issue1080TutorialWalkthroughTests
         const string manifest = """
         [
           {"file": "01-home-tutorial-with-examples.png", "caption": "Home screen after the dev-ki merge: the green 'Learn Lunima' tour entry point coexists with the curated example ladder and its one-line descriptions from #1096."},
-          {"file": "02-tour-step1-place.png", "caption": "Starting the tour shows the non-modal card at step 1/3, asking the user to place a component from the library."},
-          {"file": "03-tour-step2-connect.png", "caption": "The engine observes the real canvas: adding a component auto-advances the card to step 2/3, connecting two pins."},
-          {"file": "04-tour-step3-simulate.png", "caption": "Routing a waveguide between two pins advances to the final step 3/3, running the light simulation."}
+          {"file": "02-tour-step1-place.png", "caption": "The compact cue is bound to the action-based visual journey; explanation stays optional."},
+          {"file": "03-tour-step2-connect.png", "caption": "Two compatible parts reach the pin-connection action; one part is insufficient."},
+          {"file": "04-tour-step3-simulate.png", "caption": "A valid source connection reaches the simulation action."}
         ]
         """;
         ScreenshotArtifacts.WriteText(Path.Combine(outputDir, "manifest.json"), manifest);

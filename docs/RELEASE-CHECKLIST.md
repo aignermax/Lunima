@@ -22,6 +22,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 1. Application startup & project lifecycle
 
+- [ ] **auto** First-use optical guidance demonstrates the real compatible library item, placement, pin drag and simulation controls; actions advance only when performed, dismissal is remembered, resume preserves work, and Show target reveals offscreen targets without editing the design. Hidden guidance stops polling and animation. (`VisualLearningJourneyTests`, `VisualGuideOverlayTests`, `OpticalTutorialActionTests`, first-steps onboarding tests.)
+
 - [ ] **auto** Adaptive crossings default to enabled for fresh/unset preferences; saved true/false values survive restart. Restoring the policy on startup does not start routing or repair (`RoutingSettingsPreferencesTests`, `RoutingSettingsPersistenceTests`, `AdaptiveCrossingToggleTests`).
 
 - [ ] Reopen the 4-bit adder over an existing design, then switch Logic/System repeatedly: unchanged hierarchy subtrees stay intact, replaced nodes release model subscriptions, and removed die surfaces release cached parts even when old model parent links remain. `(auto: HierarchyLifecycleTests, DieSurfaceLifetimeTests, RepeatedExampleLoadTests [Slow])`
@@ -93,7 +95,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Create a group from selected components with `Ctrl + G`. `(auto: GroupingWorkflowTests)`
 - [ ] A new group's external pins read by direction — IN1, IN2… (west, top to bottom), OUT1… (east), N…/S… (north/south), E… (electrical) — while saved files keep their pin names. `(auto: GroupPinNamerTests)`
 - [ ] The right panel's gate section (truth table) appears only while exactly one group is selected; nothing renders otherwise. `(auto: TruthTablePanelRenderTests)`
-- [ ] "Make gate…" in the gate section: role chips (in/out/bias/–) with suggested roles and short names, Simulate shows power bars, picking NAND/AND/OR/NOR/XOR/NOT moves the threshold midway between the levels with the margin in dB (overlap warning for a wrong function, manual override + "Use suggested"), Save as gate renames the pins (undoable), Save to library adds it under Saved Groups, then "Open in Logic ›" opens the Logic tab; (?) help animates roles and threshold. `(auto: MakeGateViewModelTests, GatePinRoleSuggesterTests, GateThresholdAdvisorTests, MakeGateScreenshotTests)`
+- [ ] "Make gate…" in the gate section: role chips (in/out/bias/–) with suggested roles and short names, Simulate shows power bars, picking NAND/AND/OR/NOR/XOR/NOT moves the threshold midway between the levels with the margin in dB (overlap warning for a wrong function, manual override + "Use suggested"), Save as gate renames the pins (undoable); Save → Undo → Save still builds a valid gate and Save to library persists the current editor choices after undo; Save to library adds it under Saved Groups, then "Open in Logic ›" opens the Logic tab; (?) help animates roles and threshold. `(auto: MakeGateViewModelTests, GatePinRoleSuggesterTests, GateThresholdAdvisorTests, MakeGateScreenshotTests)`
 - [ ] Plain truth-table extraction shows the automatic threshold suggestion (largest power step, margin in dB) with "Use" and an "Open in Logic ›" link. `(auto: GateLinkingTests)`
 - [ ] Ungroup a group with `Ctrl + Shift + G`. `(auto: GroupingWorkflowTests)`
 - [ ] Rename a group via context menu and see the change in the Hierarchy panel. `(auto: HierarchyRenameTests)`
@@ -314,3 +316,12 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - **Date:** ___________________
 - **Blockers:** ___________________
 - **Approved for release:** ☐ Yes  ☐ No
+
+- [ ] Connect two chiplets guidance: Skip/completion releases the receiver position subscription; restarting records a fresh baseline without duplicate handlers.
+
+### Watch it compute: real control actions
+
+- [ ] Start Watch it compute in English and German. The compact cue and animated pointer identify Build logic network, Step clock, Run and Stop; no Next button can skip these actions.
+- [ ] Follow the real Counter buttons without changing input toggles. Clock events and register values change, Run starts, Stop preserves the committed state, and Done closes the summary.
+- [ ] Hide the analysis dock or leave Logic during the guide. Show Logic controls restores the workspace/tab without rebuilding or modifying the circuit; hiding a running dock must not count as pressing Stop.
+- [ ] Invalidate the built logic network during the guide. Guidance returns to Build instead of pointing at disabled clock controls.

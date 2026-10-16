@@ -226,6 +226,7 @@ public partial class ConnectChipletsTourViewModel : ObservableObject
         _canvas.DiesChanged -= OnDiesChanged;
         _validation.PropertyChanged -= OnValidationPropertyChanged;
         _receiverTracker.ReceiverPositionChanged -= OnReceiverPositionChanged;
+        _receiverTracker.StopTracking();
     }
 
     partial void OnCurrentStepIndexChanged(int value)
