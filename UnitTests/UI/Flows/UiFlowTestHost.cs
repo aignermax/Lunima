@@ -95,6 +95,10 @@ internal sealed class UiFlowTestHost : IDisposable
         App.OverrideServicesForTesting(services.BuildServiceProvider());
 
         Window = new MainWindow { DataContext = Vm };
+        // Hover tooltips use overlay popup hosts in headless mode and can consume the
+        // next synthetic click after a panel changes. Action flows keep tooltip text
+        // available for lookup; dedicated tooltip tests use their own fixture.
+        global::Avalonia.Controls.ToolTip.SetServiceEnabled(Window, false);
         Window.Show();
         Dispatcher.UIThread.RunJobs();
 
@@ -140,6 +144,10 @@ internal sealed class UiFlowTestHost : IDisposable
     {
         foreach (var owned in Window.OwnedWindows.ToList())
             owned.Close();
+        // This temporary fixture is being discarded, not asking the user to save.
+        // The real headless save-prompt service returns Cancel, which would leave
+        // this window alive and leak focus/input state into the shared UI session.
+        Vm.FileOperations.HasUnsavedChanges = false;
         Window.Close();
         Dispatcher.UIThread.RunJobs();
 
