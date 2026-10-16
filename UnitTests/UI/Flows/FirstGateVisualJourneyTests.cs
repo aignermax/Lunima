@@ -8,6 +8,7 @@ using CAP.Avalonia.Controls.TourAnchor;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.Views.Panels;
 using CAP_Core.Analysis.LogicAnalysis.GateBuilding;
+using CAP_Core.Analysis.LogicAnalysis.GateView;
 
 namespace UnitTests.UI.Flows;
 
@@ -119,16 +120,28 @@ public class FirstGateVisualJourneyTests
         Save("save-nand");
         await ClickTarget();
         Assert.Equal(6, tour.CurrentStepIndex);
+        await vm.GateView.PendingRebuild;
+        Assert.Equal("NAND", Assert.Single(vm.GateView.Graph.Nodes).DisplayName);
         UiInput.PressKey(window, Key.Z, RawInputModifiers.Control);
         await Settle();
         Assert.Equal(5, tour.CurrentStepIndex);
+        await vm.GateView.PendingRebuild;
+        Assert.Empty(vm.GateView.Graph.Nodes);
         await ClickTarget();
         Assert.Equal(6, tour.CurrentStepIndex);
+        await vm.GateView.PendingRebuild;
+        Assert.Equal("NAND", Assert.Single(vm.GateView.Graph.Nodes).DisplayName);
         if (tour.CurrentTargetName == "MakeGateOpenLogicButton") await ClickTarget();
         await ClickTarget();
         if (vm.RightPanel.Logic.BuildNetworkCommand.ExecutionTask is { } build) await build;
         Assert.True(tour.IsCompleted, vm.RightPanel.Logic.StatusText);
         Assert.True(vm.RightPanel.Logic.HasNetwork);
+        await vm.GateView.PendingRebuild;
+        var drawnGate = Assert.Single(vm.GateView.Graph.Nodes);
+        Assert.Equal("NAND", drawnGate.DisplayName);
+        Assert.Equal(GateSymbolKind.Nand, drawnGate.Kind);
+        Assert.False(vm.GateView.IsStale);
+        await Settle();
         Save("built");
 
         void Save(string step)
