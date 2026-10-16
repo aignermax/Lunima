@@ -20,6 +20,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 1. Application startup & project lifecycle
 
+- [ ] Two rotated SiN Edge Couplers connected at their left-facing o2 ports route around the target's left side, entering opposite its outward normal. Bend and Auto reject wrong-way S primitives; ordinary recalculation repairs unedited cached generated arcs, while manual edits and valid quantized A* fallbacks remain preserved. `(auto: SiNEdgeCouplerDirectionTests)`
+
 - [ ] System → New die → Create works through the actual flyout button, closes after creation, and can be undone. The Chiplets list contains real dies; a new or legacy single-chip design shows Die 1 rather than its logic groups. `(auto: NewDieButtonTests, WorkspaceContextTests)`
 - [ ] Routing status identifies crossing insertion, route refinement, and conflict repair while elapsed time continues; speculative repair searches do not increment completed connections or retain the initial complex-search label. Cancelled/finished passes ignore late phase updates. `(auto: RoutingPhaseProgressTests, RoutingOrchestratorProgressTests)`
 

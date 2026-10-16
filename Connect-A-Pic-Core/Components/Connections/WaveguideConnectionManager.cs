@@ -689,6 +689,9 @@ public partial class WaveguideConnectionManager
         if (connection.IsCrossChipletFacetLink)
             return true;
 
+        if (GeneratedRoutePinDirections.NeedsRepair(connection))
+            return false;
+
         // Frozen paths with matching endpoints are always kept as-is: manual bend edits
         // must survive re-routing. RecalculateTransmission handles the unfreeze case.
         if (connection.IsRouteFrozen && connection.FrozenPathStillMatchesPins())
