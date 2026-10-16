@@ -615,7 +615,7 @@
   "Home.StoreNumberTourTip": "Geführte Tour auf dem RAM-2x4-Beispiel: ein 4-Bit-Wort in eine Speicherzelle schreiben und wieder auslesen",
   "Home.WatchComputeTour": "Beim Rechnen zusehen",
   "Home.WatchComputeTourTip": "Geführte Tour auf dem 2-Bit-Zähler-Beispiel: Logiknetzwerk aufbauen, Takt weiterschalten, dem Schaltkreis beim Zählen zusehen",
-  "Home.Learn.FirstSteps": "Erste Schritte",
+  "Home.Learn.FirstSteps": "Baue deine erste Lichtschaltung",
   "Home.Learn.FirstStepsDescription": "Bauteil platzieren, zwei Pins verbinden, Licht sehen",
   "Home.Learn.WatchComputeDescription": "2-Bit-Zähler aufbauen und dem Licht beim Zählen zusehen",
   "Home.Learn.StoreNumberDescription": "Eine Zahl in photonischen RAM schreiben und wieder auslesen",
@@ -1977,7 +1977,7 @@
   "FirstGateTour.Step6Title": "Als Gatter speichern",
   "FirstGateTour.Step7Body": "Drücken Sie „In Logik öffnen ›“ und dann im Logik-Tab „Logiknetzwerk aufbauen“. Schalten Sie A und B um: Der Ausgang wird nur dunkel, wenn beide an sind — Ihr NAND rechnet.",
   "FirstGateTour.Step7Title": "Beim Rechnen zusehen",
-  "Home.FirstGateTour": "Ihr erstes Gatter",
+  "Home.FirstGateTour": "Dein erstes Gatter",
   "Home.FirstGateTourTip": "Geführte Tour mit einem Gatter-Bausatz: Bauteile gruppieren, ein NAND-Gatter erstellen, die Schwelle setzen und es im Logik-Tab aufbauen",
   "Home.Learn.FirstGateDescription": "Aus vier optischen Bauteilen ein NAND-Gatter machen",
   "LogicPanel.GateCandidates": "Gruppen, die noch keine Gatter sind:",
@@ -2200,5 +2200,8 @@
   "RunProgramTour.Action6.Cue": "Drei Additionen liefen auf deinem Chip",
   "RunProgramTour.ActionOpen.Button": "ISA-Playground öffnen",
   "RunProgramTour.ActionDone.Button": "Fertig",
-  "RunProgramTour.ActionOpen.Cue": "ISA-Playground öffnen"
+  "RunProgramTour.ActionOpen.Cue": "ISA-Playground öffnen",
+  "Home.Optical.Place": "Platzieren",
+  "Home.Optical.Connect": "Verbinden",
+  "Home.Optical.Light": "Licht"
 }

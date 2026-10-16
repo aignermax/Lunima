@@ -27,6 +27,12 @@
             <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
         </Style>
 
+        <Style Selector="Button.row.optical-start">
+            <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+            <Setter Property="Padding" Value="10,12"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
         <!-- Example tile: a calm card that lifts its border on hover. -->
         <Style Selector="Button.tile">
             <Setter Property="Background" Value="{DynamicResource Brush.Surface.Base}"/>
@@ -198,7 +204,7 @@
                         <ItemsControl ItemsSource="{Binding TourEntries}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="home:HomeTourEntry">
-                                    <Button Classes="row" Command="{Binding Command}"
+                                    <Button Classes="row" Classes.optical-start="{Binding IsOpticalStart}" Command="{Binding Command}"
                                             AutomationProperties.Name="{Binding Name}">
                                         <ToolTip.Tip>
                                             <StackPanel MaxWidth="280" Spacing="4">
@@ -206,16 +212,28 @@
                                                 <TextBlock Classes="caption" Text="{Binding Tip}" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </ToolTip.Tip>
-                                        <Grid ColumnDefinitions="Auto,12,*,Auto">
+                                        <Grid ColumnDefinitions="Auto,12,*,Auto" RowDefinitions="Auto,Auto">
                                             <Border Classes="step-number">
                                                 <TextBlock Text="{Binding Number}"/>
                                             </Border>
                                             <TextBlock Grid.Column="2" Text="{Binding Name}"
-                                                       FontWeight="Medium" TextTrimming="CharacterEllipsis"
+                                                       FontWeight="Medium" TextWrapping="Wrap"
                                                        VerticalAlignment="Center"/>
                                             <controls:Icon Grid.Column="3" Size="14"
                                                            Data="{Binding IconKey, Converter={StaticResource IconKey}}"
                                                            Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                                            <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2"
+                                                        IsVisible="{Binding IsOpticalStart}" Orientation="Horizontal"
+                                                        Spacing="6" Margin="0,10,0,0">
+                                                <controls:Icon Data="{StaticResource Icon.Box}" Size="14"/>
+                                                <TextBlock Classes="caption" Text="{loc:Localize Home.Optical.Place}"/>
+                                                <controls:Icon Data="{StaticResource Icon.ArrowRight}" Size="12"/>
+                                                <controls:Icon Data="{StaticResource Icon.Link}" Size="14"/>
+                                                <TextBlock Classes="caption" Text="{loc:Localize Home.Optical.Connect}"/>
+                                                <controls:Icon Data="{StaticResource Icon.ArrowRight}" Size="12"/>
+                                                <controls:Icon Data="{StaticResource Icon.Sun}" Size="14"/>
+                                                <TextBlock Classes="caption" Text="{loc:Localize Home.Optical.Light}"/>
+                                            </StackPanel>
                                         </Grid>
                                     </Button>
                                 </DataTemplate>

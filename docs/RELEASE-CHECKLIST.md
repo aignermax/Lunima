@@ -335,3 +335,4 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Follow the real Counter buttons without changing input toggles. Clock events and register values change, Run starts, Stop preserves the committed state, and Done closes the summary.
 - [ ] Hide the analysis dock or leave Logic during the guide. Show Logic controls restores the workspace/tab without rebuilding or modifying the circuit; hiding a running dock must not count as pressing Stop.
 - [ ] Invalidate the built logic network during the guide. Guidance returns to Build instead of pointing at disabled clock controls.
+- [ ] Home visibly offers the first optical circuit with a Place → Connect → Light sequence in all five languages. The real entry starts guidance without replacing existing work; New/Open remain available and the complete German/Spanish cue fits at 1000 px. `(auto: HomeOpticalEntryTests, HomeLearnTourListTests, FirstUseGuidanceTests)`

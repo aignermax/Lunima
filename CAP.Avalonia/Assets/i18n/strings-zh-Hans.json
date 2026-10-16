@@ -615,7 +615,7 @@
   "Home.StoreNumberTourTip": "在 RAM 2x4 示例上进行引导教程：将一个 4 位字写入存储单元并读回",
   "Home.WatchComputeTour": "看它计算",
   "Home.WatchComputeTourTip": "在 2 位计数器示例上进行引导教程：构建逻辑网络、单步时钟、观看电路计数",
-  "Home.Learn.FirstSteps": "入门第一步",
+  "Home.Learn.FirstSteps": "搭建你的第一个光路",
   "Home.Learn.FirstStepsDescription": "放置元件、连接两个引脚、观察光传播",
   "Home.Learn.WatchComputeDescription": "构建 2 位计数器，观看光如何计数",
   "Home.Learn.StoreNumberDescription": "将一个数写入光子 RAM 并读回",
@@ -2200,5 +2200,8 @@
   "RunProgramTour.Action6.Cue": "芯片已执行三次加法",
   "RunProgramTour.ActionOpen.Button": "打开 ISA 演练场",
   "RunProgramTour.ActionDone.Button": "完成",
-  "RunProgramTour.ActionOpen.Cue": "打开 ISA 演练场"
+  "RunProgramTour.ActionOpen.Cue": "打开 ISA 演练场",
+  "Home.Optical.Place": "放置",
+  "Home.Optical.Connect": "连接",
+  "Home.Optical.Light": "光"
 }
