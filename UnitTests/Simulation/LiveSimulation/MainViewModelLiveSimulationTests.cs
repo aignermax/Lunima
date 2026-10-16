@@ -74,7 +74,7 @@ public class MainViewModelLiveSimulationTests
         await SettleAsync(vm);
         var runsBefore = vm.LiveSimulation.RunCount;
 
-        vm.UndoCommand.Execute(null);
+        await vm.UndoCommand.ExecuteAsync(null);
         await SettleAsync(vm);
 
         vm.LiveSimulation.RunCount.ShouldBeGreaterThan(runsBefore);

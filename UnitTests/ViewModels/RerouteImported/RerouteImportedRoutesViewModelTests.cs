@@ -15,7 +15,7 @@ namespace UnitTests.ViewModels.RerouteImported;
 /// before/after delta report, hand-edited frozen routes are kept unchanged, and
 /// undo restores the exact imported geometry.
 /// </summary>
-public class RerouteImportedRoutesViewModelTests
+public partial class RerouteImportedRoutesViewModelTests
 {
     private const double DetourOffsetMicrometers = 800;
     private const double LengthTolerance = 1.0;
@@ -344,4 +344,5 @@ public class RerouteImportedRoutesViewModelTests
         editedPath.BendRadiusOverrides.Count.ShouldBe(1);
         editedPath.Path.TotalLengthMicrometers.ShouldBe(editedLength, LengthTolerance);
     }
+
 }

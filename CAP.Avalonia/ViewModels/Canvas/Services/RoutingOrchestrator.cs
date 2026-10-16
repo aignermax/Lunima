@@ -10,7 +10,7 @@ namespace CAP.Avalonia.ViewModels.Canvas.Services;
 /// <summary>
 /// Manages asynchronous waveguide route calculation with cancellation, throttling, and grid initialization.
 /// </summary>
-public class RoutingOrchestrator
+public partial class RoutingOrchestrator
 {
     private readonly WaveguideRouter _router;
     private readonly WaveguideConnectionManager _connectionManager;
@@ -198,6 +198,8 @@ public class RoutingOrchestrator
     /// </summary>
     public async Task RecalculateRoutesAsync()
     {
+        if (_suspendRouting > 0) return;
+        var generation = MutationGeneration;
         // Refresh the process bend-radius floor before every pass (still on the caller's
         // UI thread — the provider reads ViewModel state).
         if (GetProcessMinBendRadiusMicrometers != null)
@@ -229,7 +231,7 @@ public class RoutingOrchestrator
 
         try
         {
-            if (token.IsCancellationRequested) return;
+            if (token.IsCancellationRequested || generation != MutationGeneration) return;
 
             var passId = ++_passId;
             _totalCount = _connectionManager.Connections.Count;

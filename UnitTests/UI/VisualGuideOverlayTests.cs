@@ -15,6 +15,37 @@ namespace UnitTests.UI;
 public class VisualGuideOverlayTests
 {
     [AvaloniaFact]
+    public void DeferredListReveal_IgnoresStoppedChangedAndRemovedTargets()
+    {
+        var items = Enumerable.Range(0, 100).Select(i => $"Item {i}").ToArray();
+        var list = new ListBox { Name = "Library", ItemsSource = items, Width = 200, Height = 150 };
+        var overlay = new TourAnchorOverlay { IsVisible = false, Demonstrate = true, TargetName = "Library", TargetItem = items[^1] };
+        var window = new Window { Width = 600, Height = 400,
+            Content = new Avalonia.Controls.Grid { Children = { list, overlay } } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            var scroll = list.GetVisualDescendants().OfType<ScrollViewer>().Single();
+            overlay.IsVisible = true;
+            overlay.IsVisible = false;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, scroll.Offset.Y);
+
+            overlay.IsVisible = true;
+            overlay.TargetItem = items[0];
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, scroll.Offset.Y);
+
+            overlay.TargetItem = items[^1];
+            list.ItemsSource = new[] { "replacement" };
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, scroll.Offset.Y);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void NestedSignalTarget_PointsAtExactCheckbox_WithoutTogglingIt()
     {
         var first = new object();

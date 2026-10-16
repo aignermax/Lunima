@@ -59,7 +59,8 @@ public sealed class RepairSandbox
     /// </summary>
     private async Task RestoreAsync(RouteSnapshot routes, RoutingMetrics baseline, int undoFrom)
     {
-        while (_session.Commands.UndoCount > undoFrom && _session.Commands.Undo())
+        while (_session.Commands.UndoCount > undoFrom
+               && await _session.Canvas.Routing.ExecuteHistoryChangeAsync(_session.Commands.Undo, () => _session.Commands.CanUndo))
             await RoutingAwaiter.WaitForIdleAsync(_session.Canvas);
         await RoutingAwaiter.WaitForIdleAsync(_session.Canvas);
         routes.Restore(_session);

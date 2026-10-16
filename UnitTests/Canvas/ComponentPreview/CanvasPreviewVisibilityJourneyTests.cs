@@ -171,14 +171,7 @@ public class CanvasPreviewVisibilityJourneyTests
         window.Show();
         try
         {
-            WriteableBitmap? frame = null;
-            for (var attempt = 0; attempt < 3 && frame == null; attempt++)
-            {
-                Dispatcher.UIThread.RunJobs();
-                frame = window.CaptureRenderedFrame();
-            }
-            frame.ShouldNotBeNull("CaptureRenderedFrame stayed null after 3 attempts");
-            return frame!;
+            return HeadlessFrameCapture.Capture(window);
         }
         finally
         {

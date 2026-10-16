@@ -454,11 +454,14 @@ public partial class MainViewModel : ObservableObject
         // The tour must observe the panel instance the user actually clicks.
         StoreNumberTour = storeNumberTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
+        StoreNumberTour.AttachWorkspace(WorkspaceSwitch);
         // The gate tour observes the Make-gate steps and Logic panel the window shows.
         FirstGateTour = firstGateTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel(
-                Canvas, RightPanel.MakeGate, RightPanel.Logic);
+                Canvas, RightPanel.MakeGate, RightPanel.Logic, CommandManager);
         Home.FirstGateTourRequested = StartFirstGateTourAsync;
+        FirstGateTour.AttachUi(WorkspaceSwitch, BottomPanel.Analysis, CanvasInteraction);
+        FirstGateTour.RevealGateRequested = SelectGroupAndOpenMakeGate;
         WireMakeGate();
 
         // Keep the window title in sync with the open file and dirty state
@@ -1116,6 +1119,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         WatchTour.Start();
+        FitStartedLearningJourney(() => WatchTour.IsActive);
     }
 
     /// <summary>
@@ -1135,6 +1139,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         RunProgramTour.Start();
+        FitStartedLearningJourney(() => RunProgramTour.IsActive);
     }
 
     /// <summary>
@@ -1173,6 +1178,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         StoreNumberTour.Start();
+        FitStartedLearningJourney(() => StoreNumberTour.IsActive);
     }
 
     /// <summary>
@@ -1333,9 +1339,9 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(CanUndo))]
-    private void Undo()
+    private async Task Undo()
     {
-        if (CommandManager.Undo())
+        if (await Canvas.Routing.ExecuteHistoryChangeAsync(CommandManager.Undo, () => CommandManager.CanUndo))
         {
             StatusText = string.Format(LocalizationService.Instance.Translate("Status.Undone"), CommandManager.RedoDescription ?? "action");
         }
@@ -1348,9 +1354,9 @@ public partial class MainViewModel : ObservableObject
     private bool CanUndo() => CommandManager.CanUndo;
 
     [RelayCommand(CanExecute = nameof(CanRedo))]
-    private void Redo()
+    private async Task Redo()
     {
-        if (CommandManager.Redo())
+        if (await Canvas.Routing.ExecuteHistoryChangeAsync(CommandManager.Redo, () => CommandManager.CanRedo))
         {
             StatusText = string.Format(LocalizationService.Instance.Translate("Status.Redone"), CommandManager.UndoDescription ?? "action");
         }

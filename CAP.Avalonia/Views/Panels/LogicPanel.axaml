@@ -135,7 +135,8 @@
                             <Border Background="{DynamicResource Brush.Surface.Input}" CornerRadius="{DynamicResource Radius.S}"
                                     VerticalAlignment="Top"
                                     IsVisible="{Binding RightPanel.Logic.HasWaveform}">
-                                <controls:LogicWaveformStrip Waveform="{Binding RightPanel.Logic.Waveform}"/>
+                                <controls:LogicWaveformStrip Waveform="{Binding RightPanel.Logic.Waveform}"
+                                                             SeekCommand="{Binding RightPanel.Logic.SeekWaveformCommand}"/>
                             </Border>
                         </ScrollViewer>
                     </Grid>
@@ -146,7 +147,7 @@
 
         <!-- Fan-out warnings sit outside the sideways-scrolling columns so they stay in
              view on a narrow dock, and show whenever warnings exist. -->
-        <Border Grid.Row="2" Grid.Column="1" Classes="logicColumn" Width="320" Margin="12,6,0,0"
+        <Border Grid.Row="2" Grid.Column="1" Classes="logicColumn" Width="320" Margin="12,6,0,0" VerticalAlignment="Top"
                 IsVisible="{Binding RightPanel.Logic.HasFanOutWarnings}">
             <logicTab:LogicFanOutColumn/>
         </Border>

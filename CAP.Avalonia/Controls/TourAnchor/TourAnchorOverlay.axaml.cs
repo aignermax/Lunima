@@ -145,6 +145,8 @@ public partial class TourAnchorOverlay : UserControl
             _cachedTarget = null;
             _revealedControl = null;
             _revealGeometry = [];
+            _scrolledItem = null;
+            _scrolledList = null;
         }
     }
 

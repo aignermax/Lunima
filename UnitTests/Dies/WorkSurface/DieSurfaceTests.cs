@@ -81,9 +81,14 @@ public class DieSurfaceTests
     }
 
     [Fact]
-    public void MovingADie_TranslatesItsPartsAndRoutesRigidly_NothingIsRerouted()
+    public async Task MovingADie_TranslatesItsPartsAndRoutesRigidly_NothingIsRerouted()
     {
         var w = new WorkSurfaceCanvas();
+        // Creating the fixture's dies starts routing. Settle that work before measuring
+        // whether this move itself starts a pass, rather than racing fixture startup.
+        await w.Canvas.RecalculateRoutesAsync();
+        int routingStarts = 0;
+        w.Canvas.Routing.GetProcessMinBendRadiusMicrometers = () => { routingStarts++; return 0; };
         var before = WorkSurfaceCanvas.Geometry(w.Wire.Connection.RoutedPath);
         var dieVm = w.DieVm(w.Die1);
         var (x0, y0) = (dieVm.X, dieVm.Y);
@@ -95,6 +100,7 @@ public class DieSurfaceTests
             .ShouldBe(before.Select(s => (s.Item1 - 700, s.Item2 + 250, s.Item3 - 700, s.Item4 + 250)).ToList(),
                 "the route on the die is identical, only translated");
         w.Canvas.IsRouting.ShouldBeFalse("a die move never starts a routing pass");
+        routingStarts.ShouldBe(0, "the move must not launch even a quickly completed routing pass");
 
         w.Commands.Undo();
         WorkSurfaceCanvas.Geometry(w.Wire.Connection.RoutedPath).ShouldBe(before);

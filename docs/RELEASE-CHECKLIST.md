@@ -22,6 +22,12 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 1. Application startup & project lifecycle
 
+- [ ] **auto** Placement ghosts disappear when leaving the canvas, changing tools, disarming/replacing templates or replacing the canvas main model. Continuous placement remains armed inside the canvas; the optical Connect step shows a single detector name (`PlacementPreviewLifecycleTests`, `VisualLearningJourneyTests`).
+
+- [ ] **auto** Optical guidance reveals the exact virtualized library row after layout without duplicate/overlapping containers. Stopping guidance, changing targets or replacing the library cancels pending reveals. Library titles retain their width when row actions appear; Photodetector does not wrap its last letter onto another line (`VisualLearningJourneyTests`, `VisualGuideOverlayTests`).
+
+- [ ] **auto** First-gate guidance demonstrates real kit marquee selection, Group, Make gate, Simulate, NAND, Save and Build. Next cannot skip actions; dies/unrelated groups cannot satisfy them. Closing the editor, losing selection, changing the function and undoing Save expose a valid recovery action; observers detach when dismissed (`FirstGateTourViewModelTests`, `FirstGateVisualJourneyTests`).
+
 - [ ] **auto** First-use optical guidance demonstrates the real compatible library item, placement, pin drag and simulation controls; actions advance only when performed, dismissal is remembered, resume preserves work, and Show target reveals offscreen targets without editing the design. Hidden guidance stops polling and animation. (`VisualLearningJourneyTests`, `VisualGuideOverlayTests`, `OpticalTutorialActionTests`, first-steps onboarding tests.)
 
 - [ ] **auto** Run-program guidance advances only after building/opening/selecting/enabling and three actual photonic ADD results; status text or Next cannot bypass actions. The compact English/German cues point to real ISA controls, an explicit button opens/reopens the ISA window without losing progress, lost prerequisites lead back to the required action, Done acknowledges success, and closed windows release their playback subscription (`RunProgramTourViewModelTests`, `IsaVisualJourneyTests`).
@@ -97,6 +103,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Create a group from selected components with `Ctrl + G`. `(auto: GroupingWorkflowTests)`
 - [ ] A new group's external pins read by direction — IN1, IN2… (west, top to bottom), OUT1… (east), N…/S… (north/south), E… (electrical) — while saved files keep their pin names. `(auto: GroupPinNamerTests)`
 - [ ] The right panel's gate section (truth table) appears only while exactly one group is selected; nothing renders otherwise. `(auto: TruthTablePanelRenderTests)`
+- [ ] Saving a gate definition updates the Logic canvas automatically: the NAND symbol and current name appear without toggling views; Undo removes the definition, Redo restores it, and renaming updates the displayed name. `(auto: GateDefinitionGraphRefreshTests)`
 - [ ] "Make gate…" in the gate section: role chips (in/out/bias/–) with suggested roles and short names, Simulate shows power bars, picking NAND/AND/OR/NOR/XOR/NOT moves the threshold midway between the levels with the margin in dB (overlap warning for a wrong function, manual override + "Use suggested"), Save as gate renames the pins (undoable); Save → Undo → Save still builds a valid gate and Save to library persists the current editor choices after undo; Save to library adds it under Saved Groups, then "Open in Logic ›" opens the Logic tab; (?) help animates roles and threshold. `(auto: MakeGateViewModelTests, GatePinRoleSuggesterTests, GateThresholdAdvisorTests, MakeGateScreenshotTests)`
 - [ ] Plain truth-table extraction shows the automatic threshold suggestion (largest power step, margin in dB) with "Use" and an "Open in Logic ›" link. `(auto: GateLinkingTests)`
 - [ ] Ungroup a group with `Ctrl + Shift + G`. `(auto: GroupingWorkflowTests)`
@@ -139,6 +146,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Bend radius cannot be reduced below the active process minimum. `(auto: BendRadiusCommandTests)`
 - [ ] Crossing-insertion routes around existing components automatically. `(auto: CrossingInsertionCanvasBinderTests, InsertManualCrossingCommandTests)`
 - [ ] Router-placed crossings are temporary: moving a wire end takes its chain out even with adaptive insertion off; user-placed crossings stay. `(auto: TemporaryCrossingTests, AdaptiveCrossingRerouteTests)`
+- [ ] Move a gate in the clean 2-bit Counter, then Undo: original crossings, connection order and route geometry return without another search. Joint drags restore their pre-drag wires; Redo still routes the moved layout. Undo during routing drains the cancelled worker before restoring, and late crossing callbacks cannot overwrite it. Empty Undo preserves legitimate pending canvas updates. `(auto: MoveRouteRestorationTests, RoutingOrchestratorProgressTests)`
 - [ ] Tools → Clean Up Crossings removes every router-placed crossing, re-routes the wires and is undoable. `(auto: CleanUpCrossingsCommandTests)`
 - [ ] Cut mode also cuts a wire coming out of a crossing (router- or user-placed): the halves keep their geometry and the neighbouring router chain stays; undoable. Segment handles work on such pieces too. `(auto: CrossingPieceEditingTests, CutToolCandidateComputerTests)`
 - [ ] Dragging a crossing in Select mode slides it along one of its two wires (dominant drag direction, dashed guide + ghost); that wire's pieces only stretch/shrink, the other wire re-routes; a moved router crossing becomes user-owned; one undo step. `(auto: UiFlowCrossingAxisDragTests, MoveCrossingAlongAxisCommandTests, CrossingAxisMovePlannerTests)`
@@ -154,6 +162,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Unconnected pins are hints, not issues: hidden by default, the "Show unconnected pins" toggle in the Checks tab shows them (count in brackets) after the real problems. `(auto: DesignChecksPanelNestedTests, DesignValidationMenuCommandTests)`
 
 ## 7. Simulation & S-matrix
+
+- [ ] **auto** Logic waveforms identify the hovered signal by highlighting its row, label and trace; clicking a trace selects the nearest existing replay event and pauses playback, while repeated clicks retain the cursor. Empty/narrow plots and label/header clicks do not seek (`LogicWaveformInteractionTests`, `LogicWaveformStripRenderTests`).
+- [ ] **auto** Optical level warnings retain their amber title and exact report count in a compact card. Details start collapsed; opening them shows every unchanged warning, level calculation and receiving-pin verdict; closing restores the compact view (`LogicWarningSummaryTests`).
 
 - [ ] Run CW simulation → optical power reaches the expected output ports. `(auto: SimulationModeTests, LightCalculation/TransitiveSMatrixCalculatorTests)`
 - [ ] Run Transient simulation → time-domain output appears in the analysis dock. `(auto: TimeDomainSimulation/TimeDomainSimulatorTests)`
@@ -232,6 +243,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] GDS import dialog previews the cell hierarchy and lets the user pick placement. `(auto: Services/GdsImport/GdsImportDialogViewModelTests)`
 - [ ] Importing a finished layout with the dialog defaults keeps every route frozen and exactly as drawn (core + cladding polygons, mirrored cells mirrored), flat on the canvas; save/reopen keeps it frozen. `(auto: Integration/GdsLosslessFrozenImportTests)`
 - [ ] Selecting one imported waveguide → "Re-route selected" re-routes only that waveguide; Ctrl+Z brings the drawn route back. `(auto: Integration/GdsLosslessFrozenImportTests)`
+- [ ] Re-routing imported groups drains the previous routing worker before switching canvas scope. Hand-edited routes stay intact; removing a target or replacing a document cannot restore stale objects. Changing edit scope during routing preserves Undo for completed work, including nested groups. `(auto: RerouteImportedRoutesViewModelTests)`
 - [ ] Exporting an untouched import writes the drawn polygons verbatim and mirrored cells with `flip=True`. `(auto: Integration/GdsLosslessFrozenImportTests)`
 - [ ] Imported components are linked to the design scope (saved in `.lun`). `(auto: Services/GdsImport/DesignScopedGdsComponentServiceTests)`
 - [ ] Import a PDK JSON and register its components. `(auto: ViewModels/PdkImport/PdkImportWizardViewModelTests)`
@@ -322,9 +334,12 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Connect two chiplets guidance: Skip/completion releases the receiver position subscription; restarting records a fresh baseline without duplicate handlers.
 
 - [ ] System chiplet guide: real simulation, receiver move, checks, alignment and New die actions drive progress; Next cannot bypass them. Verify receiver drag demonstration, System/Chiplets/New die targets, EN/DE concise cues, undo recovery, and canceled unsaved-work prompt.
+- [ ] Store a number guidance points at the actual D0, LOAD and A checkboxes; a fresh clock write (including the same word), LOAD off and address away/back are required. Missing controls offer explicit recovery; Skip and input Reset release observers. Verify English/German real-click flow and unsaved-example cancellation. Store/Watch/ISA example starts fit once after the analysis dock opens; cancelled or superseded starts preserve the current viewport.
+
 ### Watch it compute: real control actions
 
 - [ ] Start Watch it compute in English and German. The compact cue and animated pointer identify Build logic network, Step clock, Run and Stop; no Next button can skip these actions.
 - [ ] Follow the real Counter buttons without changing input toggles. Clock events and register values change, Run starts, Stop preserves the committed state, and Done closes the summary.
 - [ ] Hide the analysis dock or leave Logic during the guide. Show Logic controls restores the workspace/tab without rebuilding or modifying the circuit; hiding a running dock must not count as pressing Stop.
 - [ ] Invalidate the built logic network during the guide. Guidance returns to Build instead of pointing at disabled clock controls.
+- [ ] Home visibly offers the first optical circuit with a Place → Connect → Light sequence in all five languages. The real entry starts guidance without replacing existing work; New/Open remain available and the complete German/Spanish cue fits at 1000 px. The complete Home card also fits a 760 px laptop window. `(auto: HomeOpticalEntryTests, HomeCompactLayoutScreenshotTests, HomeLearnTourListTests, FirstUseGuidanceTests)`

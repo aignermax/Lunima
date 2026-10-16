@@ -299,7 +299,8 @@ public partial class DesignCanvas : Control
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        if (_interactionState.HoveredComponent == null) return;
+        _interactionState.ResetPlacementPreview();
+        _interactionState.ResetGroupTemplatePlacementPreview();
         _interactionState.HoveredComponent = null;
         InvalidateVisual();
     }
@@ -410,6 +411,8 @@ public partial class DesignCanvas : Control
 
     private void OnMainViewModelChanged(AvaloniaPropertyChangedEventArgs e)
     {
+        _interactionState.ResetPlacementPreview();
+        _interactionState.ResetGroupTemplatePlacementPreview();
         if (e.OldValue is MainViewModel oldVm)
         {
             oldVm.CommandManager.StateChanged -= OnCommandStateChanged;
@@ -424,20 +427,7 @@ public partial class DesignCanvas : Control
             newVm.CanvasInteraction.PropertyChanged += OnInteractionPropertyChanged;
             newVm.GateView.Changed += InvalidateVisual;
         }
-    }
-
-    /// <summary>
-    /// Repaints when the interaction mode changes so mode-dependent overlays (the
-    /// analysis-output candidate glow #754, the HUD mode indicator) update immediately
-    /// after a mode button click instead of on the next pointer movement.
-    /// </summary>
-    private void OnInteractionPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ViewModels.Panels.CanvasInteractionViewModel.CurrentMode))
-        {
-            _gateConnectionGesture?.Cancel();
-            InvalidateVisual();
-        }
+        InvalidateVisual();
     }
 
     private void OnViewModelChanged(AvaloniaPropertyChangedEventArgs e)

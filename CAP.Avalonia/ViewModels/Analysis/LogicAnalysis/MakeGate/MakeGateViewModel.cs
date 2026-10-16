@@ -26,6 +26,9 @@ public partial class MakeGateViewModel : ObservableObject
     private readonly GatePinRoleSuggester _suggester = new();
     private readonly GateThresholdAdvisor _advisor = new();
     private ComponentGroup? _group;
+
+    /// <summary>The exact group whose current editor state is being displayed.</summary>
+    internal ComponentGroup? ConfiguredGroup => _group;
     private DesignCanvasViewModel? _canvas;
     private CancellationTokenSource? _simulateCts;
     private TruthTable? _table;
@@ -82,6 +85,9 @@ public partial class MakeGateViewModel : ObservableObject
 
     /// <summary>Raised after a group was saved as a gate.</summary>
     public event EventHandler? GateSaved;
+
+    /// <summary>Raised when a saved definition is applied, undone, or redone.</summary>
+    public event EventHandler? GateDefinitionChanged;
 
     /// <summary>
     /// Follows the canvas selection: exactly one selected group enables the entry; a

@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Headless;
+using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
 
 namespace UnitTests.UI;
@@ -11,6 +13,13 @@ public class HeadlessDispatcherBootstrapTests
 
     [Fact]
     public async Task SharedApplication_AfterOrdinaryFactTouchesDispatcher_SupportsAsyncDispatch()
+        => await RunProbeAsync(false);
+
+    [Fact]
+    public async Task SharedApplication_WhenDispatcherIsTouchedDuringPlatformInitialization_SupportsAsyncDispatch()
+        => await RunProbeAsync(true);
+
+    private static async Task RunProbeAsync(bool duringInitialization)
     {
         if (Environment.GetEnvironmentVariable(ProbeEnvironment) == "1")
         {
@@ -18,7 +27,8 @@ public class HeadlessDispatcherBootstrapTests
             var fallback = Dispatcher.UIThread; // Ordinary routing/view-model facts do this first.
             Assert.False(fallback.SupportsRunLoops);
             using var session = HeadlessUnitTestSession.StartNew(
-                typeof(ScreenshotTestAppBuilder), AvaloniaTestIsolationLevel.PerAssembly);
+                duringInitialization ? typeof(LateFallbackTestAppBuilder) : typeof(ScreenshotTestAppBuilder),
+                AvaloniaTestIsolationLevel.PerAssembly);
             await session.Dispatch(async () =>
             {
                 await Task.Yield(); // Requires a real nested dispatcher loop, like AvaloniaFact.
@@ -27,6 +37,23 @@ public class HeadlessDispatcherBootstrapTests
                 var live = Dispatcher.UIThread;
                 HeadlessDispatcherBootstrap.ResetPrePlatformFallback();
                 Assert.Same(live, Dispatcher.UIThread);
+                var button = new Button { Content = "Actual input" };
+                var clicked = false;
+                button.Click += (_, _) => clicked = true;
+                var window = new Window { Width = 160, Height = 100, Content = button };
+                try
+                {
+                    window.Show();
+                    Dispatcher.UIThread.RunJobs();
+                    window.MouseMove(new Point(80, 50));
+                    Assert.NotNull(window.InputHitTest(new Point(80, 50)));
+                    window.MouseDown(new Point(80, 50), MouseButton.Left);
+                    window.MouseUp(new Point(80, 50), MouseButton.Left);
+                    Assert.True(clicked, "the compositor and real input must use the active dispatcher");
+                    using var frame = window.CaptureRenderedFrame();
+                    Assert.NotNull(frame);
+                }
+                finally { window.Close(); }
                 return true;
             }, CancellationToken.None);
             return;
@@ -43,7 +70,9 @@ public class HeadlessDispatcherBootstrapTests
         start.ArgumentList.Add(typeof(HeadlessDispatcherBootstrapTests).Assembly.Location);
         start.ArgumentList.Add("--TestCaseFilter:FullyQualifiedName=" +
             typeof(HeadlessDispatcherBootstrapTests).FullName + "." +
-            nameof(SharedApplication_AfterOrdinaryFactTouchesDispatcher_SupportsAsyncDispatch));
+            (duringInitialization
+                ? nameof(SharedApplication_WhenDispatcherIsTouchedDuringPlatformInitialization_SupportsAsyncDispatch)
+                : nameof(SharedApplication_AfterOrdinaryFactTouchesDispatcher_SupportsAsyncDispatch)));
         start.Environment[ProbeEnvironment] = "1";
         using var process = Process.Start(start)!;
         var stdout = process.StandardOutput.ReadToEndAsync();
@@ -58,5 +87,24 @@ public class HeadlessDispatcherBootstrapTests
         {
             if (!process.HasExited) process.Kill(entireProcessTree: true);
         }
+    }
+}
+
+/// <summary>Reproduces a plain Fact timer touching UIThread in the platform setup gap.</summary>
+public class LateFallbackTestAppBuilder
+{
+    public static AppBuilder BuildAvaloniaApp()
+    {
+        var builder = AppBuilder.Configure<ScreenshotTestApp>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+        var initialize = builder.WindowingSubsystemInitializer!;
+        builder.UseWindowingSubsystem(() =>
+        {
+            Assert.Null(Application.Current);
+            _ = Dispatcher.UIThread; // Simulates the competing lookup immediately before platform binding.
+            initialize();
+        }, builder.WindowingSubsystemName!);
+        return builder.WithFallbackDispatcherReset();
     }
 }

@@ -1,4 +1,5 @@
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Canvas.Services;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 
@@ -13,6 +14,7 @@ public class MoveComponentCommand : IMergeableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly Component _component;
+    private readonly RouteGeometrySnapshot _routesBefore;
     private readonly double _startX;
     private readonly double _startY;
     private double _endX;
@@ -33,6 +35,7 @@ public class MoveComponentCommand : IMergeableCommand
         double endY)
     {
         _canvas = canvas;
+        _routesBefore = canvas.DragRouteSnapshot ?? RouteGeometrySnapshot.Capture(canvas);
         _component = componentViewModel.Component;
         _startX = startX;
         _startY = startY;
@@ -74,6 +77,9 @@ public class MoveComponentCommand : IMergeableCommand
     }
 
     public void Undo()
+        => _canvas.Routing.RestoreMove(UndoPosition, () => _routesBefore.Restore(_canvas));
+
+    private void UndoPosition()
     {
         // Find the current ComponentViewModel for this component
         var componentViewModel = _canvas.ViewModelOf(_component);
@@ -88,6 +94,7 @@ public class MoveComponentCommand : IMergeableCommand
             var deltaX = _startX - componentViewModel.X;
             var deltaY = _startY - componentViewModel.Y;
             _canvas.MoveComponent(componentViewModel, deltaX, deltaY);
+            _canvas.Router.PathfindingGrid?.UpdateComponentObstacle(_component);
         }
         finally
         {

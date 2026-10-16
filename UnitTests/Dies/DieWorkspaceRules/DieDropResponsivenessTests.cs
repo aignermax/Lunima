@@ -63,6 +63,7 @@ public class DieDropResponsivenessTests
         await vm.Canvas.Dies.PendingGridRebuild;
 
         long ms = UiThreadWatchdog.Measure("Undo die move", () => vm.UndoCommand.Execute(null));
+        await vm.UndoCommand.ExecutionTask!;
 
         dieVm.Y.ShouldBe(startY, 1e-6);
         ms.ShouldBeLessThan(UiThreadWatchdog.BudgetMs, "undo re-bounds the carrier in the background too");
