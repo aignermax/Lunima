@@ -66,6 +66,34 @@ public class DieLibraryContextTests
         vm.CanvasInteraction.SelectedTemplate.ShouldBe(template, "the same component can be placed again");
     }
 
+    [AvaloniaFact]
+    public void ProcessChange_UsesRealLibrarySources_WhenRemovingPlacedParts()
+    {
+        using var host = CreateAssembly();
+        var vm = host.Vm;
+        var die = vm.Canvas.Dies.RootDies[1];
+        vm.WorkspaceSwitch.Current = Workspace.Layout;
+        vm.ZoomToDie(die);
+        var template = vm.LeftPanel.FilteredTemplates.First(t => t.PdkSource == TwoDieExampleBuilder.SinPdk);
+        vm.CanvasInteraction.SelectedTemplate = template;
+        var outline = DieAssembly.OutlineOf(die);
+        vm.CanvasInteraction.CanvasClicked(outline.CenterX, outline.CenterY);
+        var part = die.ChildComponents.Single();
+        vm.WorkspaceSwitch.Current = Workspace.System;
+        vm.ZoomToDie(die);
+        var original = die.ProcessBinding;
+        vm.DieProperties.SelectedProcess = vm.DieProperties.ProcessOptions.First(
+            o => o.Selection.MemberPdkNames.Contains(TwoDieExampleBuilder.DemoPdk));
+
+        die.ProcessBinding.ShouldBe(original);
+        die.ChildComponents.ShouldContain(part);
+        vm.DieProperties.ConfirmProcessChangeCommand.Execute(null);
+        die.ChildComponents.ShouldBeEmpty("the live library identifies the placed SiN component's PDK");
+        vm.CommandManager.Undo();
+        die.ChildComponents.ShouldContain(part);
+        die.ProcessBinding.ShouldBe(original);
+    }
+
     private static UiFlowTestHost CreateAssembly()
     {
         var host = new UiFlowTestHost();

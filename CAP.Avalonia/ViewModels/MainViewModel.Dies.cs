@@ -92,6 +92,9 @@ public partial class MainViewModel
         {
             ZoomToDieRequested = ZoomToDie,
             IsEditable = Canvas.Surface.IsContentLocked,
+            ResolvePdkSource = CanvasInteraction.PlacementContext.ResolveComponentPdkSource,
+            ResolveAllowedPdkNames = process => LeftPanel.ResolveLiveMemberPdkNames(process)
+                .Concat(LeftPanel.GetProcessAgnosticPdkNames()).ToArray(),
         };
         NewDie = new NewDieViewModel(Canvas, CommandManager, Catalog, () => FileOperations.ActiveProcess)
         {
