@@ -62,6 +62,8 @@ public class SystemLearningJourneyTests
         UiInput.RunJobs();
         var showTarget = overlay.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "GuideShowTarget");
         if (showTarget.IsVisible) { UiInput.Click(window, showTarget); UiInput.RunJobs(); }
+        Assert.False(showTarget.IsVisible);
+        Assert.True(overlay.GetVisualDescendants().OfType<global::Avalonia.Controls.Shapes.Line>().Single(c => c.Name == "GuideTrail").IsVisible);
         Assert.True(overlay.GetVisualDescendants().OfType<Control>().Single(c => c.Name == "GuidePointer").IsVisible);
         Save(window, language, "move");
         if (language == "en")
