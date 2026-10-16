@@ -25,6 +25,23 @@ namespace CAP.Avalonia.Controls;
 
 public partial class DesignCanvas
 {
+    private GateConnectionGestureRecognizer? _gateConnectionGesture;
+
+    private void InitGateConnectionGesture() =>
+        _gateConnectionGesture = new GateConnectionGestureRecognizer(
+            () => MainViewModel is { } main && ViewModel is { } canvas
+                ? _gateViewRenderer.SceneFor(main.GateView.Graph, canvas)
+                : ViewModels.Logic.GateView.Layout.GateViewScene.Empty, () => Zoom, InvalidateVisual);
+
+    /// <inheritdoc/>
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        if (_activeGesture != _gateConnectionGesture) return;
+        _gateConnectionGesture?.Cancel();
+        _activeGesture = null;
+    }
+
     private void RenderGateView(DrawingContext context, CanvasRenderContext rc, DesignCanvasViewModel vm, ViewModels.Logic.GateView.GateViewViewModel gateView)
     {
         using (context.PushTransform(Matrix.CreateTranslation(vm.PanX, vm.PanY)))
@@ -34,6 +51,7 @@ public partial class DesignCanvas
             _gateViewRenderer.Render(context, rc, gateView);
             rc.Labels.Flush(context, Zoom);
             _previewRenderer.Render(context, rc);
+            _gateConnectionGesture?.Render(context, MainViewModel);
         }
 
         _overlayRenderer.Render(context, rc);
