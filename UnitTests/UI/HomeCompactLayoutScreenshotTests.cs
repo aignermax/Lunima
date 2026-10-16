@@ -46,21 +46,24 @@ public sealed class HomeCompactLayoutScreenshotTests : IDisposable
         }
         var home = new HomeViewModel(recents, preferences, new ExampleDesignsService());
         var window = new Window { Width = 1280, Height = LaptopWindowHeight, Content = new HomeView { DataContext = home } };
-        window.Show();
-        Dispatcher.UIThread.RunJobs();
-
-        var card = window.GetVisualDescendants().OfType<Border>().First(b => b.Name == "HomeCard");
-        card.Bounds.Height.ShouldBeLessThan(LaptopWindowHeight - 40, "the whole card is visible without scrolling the window");
-
-        var shotRoot = Environment.GetEnvironmentVariable("UI_SHOT_DIR");
-        if (!string.IsNullOrEmpty(shotRoot))
+        try
         {
-            ScreenshotArtifacts.SettleAnimations();
-            var dir = Path.Combine(shotRoot, "home-compact");
-            Directory.CreateDirectory(dir);
-            using var frame = window.CaptureRenderedFrame();
-            ScreenshotArtifacts.SavePng(frame!, Path.Combine(dir, $"home-{language}.png"));
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            var card = window.GetVisualDescendants().OfType<Border>().First(b => b.Name == "HomeCard");
+            card.Bounds.Height.ShouldBeLessThan(LaptopWindowHeight - 40, "the whole card is visible without scrolling the window");
+
+            var shotRoot = Environment.GetEnvironmentVariable("UI_SHOT_DIR");
+            if (!string.IsNullOrEmpty(shotRoot))
+            {
+                ScreenshotArtifacts.SettleAnimations();
+                var dir = Path.Combine(shotRoot, "home-compact");
+                Directory.CreateDirectory(dir);
+                using var frame = window.CaptureRenderedFrame();
+                ScreenshotArtifacts.SavePng(frame!, Path.Combine(dir, $"home-{language}.png"));
+            }
         }
-        window.Close();
+        finally { window.Close(); }
     }
 }
