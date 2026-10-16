@@ -90,6 +90,15 @@ public partial class MainWindow : Window
             if (DataContext is MainViewModel vm)
             {
                 WireSettingsOpener(vm); // see MainWindow.SettingsOpener.cs
+                vm.Update.ConfirmShutdownAsync = vm.FileOperations.ConfirmCloseAsync;
+                vm.Update.ShutdownAfterConfirmation = () =>
+                {
+                    _forceClose = true;
+                    if (global::Avalonia.Application.Current?.ApplicationLifetime is
+                        global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime lifetime)
+                        lifetime.Shutdown();
+                    else Close();
+                };
                 AttachNotificationHost();
 
                 vm.FileDialogService = new FileDialogService(this);

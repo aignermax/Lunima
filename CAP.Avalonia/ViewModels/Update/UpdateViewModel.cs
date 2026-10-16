@@ -25,6 +25,12 @@ public partial class UpdateViewModel : ObservableObject
 
     private GitHubReleaseInfo? _availableRelease;
 
+    /// <summary>Desktop host's save/discard/cancel guard, awaited before starting an updater.</summary>
+    public Func<Task<bool>>? ConfirmShutdownAsync { get; set; }
+
+    /// <summary>Closes the already-approved window without prompting a second time.</summary>
+    public Action? ShutdownAfterConfirmation { get; set; }
+
     [ObservableProperty]
     private string _statusText = "";
 
@@ -183,6 +189,11 @@ public partial class UpdateViewModel : ObservableObject
 
         if (selfUpdate)
         {
+            if (ConfirmShutdownAsync != null && !await ConfirmShutdownAsync())
+            {
+                StatusText = string.Empty;
+                return;
+            }
             ApplySelfUpdate(downloadedPath);
             return;
         }
@@ -209,7 +220,8 @@ public partial class UpdateViewModel : ObservableObject
                 LocalizationService.Instance.Translate("Update.UpdateFailed"), ex.Message);
             return;
         }
-        ShutdownApplication();
+        if (ShutdownAfterConfirmation != null) ShutdownAfterConfirmation();
+        else ShutdownApplication();
     }
 
     /// <summary>

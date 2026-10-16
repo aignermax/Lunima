@@ -322,7 +322,6 @@ public class UpdateViewModelTests
     {
         // With an installed, writable location AND an auto-update archive for this OS, Download must
         // perform an in-place update: hand the downloaded archive to the installer, not the browser.
-        if (OperatingSystem.IsWindows()) return; // Windows in-place self-update is deferred (manual MSI)
         var installer = new FakeInstaller { CanUpdate = true };
         var urlLauncher = new FakeUrlLauncher();
         var vm = CreateViewModelForDownload(AutoUpdateReleaseJson, urlLauncher, installer);
@@ -349,7 +348,6 @@ public class UpdateViewModelTests
         // Application, killing the whole xUnit host whenever the self-update path ran after
         // any [AvaloniaFact]. Running the exact same flow *inside* the session makes a
         // reintroduction fail loudly (and deterministically) instead of aborting random runs.
-        if (OperatingSystem.IsWindows()) return; // Windows in-place self-update is deferred (manual MSI)
         global::Avalonia.Application.Current.ShouldNotBeNull();          // precondition: session app is set
         global::Avalonia.Application.Current!.ApplicationLifetime.ShouldBeNull(); // ...with no lifetime
 
@@ -421,6 +419,52 @@ public class UpdateViewModelTests
         launcher.LastOpenedUrl.ShouldBeNull();    // no browser fallback for a retryable failure
         launcher.LastOpenedPath.ShouldBeNull();   // nothing was opened
         vm.IsDownloading.ShouldBeFalse();         // the Install button is usable again
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InstallUpdate_ConfirmsUnsavedChangesBeforeLaunchingHelper(bool confirmed)
+    {
+        var installer = new FakeInstaller { CanUpdate = true };
+        var launcher = new FakeUrlLauncher();
+        var vm = CreateViewModelForDownload(AutoUpdateReleaseJson, launcher, installer);
+        var confirmations = 0;
+        var shutdowns = 0;
+        vm.ConfirmShutdownAsync = () =>
+        {
+            installer.LaunchedArchivePath.ShouldBeNull();
+            confirmations++;
+            return Task.FromResult(confirmed);
+        };
+        vm.ShutdownAfterConfirmation = () =>
+        {
+            installer.LaunchedArchivePath.ShouldNotBeNull();
+            shutdowns++;
+        };
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        await vm.InstallUpdateCommand.ExecuteAsync(null);
+
+        confirmations.ShouldBe(1);
+        shutdowns.ShouldBe(confirmed ? 1 : 0);
+        (installer.LaunchedArchivePath != null).ShouldBe(confirmed);
+        launcher.LastOpenedPath.ShouldBeNull();
+        if (installer.LaunchedArchivePath != null) File.Delete(installer.LaunchedArchivePath);
+    }
+
+    [Fact]
+    public async Task InstallUpdate_HelperLaunchFails_KeepsApprovedAppOpen()
+    {
+        var installer = new FakeInstaller { CanUpdate = true, ThrowOnLaunch = true };
+        var vm = CreateViewModelForDownload(AutoUpdateReleaseJson, new FakeUrlLauncher(), installer);
+        vm.ConfirmShutdownAsync = () => Task.FromResult(true);
+        var closed = false;
+        vm.ShutdownAfterConfirmation = () => closed = true;
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+        await vm.InstallUpdateCommand.ExecuteAsync(null);
+        closed.ShouldBeFalse();
+        vm.StatusText.ShouldContain("test launch failure");
     }
 
     private const string AutoUpdateReleaseJson = """
@@ -544,6 +588,7 @@ public class UpdateViewModelTests
     private sealed class FakeInstaller : IInstaller
     {
         public bool CanUpdate { get; set; }
+        public bool ThrowOnLaunch { get; set; }
         public string? LaunchedArchivePath { get; private set; }
 
         public bool CanInstallInPlace(out string reason)
@@ -552,7 +597,11 @@ public class UpdateViewModelTests
             return CanUpdate;
         }
 
-        public void LaunchUpdater(string downloadedArchivePath) => LaunchedArchivePath = downloadedArchivePath;
+        public void LaunchUpdater(string downloadedArchivePath)
+        {
+            if (ThrowOnLaunch) throw new InvalidOperationException("test launch failure");
+            LaunchedArchivePath = downloadedArchivePath;
+        }
     }
 
     // --- Skip for Today tests ---
