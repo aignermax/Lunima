@@ -48,7 +48,8 @@ public static class MainViewModelTestHelper
         CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null,
         UpdateViewModel? updateViewModel = null,
         GdsPreviewRenderService? previewService = null,
-        CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null)
+        CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
+        CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -124,7 +125,7 @@ public static class MainViewModelTestHelper
             previewService ?? new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")),
             registryBrowser,
             gdsImportButton,
-            designScopedGdsComponents: designScope, pythonStartup: pythonStartup);
+            designScopedGdsComponents: designScope, pythonStartup: pythonStartup, isaPlayground: isaPlayground);
     }
 
     /// <summary>

@@ -157,9 +157,17 @@ public class TourAnchorTests
         tour.ShowCardInMainWindow.ShouldBeTrue("the build step anchors in the main window");
         tour.ShowCardInPlayground.ShouldBeFalse();
 
-        tour.CurrentStepIndex = 2;
+        logic.HasNetwork = true;
+        tour.NotifyPlaygroundOpened();
+        tour.CurrentStepIndex.ShouldBe(2);
+        tour.ShowCardInPlayground.ShouldBeTrue("the sample card belongs to the open playground window");
+        tour.ShowCardInMainWindow.ShouldBeFalse();
 
-        tour.ShowCardInPlayground.ShouldBeTrue("from the sample step on, the card lives in the playground window");
+        tour.NotifyPlaygroundClosed();
+        tour.ShowCardInMainWindow.ShouldBeTrue("closing the playground exposes its reopen action");
+        tour.ShowCardInPlayground.ShouldBeFalse();
+        tour.NotifyPlaygroundOpened();
+        tour.ShowCardInPlayground.ShouldBeTrue();
         tour.ShowCardInMainWindow.ShouldBeFalse();
     }
 

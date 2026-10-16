@@ -1761,6 +1761,8 @@
   "Tutorial.Step2Title": "2 つのピンを接続",
   "Tutorial.Step3Body": "レーザー入力をオンにして、ツールバーの実行ボタン（L キー）を押すと、シミュレーションが実行され、回路内を光が伝播する様子が表示されます。",
   "Tutorial.Step3Title": "シミュレーションを実行",
+  "WatchTour.ReturnToControls": "ロジック操作を表示",
+  "WatchTour.Finish": "完了",
   "WatchTour.Step1Body": "2 ビットカウンタの例がキャンバスに開きました。下部の分析ドックの「ロジック」タブで「ロジックネットワークを構築」を押してください。Lunima は各ゲートの真理値表を光学シミュレーションから読み取り、ゲートを実行可能なネットワークに配線します。",
   "WatchTour.Step1Title": "ロジックネットワークを構築",
   "WatchTour.Step2Body": "Logic パネルで「クロックを1ステップ進める」を一度押します。2 つのレジスタゲートが同時に次の値をコミットし、C バス行（C1C0）が 1 になります。回路が数えました。",
@@ -2170,5 +2172,14 @@
   "StoreNumberTour.LoadOffCue": "LOAD をオフにする",
   "StoreNumberTour.AddressAwayCue": "アドレス A を切り替える",
   "StoreNumberTour.AddressBackCue": "A を元に戻す",
-  "StoreNumberTour.ReadBackCue": "Q に保存した数が表示される"
+  "StoreNumberTour.ReadBackCue": "Q に保存した数が表示される",
+  "RunProgramTour.Action1.Cue": "論理ネットワークを構築",
+  "RunProgramTour.Action2.Cue": "ISAプレイグラウンドを開く",
+  "RunProgramTour.Action3.Cue": "「3に4を掛ける」を選択",
+  "RunProgramTour.Action4.Cue": "フォトニックADDを有効にする",
+  "RunProgramTour.Action5.Cue": "ステップで3回のADDを確認",
+  "RunProgramTour.Action6.Cue": "チップで3回の加算を実行しました",
+  "RunProgramTour.ActionOpen.Button": "ISAプレイグラウンドを開く",
+  "RunProgramTour.ActionDone.Button": "完了",
+  "RunProgramTour.ActionOpen.Cue": "ISAプレイグラウンドを開く"
 }

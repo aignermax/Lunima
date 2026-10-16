@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
+using CAP_Core.Logic.Isa;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 using CAP.Avalonia.ViewModels.Logic.IsaPlayground;
@@ -99,13 +100,22 @@ public partial class RunProgramTourViewModel : ObservableObject
     public string CurrentBody => LocalizationService.Instance.Translate(CurrentStep.BodyKey);
 
     /// <summary><c>x:Name</c> of the control the current step spotlights, or null for a floating card.</summary>
-    public string? CurrentTargetName => CurrentStep.TargetName;
+    public string? CurrentTargetName => ShowOpenPlaygroundAction ? null : CurrentStep.TargetName;
+
+    public bool ShowOpenPlaygroundAction => IsActive && (CurrentStepIndex == 1
+        || CurrentStepIndex >= FirstPlaygroundStepIndex && !IsPlaygroundOpen);
+
+    public bool IsFinalStep => CurrentStepIndex == Steps.Count - 1;
+
+    public string CurrentCue => LocalizationService.Instance.Translate(ShowOpenPlaygroundAction
+        ? "RunProgramTour.ActionOpen.Cue"
+        : $"RunProgramTour.Action{CurrentStepIndex + 1}.Cue");
 
     /// <summary>True when the tour card belongs to the main window's overlay (steps before the playground steps).</summary>
-    public bool ShowCardInMainWindow => IsActive && CurrentStepIndex < FirstPlaygroundStepIndex;
+    public bool ShowCardInMainWindow => IsActive && (CurrentStepIndex < FirstPlaygroundStepIndex || !IsPlaygroundOpen);
 
     /// <summary>True when the tour card belongs to the ISA playground window's overlay.</summary>
-    public bool ShowCardInPlayground => IsActive && CurrentStepIndex >= FirstPlaygroundStepIndex;
+    public bool ShowCardInPlayground => IsActive && CurrentStepIndex >= FirstPlaygroundStepIndex && IsPlaygroundOpen;
 
     /// <summary>Localized position label, e.g. "Step 2/6".</summary>
     public string ProgressText => string.Format(
@@ -124,16 +134,20 @@ public partial class RunProgramTourViewModel : ObservableObject
         _dock.OpenLogic();
         _logic.PropertyChanged += OnLogicPropertyChanged;
         _playground.PropertyChanged += OnPlaygroundPropertyChanged;
+        _playground.PhotonicAddCompleted += OnPhotonicAddCompleted;
         EvaluateCurrentStep();
     }
 
-    /// <summary>Advances to the next step manually; on the last step the tour completes.</summary>
+    /// <summary>Rechecks the current action; only the final acknowledgement completes the tour.</summary>
     [RelayCommand]
     public void Next()
     {
         if (!IsActive)
             return;
-        Advance();
+        if (IsFinalStep)
+            Advance();
+        else
+            EvaluateCurrentStep();
     }
 
     /// <summary>Exits the tour without completing it.</summary>
@@ -162,15 +176,8 @@ public partial class RunProgramTourViewModel : ObservableObject
 
     private void OnPlaygroundPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(IsaPlaygroundViewModel.PhotonicStatusText)
-            && !string.IsNullOrEmpty(_playground.PhotonicStatusText))
-        {
-            _photonicAddCount++;
-        }
-
         if (e.PropertyName is nameof(IsaPlaygroundViewModel.SelectedSample)
-            or nameof(IsaPlaygroundViewModel.UsePhotonicAdder)
-            or nameof(IsaPlaygroundViewModel.PhotonicStatusText))
+            or nameof(IsaPlaygroundViewModel.UsePhotonicAdder))
         {
             EvaluateCurrentStep();
         }
@@ -182,6 +189,22 @@ public partial class RunProgramTourViewModel : ObservableObject
     /// </summary>
     private void EvaluateCurrentStep()
     {
+        if (!IsActive || IsFinalStep)
+            return;
+
+        // Rebuilding the network, changing the sample, or disabling photonic
+        // execution invalidates the pending action. Point back to that prerequisite
+        // instead of asking for steps that can no longer produce the required ADDs.
+        var requiredStep = !_logic.HasNetwork ? 0
+            : CurrentStepIndex >= 3 && _playground.SelectedSample?.FileName != MultiplySampleFileName ? 2
+            : CurrentStepIndex >= 4 && !_playground.UsePhotonicAdder ? 3
+            : CurrentStepIndex;
+        if (requiredStep < CurrentStepIndex)
+        {
+            _photonicAddCount = 0;
+            CurrentStepIndex = requiredStep;
+        }
+
         while (IsActive && CurrentStep.IsCompleted())
             Advance();
     }
@@ -199,14 +222,30 @@ public partial class RunProgramTourViewModel : ObservableObject
         Detach();
     }
 
+    private void OnPhotonicAddCompleted(PhotonicAddTrace trace)
+    {
+        if (CurrentStepIndex != 4 || _playground.SelectedSample?.FileName != MultiplySampleFileName)
+            return;
+        _photonicAddCount++;
+        EvaluateCurrentStep();
+    }
+
     private void Detach()
     {
         _logic.PropertyChanged -= OnLogicPropertyChanged;
         _playground.PropertyChanged -= OnPlaygroundPropertyChanged;
+        _playground.PhotonicAddCompleted -= OnPhotonicAddCompleted;
     }
 
-    partial void OnCurrentStepIndexChanged(int value)
+    partial void OnCurrentStepIndexChanged(int value) => NotifyStepProperties();
+    partial void OnIsPlaygroundOpenChanged(bool value) => NotifyStepProperties();
+    partial void OnIsActiveChanged(bool value) => NotifyStepProperties();
+
+    private void NotifyStepProperties()
     {
+        OnPropertyChanged(nameof(ShowOpenPlaygroundAction));
+        OnPropertyChanged(nameof(IsFinalStep));
+        OnPropertyChanged(nameof(CurrentCue));
         OnPropertyChanged(nameof(CurrentStep));
         OnPropertyChanged(nameof(CurrentTitle));
         OnPropertyChanged(nameof(CurrentBody));

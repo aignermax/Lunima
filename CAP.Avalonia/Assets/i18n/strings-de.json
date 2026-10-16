@@ -1761,6 +1761,8 @@
   "Tutorial.Step2Title": "Zwei Pins verbinden",
   "Tutorial.Step3Body": "Schalte einen Laser-Eingang ein und drücke dann die Run-Schaltfläche in der Werkzeugleiste (Taste L), um zu simulieren und das Licht durch deine Schaltung laufen zu sehen.",
   "Tutorial.Step3Title": "Simulation ausführen",
+  "WatchTour.ReturnToControls": "Logik-Steuerung anzeigen",
+  "WatchTour.Finish": "Fertig",
   "WatchTour.Step1Body": "Das 2-Bit-Zähler-Beispiel ist jetzt auf der Arbeitsfläche geöffnet. Drücken Sie im Logik-Tab des Analyse-Docks unten auf „Logiknetzwerk aufbauen“ — Lunima liest die Wahrheitstabelle jedes Gatters aus seiner optischen Simulation und verschaltet die Gatter zu einem ausführbaren Netzwerk.",
   "WatchTour.Step1Title": "Logiknetzwerk aufbauen",
   "WatchTour.Step2Body": "Drücken Sie im Logic-Panel einmal auf „Takt weiterschalten“. Beide Register-Gatter übernehmen ihre nächsten Werte gleichzeitig, und die C-Bus-Zeile (C1C0) zeigt nun 1 — der Schaltkreis hat gerade gezählt.",
@@ -2170,5 +2172,14 @@
   "StoreNumberTour.LoadOffCue": "LOAD ausschalten",
   "StoreNumberTour.AddressAwayCue": "Adresse A umschalten",
   "StoreNumberTour.AddressBackCue": "A zurückschalten",
-  "StoreNumberTour.ReadBackCue": "Q zeigt deine gespeicherte Zahl"
+  "StoreNumberTour.ReadBackCue": "Q zeigt deine gespeicherte Zahl",
+  "RunProgramTour.Action1.Cue": "Logiknetzwerk aufbauen",
+  "RunProgramTour.Action2.Cue": "ISA-Playground öffnen",
+  "RunProgramTour.Action3.Cue": "„3 mal 4 rechnen“ auswählen",
+  "RunProgramTour.Action4.Cue": "Photonisches ADD aktivieren",
+  "RunProgramTour.Action5.Cue": "Mit Schritt drei ADDs beobachten",
+  "RunProgramTour.Action6.Cue": "Drei Additionen liefen auf deinem Chip",
+  "RunProgramTour.ActionOpen.Button": "ISA-Playground öffnen",
+  "RunProgramTour.ActionDone.Button": "Fertig",
+  "RunProgramTour.ActionOpen.Cue": "ISA-Playground öffnen"
 }
