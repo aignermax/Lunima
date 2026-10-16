@@ -33,6 +33,34 @@ public partial class TourAnchorOverlay
     private Point? _pointerDestination;
     private object? _scrolledItem;
     private ListBox? _scrolledList;
+    private DesignCanvas? _offscreenCanvas;
+    private Point? _offscreenPoint;
+
+    private void ClearOffscreenTarget()
+    {
+        _offscreenCanvas = null;
+        _offscreenPoint = null;
+        if (GuideShowTarget != null) GuideShowTarget.IsVisible = false;
+    }
+
+    private void ShowTarget_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_offscreenCanvas is not { ViewModel: { } vm } canvas || _offscreenPoint is not { } point)
+            return;
+        if (TargetPin is { } startPin && ConnectionTargetPin is { } endPin)
+        {
+            var start = startPin.GetAbsolutePosition();
+            var end = endPin.GetAbsolutePosition();
+            point = new Point((start.x + end.x) / 2, (start.y + end.y) / 2);
+            var fit = Math.Min(Math.Max(1, canvas.Bounds.Width - 96) / Math.Max(1, Math.Abs(end.x - start.x)),
+                Math.Max(1, canvas.Bounds.Height - 96) / Math.Max(1, Math.Abs(end.y - start.y)));
+            canvas.SetCurrentValue(DesignCanvas.ZoomProperty, Math.Min(canvas.Zoom, fit));
+        }
+        // Only the viewport changes, and only after the user requests it.
+        vm.PanX = canvas.Bounds.Width / 2 - point.X * canvas.Zoom;
+        vm.PanY = canvas.Bounds.Height / 2 - point.Y * canvas.Zoom;
+        RefreshAnchor();
+    }
 
     private Control? ResolveItemTarget(Control? target)
     {
@@ -68,6 +96,11 @@ public partial class TourAnchorOverlay
                     end.y * canvas.Zoom + canvas.ViewModel.PanY);
                 if (new Rect(canvas.Bounds.Size).Contains(endLocal))
                     _pointerDestination = canvas.TranslatePoint(endLocal, RootCanvas);
+                else
+                {
+                    _offscreenCanvas = canvas;
+                    _offscreenPoint = new Point(end.x, end.y);
+                }
             }
         }
         if (point == null)
@@ -75,7 +108,11 @@ public partial class TourAnchorOverlay
         var local = new Point(point.Value.X * canvas.Zoom + canvas.ViewModel.PanX,
             point.Value.Y * canvas.Zoom + canvas.ViewModel.PanY);
         if (!new Rect(canvas.Bounds.Size).Contains(local))
+        {
+            _offscreenCanvas = canvas;
+            _offscreenPoint = point;
             return default;
+        }
         var translated = canvas.TranslatePoint(local, RootCanvas);
         return translated is { } actual ? new Rect(actual.X - 8, actual.Y - 8, 16, 16) : default;
     }

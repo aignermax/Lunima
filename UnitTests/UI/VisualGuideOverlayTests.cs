@@ -6,11 +6,80 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CAP.Avalonia.Controls.TourAnchor;
 using CAP.Avalonia.Behaviors;
+using CAP.Avalonia.Controls;
+using CAP.Avalonia.ViewModels.Canvas;
+using Avalonia.Interactivity;
 
 namespace UnitTests.UI;
 
 public class VisualGuideOverlayTests
 {
+    [AvaloniaFact]
+    public void OffscreenConnectionTarget_RevealsBothPins()
+    {
+        var vm = new DesignCanvasViewModel();
+        var startPart = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        var endPart = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        startPart.PhysicalX = 100;
+        startPart.PhysicalY = 100;
+        endPart.PhysicalX = 9000;
+        endPart.PhysicalY = 8000;
+        var start = startPart.PhysicalPins.First();
+        var end = endPart.PhysicalPins.First();
+        var canvas = new DesignCanvas { Name = "Canvas", ViewModel = vm };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = "Canvas", TargetPin = start, ConnectionTargetPin = end };
+        var window = new Window { Width = 800, Height = 600, Content = new Avalonia.Controls.Grid { Children = { canvas, overlay } } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            overlay.TargetName = null;
+            overlay.TargetName = "Canvas";
+            var reveal = overlay.FindControl<Button>("GuideShowTarget")!;
+            Assert.True(reveal.IsVisible);
+            reveal.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            foreach (var pin in new[] { start, end })
+            {
+                var position = pin.GetAbsolutePosition();
+                Assert.True(new Rect(canvas.Bounds.Size).Contains(new Point(
+                    position.x * canvas.Zoom + vm.PanX, position.y * canvas.Zoom + vm.PanY)));
+            }
+            Assert.False(reveal.IsVisible);
+            Assert.Equal(100, startPart.PhysicalX);
+            Assert.Equal(9000, endPart.PhysicalX);
+            Assert.Empty(vm.Connections);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void OffscreenPlacement_CanBeRevealedWithoutChangingDesign()
+    {
+        var vm = new DesignCanvasViewModel();
+        var target = new DesignCanvas { Name = "Canvas", ViewModel = vm };
+        var overlay = new TourAnchorOverlay { Demonstrate = true, TargetName = "Canvas", TargetCanvasPoint = new Point(9000, 8000) };
+        var window = new Window { Width = 800, Height = 600, Content = new Avalonia.Controls.Grid { Children = { target, overlay } } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            overlay.TargetCanvasPoint = new Point(9001, 8000);
+            Dispatcher.UIThread.RunJobs();
+            var reveal = overlay.FindControl<Button>("GuideShowTarget");
+            Assert.NotNull(reveal);
+            Assert.True(reveal.IsVisible);
+            reveal.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var local = new Point(9001 * target.Zoom + vm.PanX, 8000 * target.Zoom + vm.PanY);
+            Assert.True(new Rect(target.Bounds.Size).Contains(local));
+            Assert.Empty(vm.Components);
+            Assert.Empty(vm.Connections);
+            Assert.False(reveal.IsVisible);
+        }
+        finally { window.Close(); }
+    }
+
     [AvaloniaFact]
     public void ClippedTarget_DoesNotPointAtUnrelatedVisibleSurface()
     {

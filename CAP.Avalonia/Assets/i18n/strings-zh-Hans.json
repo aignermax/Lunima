@@ -2153,6 +2153,7 @@
   "Tutorial.ActionSimulate.Body": "点击仿真，观察光在已连接的电路中传播。",
   "Tutorial.ActionSimulate.Cue": "点击仿真",
   "Tutorial.NoCompatibleTemplate": "没有可见的兼容元件。请打开光学元件库或调整筛选条件。",
+  "Tutorial.ShowTarget": "显示目标",
   "Tutorial.CompletedCue": "你的光路已连接成功！",
   "Tutorial.NoPlacementSpace": "请选择芯片上的空白位置，或腾出更多空间。",
   "Tutorial.ActionOptics.Title": "打开光学工作区",

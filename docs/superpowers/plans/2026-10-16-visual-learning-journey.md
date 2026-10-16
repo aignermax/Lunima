@@ -68,3 +68,5 @@
 - Combined onboarding, legacy screenshot, first-use and actual UI-action tests: 43/43 passed. Follow-up animated drag, target clipping, visibility, retained-work and real nonzero receiver-power checks: 14/14 passed.
 - Actual screenshots inspected: German select, place, connect and simulation. A screenshot initially captured before virtualized-item layout; the UI test now waits for and asserts a visible pointer before capture.
 - First-use guidance starts on an empty project from Home. Explicit resume preserves the design; dismissal persists. Completion shows a brief smile beside Run. Logic/System tour refinements remain a follow-up under task 3.
+
+- Independent review found offscreen canvas targets could strand the learner. Explicit localized Show target now pans the viewport, fitting both connection pins when necessary, without editing the design. Placement and pin recovery RED→GREEN; focused onboarding/real en-de UI/legacy anchor suite 120/120 passed. Accessibility names added to resume/help/dismiss controls. Independent follow-up review clear.

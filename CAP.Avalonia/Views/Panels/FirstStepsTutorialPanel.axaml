@@ -12,7 +12,8 @@
     <Grid ColumnDefinitions="*,Auto,Auto">
       <TextBlock Text="{Binding CurrentCue}" FontSize="14" FontWeight="SemiBold"
                  VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,6,0"/>
-      <Button Grid.Column="1" Classes="ghost icon" ToolTip.Tip="{Binding CurrentTitle}">
+      <Button Grid.Column="1" Classes="ghost icon" ToolTip.Tip="{Binding CurrentTitle}"
+              AutomationProperties.Name="{Binding CurrentTitle}">
         <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
         <Button.Flyout>
           <Flyout>
@@ -25,6 +26,7 @@
         </Button.Flyout>
       </Button>
       <Button Grid.Column="2" Classes="ghost icon" Command="{Binding SkipCommand}"
+              AutomationProperties.Name="{loc:Localize Tutorial.Skip}"
               ToolTip.Tip="{loc:Localize Tutorial.Skip}">
         <controls:Icon Data="{StaticResource Icon.X}"/>
       </Button>

@@ -2153,6 +2153,7 @@
   "Tutorial.ActionSimulate.Body": "Klicke auf Simulieren, um Licht durch deine verbundene Schaltung fließen zu sehen.",
   "Tutorial.ActionSimulate.Cue": "Auf Simulieren klicken",
   "Tutorial.NoCompatibleTemplate": "Kein passendes Bauteil sichtbar. Öffne die optische Bibliothek oder passe den Filter an.",
+  "Tutorial.ShowTarget": "Ziel zeigen",
   "Tutorial.CompletedCue": "Deine Lichtschaltung ist verbunden!",
   "Tutorial.NoPlacementSpace": "Wähle eine freie Stelle auf dem Chip oder schaffe mehr Platz.",
   "Tutorial.ActionOptics.Title": "Optik öffnen",

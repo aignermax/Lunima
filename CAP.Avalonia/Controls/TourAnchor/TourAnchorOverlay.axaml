@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Controls.TourAnchor.TourAnchorOverlay">
 
   <!-- Guided-tour anchor overlay (#1167): dims everything except the spotlighted
@@ -36,5 +37,7 @@
           Fill="{DynamicResource Brush.Text.Primary}" Stroke="{DynamicResource Brush.Success}"
           StrokeThickness="2" IsVisible="False" IsHitTestVisible="False"/>
     <ContentControl x:Name="CardHost" IsHitTestVisible="True"/>
+    <Button x:Name="GuideShowTarget" IsVisible="False"
+            Content="{loc:Localize Tutorial.ShowTarget}" Click="ShowTarget_Click"/>
   </Canvas>
 </UserControl>

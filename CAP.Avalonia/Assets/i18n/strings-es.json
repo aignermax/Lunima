@@ -2153,6 +2153,7 @@
   "Tutorial.ActionSimulate.Body": "Haz clic en Simular para ver la luz recorrer el circuito conectado.",
   "Tutorial.ActionSimulate.Cue": "Haz clic en Simular",
   "Tutorial.NoCompatibleTemplate": "No hay un componente compatible visible. Abre la biblioteca óptica o ajusta el filtro.",
+  "Tutorial.ShowTarget": "Mostrar el objetivo",
   "Tutorial.CompletedCue": "¡Tu circuito óptico está conectado!",
   "Tutorial.NoPlacementSpace": "Elige un espacio libre en el chip o deja más espacio.",
   "Tutorial.ActionOptics.Title": "Abre Óptica",

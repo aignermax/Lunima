@@ -98,6 +98,7 @@ public partial class TourAnchorOverlay : UserControl
         _attached = false;
         _poll.Stop();
         StopDemonstration();
+        ClearOffscreenTarget();
         foreach (var ancestor in _visibilityAncestors)
             ancestor.PropertyChanged -= OnAncestorPropertyChanged;
         _visibilityAncestors.Clear();
@@ -128,6 +129,7 @@ public partial class TourAnchorOverlay : UserControl
         {
             _poll.Stop();
             StopDemonstration();
+            ClearOffscreenTarget();
             _cachedTarget = null;
         }
     }
@@ -138,6 +140,7 @@ public partial class TourAnchorOverlay : UserControl
             return;
 
         var viewport = RootCanvas.Bounds.Size;
+        ClearOffscreenTarget();
         var target = FindTarget();
         target = ResolveItemTarget(target);
         var targetRect = target == null ? default : TargetRectInOverlay(target);
@@ -158,6 +161,13 @@ public partial class TourAnchorOverlay : UserControl
         var pos = TourCardPlacement.Place(viewport, targetRect, cardSize, out var side);
         ACanvas.SetLeft(CardHost, pos.X);
         ACanvas.SetTop(CardHost, pos.Y);
+        GuideShowTarget.IsVisible = _offscreenPoint != null;
+        if (GuideShowTarget.IsVisible)
+        {
+            GuideShowTarget.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            ACanvas.SetLeft(GuideShowTarget, Math.Max(8, pos.X));
+            ACanvas.SetTop(GuideShowTarget, Math.Max(8, pos.Y - GuideShowTarget.DesiredSize.Height - 8));
+        }
 
         UpdateSpotlight(targetRect, hasSpotlight);
         UpdateArrow(targetRect, side, hasSpotlight);

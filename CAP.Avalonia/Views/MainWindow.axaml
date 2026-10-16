@@ -47,6 +47,7 @@
                         </Button>
                         <Button x:Name="ResumeVisualGuideButton" Classes="toolbar"
                                 Command="{Binding Home.LearnTutorialCommand}"
+                                AutomationProperties.Name="{loc:Localize Home.LearnTutorial}"
                                 ToolTip.Tip="{loc:Localize Home.LearnTutorial}">
                             <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
                         </Button>
