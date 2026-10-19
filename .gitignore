@@ -424,3 +424,6 @@ FodyWeavers.xsd
 # Godot leftover files (project migrated from Godot to Avalonia)
 *.uid.mcp.json
 .env
+
+# Local trailer render projects and generated video outputs
+/brag-output*/
