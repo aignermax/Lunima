@@ -201,6 +201,7 @@
                     <StackPanel Spacing="8">
                         <TextBlock Classes="label" Text="{loc:Localize Home.LearnTutorial}"/>
                         <Button Classes="primary" Command="{Binding LearningPath.ResumeCommand}"
+                                AutomationProperties.Name="{loc:Localize Home.LearnTutorial}"
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14,12">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="{Binding LearningPath.ResumeLabel}" FontWeight="SemiBold"/>
