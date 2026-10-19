@@ -1117,7 +1117,7 @@ public partial class MainViewModel : ObservableObject
             .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
                 == ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel.CounterExampleFileName)
             ?.FilePath;
-        if (counterPath == null || !await FileOperations.OpenDesignAsCopyAsync(counterPath))
+        if (counterPath == null || !await FileOperations.OpenDesignAsCopyAsync(counterPath, () => navigation == _learningNavigationVersion))
             return;
         if (navigation != _learningNavigationVersion) return;
 
@@ -1139,7 +1139,7 @@ public partial class MainViewModel : ObservableObject
             .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
                 == ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel.AdderExampleFileName)
             ?.FilePath;
-        if (adderPath == null || !await FileOperations.OpenDesignAsCopyAsync(adderPath))
+        if (adderPath == null || !await FileOperations.OpenDesignAsCopyAsync(adderPath, () => navigation == _learningNavigationVersion))
             return;
         if (navigation != _learningNavigationVersion) return;
 
@@ -1161,7 +1161,7 @@ public partial class MainViewModel : ObservableObject
             .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
                 == ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel.ExampleFileName)
             ?.FilePath;
-        if (chipletsPath == null || !await FileOperations.OpenDesignAsCopyAsync(chipletsPath))
+        if (chipletsPath == null || !await FileOperations.OpenDesignAsCopyAsync(chipletsPath, () => navigation == _learningNavigationVersion))
             return;
         if (navigation != _learningNavigationVersion) return;
 
@@ -1182,7 +1182,7 @@ public partial class MainViewModel : ObservableObject
             .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
                 == ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel.RamExampleFileName)
             ?.FilePath;
-        if (ramPath == null || !await FileOperations.OpenDesignAsCopyAsync(ramPath))
+        if (ramPath == null || !await FileOperations.OpenDesignAsCopyAsync(ramPath, () => navigation == _learningNavigationVersion))
             return;
         if (navigation != _learningNavigationVersion) return;
 

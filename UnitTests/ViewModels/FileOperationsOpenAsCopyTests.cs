@@ -153,4 +153,58 @@ public class FileOperationsOpenAsCopyTests : IDisposable
             }
         }
     }
+
+    [Fact]
+    public async Task OpenAsCopy_PausedDuringRead_PreservesCurrentDesign()
+    {
+        await CreateSourceDesignAsync();
+        var json = await File.ReadAllTextAsync(_sourceDesignPath);
+        var pendingRead = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var readStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _fileOps.ReadDesignFileAsync = _ => { readStarted.SetResult(); return pendingRead.Task; };
+        _fileOps.CurrentFilePath = "current-design.lun";
+        _fileOps.HasUnsavedChanges = true;
+        var canvasChanges = 0;
+        _canvas.Components.CollectionChanged += (_, _) => canvasChanges++;
+        var openedEvents = 0;
+        _fileOps.ProjectOpened = () => openedEvents++;
+        var currentNavigation = true;
+
+        var opening = _fileOps.OpenDesignAsCopyAsync(_sourceDesignPath, () => currentNavigation);
+        await readStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        currentNavigation = false;
+        pendingRead.SetResult(json);
+
+        (await opening).ShouldBeFalse();
+        canvasChanges.ShouldBe(0, "a paused chapter must not clear or replace the current canvas");
+        _fileOps.CurrentFilePath.ShouldBe("current-design.lun");
+        _fileOps.HasUnsavedChanges.ShouldBeTrue();
+        openedEvents.ShouldBe(0);
+        _recentProjects.GetRecentProjects().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task OpenAsCopy_PausedDuringPrompt_DoesNotReadOrReplaceDesign()
+    {
+        await CreateSourceDesignAsync();
+        var pendingPrompt = new TaskCompletionSource<SavePromptResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var messageBox = new Mock<IMessageBoxService>();
+        messageBox.Setup(box => box.ShowSavePromptAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(pendingPrompt.Task);
+        _fileOps.MessageBoxService = messageBox.Object;
+        _fileOps.HasUnsavedChanges = true;
+        _fileOps.CurrentFilePath = "current-design.lun";
+        var reads = 0;
+        _fileOps.ReadDesignFileAsync = path => { reads++; return File.ReadAllTextAsync(path); };
+        var currentNavigation = true;
+
+        var opening = _fileOps.OpenDesignAsCopyAsync(_sourceDesignPath, () => currentNavigation);
+        currentNavigation = false;
+        pendingPrompt.SetResult(SavePromptResult.DontSave);
+
+        (await opening).ShouldBeFalse();
+        reads.ShouldBe(0);
+        _fileOps.CurrentFilePath.ShouldBe("current-design.lun");
+        _fileOps.HasUnsavedChanges.ShouldBeTrue();
+    }
 }

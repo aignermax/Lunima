@@ -53,6 +53,8 @@ public partial class FileOperationsViewModel : ObservableObject
     /// <summary>Prompt shown before discarding unsaved changes to load another design.</summary>
     private const string LoadPromptMessage = "Do you want to save your changes before loading another design?";
 
+    internal Func<string, Task<string>> ReadDesignFileAsync { get; set; } = path => File.ReadAllTextAsync(path);
+
     /// <summary>
     /// Persists metadata loaded from the last opened file so that Created date
     /// and other user-set fields survive a save-over-reload cycle.
@@ -1123,12 +1125,17 @@ public partial class FileOperationsViewModel : ObservableObject
     /// </summary>
     /// <param name="filePath">Absolute path to the template/example .lun file.</param>
     /// <returns>True when the design was opened; false when cancelled, missing, or failed.</returns>
-    public async Task<bool> OpenDesignAsCopyAsync(string filePath)
+    public Task<bool> OpenDesignAsCopyAsync(string filePath) => OpenDesignAsCopyAsync(filePath, null);
+
+    /// <summary>Opens a copy only while its initiating navigation request is still current.</summary>
+    public async Task<bool> OpenDesignAsCopyAsync(string filePath, Func<bool>? canProceed)
     {
+        if (canProceed?.Invoke() == false) return false;
         if (!await ConfirmUnsavedChangesAsync(LoadPromptMessage))
             return false;
+        if (canProceed?.Invoke() == false) return false;
 
-        if (!await LoadDesignFromFileAsync(filePath, recordRecent: false))
+        if (!await LoadDesignFromFileAsync(filePath, recordRecent: false, canProceed: canProceed))
             return false;
 
         CurrentFilePath = null;
@@ -1144,13 +1151,16 @@ public partial class FileOperationsViewModel : ObservableObject
     /// reads a .lun file and replaces the current canvas contents with it.
     /// Does NOT prompt about unsaved changes — callers do that first.
     /// </summary>
-    private async Task<bool> LoadDesignFromFileAsync(string filePath, bool recordRecent = true)
+    private async Task<bool> LoadDesignFromFileAsync(string filePath, bool recordRecent = true, Func<bool>? canProceed = null)
     {
         if (File.Exists(filePath))
         {
             try
             {
-                var json = await File.ReadAllTextAsync(filePath);
+                var json = await ReadDesignFileAsync(filePath);
+                // A chapter can be paused while the prompt or disk read is pending.
+                // Past this boundary the canvas replacement is synchronous on the UI thread.
+                if (canProceed?.Invoke() == false) return false;
                 var designData = JsonSerializer.Deserialize<DesignFileData>(json);
 
                 if (designData == null)

@@ -94,7 +94,7 @@ public partial class MainViewModel
             .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
                 == Onboarding.FirstStepsTutorial.FirstGateTourViewModel.GateKitExampleFileName)
             ?.FilePath;
-        if (kitPath == null || !await FileOperations.OpenDesignAsCopyAsync(kitPath))
+        if (kitPath == null || !await FileOperations.OpenDesignAsCopyAsync(kitPath, () => navigation == _learningNavigationVersion))
             return;
         if (navigation != _learningNavigationVersion) return;
 
