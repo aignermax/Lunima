@@ -16,6 +16,7 @@ public partial class FileOperationsViewModel
     [RelayCommand]
     private async Task ExportDieFiles()
     {
+        var exportRequestId = GdsExport.BeginExportRequest();
         var dies = _canvas.Dies.RootDies;
         if (dies.Count == 0)
         {
@@ -40,7 +41,7 @@ public partial class FileOperationsViewModel
             written.Add(Path.GetFileName(path));
             if (GdsExport.GenerateGdsEnabled && GdsExport.IsEnvironmentReady)
             {
-                var result = await GdsExport.ExportScriptToGdsAsync(path);
+                var result = await GdsExport.ExportScriptToGdsAsync(path, exportRequestId);
                 if (!result.Success)
                     _errorConsole?.LogError($"GDS generation failed for {Path.GetFileName(path)}: {result.ErrorMessage}");
             }

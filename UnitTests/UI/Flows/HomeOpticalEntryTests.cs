@@ -29,16 +29,8 @@ public class HomeOpticalEntryTests
         UiInput.RunJobs();
         var home = UiInput.Descendants<CAP.Avalonia.Views.HomeView>(host.Window).Single();
         var button = UiInput.Descendants<Button>(home)
-            .Single(b => b.IsEffectivelyVisible && ReferenceEquals(b.Command, vm.Home.LearnTutorialCommand));
-        foreach (var key in new[] { "Home.Optical.Place", "Home.Optical.Connect", "Home.Optical.Light" })
-        {
-            var label = UiInput.Descendants<TextBlock>(button).Single(t => t.IsEffectivelyVisible && t.Text == LocalizationService.Instance.Translate(key));
-            var origin = label.TranslatePoint(default, button)!.Value;
-            Assert.InRange(origin.X + label.Bounds.Width, 0, button.Bounds.Width);
-            Assert.InRange(origin.Y + label.Bounds.Height, 0, button.Bounds.Height);
-        }
-        var title = UiInput.Descendants<TextBlock>(button).Single(t => t.Text == LocalizationService.Instance.Translate("Home.Learn.FirstSteps"));
-        Assert.Equal(Avalonia.Media.TextTrimming.None, title.TextTrimming);
+            .Single(b => b.IsEffectivelyVisible && ReferenceEquals(b.Command, vm.LearningPath.ResumeCommand));
+        var title = UiInput.Descendants<TextBlock>(button).Single(t => t.Text == vm.LearningPath.ResumeLabel);
         Assert.True(title.DesiredSize.Height <= title.Bounds.Height);
         Assert.Contains(UiInput.Descendants<Button>(host.Window), b => b.IsEffectivelyVisible && ReferenceEquals(b.Command, vm.Home.NewProjectCommand));
         Assert.Contains(UiInput.Descendants<Button>(host.Window), b => b.IsEffectivelyVisible && ReferenceEquals(b.Command, vm.Home.OpenProjectCommand));

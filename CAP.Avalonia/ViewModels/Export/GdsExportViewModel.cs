@@ -313,13 +313,29 @@ public partial class GdsExportViewModel : ObservableObject
     /// Exports a Python script to GDS (if enabled and environment is ready).
     /// </summary>
     /// <param name="scriptPath">Path to the exported Python script.</param>
+    /// <param name="exportRequestId">Identity reserved by the outer command before its first await; omitted for direct exports.</param>
     /// <returns>Export result with status information.</returns>
-    public async Task<GdsExportService.ExportResult> ExportScriptToGdsAsync(string scriptPath)
+    public async Task<GdsExportService.ExportResult> ExportScriptToGdsAsync(string scriptPath, long? exportRequestId = null)
     {
+        var requestId = exportRequestId ?? BeginExportRequest();
         var result = await _exportService.ExportToGdsAsync(scriptPath, GenerateGdsEnabled);
         LastExportStatus = result.Status;
+        if (result.Success && !string.IsNullOrWhiteSpace(result.GdsPath))
+        {
+            LastSuccessfulGdsExportRequestId = requestId;
+            OnPropertyChanged(nameof(LastSuccessfulGdsExportRequestId));
+        }
         return result;
     }
+
+    /// <summary>Reserves the identity at the start of an export command, before dialogs or other awaits.</summary>
+    public long BeginExportRequest() => ++LatestStartedGdsExportRequestId;
+
+    /// <summary>Monotonic request identity assigned before asynchronous export execution.</summary>
+    public long LatestStartedGdsExportRequestId { get; private set; }
+
+    /// <summary>Identity of the request that most recently produced a GDS artifact.</summary>
+    public long LastSuccessfulGdsExportRequestId { get; private set; }
 
     private int _searchGeneration;
 
