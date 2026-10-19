@@ -795,6 +795,7 @@ public partial class MainViewModel : ObservableObject
         WireShell();
         WireFileOperations();
         WireCommandManager();
+        InitializeLearningPath(preferencesService);
 
         // Initialize panels
         LeftPanel.Initialize();
@@ -1111,12 +1112,14 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private async Task StartWatchComputeTourAsync()
     {
+        var navigation = _learningNavigationVersion;
         var counterPath = Home.Examples
             .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
                 == ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel.CounterExampleFileName)
             ?.FilePath;
         if (counterPath == null || !await FileOperations.OpenDesignAsCopyAsync(counterPath))
             return;
+        if (navigation != _learningNavigationVersion) return;
 
         WatchTour.Start();
         FitStartedLearningJourney(() => WatchTour.IsActive);
@@ -1131,12 +1134,14 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private async Task StartRunProgramTourAsync()
     {
+        var navigation = _learningNavigationVersion;
         var adderPath = Home.Examples
             .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
                 == ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel.AdderExampleFileName)
             ?.FilePath;
         if (adderPath == null || !await FileOperations.OpenDesignAsCopyAsync(adderPath))
             return;
+        if (navigation != _learningNavigationVersion) return;
 
         RunProgramTour.Start();
         FitStartedLearningJourney(() => RunProgramTour.IsActive);
@@ -1151,12 +1156,14 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private async Task StartConnectChipletsTourAsync()
     {
+        var navigation = _learningNavigationVersion;
         var chipletsPath = Home.Examples
             .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
                 == ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel.ExampleFileName)
             ?.FilePath;
         if (chipletsPath == null || !await FileOperations.OpenDesignAsCopyAsync(chipletsPath))
             return;
+        if (navigation != _learningNavigationVersion) return;
 
         ConnectChipletsTour.Start();
     }
@@ -1170,12 +1177,14 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private async Task StartStoreNumberTourAsync()
     {
+        var navigation = _learningNavigationVersion;
         var ramPath = Home.Examples
             .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
                 == ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel.RamExampleFileName)
             ?.FilePath;
         if (ramPath == null || !await FileOperations.OpenDesignAsCopyAsync(ramPath))
             return;
+        if (navigation != _learningNavigationVersion) return;
 
         StoreNumberTour.Start();
         FitStartedLearningJourney(() => StoreNumberTour.IsActive);

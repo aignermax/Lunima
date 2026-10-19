@@ -316,10 +316,22 @@ public partial class GdsExportViewModel : ObservableObject
     /// <returns>Export result with status information.</returns>
     public async Task<GdsExportService.ExportResult> ExportScriptToGdsAsync(string scriptPath)
     {
+        var requestId = ++LatestStartedGdsExportRequestId;
         var result = await _exportService.ExportToGdsAsync(scriptPath, GenerateGdsEnabled);
         LastExportStatus = result.Status;
+        if (result.Success && !string.IsNullOrWhiteSpace(result.GdsPath))
+        {
+            LastSuccessfulGdsExportRequestId = requestId;
+            OnPropertyChanged(nameof(LastSuccessfulGdsExportRequestId));
+        }
         return result;
     }
+
+    /// <summary>Monotonic request identity assigned before asynchronous export execution.</summary>
+    public long LatestStartedGdsExportRequestId { get; private set; }
+
+    /// <summary>Identity of the request that most recently produced a GDS artifact.</summary>
+    public long LastSuccessfulGdsExportRequestId { get; private set; }
 
     private int _searchGeneration;
 

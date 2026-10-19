@@ -1,0 +1,144 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Onboarding.LearningPath"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.LearningPathPanel"
+             x:DataType="vm:LearningPathViewModel"
+             Width="{Binding PanelWidth}">
+  <UserControl.Styles>
+    <Style Selector="Button.chapter">
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Padding" Value="6,8"/>
+      <Setter Property="MinHeight" Value="64"/>
+    </Style>
+    <Style Selector="Button.chapter.current">
+      <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+    </Style>
+    <Style Selector="Border.badge">
+      <Setter Property="Width" Value="28"/>
+      <Setter Property="Height" Value="28"/>
+      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Border.badge.completed">
+      <Setter Property="Background" Value="{DynamicResource Brush.Surface.Raised}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Brush.Success}"/>
+    </Style>
+    <Style Selector="Border.badge.current">
+      <Setter Property="Background" Value="{DynamicResource Brush.Surface.Raised}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+      <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Border Background="{DynamicResource Brush.Surface.Panel}"
+          BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="0,0,1,0">
+    <Grid>
+      <Grid IsVisible="{Binding IsExpanded}" RowDefinitions="Auto,Auto,*,Auto">
+        <Grid ColumnDefinitions="*,Auto,Auto" Margin="12,8,8,4">
+          <TextBlock Classes="strong" Text="{loc:Localize LearningPath.Title}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+          <Button Grid.Column="1" Classes="ghost icon" Command="{Binding ToggleCommand}"
+                  ToolTip.Tip="{loc:Localize LearningPath.Collapse}" AutomationProperties.Name="{loc:Localize LearningPath.Collapse}">
+            <controls:Icon Data="{StaticResource Icon.ChevronLeft}"/>
+          </Button>
+          <Button Grid.Column="2" Classes="ghost icon" Command="{Binding CloseCommand}"
+                  ToolTip.Tip="{loc:Localize LearningPath.Close}" AutomationProperties.Name="{loc:Localize LearningPath.Close}">
+            <controls:Icon Data="{StaticResource Icon.X}"/>
+          </Button>
+        </Grid>
+
+        <!-- Keep progress and the selected chapter in view even on short windows. -->
+        <StackPanel Grid.Row="1" Margin="12,4,12,12" Spacing="4">
+          <TextBlock Classes="caption" Text="{Binding ProgressText}"/>
+          <TextBlock Classes="subtitle" Text="{Binding CurrentTitle}" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <Grid Margin="8,0,8,8" VerticalAlignment="Top">
+            <!-- The spine links every badge into one continuous learning path. -->
+            <Border Width="2" HorizontalAlignment="Left" Margin="20,32,0,32"
+                    Background="{DynamicResource Brush.Border.Strong}" IsHitTestVisible="False"/>
+            <ItemsControl ItemsSource="{Binding Chapters}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:LearningChapterViewModel">
+                  <Button Classes="chapter" Classes.current="{Binding IsCurrent}" Command="{Binding StartCommand}"
+                          AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding StatusText}">
+                    <Grid ColumnDefinitions="28,*">
+                      <Border Classes="badge" Classes.completed="{Binding IsCompleted}" Classes.current="{Binding IsCurrent}"
+                              VerticalAlignment="Center">
+                        <Grid>
+                          <TextBlock Text="{Binding Number}" IsVisible="{Binding !IsCompleted}" FontWeight="SemiBold"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                          <controls:Icon Data="{StaticResource Icon.Check}" IsVisible="{Binding IsCompleted}"
+                                         Foreground="{DynamicResource Brush.Success}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                      </Border>
+                      <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="3" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" Classes="strong" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding StatusText}" Classes="caption" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Grid>
+        </ScrollViewer>
+
+        <Border Grid.Row="3" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="0,1,0,0" Padding="12">
+          <StackPanel Spacing="8">
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsCelebrating}">
+              <controls:Icon Data="{StaticResource Icon.Check}" Foreground="{DynamicResource Brush.Success}"/>
+              <TextBlock Text="{loc:Localize LearningPath.WellDone}" Classes="strong success"/>
+            </StackPanel>
+            <TextBlock Text="{Binding RewardText}" Classes="caption" TextWrapping="Wrap" IsVisible="{Binding IsCelebrating}"/>
+            <Button Classes="primary" Content="{Binding NextLabel}" Command="{Binding ContinueCommand}"
+                    IsEnabled="{Binding CanContinue}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <Grid IsVisible="{Binding !IsExpanded}" RowDefinitions="Auto,*,Auto">
+        <Button Classes="ghost icon" Command="{Binding ToggleCommand}" Margin="8,8,7,12"
+                ToolTip.Tip="{loc:Localize LearningPath.Expand}" AutomationProperties.Name="{loc:Localize LearningPath.Expand}">
+          <controls:Icon Data="{StaticResource Icon.GraduationCap}"/>
+        </Button>
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+          <Grid VerticalAlignment="Top">
+            <Border Width="2" Margin="0,22" Background="{DynamicResource Brush.Border.Strong}" HorizontalAlignment="Center"/>
+            <ItemsControl ItemsSource="{Binding Chapters}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:LearningChapterViewModel">
+                  <Button Classes="ghost" Padding="0" Height="44" HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center" Command="{Binding StartCommand}"
+                          ToolTip.Tip="{Binding Title}" AutomationProperties.Name="{Binding Title}"
+                          AutomationProperties.HelpText="{Binding StatusText}">
+                    <Border Classes="badge" Classes.completed="{Binding IsCompleted}" Classes.current="{Binding IsCurrent}">
+                      <Grid>
+                        <TextBlock Text="{Binding Number}" IsVisible="{Binding !IsCompleted}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <controls:Icon Data="{StaticResource Icon.Check}" IsVisible="{Binding IsCompleted}"
+                                       Foreground="{DynamicResource Brush.Success}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                      </Grid>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Grid>
+        </ScrollViewer>
+        <Button Grid.Row="2" Classes="ghost icon" Command="{Binding ToggleCommand}" Margin="8,12,7,12"
+                ToolTip.Tip="{Binding CurrentTitle}" AutomationProperties.Name="{loc:Localize LearningPath.Expand}">
+          <controls:Icon Data="{StaticResource Icon.ChevronRight}"/>
+        </Button>
+      </Grid>
+    </Grid>
+  </Border>
+</UserControl>

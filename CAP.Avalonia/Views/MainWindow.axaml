@@ -610,6 +610,8 @@
         <panels:AnalysisDockPanel DockPanel.Dock="Bottom"/>
 
         <!-- ══ Left: icon rail + one full-height pane ═════════════════════════════ -->
+        <panels:LearningPathPanel DockPanel.Dock="Left" DataContext="{Binding LearningPath}"
+                                  IsVisible="{Binding IsVisible}"/>
         <Grid DockPanel.Dock="Left" ColumnDefinitions="320,Auto" Name="LeftPanelGrid">
             <Border Grid.Column="0" Name="LeftPanelBorder" Classes="sidePanel left"
                     MinWidth="248" MaxWidth="800">
@@ -1328,6 +1330,13 @@
                                 TargetItem="{Binding StoreNumberTour.CurrentTargetItem}">
         <tour:TourAnchorOverlay.Card>
             <panels:StoreNumberTourPanel DataContext="{Binding StoreNumberTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+
+    <tour:TourAnchorOverlay IsVisible="{Binding ManufacturingTour.IsActive, FallbackValue=False}"
+                           Demonstrate="True" TargetName="{Binding ManufacturingTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:ManufacturingTourPanel DataContext="{Binding ManufacturingTour}"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 

@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Onboarding.FirstStepsTutorial"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.ManufacturingTourPanel"
+             x:DataType="vm:ManufacturingTourViewModel">
+  <Border Classes="overlay" Padding="16" Width="340" CornerRadius="12">
+    <StackPanel Spacing="8">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="label" Text="{Binding ProgressText}" VerticalAlignment="Center"/>
+        <Button Grid.Column="1" Classes="ghost" Content="{loc:Localize Tutorial.Skip}" Command="{Binding SkipCommand}"/>
+      </Grid>
+      <TextBlock Classes="subtitle" Text="{Binding CurrentTitle}" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding CurrentBody}" TextWrapping="Wrap"/>
+      <Border IsVisible="{Binding IsIntroduction}" Classes="overlay" Padding="8">
+        <TextBlock Text="{Binding ProcessSummary}" TextWrapping="Wrap"/>
+      </Border>
+      <TextBlock Text="{Binding CurrentCue}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+      <Button IsVisible="{Binding IsIntroduction}" Content="{loc:Localize ManufacturingTour.InspectProcess}"
+              Command="{Binding InspectProcessCommand}"/>
+      <TextBlock Text="{Binding ExportStatus}" TextWrapping="Wrap"/>
+      <Button Name="ManufacturingContinueButton" IsVisible="{Binding CanContinue}" Classes="primary"
+              Content="{Binding ContinueText}" Command="{Binding NextCommand}"/>
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -66,6 +66,10 @@ public partial class HomeViewModel : ObservableObject
     /// </summary>
     public ObservableCollection<HomeTourEntry> TourEntries { get; } = new();
 
+    public Onboarding.LearningPath.LearningPathViewModel? LearningPath { get; set; }
+    public Func<Task>? ManufacturingTourRequested { get; set; }
+    [RelayCommand] private Task ManufacturingTour() => ManufacturingTourRequested?.Invoke() ?? Task.CompletedTask;
+
     /// <summary>True when any shipped examples were found (shows the Examples section).</summary>
     [ObservableProperty]
     private bool _hasExamples;
@@ -174,6 +178,9 @@ public partial class HomeViewModel : ObservableObject
         TourEntries.Add(new HomeTourEntry(6, "Icon.Link",
             "Home.ConnectChipletsTour", "Home.Learn.ConnectChipletsDescription",
             "Home.ConnectChipletsTourTip", ConnectChipletsTourCommand));
+        TourEntries.Add(new HomeTourEntry(7, "Icon.Save",
+            "LearningPath.Manufacturing", "LearningPath.ManufacturingDescription",
+            "LearningPath.ManufacturingDescription", ManufacturingTourCommand));
     }
 
     /// <summary>Rebuilds the shipped-examples list from disk.</summary>

@@ -7,6 +7,8 @@ public class UserPreferences
 {
     /// <summary>Offer visual first-use guidance until it is completed or explicitly dismissed.</summary>
     public bool GuidedLearningEnabled { get; set; } = true;
+    public List<int> CompletedLearningChapters { get; set; } = new();
+    public int LastLearningChapter { get; set; } = 1;
 
     /// <summary>
     /// List of PDK names that are currently enabled (visible in library).

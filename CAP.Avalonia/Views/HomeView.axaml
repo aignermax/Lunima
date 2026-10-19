@@ -200,6 +200,14 @@
                 <StackPanel Grid.Column="2" Spacing="20">
                     <StackPanel Spacing="8">
                         <TextBlock Classes="label" Text="{loc:Localize Home.LearnTutorial}"/>
+                        <Button Classes="primary" Command="{Binding LearningPath.ResumeCommand}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14,12">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding LearningPath.ResumeLabel}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding LearningPath.ProgressText}" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                        <Expander Header="{loc:Localize LearningPath.AllChapters}" IsExpanded="False">
                         <!-- The guided tours in learning order: the number says it is a sequence. -->
                         <ItemsControl ItemsSource="{Binding TourEntries}">
                             <ItemsControl.ItemTemplate>
@@ -239,6 +247,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        </Expander>
                     </StackPanel>
 
                     <!-- Shipped example designs in learning-path order; the one-line

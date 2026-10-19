@@ -7,7 +7,7 @@ using Xunit;
 namespace UnitTests.Onboarding.FirstStepsTutorial;
 
 /// <summary>
-/// Tests for the Home screen's "Learn Lunima" list (issue #1301): the six
+/// Tests for the Home screen's "Learn Lunima" list (issue #1301): the seven
 /// guided tours appear as one numbered, data-driven list in learning order,
 /// and each entry carries the existing tour command instance — clicking a row
 /// starts exactly the tour the previous standalone button started.
@@ -38,10 +38,10 @@ public class HomeLearnTourListTests : IDisposable
     }
 
     [Fact]
-    public void TourEntries_HasSixTours_InLearningOrder()
+    public void TourEntries_HasSevenTours_InLearningOrder()
     {
-        _home.TourEntries.Count.ShouldBe(6);
-        _home.TourEntries.Select(e => e.Number).ShouldBe(new[] { 1, 2, 3, 4, 5, 6 });
+        _home.TourEntries.Count.ShouldBe(7);
+        _home.TourEntries.Select(e => e.Number).ShouldBe(new[] { 1, 2, 3, 4, 5, 6, 7 });
         _home.TourEntries.Select(e => e.NameKey).ShouldBe(new[]
         {
             "Home.Learn.FirstSteps",
@@ -50,6 +50,7 @@ public class HomeLearnTourListTests : IDisposable
             "Home.StoreNumberTour",
             "Home.RunProgramTour",
             "Home.ConnectChipletsTour",
+            "LearningPath.Manufacturing",
         });
     }
 
@@ -71,15 +72,18 @@ public class HomeLearnTourListTests : IDisposable
     [InlineData(3)]
     [InlineData(4)]
     [InlineData(5)]
+    [InlineData(6)]
     public async Task TourEntryCommand_InvokesTheMatchingTourCallback(int entryIndex)
     {
-        var invoked = new int[6];
+        var invoked = new int[7];
         _home.LearnTutorialRequested = () => { invoked[0]++; return Task.CompletedTask; };
         _home.FirstGateTourRequested = () => { invoked[1]++; return Task.CompletedTask; };
         _home.WatchComputeTourRequested = () => { invoked[2]++; return Task.CompletedTask; };
         _home.StoreNumberTourRequested = () => { invoked[3]++; return Task.CompletedTask; };
         _home.RunProgramTourRequested = () => { invoked[4]++; return Task.CompletedTask; };
         _home.ConnectChipletsTourRequested = () => { invoked[5]++; return Task.CompletedTask; };
+
+        _home.ManufacturingTourRequested = () => { invoked[6]++; return Task.CompletedTask; };
 
         await ((IAsyncRelayCommand)_home.TourEntries[entryIndex].Command).ExecuteAsync(null);
 
@@ -94,7 +98,7 @@ public class HomeLearnTourListTests : IDisposable
 
         _home.Show();
 
-        _home.TourEntries.Count.ShouldBe(6);
+        _home.TourEntries.Count.ShouldBe(7);
         _home.TourEntries.Select(e => e.Command).ShouldBe(commands);
     }
 }
