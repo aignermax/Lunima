@@ -2243,6 +2243,7 @@ public partial class FileOperationsViewModel : ObservableObject
     [RelayCommand]
     private async Task ExportNazca()
     {
+        var exportRequestId = GdsExport.BeginExportRequest();
         if (FileDialogService == null)
         {
             UpdateStatus?.Invoke("Export not available");
@@ -2333,7 +2334,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 }
 
                 // Attempt GDS generation if enabled
-                var result = await GdsExport.ExportScriptToGdsAsync(filePath);
+                var result = await GdsExport.ExportScriptToGdsAsync(filePath, exportRequestId);
 
                 if (result.Success && result.GdsPath != null)
                 {

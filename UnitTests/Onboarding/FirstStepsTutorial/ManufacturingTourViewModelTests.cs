@@ -90,6 +90,23 @@ public class ManufacturingTourViewModelTests
         public void Complete() => _pending.SetResult(new() { Success = true, GdsPath = "lesson.gds", Status = "Exported" });
         public void Reset() => _pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
+    [Fact]
+    public async Task ExportRequestReservedBeforeLesson_CannotBeReissuedAfterSaveDialog()
+    {
+        var service = new ControlledExportService { Result = new() { Success = true, GdsPath = "lesson.gds" } };
+        var export = new GdsExportViewModel(service);
+        // The outer command reserves its identity before showing a save dialog.
+        var earlierRequest = export.BeginExportRequest();
+        var tour = new ManufacturingTourViewModel(export);
+        tour.Start();
+        tour.Next();
+        await export.ExportScriptToGdsAsync("earlier.py", earlierRequest);
+        export.LatestStartedGdsExportRequestId.ShouldBe(earlierRequest);
+        tour.IsClosing.ShouldBeFalse();
+        var currentRequest = export.BeginExportRequest();
+        await export.ExportScriptToGdsAsync("current.py", currentRequest);
+        tour.IsClosing.ShouldBeTrue();
+    }
     private sealed class ControlledExportService : GdsExportService
     {
         public ExportResult Result { get; set; } = new();
