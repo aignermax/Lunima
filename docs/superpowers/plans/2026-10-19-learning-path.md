@@ -30,3 +30,9 @@ Root implements course model/integration. Independent workers own only panel fil
 
 ## Verification
 150 focused lesson, Home, course-state and real-window UI tests passed. Desktop build: 0 warnings, 0 errors. Actual new CAP.Desktop.exe launched (PID26084), responsive Lunima window, executable path confirmed. Native screenshot automation unavailable (missing pipe); headless real MainWindow render inspected at 1440/1100px. Independent review findings on pending close and stale inflight exports fixed with regression coverage.
+
+## Pause and return feedback
+- Added one-shot green cue from panel close button to toolbar LearnLunima button, with static reduced-motion fallback.
+- Toolbar reopens the map without restarting the lesson or replacing the design.
+- Verified: 152 targeted Release tests passed; Release desktop build: 0 warnings, 0 errors; native headless screenshots at 1440 and 1100 pixels inspected; static review found no actionable issues.
+

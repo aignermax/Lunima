@@ -2241,5 +2241,6 @@
   "ManufacturingTour.Continue": "エクスポートに進む",
   "ManufacturingTour.InspectProcess": "PDKとプロセスを表示",
   "ManufacturingTour.NoProcess": "製造プロセスが選択されていません。",
-  "ManufacturingTour.ProcessSummary": "{0}\nコア：{1}、{2} nm · クラッド：{3}\n設計波長：{4} nm"
+  "ManufacturingTour.ProcessSummary": "{0}\nコア：{1}、{2} nm · クラッド：{3}\n設計波長：{4} nm",
+  "LearningPath.ResumeHere": "ここから学習を再開"
 }

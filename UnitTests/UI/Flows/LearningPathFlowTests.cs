@@ -5,6 +5,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Media.Imaging;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.Views.Panels;
+using CAP.Avalonia.Controls.TourAnchor;
 
 namespace UnitTests.UI.Flows;
 
@@ -36,10 +37,21 @@ public class LearningPathFlowTests
         Assert.Equal(44, panel.Bounds.Width);
         Assert.True(host.Vm.Tutorial.IsActive);
         Capture(host.Window, width, language + "-collapsed");
-        host.Vm.LearningPath.CloseCommand.Execute(null); UiInput.RunJobs();
+        host.Vm.LearningPath.ToggleCommand.Execute(null); UiInput.RunJobs();
+        var close = UiInput.Descendants<Button>(panel).Single(b => b.Name == "LearningPathCloseButton");
+        UiInput.Click(host.Window, close); UiInput.RunJobs();
         Assert.False(host.Vm.Tutorial.IsActive);
         Assert.False(host.Vm.LearningPath.IsVisible);
         Assert.Equal(0, host.Vm.LearningPath.CompletedCount);
+        var hint = UiInput.Descendants<LearningReturnHint>(host.Window).Single();
+        Assert.True(hint.IsPlaying);
+        Assert.False(hint.IsHitTestVisible);
+        Capture(host.Window, width, language + "-return-hint");
+        var help = host.Window.FindControl<Button>("ResumeVisualGuideButton")!;
+        UiInput.Click(host.Window, help); UiInput.RunJobs();
+        Assert.True(host.Vm.LearningPath.IsVisible);
+        Assert.False(hint.IsPlaying);
+        Assert.False(host.Vm.Tutorial.IsActive); // Opening the map does not replace or restart the design.
     }
 
     private static void Capture(Window window, int width, string name)

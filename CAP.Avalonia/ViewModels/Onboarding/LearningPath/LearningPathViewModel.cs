@@ -20,6 +20,8 @@ public partial class LearningPathViewModel : ObservableObject
     public int CurrentNumber { get; private set; }
     public Func<int, Task>? StartChapterRequested { get; set; }
     public Action? CloseRequested { get; set; }
+    public event Action? Pausing;
+    public bool IsPaused => !_active && !IsCelebrating;
     public IReadOnlyList<LearningChapterViewModel> Chapters { get; }
     public int CompletedCount => Chapters.Count(chapter => chapter.IsCompleted);
     public string ProgressText => string.Format(LocalizationService.Instance.Translate("LearningPath.Progress"), CompletedCount, Chapters.Count);
@@ -68,7 +70,7 @@ public partial class LearningPathViewModel : ObservableObject
         Refresh();
     }
 
-    public void Pause() => _active = false;
+    public void Pause() { _active = false; Refresh(); }
 
     private async Task StartChapterAsync(int number)
     {
@@ -83,8 +85,17 @@ public partial class LearningPathViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanContinue))]
     private Task Continue() => StartChapterAsync(CurrentNumber + 1);
     [RelayCommand] private Task Resume() => StartChapterAsync(CanContinue ? CurrentNumber + 1 : CurrentNumber);
+    [RelayCommand] private void Reveal() { IsVisible = true; IsExpanded = true; Refresh(); }
     [RelayCommand] private void Toggle() => IsExpanded = !IsExpanded;
-    [RelayCommand] private void Close() { _cancelPendingStart = true; CloseRequested?.Invoke(); Pause(); IsVisible = false; IsCelebrating = false; }
+    [RelayCommand] private void Close()
+    {
+        if (IsVisible) Pausing?.Invoke();
+        _cancelPendingStart = true;
+        CloseRequested?.Invoke();
+        IsCelebrating = false;
+        Pause();
+        IsVisible = false;
+    }
 
     private void Refresh()
     {
@@ -101,6 +112,7 @@ public partial class LearningPathViewModel : ObservableObject
         OnPropertyChanged(nameof(CanContinue));
         OnPropertyChanged(nameof(NextLabel));
         OnPropertyChanged(nameof(ResumeLabel));
+        OnPropertyChanged(nameof(IsPaused));
         ContinueCommand.NotifyCanExecuteChanged();
     }
 }

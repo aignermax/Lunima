@@ -2241,5 +2241,6 @@
   "ManufacturingTour.Continue": "Continuar con la exportación",
   "ManufacturingTour.InspectProcess": "Mostrar PDK y procesos",
   "ManufacturingTour.NoProcess": "No se ha seleccionado ningún proceso de fabricación.",
-  "ManufacturingTour.ProcessSummary": "{0}\nNúcleo: {1}, {2} nm · Revestimiento: {3}\nLongitud de onda de diseño: {4} nm"
+  "ManufacturingTour.ProcessSummary": "{0}\nNúcleo: {1}, {2} nm · Revestimiento: {3}\nLongitud de onda de diseño: {4} nm",
+  "LearningPath.ResumeHere": "Retoma el aprendizaje aquí"
 }

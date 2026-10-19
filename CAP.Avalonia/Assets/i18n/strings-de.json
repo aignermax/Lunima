@@ -2241,5 +2241,6 @@
   "ManufacturingTour.Continue": "Weiter zum Export",
   "ManufacturingTour.InspectProcess": "PDKs und Prozesse anzeigen",
   "ManufacturingTour.NoProcess": "Kein Fertigungsprozess ausgewählt.",
-  "ManufacturingTour.ProcessSummary": "{0}\nKern: {1}, {2} nm · Hülle: {3}\nEntwurfswellenlänge: {4} nm"
+  "ManufacturingTour.ProcessSummary": "{0}\nKern: {1}, {2} nm · Hülle: {3}\nEntwurfswellenlänge: {4} nm",
+  "LearningPath.ResumeHere": "Hier geht’s zum Lernpfad"
 }

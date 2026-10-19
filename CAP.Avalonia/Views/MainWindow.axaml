@@ -46,7 +46,7 @@
                             <controls:Icon Data="{StaticResource Icon.House}"/>
                         </Button>
                         <Button x:Name="ResumeVisualGuideButton" Classes="toolbar"
-                                Command="{Binding Home.LearnTutorialCommand}"
+                                Command="{Binding LearningPath.RevealCommand}"
                                 AutomationProperties.Name="{loc:Localize Home.LearnTutorial}"
                                 ToolTip.Tip="{loc:Localize Home.LearnTutorial}">
                             <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
@@ -1339,6 +1339,8 @@
             <panels:ManufacturingTourPanel DataContext="{Binding ManufacturingTour}"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
+
+    <tour:LearningReturnHint Model="{Binding LearningPath}"/>
 
     <!-- Home screen overlay: compact centered card over the dimmed editor, shown until a
          project is opened/created; reopenable via the Home button. -->

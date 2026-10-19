@@ -2241,5 +2241,6 @@
   "ManufacturingTour.Continue": "继续导出",
   "ManufacturingTour.InspectProcess": "显示 PDK 和工艺",
   "ManufacturingTour.NoProcess": "尚未选择制造工艺。",
-  "ManufacturingTour.ProcessSummary": "{0}\n芯层：{1}，{2} nm · 包层：{3}\n设计波长：{4} nm"
+  "ManufacturingTour.ProcessSummary": "{0}\n芯层：{1}，{2} nm · 包层：{3}\n设计波长：{4} nm",
+  "LearningPath.ResumeHere": "在这里继续学习"
 }

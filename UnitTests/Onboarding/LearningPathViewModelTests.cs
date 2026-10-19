@@ -7,6 +7,29 @@ namespace UnitTests.Onboarding;
 public class LearningPathViewModelTests
 {
     [Fact]
+    public void Pause_notifies_before_hiding_and_reveal_preserves_chapter_without_starting_or_replacing_design()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
+        try
+        {
+            var model = new LearningPathViewModel(Preferences(path));
+            bool visibleAtPause = false;
+            int starts = 0;
+            model.Pausing += () => visibleAtPause = model.IsVisible;
+            model.StartChapterRequested = _ => { starts++; return Task.CompletedTask; };
+            model.Activate(4);
+            model.CloseCommand.Execute(null);
+            visibleAtPause.ShouldBeTrue();
+            model.IsVisible.ShouldBeFalse();
+            model.RevealCommand.Execute(null);
+            model.IsVisible.ShouldBeTrue();
+            model.IsExpanded.ShouldBeTrue();
+            model.CurrentNumber.ShouldBe(4);
+            starts.ShouldBe(0);
+        }
+        finally { File.Delete(path); }
+    }
+    [Fact]
     public async Task Closing_during_pending_start_prevents_late_sidebar_reactivation()
     {
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");

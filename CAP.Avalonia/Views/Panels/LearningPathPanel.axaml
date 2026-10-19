@@ -48,7 +48,7 @@
                   ToolTip.Tip="{loc:Localize LearningPath.Collapse}" AutomationProperties.Name="{loc:Localize LearningPath.Collapse}">
             <controls:Icon Data="{StaticResource Icon.ChevronLeft}"/>
           </Button>
-          <Button Grid.Column="2" Classes="ghost icon" Command="{Binding CloseCommand}"
+          <Button x:Name="LearningPathCloseButton" Grid.Column="2" Classes="ghost icon" Command="{Binding CloseCommand}"
                   ToolTip.Tip="{loc:Localize LearningPath.Close}" AutomationProperties.Name="{loc:Localize LearningPath.Close}">
             <controls:Icon Data="{StaticResource Icon.X}"/>
           </Button>
@@ -100,7 +100,9 @@
             </StackPanel>
             <TextBlock Text="{Binding RewardText}" Classes="caption" TextWrapping="Wrap" IsVisible="{Binding IsCelebrating}"/>
             <Button Classes="primary" Content="{Binding NextLabel}" Command="{Binding ContinueCommand}"
-                    IsEnabled="{Binding CanContinue}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                    IsVisible="{Binding !IsPaused}" IsEnabled="{Binding CanContinue}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+            <Button Classes="primary" Content="{Binding ResumeLabel}" Command="{Binding ResumeCommand}"
+                    IsVisible="{Binding IsPaused}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
           </StackPanel>
         </Border>
       </Grid>
