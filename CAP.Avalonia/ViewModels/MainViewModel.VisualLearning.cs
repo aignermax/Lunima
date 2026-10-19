@@ -65,6 +65,8 @@ public partial class MainViewModel
             RunProgramTour.Skip();
             ConnectChipletsTour.Skip();
             StoreNumberTour.Skip();
+            ManufacturingTour?.Skip();
+            LearningPath?.Pause();
             _learningSuccessTimeout?.Dispose();
             _learningSuccessTimeout = null;
             ShowLearningSuccess = false;

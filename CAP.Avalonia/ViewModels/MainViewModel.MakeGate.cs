@@ -89,12 +89,14 @@ public partial class MainViewModel
     /// </summary>
     private async Task StartFirstGateTourAsync()
     {
+        var navigation = _learningNavigationVersion;
         var kitPath = Home.Examples
             .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
                 == Onboarding.FirstStepsTutorial.FirstGateTourViewModel.GateKitExampleFileName)
             ?.FilePath;
-        if (kitPath == null || !await FileOperations.OpenDesignAsCopyAsync(kitPath))
+        if (kitPath == null || !await FileOperations.OpenDesignAsCopyAsync(kitPath, () => navigation == _learningNavigationVersion))
             return;
+        if (navigation != _learningNavigationVersion) return;
 
         FirstGateTour.Start();
     }
