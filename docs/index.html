@@ -135,6 +135,15 @@
   .frame-bar .ok { color: var(--green); }
   .frame-bar .hud { text-overflow: ellipsis; overflow: hidden; }
   .hero-frame { margin-bottom: 0; }
+  .trailer { margin-top: 36px; }
+  .trailer-player { position: relative; aspect-ratio: 16 / 9; min-height: 200px; background: var(--navy); }
+  .trailer-player iframe { display: block; width: 100%; height: 100%; position: absolute; inset: 0; border: 0; }
+  .trailer-launch { display: block; width: 100%; height: 100%; position: absolute; inset: 0; color: var(--fg); }
+  .trailer-launch img { width: 100%; height: 100%; object-fit: cover; }
+  .trailer-launch:focus-visible { outline-offset: -4px; }
+  .trailer-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 16px 24px; border-radius: 8px; background: var(--amber); color: var(--navy); font-weight: 700; white-space: nowrap; box-shadow: 0 8px 32px #0008; }
+  .trailer-launch:hover .trailer-play { background: #ffc266; }
+  .trailer-note { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; padding: 12px 16px; font-size: 13px; color: var(--dim); }
 
   /* ---------- feature sections ---------- */
   .feature { display: grid; grid-template-columns: 5fr 7fr; gap: 56px; align-items: center; }
@@ -318,6 +327,17 @@
         <a class="btn btn-ghost" href="https://github.com/aignermax/Lunima">View on GitHub</a>
       </div>
       <p class="platforms">Windows · Linux · macOS — MIT licensed</p>
+
+      <figure class="frame trailer" id="intro">
+        <div class="frame-bar"><span>Meet Lunima</span><span class="hud">The short introduction</span></div>
+        <div class="trailer-player" id="trailer-player">
+          <a class="trailer-launch" id="trailer-launch" href="https://www.youtube.com/watch?v=VkW_8l1kOVU" aria-label="Play the Lunima introduction on YouTube" aria-describedby="trailer-privacy">
+            <img src="media/intro-trailer.jpg" width="1280" height="720" alt="" decoding="async">
+            <span class="trailer-play"><span aria-hidden="true">▶</span> Watch the intro</span>
+          </a>
+        </div>
+        <figcaption class="trailer-note"><span id="trailer-privacy">Playing loads YouTube and shares data with Google.</span><a href="https://www.youtube.com/watch?v=VkW_8l1kOVU">Watch on YouTube</a></figcaption>
+      </figure>
 
       <!-- signature: a routed waveguide carrying a light pulse into the canvas -->
       <svg class="route" viewBox="0 0 1120 110" aria-hidden="true" role="presentation">
@@ -668,12 +688,34 @@
 <section id="privacy" class="wrap privacy">
   <p class="privacy-label">Privacy</p>
   <p class="privacy-text">
-    This is a static page: no tracking, cookies, analytics, or forms are run by us, and nothing
-    on it reads or stores anything about you. It's hosted on GitHub Pages, so GitHub — as the
+    This is a static page: we run no analytics or tracking cookies. The introduction uses a
+    locally hosted preview image; no YouTube player is loaded until you choose to play it.
+    Playing loads YouTube's privacy-enhanced player and shares data with Google; see
+    <a href="https://policies.google.com/privacy">Google's Privacy Policy</a>.
+    Release information is requested from GitHub's public API. The site is hosted on GitHub Pages, so GitHub — as the
     hosting provider — technically processes visitor IP addresses in its server logs to serve
     the page; see the <a href="https://docs.github.com/site-policy/privacy-policies/github-privacy-statement">GitHub Privacy Statement</a> for details.
   </p>
 </section>
+
+<script>
+(function () {
+  "use strict";
+  var launch = document.getElementById("trailer-launch");
+  launch.addEventListener("click", function (event) {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    var player = document.createElement("iframe");
+    player.title = "Lunima — short introduction";
+    player.src = "https://www.youtube-nocookie.com/embed/VkW_8l1kOVU?autoplay=1&playsinline=1&rel=0";
+    player.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+    player.allowFullscreen = true;
+    player.referrerPolicy = "strict-origin-when-cross-origin";
+    event.preventDefault();
+    document.getElementById("trailer-player").replaceChildren(player);
+    player.focus();
+  });
+})();
+</script>
 
 <!-- ================= DYNAMIC RELEASE INFO ================= -->
 <!-- Keeps the static v0.18.2 fallback above in sync with the latest GitHub
