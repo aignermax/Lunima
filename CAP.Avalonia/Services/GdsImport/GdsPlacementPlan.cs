@@ -9,6 +9,9 @@ namespace CAP.Avalonia.Services.GdsImport;
 /// </summary>
 public sealed record GdsPlacementInstruction
 {
+    /// <summary>Original GDS cell identity for reviewed logical groups.</summary>
+    public string CellName { get; init; } = string.Empty;
+
     /// <summary>Deterministic instance key (<c>{CellName}#{n}</c>), same as the import's.</summary>
     public string InstanceName { get; init; } = string.Empty;
 
@@ -127,6 +130,9 @@ public sealed record GdsConnectionInstruction
 /// </summary>
 public sealed record GdsPlacementPlan
 {
+    /// <summary>Explicit logical groups of intact source instances.</summary>
+    public IReadOnlyList<CAP_DataAccess.Import.Gds.Interpretation.GdsInterpretationGroup> Groups { get; init; } = [];
+
     /// <summary>Name of the single group all placements belong to (the imported top cell).</summary>
     public string GroupName { get; init; } = string.Empty;
 
@@ -206,6 +212,7 @@ public sealed record GdsPlacementPlan
             // note would only re-flood the report on huge imports.
             return new GdsPlacementInstruction
             {
+                CellName = instance.CellName,
                 InstanceName = instance.InstanceName,
                 ComponentIdentifier = identifier,
                 PdkSource = pdkSource,
@@ -234,6 +241,7 @@ public sealed record GdsPlacementPlan
 
         return new GdsPlacementPlan
         {
+            Groups = outcome.Interpretation?.Groups ?? [],
             GroupName = outcome.TopCellName,
             Placements = placements,
             Connections = connections,
@@ -262,11 +270,13 @@ public sealed record GdsPlacementPlan
         var registered = registeredByDraftName.TryGetValue(outcome.TopCellName, out var componentName);
         return new GdsPlacementPlan
         {
+            Groups = outcome.Interpretation?.Groups ?? [],
             GroupName = outcome.TopCellName,
             Placements = new[]
             {
                 new GdsPlacementInstruction
                 {
+                    CellName = outcome.TopCellName,
                     InstanceName = outcome.TopCellName,
                     ComponentIdentifier = registered ? componentName : null,
                     PdkSource = registered ? outcome.UserPdkName : null,

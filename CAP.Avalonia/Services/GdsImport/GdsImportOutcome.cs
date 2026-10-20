@@ -17,6 +17,9 @@ public sealed record GdsRegisteredComponent(string CellDraftName, string Compone
 /// </summary>
 public sealed record GdsImportOutcome
 {
+    /// <summary>Applied review decisions, available for logical grouping and reuse.</summary>
+    public CAP_DataAccess.Import.Gds.Interpretation.GdsImportInterpretation? Interpretation { get; init; }
+
     /// <summary>The imported top cell.</summary>
     public string TopCellName { get; init; } = string.Empty;
 

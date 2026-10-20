@@ -39,7 +39,7 @@ internal sealed partial class GdsHierarchyImportSession
         FlattenedGdsCell detectionCell, GdsBoundingBox bbox, string cellName)
     {
         var pins = GdsPinDetector.Detect(detectionCell, bbox, _options.PinDetection);
-        if (pins.Any(p => p.Source == DetectedPinSource.Label))
+        if (!_options.AllowAnyLayerLabelFallback || pins.Any(p => p.Source == DetectedPinSource.Label))
             return pins;
 
         var ghosts = detectionCell.Texts.Where(GdsGhostLabelFilter.IsGhost).ToList();

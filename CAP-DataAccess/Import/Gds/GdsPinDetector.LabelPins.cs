@@ -31,7 +31,7 @@ public static partial class GdsPinDetector
     {
         AnchorGeometryIndex? geometryIndex = null;
         // nazca-style arrow markers carry exact pin positions for this cell.
-        var markers = GdsPinArrowMarkers.Find(flattened, cellBBox);
+        var markers = GdsPinArrowMarkers.Find(flattened, cellBBox, options.PortMarkerLayers);
         foreach (var text in flattened.Texts)
         {
             if (!ContainsLayer(options.PortLayers, text.Layer, text.TextType))

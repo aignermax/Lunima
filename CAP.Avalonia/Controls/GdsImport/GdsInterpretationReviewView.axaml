@@ -1,0 +1,207 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.GdsImport.Interpretation"
+             xmlns:local="using:CAP.Avalonia.Controls.GdsImport"
+             xmlns:tour="using:CAP.Avalonia.Controls.TourAnchor"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:svc="using:CAP.Avalonia.Services.GdsImport"
+             x:Class="CAP.Avalonia.Controls.GdsImport.GdsInterpretationReviewView"
+             x:DataType="vm:GdsInterpretationReviewViewModel"
+             Background="{DynamicResource Brush.Surface.Base}">
+  <UserControl.Styles>
+    <Style Selector="Button.reviewStep.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Hover}"/>
+    </Style>
+  </UserControl.Styles>
+  <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="180,*,290" Margin="16" IsEnabled="{Binding !IsWorking}">
+    <StackPanel Grid.ColumnSpan="3" Spacing="5" Margin="8,4,8,18">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBlock Classes="title" Text="{loc:Localize GdsReview.Title}"/>
+        <Button Grid.Column="1" Classes="ghost" Content="↶" Command="{Binding UndoCommand}"
+                ToolTip.Tip="{loc:Localize GdsReview.Undo}" Margin="8,0"/>
+        <Button Grid.Column="2" Classes="ghost" Content="{loc:Localize GdsReview.ShowMe}" Command="{Binding RestartGuideCommand}"/>
+      </Grid>
+      <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.OriginalSafe}"/>
+    </StackPanel>
+    <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,0,1,0" Padding="0,8,12,8">
+      <StackPanel Spacing="12">
+        <ItemsControl ItemsSource="{Binding Steps}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:GdsReviewStep">
+              <Button Classes="ghost reviewStep" Classes.active="{Binding IsCurrent}" HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Left" Margin="0,4" Padding="10,12"
+                      Command="{ReflectionBinding $parent[UserControl].DataContext.ChooseStepCommand}"
+                      CommandParameter="{Binding}">
+                <StackPanel Orientation="Horizontal" Spacing="9">
+                  <TextBlock Text="{Binding Number}" Classes="caption mono" VerticalAlignment="Center"/>
+                  <TextBlock Text="{Binding Title}" TextWrapping="Wrap" MaxWidth="115"/>
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap" Text="{loc:Localize GdsReview.LayerNotComponent}" Margin="10,20,4,0"/>
+      </StackPanel>
+    </Border>
+    <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="Auto,*,Auto" Margin="16,4">
+      <StackPanel Spacing="7" Margin="0,0,0,14">
+        <TextBlock Classes="subtitle" Text="{Binding StageTitle}"/>
+        <TextBlock Classes="caption secondary" Text="{Binding StageDescription}" TextWrapping="Wrap"/>
+        <ComboBox x:Name="GdsReviewCellSelector" ItemsSource="{Binding DisplayCells}" SelectedItem="{Binding SelectedCell}"
+                  IsVisible="{Binding ShowCellSelector}" HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:GdsCellReviewRow"><TextBlock Text="{Binding CellName}"/></DataTemplate></ComboBox.ItemTemplate>
+        </ComboBox>
+      </StackPanel>
+      <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+        <local:GdsReviewPreview x:Name="ReviewPreview" Scene="{Binding Scene}" HighlightLayer="{Binding HighlightLayer}"
+                                Ports="{Binding PreviewPorts}" SelectedPortIndex="{Binding SelectedPortIndex}"
+                                ShowPorts="{Binding IsPortStep}" MinHeight="300"/>
+      </Border>
+      <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+        <StackPanel>
+          <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.PreviewHint}" TextWrapping="Wrap"/>
+          <TextBlock Classes="caption warning" Text="{loc:Localize GdsReview.PreviewLimited}"
+                     IsVisible="{Binding #ReviewPreview.IsPreviewLimited}" TextWrapping="Wrap"/>
+        </StackPanel>
+        <Button Grid.Column="1" Classes="ghost" Content="⛶" Click="OnFit" ToolTip.Tip="{loc:Localize GdsReview.Fit}"/>
+      </Grid>
+    </Grid>
+    <Border Grid.Row="1" Grid.Column="2" Classes="card" Padding="16">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="14">
+          <StackPanel IsVisible="{Binding IsLayoutStep}" Spacing="12">
+            <TextBlock Classes="strong" Text="{loc:Localize GdsReview.LayoutReady}"/>
+            <TextBlock TextWrapping="Wrap" Classes="secondary" Text="{loc:Localize GdsReview.LayoutBody}"/>
+            <TextBlock Classes="caption secondary" Text="{Binding Summary}" TextWrapping="Wrap"/>
+            <Button Content="{loc:Localize GdsReview.ReuseSaved}" IsVisible="{Binding HasSavedInterpretation}"
+                    Command="{Binding ReuseSavedCommand}"/>
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsLayerStep}" Spacing="10">
+            <TextBlock Classes="strong" Text="{loc:Localize GdsReview.LayerRoles}"/>
+            <ListBox ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}" MaxHeight="210">
+              <ListBox.ItemTemplate><DataTemplate x:DataType="vm:GdsLayerReviewRow">
+                <Grid ColumnDefinitions="70,*" Margin="4">
+                  <TextBlock Text="{Binding Label}" Classes="mono"/>
+                  <TextBlock Grid.Column="1" Text="{Binding SelectedRole.Label}" TextWrapping="Wrap" Classes="caption secondary"/>
+                </Grid>
+              </DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="{Binding SelectedLayer.Counts}" Classes="caption secondary"/>
+            <ComboBox x:Name="GdsReviewRole" ItemsSource="{Binding SelectedLayer.Choices}"
+                      SelectedItem="{Binding SelectedLayer.SelectedRole}" HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:GdsRoleChoice"><TextBlock Text="{Binding Label}"/></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Text="{loc:Localize GdsReview.UnknownSafe}" TextWrapping="Wrap" Classes="caption secondary"/>
+            <Expander Header="{loc:Localize GdsReview.Profiles}">
+              <StackPanel Spacing="8" Margin="0,8">
+                <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" HorizontalAlignment="Stretch">
+                  <ComboBox.ItemTemplate><DataTemplate x:DataType="svc:GdsLayerProfile"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Content="{loc:Localize GdsReview.LoadProfile}" Command="{Binding LoadProfileCommand}"/>
+                <TextBox Text="{Binding ProfileName}" Watermark="{loc:Localize GdsReview.ProfileName}"/>
+                <Button Content="{loc:Localize GdsReview.SaveProfile}" Command="{Binding SaveProfileCommand}"/>
+              </StackPanel>
+            </Expander>
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsCellStep}" Spacing="12">
+            <TextBlock Classes="strong" Text="{loc:Localize GdsReview.CellMeaning}"/>
+            <TextBox Text="{Binding SelectedCell.DisplayName}" Watermark="{loc:Localize GdsReview.ComponentName}"/>
+            <CheckBox x:Name="GdsReviewExpand" Content="{loc:Localize GdsReview.ExpandChildren}"
+                      IsChecked="{Binding SelectedCell.ExpandChildren}" IsEnabled="{Binding SelectedCell.CanExpand}"/>
+            <TextBlock Classes="caption secondary" TextWrapping="Wrap" Text="{loc:Localize GdsReview.CellScope}"/>
+            <Expander Header="{loc:Localize GdsReview.GroupCells}">
+              <StackPanel Spacing="8" Margin="0,8">
+                <ItemsControl ItemsSource="{Binding ActiveCells}">
+                  <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GdsCellReviewRow">
+                    <CheckBox Content="{Binding CellName}" IsChecked="{Binding IncludeInGroup}"/>
+                  </DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBox Text="{Binding GroupName}"/>
+                <Button Content="{loc:Localize GdsReview.GroupCells}" Command="{Binding GroupCellsCommand}"/>
+                <TextBlock Text="{Binding GroupSummary}" Classes="caption success" TextWrapping="Wrap"/>
+                <Button Classes="ghost" Content="{loc:Localize GdsReview.ClearGroups}" Command="{Binding ClearGroupsCommand}"/>
+              </StackPanel>
+            </Expander>
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsPortStep}" Spacing="8">
+            <TextBlock Classes="strong" Text="{loc:Localize GdsReview.Ports}"/>
+            <TextBlock Classes="caption warning" IsVisible="{Binding SelectedCell.DetectionLimited}"
+                       Text="{loc:Localize GdsReview.ManualPortsRequired}" TextWrapping="Wrap"/>
+            <ListBox ItemsSource="{Binding SelectedCell.Ports}" SelectedItem="{Binding SelectedPort}" MaxHeight="135">
+              <ListBox.ItemTemplate><DataTemplate x:DataType="vm:GdsPortReviewRow"><TextBlock Text="{Binding Name}"/></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button x:Name="GdsReviewAddPort" Content="+" Command="{Binding AddPortCommand}" ToolTip.Tip="{loc:Localize GdsReview.AddPort}"/>
+              <Button Content="−" Command="{Binding RemovePortCommand}" ToolTip.Tip="{loc:Localize GdsReview.RemovePort}"/>
+            </StackPanel>
+            <TextBox Text="{Binding SelectedPort.Name}" Watermark="{loc:Localize GdsReview.PortName}"/>
+            <ComboBox x:Name="GdsReviewPortKind" ItemsSource="{x:Static vm:GdsPortReviewRow.Kinds}"
+                      SelectedItem="{Binding SelectedPort.Kind}" HorizontalAlignment="Stretch"/>
+            <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.PortCoordinates}" TextWrapping="Wrap"/>
+            <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,Auto,Auto,Auto">
+              <TextBlock Text="X · µm" Classes="caption secondary"/>
+              <TextBlock Grid.Column="2" Text="Y · µm" Classes="caption secondary"/>
+              <NumericUpDown Grid.Row="1" Value="{Binding SelectedPort.XUm}" Increment="0.1" FormatString="0.###"/>
+              <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding SelectedPort.YUm}" Increment="0.1" FormatString="0.###"/>
+              <TextBlock Grid.Row="2" Text="{loc:Localize GdsReview.Direction}" Classes="caption secondary" Margin="0,8,0,3"/>
+              <TextBlock Grid.Row="2" Grid.Column="2" Text="{loc:Localize GdsReview.Width}" Classes="caption secondary" Margin="0,8,0,3"/>
+              <NumericUpDown Grid.Row="3" Value="{Binding SelectedPort.AngleDegrees}" Increment="90" FormatString="0.##"/>
+              <NumericUpDown Grid.Row="3" Grid.Column="2" Value="{Binding SelectedPort.WidthUm}" Increment="0.1" FormatString="0.###"/>
+            </Grid>
+            <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.PortDrag}" TextWrapping="Wrap"/>
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsModelStep}" Spacing="12">
+            <TextBlock Classes="strong" Text="{loc:Localize GdsReview.Model}"/>
+            <ComboBox x:Name="GdsReviewModel" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedCell.SelectedModel}"
+                      PlaceholderText="{loc:Localize GdsReview.GeometryOnly}" HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="svc:GdsModelCandidate">
+                <StackPanel><TextBlock Text="{Binding ComponentName}"/><TextBlock Text="{Binding PdkName}" Classes="caption secondary"/></StackPanel>
+              </DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button x:Name="GdsReviewGeometryOnly" Content="{loc:Localize GdsReview.GeometryOnly}" Command="{Binding GeometryOnlyCommand}"/>
+            <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.ModelWarning}" TextWrapping="Wrap"/>
+            <TextBlock Classes="strong" Text="{loc:Localize GdsReview.PinMapping}"/>
+            <ItemsControl ItemsSource="{Binding SelectedCell.Ports}">
+              <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GdsPortReviewRow">
+                <Grid ColumnDefinitions="70,*" Margin="0,4">
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                  <ComboBox Grid.Column="1" SelectedItem="{Binding ModelPortName}" PlaceholderText="{Binding Name}"
+                            HorizontalAlignment="Stretch"
+                            ItemsSource="{ReflectionBinding $parent[UserControl].DataContext.SelectedCell.SelectedModel.PinNames}"/>
+                </Grid>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsSummaryStep}" Spacing="12">
+            <TextBlock Classes="strong" Text="{loc:Localize GdsReview.Ready}"/>
+            <TextBlock Text="{Binding Summary}" TextWrapping="Wrap"/>
+            <TextBlock Text="{loc:Localize GdsReview.Persistence}" TextWrapping="Wrap" Classes="secondary"/>
+            <TextBlock Text="{loc:Localize GdsReview.NoReroute}" TextWrapping="Wrap" Classes="caption success"/>
+            <TextBox Text="{Binding ProfileName}" Watermark="{loc:Localize GdsReview.ProfileName}"/>
+            <Button Content="{loc:Localize GdsReview.SaveProfile}" Command="{Binding SaveProfileCommand}"/>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+    <Grid Grid.Row="2" Grid.ColumnSpan="3" ColumnDefinitions="*,Auto,Auto" Margin="8,18,0,0">
+      <StackPanel>
+        <TextBlock Text="{Binding Message}" Classes="caption warning" TextWrapping="Wrap"/>
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsWorking}" Height="3" Margin="0,8,12,0"/>
+      </StackPanel>
+      <Button Grid.Column="1" Classes="ghost" Content="{loc:Localize GdsReview.Back}" Command="{Binding BackCommand}" Margin="12,0"/>
+      <Button x:Name="GdsReviewNext" Grid.Column="2" Classes="primary" Content="{Binding NextText}" Command="{Binding NextCommand}"/>
+    </Grid>
+    <tour:TourAnchorOverlay Grid.RowSpan="3" Grid.ColumnSpan="3" TargetName="{Binding GuideTargetName}"
+                            Demonstrate="True" IsVisible="{Binding GuideEnabled}">
+      <tour:TourAnchorOverlay.Card>
+        <Border Classes="card" Padding="12" MaxWidth="290">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding StageDescription}" TextWrapping="Wrap" MaxWidth="235" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Classes="ghost" Content="×" Command="{Binding PauseGuideCommand}" ToolTip.Tip="{loc:Localize GdsReview.PauseGuide}"/>
+          </Grid>
+        </Border>
+      </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+  </Grid>
+</UserControl>

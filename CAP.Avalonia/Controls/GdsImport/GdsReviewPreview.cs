@@ -1,0 +1,212 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Media;
+using CAP_DataAccess.Import.Gds;
+using CAP_DataAccess.Import.Gds.LayerPicker;
+
+namespace CAP.Avalonia.Controls.GdsImport;
+
+/// <summary>Native GDS review surface with layer selection and editable local-cell ports.</summary>
+public sealed class GdsReviewPreview : Control
+{
+    private const double PaddingPixels = 24;
+    private const double PortRadius = 6;
+    private const double PickRadius = 10;
+    private static readonly IBrush BackgroundBrush = new SolidColorBrush(Color.Parse("#11191D"));
+    private static readonly IBrush PortBrush = new SolidColorBrush(Color.Parse("#53EEE0"));
+    private GdsReviewGeometryCache? _cache;
+    private double _zoom = 1;
+    private Vector _pan;
+    private Point? _panStart;
+    private int _dragPort = -1;
+    private IPointer? _capturedPointer;
+
+    /// <summary>The flattened GDS geometry to review.</summary>
+    public static readonly StyledProperty<GdsLayerGeometryScene?> SceneProperty =
+        AvaloniaProperty.Register<GdsReviewPreview, GdsLayerGeometryScene?>(nameof(Scene));
+    /// <summary>The emphasized source layer.</summary>
+    public static readonly StyledProperty<GdsLayerPair?> HighlightLayerProperty =
+        AvaloniaProperty.Register<GdsReviewPreview, GdsLayerPair?>(nameof(HighlightLayer));
+    /// <summary>The editable ports, in cell-local application coordinates.</summary>
+    public static readonly StyledProperty<IReadOnlyList<DetectedPin>?> PortsProperty =
+        AvaloniaProperty.Register<GdsReviewPreview, IReadOnlyList<DetectedPin>?>(nameof(Ports));
+    /// <summary>The selected port index.</summary>
+    public static readonly StyledProperty<int> SelectedPortIndexProperty =
+        AvaloniaProperty.Register<GdsReviewPreview, int>(nameof(SelectedPortIndex), -1);
+    /// <summary>Whether ports are shown and can be edited.</summary>
+    public static readonly StyledProperty<bool> ShowPortsProperty =
+        AvaloniaProperty.Register<GdsReviewPreview, bool>(nameof(ShowPorts));
+    /// <summary>Whether the display omits geometry to stay responsive.</summary>
+    public static readonly DirectProperty<GdsReviewPreview, bool> IsPreviewLimitedProperty =
+        AvaloniaProperty.RegisterDirect<GdsReviewPreview, bool>(nameof(IsPreviewLimited), c => c.IsPreviewLimited);
+    private bool _isPreviewLimited;
+
+    /// <summary>Gets or sets the source scene.</summary>
+    public GdsLayerGeometryScene? Scene { get => GetValue(SceneProperty); set => SetValue(SceneProperty, value); }
+    /// <summary>Gets or sets the highlighted layer.</summary>
+    public GdsLayerPair? HighlightLayer { get => GetValue(HighlightLayerProperty); set => SetValue(HighlightLayerProperty, value); }
+    /// <summary>Gets or sets the port snapshot; replace it after edits.</summary>
+    public IReadOnlyList<DetectedPin>? Ports { get => GetValue(PortsProperty); set => SetValue(PortsProperty, value); }
+    /// <summary>Gets or sets the selected port index.</summary>
+    public int SelectedPortIndex { get => GetValue(SelectedPortIndexProperty); set => SetValue(SelectedPortIndexProperty, value); }
+    /// <summary>Gets or sets port visibility and editing.</summary>
+    public bool ShowPorts { get => GetValue(ShowPortsProperty); set => SetValue(ShowPortsProperty, value); }
+    /// <summary>Gets whether this preview is limited; source geometry remains intact.</summary>
+    public bool IsPreviewLimited => _isPreviewLimited;
+    /// <summary>Raised when visible source geometry is picked.</summary>
+    public event Action<GdsLayerPair>? LayerPicked;
+    /// <summary>Raised when a port is selected.</summary>
+    public event Action<int>? PortPicked;
+    /// <summary>Raised during dragging with bounded local X/Y in micrometers.</summary>
+    public event Action<int, double, double>? PortMoved;
+    public event Action? PortDragStarted;
+    public event Action? PortDragCompleted;
+
+    static GdsReviewPreview() =>
+        AffectsRender<GdsReviewPreview>(SceneProperty, HighlightLayerProperty, PortsProperty, SelectedPortIndexProperty, ShowPortsProperty);
+
+    /// <summary>Resets zoom and pan to fit the entire scene.</summary>
+    public void Fit()
+    {
+        _zoom = 1;
+        _pan = default;
+        InvalidateVisual();
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == SceneProperty)
+        {
+            CancelGesture();
+            _cache = Scene is { } scene ? new GdsReviewGeometryCache(scene) : null;
+            SetAndRaise(IsPreviewLimitedProperty, ref _isPreviewLimited, _cache?.IsLimited == true);
+            Fit();
+        }
+        if (change.Property == ShowPortsProperty && !ShowPorts) CancelGesture();
+    }
+
+    private (double Scale, Point Offset) Transform()
+    {
+        var box = Scene!.Bounds;
+        var width = Math.Max(1, Bounds.Width - 2 * PaddingPixels);
+        var height = Math.Max(1, Bounds.Height - 2 * PaddingPixels);
+        var scale = Math.Min(width / Math.Max(1, box.Width), height / Math.Max(1, box.Height)) * _zoom;
+        return (scale, new Point((Bounds.Width - box.Width * scale) / 2 + _pan.X,
+            (Bounds.Height - box.Height * scale) / 2 + _pan.Y));
+    }
+
+    /// <inheritdoc/>
+    public override void Render(DrawingContext context)
+    {
+        context.FillRectangle(BackgroundBrush, new Rect(Bounds.Size));
+        if (Scene is null || _cache is null) return;
+        var (scale, offset) = Transform();
+        using var clip = context.PushClip(new Rect(Bounds.Size));
+        using (context.PushTransform(new Matrix(scale, 0, 0, scale, offset.X, offset.Y)))
+        {
+            foreach (var layer in _cache.Layers)
+            {
+                var selected = HighlightLayer == layer.Pair;
+                using var opacity = context.PushOpacity(selected ? 0.95 : HighlightLayer.HasValue ? 0.22 : 0.68);
+                var pen = selected ? new Pen(PortBrush, 1.5 / scale) : null;
+                foreach (var geometry in layer.Geometries)
+                    context.DrawGeometry(layer.Fill, pen, geometry);
+                foreach (var text in layer.Texts)
+                    context.DrawEllipse(layer.Fill, pen, text, 3 / scale, 3 / scale);
+            }
+        }
+        if (!ShowPorts || Ports is null) return;
+        for (var i = 0; i < Ports.Count; i++)
+        {
+            var port = Ports[i];
+            var center = new Point(offset.X + port.XUm * scale, offset.Y + port.YUm * scale);
+            var angle = port.AngleDegrees * Math.PI / 180;
+            var end = center + new Vector(Math.Cos(angle) * 18, Math.Sin(angle) * 18);
+            context.DrawLine(new Pen(PortBrush, 2), center, end);
+            context.DrawEllipse(i == SelectedPortIndex ? Brushes.White : PortBrush,
+                new Pen(BackgroundBrush, 2), center, PortRadius, PortRadius);
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        if (Scene is null) return;
+        var point = e.GetPosition(this);
+        var buttons = e.GetCurrentPoint(this).Properties;
+        if (buttons.IsMiddleButtonPressed) _panStart = point;
+        else if (buttons.IsLeftButtonPressed)
+        {
+            var (scale, offset) = Transform();
+            var local = (point - offset) / scale;
+            if (ShowPorts && Ports is { } ports)
+                for (var i = ports.Count - 1; i >= 0; i--)
+                    if ((new Vector(ports[i].XUm, ports[i].YUm) - local).Length * scale <= PickRadius)
+                    { _dragPort = i; PortPicked?.Invoke(i); PortDragStarted?.Invoke(); break; }
+            if (_dragPort < 0 && _cache is { } cache &&
+                GdsLayerHitTester.TryPick(cache.PickScene, local.X + Scene.Bounds.MinX,
+                    Scene.Bounds.MaxY - local.Y, PickRadius / scale, out var pair))
+                LayerPicked?.Invoke(pair);
+        }
+        else return;
+        if (_panStart.HasValue || _dragPort >= 0)
+        { _capturedPointer = e.Pointer; e.Pointer.Capture(this); }
+        e.Handled = true;
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        var position = e.GetPosition(this);
+        if (_panStart is { } start)
+        { _pan += position - start; _panStart = position; InvalidateVisual(); }
+        else if (_dragPort >= 0 && ShowPorts && Scene is { } scene && _dragPort < (Ports?.Count ?? 0))
+        {
+            var (scale, offset) = Transform();
+            var local = (position - offset) / scale;
+            PortMoved?.Invoke(_dragPort, Math.Clamp(local.X, 0, Math.Max(0, scene.Bounds.Width)),
+                Math.Clamp(local.Y, 0, Math.Max(0, scene.Bounds.Height)));
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    { base.OnPointerReleased(e); CancelGesture(); }
+    /// <inheritdoc/>
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    { base.OnPointerCaptureLost(e); CancelGesture(); }
+    /// <inheritdoc/>
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    { CancelGesture(); base.OnDetachedFromVisualTree(e); }
+
+    private void CancelGesture()
+    {
+        var pointer = _capturedPointer;
+        var wasDragging = _dragPort >= 0;
+        _capturedPointer = null;
+        _dragPort = -1;
+        _panStart = null;
+        pointer?.Capture(null);
+        if (wasDragging) PortDragCompleted?.Invoke();
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        if (Scene is null) return;
+        var point = e.GetPosition(this);
+        var before = Transform();
+        var local = (point - before.Offset) / before.Scale;
+        _zoom = Math.Clamp(_zoom * Math.Pow(1.2, e.Delta.Y), 0.1, 100);
+        var after = Transform();
+        _pan += point - (after.Offset + local * after.Scale);
+        InvalidateVisual();
+        e.Handled = true;
+    }
+}

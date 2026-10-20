@@ -46,7 +46,7 @@ public partial class GdsImportDialogViewModel
     {
         PinSuggestions.Clear();
 
-        if (_analyzedLibrary is null || SelectedTopCell is null)
+        if (EnableReview || _analyzedLibrary is null || SelectedTopCell is null)
         {
             OnPropertyChanged(nameof(HasPinSuggestions));
             return;

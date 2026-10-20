@@ -5,15 +5,16 @@
         xmlns:gds="using:CAP.Avalonia.Services.GdsImport"
         xmlns:controls="using:CAP.Avalonia.Controls"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
+        xmlns:review="using:CAP.Avalonia.Controls.GdsImport"
         x:Class="CAP.Avalonia.Views.Dialogs.GdsImportDialog"
         x:DataType="vm:GdsImportDialogViewModel"
         Title="{loc:Localize GdsImport.WindowTitle}"
-        Width="560" MaxHeight="720"
-        SizeToContent="Height"
+        Width="1200" Height="800" MinWidth="950" MinHeight="650"
         WindowStartupLocation="CenterOwner"
-        CanResize="False">
+        CanResize="True">
 
-    <DockPanel>
+    <Grid>
+    <DockPanel IsVisible="{Binding !HasReview}">
 
         <!-- Footer -->
         <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Brush.Border.Subtle}"
@@ -360,4 +361,18 @@
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
+    <Grid IsVisible="{Binding HasReview}" RowDefinitions="Auto,*,Auto">
+        <Grid ColumnDefinitions="Auto,*,Auto" Margin="24,12,24,0">
+            <TextBlock Text="{loc:Localize GdsImport.TopCellLabel}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+            <ComboBox Grid.Column="1" ItemsSource="{Binding TopCells}" SelectedItem="{Binding SelectedTopCell}"
+                      IsEnabled="{Binding !IsBusy}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="gds:GdsTopCellSummary"><TextBlock Text="{Binding CellName}"/></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Grid.Column="2" Classes="ghost" Content="{Binding CloseButtonText}" Command="{Binding CancelCommand}" Margin="12,0,0,0"/>
+        </Grid>
+        <review:GdsInterpretationReviewView Grid.Row="1" DataContext="{Binding Review}" IsEnabled="{Binding !IsBusy}"/>
+        <TextBlock Grid.Row="2" Text="{Binding ErrorText}" IsVisible="{Binding HasError}"
+                   Classes="warning" TextWrapping="Wrap" Margin="24,0,24,12"/>
+    </Grid>
+    </Grid>
 </Window>

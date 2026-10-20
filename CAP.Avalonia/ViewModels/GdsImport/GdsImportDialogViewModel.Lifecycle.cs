@@ -33,6 +33,12 @@ public partial class GdsImportDialogViewModel
     /// </summary>
     public void OnWindowClosed()
     {
+        _reviewGeneration++;
+        if(Review!=null)
+        {
+            Review.PropertyChanged-=OnReviewChanged;
+            Review.Close();
+        }
         if (_continueRunAfterWindowClose)
             return;
         CancelCurrentRun();

@@ -104,6 +104,7 @@ public partial class GdsImportDialogViewModel
     {
         RebuildSuggestions();
         RebuildPinSuggestions();
+        _ = RefreshSelectedReviewAsync();
     }
 
     partial void OnPortLayersTextChanged(string value)
@@ -130,6 +131,7 @@ public partial class GdsImportDialogViewModel
     private void RebuildSuggestions()
     {
         SuggestionChips.Clear();
+        if(EnableReview)return; // Native review uses bounded scenes; do not flatten the layout for legacy chips.
         if (_analyzedLibrary is not null && SelectedTopCell is not null && _layerCensus.Count > 0)
         {
             var suggestions = GdsLayerSuggestionEngine.Build(

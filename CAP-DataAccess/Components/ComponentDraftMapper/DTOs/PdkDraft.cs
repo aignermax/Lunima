@@ -54,6 +54,10 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
 
     public class PdkComponentDraft
     {
+        /// <summary>Explicit imported model readiness; null preserves legacy component behavior.</summary>
+        [JsonPropertyName("importedModelStatus")]
+        public string? ImportedModelStatus { get; set; }
+
         [JsonPropertyName("name")]
         public string Name { get; set; }
 

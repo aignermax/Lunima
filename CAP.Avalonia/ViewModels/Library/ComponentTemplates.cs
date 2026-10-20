@@ -126,6 +126,7 @@ public static class ComponentTemplates
             DiscreteRotation.R0,
             physicalPins);
 
+        component.SimulationModelStatus = template.SourceDraft?.ImportedModelStatus;
         component.PhysicalX = x;
         component.PhysicalY = y;
         component.WidthMicrometers = template.WidthMicrometers;

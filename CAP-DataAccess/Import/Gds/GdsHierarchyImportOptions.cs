@@ -59,11 +59,23 @@ public sealed record KnownComponent(
 /// </summary>
 public sealed record GdsHierarchyImportOptions
 {
+    /// <summary>Original layout frame retained when reviewed hierarchy expansion removes internal annotations.</summary>
+    public GdsBoundingBox? SourceTopBoundingBox { get; init; }
+
+    /// <summary>Explicit interpretation; manual decisions override detection.</summary>
+    public Interpretation.GdsImportInterpretation? Interpretation { get; init; }
+
     /// <summary>Hierarchy handling mode. Default: <see cref="GdsHierarchyImportMode.ExplodeHierarchy"/>.</summary>
     public GdsHierarchyImportMode Mode { get; init; } = GdsHierarchyImportMode.ExplodeHierarchy;
 
     /// <summary>Pin detection configuration forwarded to <see cref="GdsPinDetector"/>.</summary>
     public GdsPinDetectionOptions PinDetection { get; init; } = new();
+
+    /// <summary>
+    /// Discover labels on unconfigured layers when configured labels are absent.
+    /// Confirmed layer-role mappings disable this legacy convenience.
+    /// </summary>
+    public bool AllowAnyLayerLabelFallback { get; init; } = true;
 
     /// <summary>
     /// Heuristic (edge-detected) pins the user explicitly removed in the import

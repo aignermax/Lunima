@@ -67,6 +67,7 @@ public static class GdsCellDraftMapper
             Pins = pins.Select(p => new PhysicalPinDraft
             {
                 Name = p.Name,
+                PortType = p.PortType,
                 OffsetXMicrometers = p.XUm,
                 OffsetYMicrometers = p.YUm,
                 AngleDegrees = p.AngleDegrees,
@@ -77,7 +78,7 @@ public static class GdsCellDraftMapper
                 PinKind = p.IsElectrical == true
                     ? CAP_Core.Components.PinKinds.PinKindHelper.ElectricalKindName
                     : null,
-                WaveguideWidthMicrometers = p.IsElectrical == true ? null : processDefaultWidthUm,
+                WaveguideWidthMicrometers = p.IsElectrical == true ? null : p.WidthUm > 0 ? p.WidthUm : processDefaultWidthUm,
                 Layer = p.Layer,
             }).ToList(),
             SMatrix = null,

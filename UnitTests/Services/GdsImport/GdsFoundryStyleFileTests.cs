@@ -4,6 +4,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.GdsImport;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_DataAccess.Import.Gds;
+using GdsLayerRole = CAP_DataAccess.Import.Gds.LayerCensus.GdsLayerRole;
 using CAP_DataAccess.Import.Gds.LayerCensus;
 using Shouldly;
 using UnitTests.Import.Gds;
