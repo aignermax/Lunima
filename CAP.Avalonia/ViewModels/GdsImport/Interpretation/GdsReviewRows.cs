@@ -9,6 +9,8 @@ namespace CAP.Avalonia.ViewModels.GdsImport.Interpretation;
 
 public sealed record GdsRoleChoice(GdsLayerRole Role, string Label)
 {
+    public string Description => LocalizationService.Instance.Translate("GdsReview.RoleHelp." +
+        (Role == (GdsLayerRole.PortMarker | GdsLayerRole.PortLabel) ? "MarkerLabel" : Role.ToString()));
     public override string ToString() => Label;
 }
 
@@ -20,6 +22,13 @@ public sealed partial class GdsLayerReviewRow : ObservableObject
     public string Label => $"{Layer} / {Datatype}";
     public string Counts { get; }
     public IReadOnlyList<GdsRoleChoice> Choices { get; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPinEvidence))]
+    [NotifyPropertyChangedFor(nameof(PinEvidenceText))]
+    private int _suggestedPinCount;
+    public bool HasPinEvidence => SuggestedPinCount > 0;
+    public string PinEvidenceText => string.Format(
+        LocalizationService.Instance.Translate("GdsReview.PinEvidence"), SuggestedPinCount);
     [ObservableProperty] private GdsLayerRole _role;
     public GdsRoleChoice SelectedRole
     {
@@ -52,6 +61,7 @@ public sealed partial class GdsPortReviewRow : ObservableObject
     [ObservableProperty] private double _angleDegrees;
     [ObservableProperty] private double _widthUm;
     [ObservableProperty] private string _kind = "optical";
+    [ObservableProperty] private bool _needsKindReview;
     [ObservableProperty] private string _modelPortName = "";
     public static IReadOnlyList<string> Kinds { get; } = ["optical", "electrical", "vertical_te", "vertical_tm"];
     public int? Layer { get; }
@@ -60,7 +70,9 @@ public sealed partial class GdsPortReviewRow : ObservableObject
         _name = pin.Name; _xUm = pin.XUm; _yUm = pin.YUm; _angleDegrees = pin.AngleDegrees;
         _widthUm = pin.WidthUm; Layer = pin.Layer;
         _kind = pin.IsElectrical == true ? "electrical" : pin.PortType ?? "optical";
+        _needsKindReview = pin.IsElectrical == null && pin.PortType == null;
     }
+    partial void OnKindChanged(string value) => NeedsKindReview = false;
     public DetectedPin ToPin() => new()
     {
         Name = Name.Trim(),
@@ -69,8 +81,8 @@ public sealed partial class GdsPortReviewRow : ObservableObject
         AngleDegrees = AngleDegrees,
         WidthUm = WidthUm,
         Layer = Layer,
-        IsElectrical = Kind == "electrical",
-        PortType = Kind == "electrical" ? "electrical" : Kind,
+        IsElectrical = NeedsKindReview ? null : Kind == "electrical",
+        PortType = NeedsKindReview ? null : Kind,
         Source = DetectedPinSource.Label
     };
 }

@@ -14,6 +14,7 @@ public sealed class GdsReviewSceneBuilder
     private const int NodeBudget = 100_000;
     private readonly GdsLibrary _library;
     private readonly Dictionary<BoundsKey, GdsBoundingBox?> _bounds = new();
+    private readonly Dictionary<string, IReadOnlyList<GdsLayerPair>> _layerPairs = new(StringComparer.Ordinal);
     private readonly object _boundsGate = new();
     private readonly record struct BoundsKey(string CellName, GdsTransform Linear);
 
@@ -40,6 +41,7 @@ public sealed class GdsReviewSceneBuilder
             CellName = cellName,
             Bounds = bounds,
             IsLimited = budget.Limited,
+            ReviewSource = this,
             Layers = layers.OrderBy(x => x.Key.Layer).ThenBy(x => x.Key.Datatype)
                 .Select(x => new GdsLayerGeometry
                 {
@@ -48,6 +50,48 @@ public sealed class GdsReviewSceneBuilder
                     Texts = x.Value.Texts.ToArray(),
                 }).ToArray(),
         };
+    }
+
+    /// <summary>Returns only the geometry owned by a cell, without expanding references.</summary>
+    public GdsLayerGeometryScene BuildLocalScene(string cellName)
+    {
+        var elements = Cell(cellName).Elements;
+        var polygons = elements.OfType<GdsPolygon>()
+            .Concat(elements.OfType<GdsPath>().SelectMany(GdsPathOutliner.Outline))
+            .GroupBy(p => new GdsLayerPair(p.Layer, p.DataType))
+            .ToDictionary(g => g.Key, g => g.ToArray());
+        var texts = elements.OfType<GdsText>()
+            .GroupBy(t => new GdsLayerPair(t.Layer, t.TextType))
+            .ToDictionary(g => g.Key, g => g.ToArray());
+        return new GdsLayerGeometryScene
+        {
+            CellName = cellName,
+            Bounds = GetBounds(cellName),
+            Layers = polygons.Keys.Union(texts.Keys).OrderBy(p => p.Layer).ThenBy(p => p.Datatype)
+                .Select(p => new GdsLayerGeometry
+                {
+                    Pair = p,
+                    Polygons = polygons.GetValueOrDefault(p) ?? [],
+                    Texts = texts.GetValueOrDefault(p) ?? [],
+                }).ToArray(),
+        };
+    }
+
+    /// <summary>Returns compact references, preserving arrays instead of expanding their instances.</summary>
+    public IReadOnlyList<GdsReference> GetReferences(string cellName) =>
+        Cell(cellName).Elements.OfType<GdsReference>().Where(r => r.Columns > 0 && r.Rows > 0).ToArray();
+
+    /// <summary>Layer metadata for a whole subtree, without allocating its geometry.</summary>
+    public IReadOnlyList<GdsLayerPair> GetLayerPairs(string cellName)
+    {
+        lock (_boundsGate)
+            if (_layerPairs.TryGetValue(cellName, out var cached))
+                return cached;
+        var layers = new Dictionary<GdsLayerPair, LayerData>();
+        CollectLayers(cellName, layers, new HashSet<string>(StringComparer.Ordinal), default);
+        var result = layers.Keys.OrderBy(p => p.Layer).ThenBy(p => p.Datatype).ToArray();
+        lock (_boundsGate) _layerPairs[cellName] = result;
+        return result;
     }
 
     private GdsBoundingBox? Bounds(

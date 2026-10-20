@@ -56,14 +56,9 @@ public sealed partial class GdsInterpretationReviewViewModel
                     return cells.ToDictionary(x => x.CellName, x =>
                     {
                         _lifetime.Token.ThrowIfCancellationRequested();
-                        var scene = _sceneBuilder.Build(x.CellName, _lifetime.Token);
-                        // A sampled scene cannot prove port completeness. Ask for explicit ports instead.
-                        if (scene.IsLimited) return (Pins: (IReadOnlyList<DetectedPin>)Array.Empty<DetectedPin>(), Limited: true);
-                        var detection = new FlattenedGdsCell { CellName = x.CellName };
-                        detection.Polygons.AddRange(scene.Layers.SelectMany(layer => layer.Polygons));
-                        detection.Texts.AddRange(_library.Cells[x.CellName].Elements.OfType<GdsText>());
-                        return (Pins: GdsPinNameNormalizer.Normalize(
-                            GdsPinDetector.Detect(detection, x.Bounds, options.PinDetection), x.CellName, new()), Limited: false);
+                        var result = GdsReviewPinDetector.Detect(_library.Cells[x.CellName], x.Bounds,
+                            options.PinDetection, _lifetime.Token);
+                        return (Pins: result.Pins, Limited: result.Limited);
                     });
                 }, _lifetime.Token);
                 }

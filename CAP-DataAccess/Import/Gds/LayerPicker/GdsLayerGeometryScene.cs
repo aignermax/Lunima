@@ -45,6 +45,12 @@ public sealed record GdsLayerGeometryScene
     public bool IsLimited { get; init; }
 
     /// <summary>
+    /// Complete hierarchy backing a bounded review sample. Native viewers render
+    /// each cell once and reuse it at reference placements rather than flattening arrays.
+    /// </summary>
+    public GdsReviewSceneBuilder? ReviewSource { get; init; }
+
+    /// <summary>
     /// Flattens <paramref name="topCellName"/> and groups its geometry by
     /// (layer, datatype). Texts group by their texttype so the pairs line up
     /// with the layer census and the port-layer field syntax.

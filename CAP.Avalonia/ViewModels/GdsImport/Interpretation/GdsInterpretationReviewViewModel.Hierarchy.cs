@@ -4,6 +4,16 @@ namespace CAP.Avalonia.ViewModels.GdsImport.Interpretation;
 
 public sealed partial class GdsInterpretationReviewViewModel
 {
+    /// <summary>Selects the exposed component containing a clicked source cell.</summary>
+    public void PickCell(IReadOnlyList<string> cellPath)
+    {
+        if (!IsCellStep) return;
+        var visible = DisplayCells;
+        var selected = cellPath.Reverse().Select(name => visible.FirstOrDefault(x => x.CellName == name))
+            .FirstOrDefault(row => row != null);
+        if (selected != null) SelectedCell = selected;
+    }
+
     /// <summary>Only exposed cells can be edited as independently placed components.</summary>
     public IReadOnlyList<GdsCellReviewRow> DisplayCells => IsCellStep ? VisibleHierarchy() : ActiveCells;
     public IReadOnlyList<GdsCellReviewRow> ActiveCells => VisibleHierarchy().Where(x => !x.ExpandChildren).ToArray();

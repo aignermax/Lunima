@@ -10,6 +10,7 @@ public partial class GdsInterpretationReviewView : UserControl
     {
         InitializeComponent();
         ReviewPreview.LayerPicked += pair => (DataContext as GdsInterpretationReviewViewModel)?.PickLayer(pair);
+        ReviewPreview.CellPathPicked += path => (DataContext as GdsInterpretationReviewViewModel)?.PickCell(path);
         ReviewPreview.PortPicked += index => (DataContext as GdsInterpretationReviewViewModel)?.PickPort(index);
         ReviewPreview.PortMoved += (index, x, y) => (DataContext as GdsInterpretationReviewViewModel)?.MovePort(index, x, y);
         ReviewPreview.PortDragStarted += () => (DataContext as GdsInterpretationReviewViewModel)?.BeginPortDrag();

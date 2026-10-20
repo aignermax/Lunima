@@ -53,21 +53,52 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     public bool IsModelStep => StageIndex == 4;
     public bool IsSummaryStep => StageIndex == 5;
     public bool ShowCellSelector => StageIndex is 2 or 3 or 4;
+    public bool HasSelectedPort => SelectedPort != null;
+    public bool HasSelectedModel => SelectedCell?.SelectedModel != null;
+    public IReadOnlyList<GdsModelCandidate> CompatibleModels => SelectedCell is not { } cell || cell.Ports.Count == 0
+        ? [] : Models.Where(model => model.PinNames.Count == cell.Ports.Count &&
+            model.PinNames.Select(name => model.PinDomains.GetValueOrDefault(name, "optical"))
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .SequenceEqual(cell.Ports.Select(port => port.Kind == "electrical" ? "electrical" : "optical").Order(StringComparer.OrdinalIgnoreCase),
+                    StringComparer.OrdinalIgnoreCase)).ToArray();
+    public bool HasCompatibleModels => CompatibleModels.Count > 0;
+    public string? HighlightCellName => IsCellStep ? SelectedCell?.CellName : null;
     public string StageTitle => Text("Step" + StageIndex);
     public string StageDescription => Text("Description" + StageIndex);
     public string NextText => Text(StageIndex == 5 ? "Apply" : "ConfirmNext");
     public string Summary => string.Format(Text("Summary"), Layers.Count, ActiveCells.Count, _groups.Count);
+    public string ConnectionReadiness => string.Format(Text("ConnectionReadiness"),
+        ActiveCells.Count(x => x.Ports.Count == 0), ActiveCells.Count(x => x.SelectedModel != null), ActiveCells.Count);
+    public string RouteReadiness => Text(Layers.Any(x => (x.Role & (GdsLayerRole.OpticalCore | GdsLayerRole.Electrical | GdsLayerRole.Heater)) != 0)
+        ? "RouteLayersChosen" : "NoRouteLayers");
     public string GroupSummary => string.Join(", ", _groups.Select(x => x.Name));
+    public string GuideToggleText => Text(GuideEnabled ? "PauseGuide" : "ShowMe");
+    public object? GuideTargetItem => IsLayerStep ? SelectedLayer?.SelectedRole : null;
+    [RelayCommand]
+    private void ToggleGuide()
+    {
+        if (GuideEnabled) PauseGuide();
+        else RestartGuide();
+    }
+    [RelayCommand]
+    private void ConfirmPortKind()
+    {
+        if (SelectedPort is not { NeedsKindReview: true } port) return;
+        RecordEdit();
+        port.NeedsKindReview = false;
+        FinishEdit();
+    }
+    partial void OnGuideEnabledChanged(bool value) => OnPropertyChanged(nameof(GuideToggleText));
     public string GuideTargetName => StageIndex switch
     {
         0 => "GdsReviewNext",
         1 => "GdsReviewRole",
         2 => SelectedCell?.CanExpand == true ? "GdsReviewExpand" : "GdsReviewCellSelector",
         3 => SelectedPort != null ? "GdsReviewPortKind" : "GdsReviewAddPort",
-        4 => Models.Count > 0 ? "GdsReviewModel" : "GdsReviewGeometryOnly",
+        4 => HasCompatibleModels ? "GdsReviewModel" : "GdsReviewGeometryOnly",
         _ => "GdsReviewNext"
     };
-    public GdsLayerGeometryScene Scene => ShowCellSelector && SelectedCell != null
+    public GdsLayerGeometryScene Scene => StageIndex is 3 or 4 && SelectedCell != null
         ? _sceneCache.GetValueOrDefault(SelectedCell.CellName) ?? SelectedCell.Scene : _topScene;
     public GdsLayerPair? HighlightLayer => IsLayerStep ? SelectedLayer?.Pair : null;
     public IReadOnlyList<DetectedPin> PreviewPorts => IsPortStep && SelectedCell != null ? SelectedCell.Ports.Select(x => x.ToPin()).ToArray() : [];
@@ -129,7 +160,11 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     }
 
     partial void OnStageIndexChanged(int value) { RefreshCellSelection(); RefreshSteps(); RefreshPresentation(); }
-    partial void OnSelectedLayerChanged(GdsLayerReviewRow? value) => OnPropertyChanged(nameof(HighlightLayer));
+    partial void OnSelectedLayerChanged(GdsLayerReviewRow? value)
+    {
+        OnPropertyChanged(nameof(HighlightLayer));
+        OnPropertyChanged(nameof(GuideTargetItem));
+    }
     partial void OnSelectedCellChanged(GdsCellReviewRow? value)
     {
         SelectedPort = value?.Ports.FirstOrDefault();
@@ -138,6 +173,7 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     }
     partial void OnSelectedPortChanged(GdsPortReviewRow? value)
     {
+        OnPropertyChanged(nameof(HasSelectedPort));
         OnPropertyChanged(nameof(SelectedPortIndex));
         OnPropertyChanged(nameof(GuideTargetName));
     }
@@ -155,13 +191,20 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
         foreach (var property in new[]{nameof(IsLayoutStep),nameof(IsLayerStep),nameof(IsCellStep),nameof(IsPortStep),
             nameof(IsModelStep),nameof(IsSummaryStep),nameof(ShowCellSelector),nameof(StageTitle),nameof(StageDescription),
             nameof(NextText),nameof(Summary),nameof(Scene),nameof(HighlightLayer),nameof(PreviewPorts),nameof(GuideTargetName),
-            nameof(SelectedPortIndex),nameof(LayersConfirmed),nameof(CanApply),nameof(GroupSummary)})
+            nameof(SelectedPortIndex),nameof(LayersConfirmed),nameof(CanApply),nameof(GroupSummary),nameof(HasSelectedModel),
+            nameof(HighlightCellName),nameof(ConnectionReadiness),nameof(RouteReadiness),
+            nameof(CompatibleModels),nameof(HasCompatibleModels),nameof(GuideTargetItem)})
             OnPropertyChanged(property);
     }
 
     private void OnRowChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (_restoring || e.PropertyName is nameof(GdsLayerReviewRow.SelectedRole) or nameof(GdsCellReviewRow.IncludeInGroup)) return;
+        if (_restoring || e.PropertyName is nameof(GdsLayerReviewRow.SelectedRole) or nameof(GdsPortReviewRow.NeedsKindReview)) return;
+        if (e.PropertyName == nameof(GdsCellReviewRow.IncludeInGroup))
+        {
+            if (sender is GdsCellReviewRow { IncludeInGroup: true } cell) SelectedCell = cell;
+            return;
+        }
         if (sender is GdsPortReviewRow port)
         {
             var owner = Cells.FirstOrDefault(x => x.Ports.Contains(port));

@@ -16,18 +16,22 @@ public sealed class GdsReviewPreview : Control
     private static readonly IBrush BackgroundBrush = new SolidColorBrush(Color.Parse("#11191D"));
     private static readonly IBrush PortBrush = new SolidColorBrush(Color.Parse("#53EEE0"));
     private GdsReviewGeometryCache? _cache;
+    private GdsReviewHierarchyCache? _hierarchy;
     private double _zoom = 1;
     private Vector _pan;
     private Point? _panStart;
     private int _dragPort = -1;
     private IPointer? _capturedPointer;
 
-    /// <summary>The flattened GDS geometry to review.</summary>
+    /// <summary>The GDS geometry and optional complete hierarchy to review.</summary>
     public static readonly StyledProperty<GdsLayerGeometryScene?> SceneProperty =
         AvaloniaProperty.Register<GdsReviewPreview, GdsLayerGeometryScene?>(nameof(Scene));
     /// <summary>The emphasized source layer.</summary>
     public static readonly StyledProperty<GdsLayerPair?> HighlightLayerProperty =
         AvaloniaProperty.Register<GdsReviewPreview, GdsLayerPair?>(nameof(HighlightLayer));
+    /// <summary>The named cell whose placements are outlined in the complete layout.</summary>
+    public static readonly StyledProperty<string?> HighlightCellNameProperty =
+        AvaloniaProperty.Register<GdsReviewPreview, string?>(nameof(HighlightCellName));
     /// <summary>The editable ports, in cell-local application coordinates.</summary>
     public static readonly StyledProperty<IReadOnlyList<DetectedPin>?> PortsProperty =
         AvaloniaProperty.Register<GdsReviewPreview, IReadOnlyList<DetectedPin>?>(nameof(Ports));
@@ -46,6 +50,8 @@ public sealed class GdsReviewPreview : Control
     public GdsLayerGeometryScene? Scene { get => GetValue(SceneProperty); set => SetValue(SceneProperty, value); }
     /// <summary>Gets or sets the highlighted layer.</summary>
     public GdsLayerPair? HighlightLayer { get => GetValue(HighlightLayerProperty); set => SetValue(HighlightLayerProperty, value); }
+    /// <summary>Gets or sets the named cell to outline.</summary>
+    public string? HighlightCellName { get => GetValue(HighlightCellNameProperty); set => SetValue(HighlightCellNameProperty, value); }
     /// <summary>Gets or sets the port snapshot; replace it after edits.</summary>
     public IReadOnlyList<DetectedPin>? Ports { get => GetValue(PortsProperty); set => SetValue(PortsProperty, value); }
     /// <summary>Gets or sets the selected port index.</summary>
@@ -56,6 +62,10 @@ public sealed class GdsReviewPreview : Control
     public bool IsPreviewLimited => _isPreviewLimited;
     /// <summary>Raised when visible source geometry is picked.</summary>
     public event Action<GdsLayerPair>? LayerPicked;
+    /// <summary>Raised with the source cell owning the picked geometry.</summary>
+    public event Action<string>? CellPicked;
+    /// <summary>Raised with the actual root-to-leaf ancestry of the picked placement.</summary>
+    public event Action<IReadOnlyList<string>>? CellPathPicked;
     /// <summary>Raised when a port is selected.</summary>
     public event Action<int>? PortPicked;
     /// <summary>Raised during dragging with bounded local X/Y in micrometers.</summary>
@@ -64,7 +74,7 @@ public sealed class GdsReviewPreview : Control
     public event Action? PortDragCompleted;
 
     static GdsReviewPreview() =>
-        AffectsRender<GdsReviewPreview>(SceneProperty, HighlightLayerProperty, PortsProperty, SelectedPortIndexProperty, ShowPortsProperty);
+        AffectsRender<GdsReviewPreview>(SceneProperty, HighlightLayerProperty, HighlightCellNameProperty, PortsProperty, SelectedPortIndexProperty, ShowPortsProperty);
 
     /// <summary>Resets zoom and pan to fit the entire scene.</summary>
     public void Fit()
@@ -81,7 +91,8 @@ public sealed class GdsReviewPreview : Control
         if (change.Property == SceneProperty)
         {
             CancelGesture();
-            _cache = Scene is { } scene ? new GdsReviewGeometryCache(scene) : null;
+            _hierarchy = Scene is { ReviewSource: not null } full ? new GdsReviewHierarchyCache(full) : null;
+            _cache = _hierarchy is null && Scene is { } scene ? new GdsReviewGeometryCache(scene) : null;
             SetAndRaise(IsPreviewLimitedProperty, ref _isPreviewLimited, _cache?.IsLimited == true);
             Fit();
         }
@@ -102,12 +113,16 @@ public sealed class GdsReviewPreview : Control
     public override void Render(DrawingContext context)
     {
         context.FillRectangle(BackgroundBrush, new Rect(Bounds.Size));
-        if (Scene is null || _cache is null) return;
+        if (Scene is null || (_cache is null && _hierarchy is null)) return;
         var (scale, offset) = Transform();
         using var clip = context.PushClip(new Rect(Bounds.Size));
-        using (context.PushTransform(new Matrix(scale, 0, 0, scale, offset.X, offset.Y)))
+        if (_hierarchy is not null)
+            _hierarchy.Render(context,
+                new Matrix(scale, 0, 0, -scale, offset.X - Scene.Bounds.MinX * scale, offset.Y + Scene.Bounds.MaxY * scale),
+                new Rect(Bounds.Size), HighlightLayer, HighlightCellName);
+        else using (context.PushTransform(new Matrix(scale, 0, 0, scale, offset.X, offset.Y)))
         {
-            foreach (var layer in _cache.Layers)
+            foreach (var layer in _cache!.Layers)
             {
                 var selected = HighlightLayer == layer.Pair;
                 using var opacity = context.PushOpacity(selected ? 0.95 : HighlightLayer.HasValue ? 0.22 : 0.68);
@@ -147,10 +162,22 @@ public sealed class GdsReviewPreview : Control
                 for (var i = ports.Count - 1; i >= 0; i--)
                     if ((new Vector(ports[i].XUm, ports[i].YUm) - local).Length * scale <= PickRadius)
                     { _dragPort = i; PortPicked?.Invoke(i); PortDragStarted?.Invoke(); break; }
-            if (_dragPort < 0 && _cache is { } cache &&
-                GdsLayerHitTester.TryPick(cache.PickScene, local.X + Scene.Bounds.MinX,
-                    Scene.Bounds.MaxY - local.Y, PickRadius / scale, out var pair))
-                LayerPicked?.Invoke(pair);
+            if (_dragPort < 0)
+            {
+                double x = local.X + Scene.Bounds.MinX, y = Scene.Bounds.MaxY - local.Y;
+                GdsLayerPair pair = default;
+                string? pickedCell = null;
+                IReadOnlyList<string> pickedPath = [];
+                bool picked = _hierarchy is not null
+                    ? _hierarchy.TryPick(x, y, PickRadius / scale, out pair, out pickedCell, out pickedPath)
+                    : _cache is { } cache && GdsLayerHitTester.TryPick(cache.PickScene, x, y, PickRadius / scale, out pair);
+                if (picked)
+                {
+                    LayerPicked?.Invoke(pair);
+                    if (pickedCell is not null) CellPicked?.Invoke(pickedCell);
+                    if (pickedPath.Count > 0) CellPathPicked?.Invoke(pickedPath);
+                }
+            }
         }
         else return;
         if (_panStart.HasValue || _dragPort >= 0)
@@ -203,7 +230,7 @@ public sealed class GdsReviewPreview : Control
         var point = e.GetPosition(this);
         var before = Transform();
         var local = (point - before.Offset) / before.Scale;
-        _zoom = Math.Clamp(_zoom * Math.Pow(1.2, e.Delta.Y), 0.1, 100);
+        _zoom = Math.Clamp(_zoom * Math.Pow(1.2, e.Delta.Y), 0.1, 1e12);
         var after = Transform();
         _pan += point - (after.Offset + local * after.Scale);
         InvalidateVisual();

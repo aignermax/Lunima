@@ -28,9 +28,10 @@ public readonly record struct GdsPreviewKey(string? Module, string? Function, st
     public string? GdsFactoryFunction { get; init; }
 
     /// <summary>True when there is something to render — a Nazca function or a gdsfactory
-    /// factory (built-in / external-port components have neither).</summary>
+    /// factory. Analysis tools use schematic previews; their sentinel is not a Python function.</summary>
     public bool IsRenderable =>
-        !string.IsNullOrWhiteSpace(Function) || !string.IsNullOrWhiteSpace(GdsFactoryFunction);
+        Function != Component.AnalysisToolNazcaSentinel &&
+        (!string.IsNullOrWhiteSpace(Function) || !string.IsNullOrWhiteSpace(GdsFactoryFunction));
 
     /// <summary>
     /// Builds the render identity of a placed component: the same key the library thumbnail
@@ -43,7 +44,7 @@ public readonly record struct GdsPreviewKey(string? Module, string? Function, st
     {
         if (IsGdsFactoryNative(component.GdsFactoryFunction))
             return new GdsPreviewKey(component.NazcaModuleName, null, null)
-                { GdsFactoryFunction = component.GdsFactoryFunction };
+            { GdsFactoryFunction = component.GdsFactoryFunction };
         return new GdsPreviewKey(component.NazcaModuleName, component.NazcaFunctionName,
             component.NazcaFunctionParameters);
     }

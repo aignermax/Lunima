@@ -21,6 +21,7 @@ public partial class GdsImportDialogViewModel
     {
         if (!EnableReview || _analyzedLibrary == null || SelectedTopCell == null) return;
         var generation = ++_reviewGeneration;
+        var previousInterpretation = Review?.BuildInterpretation();
         if (Review != null)
         {
             Review.PropertyChanged -= OnReviewChanged;
@@ -28,7 +29,8 @@ public partial class GdsImportDialogViewModel
             Review = null;
         }
         var selected = SelectedTopCell.CellName;
-        var assignments = new List<GdsLayerAssignment>();
+        var evidence = await Task.Run(() => GdsReviewPortEvidence.Suggest(_analyzedLibrary, selected, token), token);
+        var assignments = evidence.Select(x => x.Assignment).ToList();
         void Add(string text, GdsLayerRole role)
         {
             foreach (var pair in ParseLayerPairs(text) ?? [])
@@ -38,13 +40,22 @@ public partial class GdsImportDialogViewModel
                 else assignments.Add(new(pair.Layer, pair.Datatype, role));
             }
         }
-        Add(WaveguideLayersText, GdsLayerRole.OpticalCore);
-        Add(MetalLayersText, GdsLayerRole.Electrical);
-        Add(PortLayersText, GdsLayerRole.PortLabel | GdsLayerRole.PortMarker);
+        // Hidden legacy defaults name one exporter, not the file being reviewed.
+        if (WaveguideLayersText != DefaultWaveguideLayersText) Add(WaveguideLayersText, GdsLayerRole.OpticalCore);
+        if (MetalLayersText != DefaultMetalLayersText) Add(MetalLayersText, GdsLayerRole.Electrical);
+        if (PortLayersText != DefaultPortLayersText) Add(PortLayersText, GdsLayerRole.PortLabel | GdsLayerRole.PortMarker);
+        if (previousInterpretation?.SourceSha256 == _reviewSourceHash && previousInterpretation.TopCellName == selected)
+            assignments = previousInterpretation.Layers.ToList();
         var review = await GdsInterpretationReviewViewModel.CreateAsync(_analyzedLibrary, selected, _reviewSourceHash,
-            assignments, _importService.GetModelCandidates(), profiles:ReviewProfileStore, cancellationToken: token);
+            assignments, _importService.GetModelCandidates(), profiles: ReviewProfileStore, cancellationToken: token);
         if (token.IsCancellationRequested || generation != _reviewGeneration || SelectedTopCell?.CellName != selected) return;
         if (Review != null) Review.PropertyChanged -= OnReviewChanged;
+        foreach (var layer in review.Layers)
+        {
+            var suggestion = evidence.FirstOrDefault(x => x.Assignment.Layer == layer.Layer && x.Assignment.Datatype == layer.Datatype);
+            if (suggestion != null && (layer.Role & suggestion.Assignment.Role) == suggestion.Assignment.Role)
+                layer.SuggestedPinCount = suggestion.MatchedLabelCount;
+        }
         Review = review;
         review.OfferSavedInterpretation(_importService.FindInterpretation(_reviewSourceHash, selected));
         review.PropertyChanged += OnReviewChanged;

@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -19,31 +21,107 @@ namespace UnitTests.UI;
 [Collection("LocalizationSingleton")]
 public class GdsInterpretationReviewViewTests
 {
+    [AvaloniaFact]
+    public async Task ComponentOverviewClickSelectsPartAndModelsMatchItsSignalDomains()
+    {
+        var optical = new GdsModelCandidate("pdk", "two optical ports", ["in", "out"]);
+        var electrical = new GdsModelCandidate("pdk", "two electrical ports", ["p", "n"])
+        { PinDomains = new Dictionary<string, string> { ["p"] = "electrical", ["n"] = "electrical" } };
+        var vm = await CreateReview([optical, electrical, new("pdk", "three ports", ["a", "b", "c"])]);
+        var view = new GdsInterpretationReviewView { DataContext = vm };
+        var window = new Window { Width = 1180, Height = 780, Content = view };
+        try
+        {
+            window.Show();
+            await vm.NextCommand.ExecuteAsync(null);
+            await vm.NextCommand.ExecuteAsync(null);
+            vm.SelectedCell = null;
+            Layout(window);
+            var preview = view.FindControl<GdsReviewPreview>("ReviewPreview")!;
+            preview.Scene!.CellName.ShouldBe("TOP");
+            var point = preview.TranslatePoint(new Point(preview.Bounds.Width / 2, preview.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(point, MouseButton.Left);
+            window.MouseUp(point, MouseButton.Left);
+            vm.SelectedCell.ShouldNotBeNull().CellName.ShouldBe("coupler");
+            vm.HighlightCellName.ShouldBe("coupler");
+            vm.CompatibleModels.ShouldBe([optical]);
+            vm.SelectedCell.Ports[0].Kind = "vertical_te";
+            vm.CompatibleModels.ShouldBe([optical]);
+        }
+        finally { vm.Close(); window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public async Task PointerCanReturnToLayoutWhileGuideIsVisible()
+    {
+        var vm = await CreateReview();
+        var view = new GdsInterpretationReviewView { DataContext = vm };
+        var window = new Window { Width = 1180, Height = 780, Content = view };
+        try
+        {
+            window.Show();
+            await vm.NextCommand.ExecuteAsync(null);
+            Layout(window);
+            var layout = view.GetVisualDescendants().OfType<Button>()
+                .Single(b => b.DataContext is GdsReviewStep { Index: 0 });
+            var point = layout.TranslatePoint(new Point(layout.Bounds.Width / 2, layout.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(point, MouseButton.Left);
+            window.MouseUp(point, MouseButton.Left);
+            vm.StageIndex.ShouldBe(0);
+        }
+        finally { vm.Close(); window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public async Task LayerRolesAreVisibleChoicesAndEmptyPortsHideCoordinateEditor()
+    {
+        var vm = await CreateReview();
+        var view = new GdsInterpretationReviewView { DataContext = vm };
+        var window = new Window { Width = 1180, Height = 780, Content = view };
+        try
+        {
+            window.Show();
+            await vm.NextCommand.ExecuteAsync(null);
+            Layout(window);
+            var choices = view.FindControl<ListBox>("GdsReviewRole").ShouldNotBeNull();
+            choices.Items.Count.ShouldBe(10);
+            choices.SelectedItem.ShouldBeSameAs(vm.SelectedLayer!.SelectedRole);
+            vm.StageIndex = 3;
+            Layout(window);
+            view.FindControl<Control>("GdsReviewPortEditor").ShouldNotBeNull()
+                .IsEffectivelyVisible.ShouldBeFalse();
+            vm.AddPortCommand.Execute(null);
+            Layout(window);
+            view.FindControl<Control>("GdsReviewPortEditor")!.IsEffectivelyVisible.ShouldBeTrue();
+        }
+        finally { vm.Close(); window.Close(); }
+    }
+
     private static readonly string ScreenshotDirectory =
         Path.Combine(Path.GetTempPath(), "lunima-gds-review-qa");
 
     [AvaloniaFact]
     public async Task RealMziLayoutRendersInNativeReview()
     {
-        var directory=new DirectoryInfo(AppContext.BaseDirectory);
-        while(directory!=null && !Directory.Exists(Path.Combine(directory.FullName,"Tools","gds-test-data")))
-            directory=directory.Parent;
-        var source=Path.Combine(directory.ShouldNotBeNull().FullName,"Tools","gds-test-data","gdsfactory_mzi_like.gds");
-        var analysis=await GdsImportService.AnalyzeAsync(source);
-        var vm=await GdsInterpretationReviewViewModel.CreateAsync(analysis.Library,analysis.TopCellCandidates[0],
-            analysis.SourceSha256,[new(1,0,GdsLayerRole.OpticalCore),new(1,10,GdsLayerRole.PortLabel)],[],
-            new GdsLayerProfileStore(Path.Combine(ScreenshotDirectory,$"mzi-{Guid.NewGuid():N}.json")));
-        var view=new GdsInterpretationReviewView { DataContext=vm };
-        var window=new Window { Width=1180,Height=780,Content=view };
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null && !Directory.Exists(Path.Combine(directory.FullName, "Tools", "gds-test-data")))
+            directory = directory.Parent;
+        var source = Path.Combine(directory.ShouldNotBeNull().FullName, "Tools", "gds-test-data", "gdsfactory_mzi_like.gds");
+        var analysis = await GdsImportService.AnalyzeAsync(source);
+        var vm = await GdsInterpretationReviewViewModel.CreateAsync(analysis.Library, analysis.TopCellCandidates[0],
+            analysis.SourceSha256, [new(1, 0, GdsLayerRole.OpticalCore), new(1, 10, GdsLayerRole.PortLabel)], [],
+            new GdsLayerProfileStore(Path.Combine(ScreenshotDirectory, $"mzi-{Guid.NewGuid():N}.json")));
+        var view = new GdsInterpretationReviewView { DataContext = vm };
+        var window = new Window { Width = 1180, Height = 780, Content = view };
         try
         {
             window.Show();
             await vm.NextCommand.ExecuteAsync(null);
             Layout(window);
-            vm.Scene.Layers.Sum(x=>x.Polygons.Count).ShouldBeGreaterThan(0);
-            Capture(view,"native-mzi-layout.png");
+            vm.Scene.Layers.Sum(x => x.Polygons.Count).ShouldBeGreaterThan(0);
+            Capture(view, "native-mzi-layout.png");
         }
-        finally { vm.Close();window.Close(); }
+        finally { vm.Close(); window.Close(); }
     }
 
     [AvaloniaFact]
@@ -121,7 +199,7 @@ public class GdsInterpretationReviewViewTests
         if (stage is 2 or 3 or 4) selector.SelectedItem.ShouldBeSameAs(vm.SelectedCell);
         if (stage == 1)
         {
-            var role = view.FindControl<ComboBox>("GdsReviewRole").ShouldNotBeNull();
+            var role = view.FindControl<ListBox>("GdsReviewRole").ShouldNotBeNull();
             role.SelectedItem.ShouldBeSameAs(vm.SelectedLayer!.SelectedRole);
             role.Items.Count.ShouldBeGreaterThan(5);
         }
@@ -155,7 +233,7 @@ public class GdsInterpretationReviewViewTests
         new FileInfo(Path.Combine(ScreenshotDirectory, name)).Length.ShouldBeGreaterThan(1000);
     }
 
-    private static async Task<GdsInterpretationReviewViewModel> CreateReview()
+    private static async Task<GdsInterpretationReviewViewModel> CreateReview(IReadOnlyList<GdsModelCandidate>? models = null)
     {
         var bytes = GdsTestWriter.Create().StandardPrologue()
             .BeginCell("TOP").SRef("coupler", 0, 0).EndCell()
@@ -171,6 +249,6 @@ public class GdsInterpretationReviewViewTests
                 new GdsLayerAssignment(1, 0, GdsLayerRole.OpticalCore),
                 new GdsLayerAssignment(8, 0, GdsLayerRole.Slab),
                 new GdsLayerAssignment(56, 0, GdsLayerRole.PortLabel)
-            ], [], new GdsLayerProfileStore(Path.Combine(ScreenshotDirectory, $"profiles-{Guid.NewGuid():N}.json")));
+            ], models ?? [], new GdsLayerProfileStore(Path.Combine(ScreenshotDirectory, $"profiles-{Guid.NewGuid():N}.json")));
     }
 }
