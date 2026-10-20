@@ -2363,5 +2363,14 @@
   "GdsReview.NextRouteSuggestion": "Mostrar posibles rutas",
   "GdsReview.RouteSuggestion": "{0} formas de trazado en {1} celdas. La forma por sí sola no determina su función óptica o eléctrica.",
   "GdsReview.UseOpticalSuggestion": "Usar como óptica",
-  "GdsReview.UseElectricalSuggestion": "Usar como eléctrica"
+  "GdsReview.UseElectricalSuggestion": "Usar como eléctrica",
+  "GdsReview.CombinedRouteLayerWarning": "Varias capas de núcleo o conductor se combinan en 2D; las superposiciones pueden conectar. No se distinguen máscaras alternativas, alturas de capa ni vías. Asigna solo capas de conexión verificadas; deja las dudosas como desconocidas.",
+  "GdsReview.SelectionLegend": "Dorado: capa seleccionada · Gris: contexto del diseño. Clic derecho para aislar. Los cuadrados indican posiciones de texto, no pines confirmados.",
+  "GdsReview.HierarchyPath": "Ruta jerárquica",
+  "GdsReview.ParentAssembly": "Conjunto superior",
+  "GdsReview.ChildCells": "Celdas hijas",
+  "GdsReview.OpenSelectedChild": "Abrir celda hija seleccionada",
+  "GdsReview.ChildCellCounts": "{0} ubicaciones · {1} tipos de celdas hijas",
+  "GdsReview.HierarchyChildrenHelp": "Selecciona una celda hija para revisarla. Al abrirla, las celdas hijas del conjunto se importan como partes separadas; Deshacer restaura el conjunto.",
+  "GdsReview.HierarchyLeafHelp": "Esta celda no tiene celdas hijas. Sus formas no permiten identificar de forma fiable componentes MMI o MZI separados."
 }

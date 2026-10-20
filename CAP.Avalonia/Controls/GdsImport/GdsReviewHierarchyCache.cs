@@ -106,15 +106,15 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene) : IDi
                 foreach (var layer in cell.Layers)
                 {
                     if (isolateSelectedLayer && highlight is { } onlyLayer && layer.Pair != onlyLayer) continue;
-                    using var opacity = context.PushOpacity(highlight == layer.Pair ? .95 : highlight.HasValue ? .12 : .68);
-                    var fill = _brushes[layer.Pair];
+                    using var opacity = context.PushOpacity(highlight == layer.Pair ? 1 : highlight.HasValue ? GdsReviewSelectionStyle.ContextOpacity : .68);
+                    var fill = highlight == layer.Pair ? GdsReviewSelectionStyle.Selected : highlight.HasValue ? GdsReviewSelectionStyle.Context : _brushes[layer.Pair];
                     var pen = highlight == layer.Pair ? new Pen(Brushes.White, 1 / scale) : null;
                     DrawNode(layer.Geometry.Root);
                     foreach (var text in layer.Texts)
                     {
                         var anchor = new Point(text.Position.X, text.Position.Y);
                         if (viewport.Inflate(3).Contains(matrix.Transform(anchor)))
-                            context.DrawEllipse(fill, pen, anchor, 3 / scale, 3 / scale);
+                            context.DrawRectangle(null, new Pen(fill, 1 / scale), new Rect(anchor.X - 3 / scale, anchor.Y - 3 / scale, 6 / scale, 6 / scale));
                     }
 
                     void DrawNode(GdsReviewSpatialGeometry.Node? node)
@@ -186,9 +186,9 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene) : IDi
             if (isolateSelectedLayer && highlight is { } only && !pairs.Contains(only)) return;
             proxies++;
             bool emphasized = highlight is { } selected && pairs.Contains(selected);
-            using var opacity = context.PushOpacity(emphasized ? .95 : highlight.HasValue ? .12 : .68);
+            using var opacity = context.PushOpacity(emphasized ? 1 : highlight.HasValue ? GdsReviewSelectionStyle.ContextOpacity : .68);
             if (pairs.Count > 0)
-                context.FillRectangle(_brushes[emphasized ? highlight!.Value : pairs[0]], pixels);
+                context.FillRectangle(emphasized ? GdsReviewSelectionStyle.Selected : highlight.HasValue ? GdsReviewSelectionStyle.Context : _brushes[pairs[0]], pixels);
             if (emphasized)
                 context.DrawRectangle(null, new Pen(Brushes.White, 1), pixels);
             if (name == highlightCell)

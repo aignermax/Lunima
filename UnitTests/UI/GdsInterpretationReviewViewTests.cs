@@ -22,6 +22,47 @@ namespace UnitTests.UI;
 public class GdsInterpretationReviewViewTests
 {
     [AvaloniaFact]
+    public async Task LayerGuideStartsAtListAndRightClickTogglesContext()
+    {
+        var vm = await CreateReview();
+        var view = new GdsInterpretationReviewView { DataContext = vm };
+        var window = new Window { Width = 1180, Height = 780, Content = view };
+        try
+        {
+            vm.StageIndex = 1;
+            window.Show();
+            Layout(window);
+            vm.GuideEnabled.ShouldBeTrue();
+            vm.GuideTargetName.ShouldBe("GdsReviewLayerList");
+            var preview = view.FindControl<GdsReviewPreview>("ReviewPreview")!;
+            preview.IsolateSelectedLayer.ShouldBeFalse();
+            var center = preview.TranslatePoint(new Point(preview.Bounds.Width / 2, preview.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(center, MouseButton.Right);
+            window.MouseUp(center, MouseButton.Right);
+            Layout(window);
+            vm.IsolateSelectedLayer.ShouldBeTrue();
+            window.MouseDown(center, MouseButton.Right);
+            window.MouseUp(center, MouseButton.Right);
+            Layout(window);
+            vm.IsolateSelectedLayer.ShouldBeFalse();
+            var list = view.FindControl<ListBox>("GdsReviewLayerList")!;
+            var row = list.TranslatePoint(new Point(30, 15), window)!.Value;
+            window.MouseDown(row, MouseButton.Left);
+            window.MouseUp(row, MouseButton.Left);
+            Layout(window);
+            vm.GuideTargetName.ShouldBe("GdsReviewRole");
+            Capture(view, "layer-context-and-guide.png");
+            vm.RestartGuideCommand.Execute(null);
+            vm.GuideTargetName.ShouldBe("GdsReviewLayerList");
+            list.Focus();
+            window.KeyPress(Key.Down, RawInputModifiers.None);
+            Layout(window);
+            vm.GuideTargetName.ShouldBe("GdsReviewRole");
+        }
+        finally { vm.Close(); window.Close(); }
+    }
+
+    [AvaloniaFact]
     public async Task RouteSuggestionCanBeConfirmedByPointerAndUndone()
     {
         var library = new GdsLibrary();
@@ -271,11 +312,11 @@ public class GdsInterpretationReviewViewTests
         if (stage == 1)
         {
             var preview = view.FindControl<GdsReviewPreview>("ReviewPreview")!;
-            preview.IsolateSelectedLayer.ShouldBeTrue();
-            vm.IsolateSelectedLayer = false;
-            Dispatcher.UIThread.RunJobs();
             preview.IsolateSelectedLayer.ShouldBeFalse();
             vm.IsolateSelectedLayer = true;
+            Dispatcher.UIThread.RunJobs();
+            preview.IsolateSelectedLayer.ShouldBeTrue();
+            vm.IsolateSelectedLayer = false;
             var detail = view.FindControl<ComboBox>("GdsReviewDetail")!;
             detail.SelectedIndex = 1;
             Dispatcher.UIThread.RunJobs();

@@ -78,7 +78,7 @@ public class GdsReviewPreviewTests
         top.Elements.Add(new GdsReference { CellName = leaf.Name, Offset = new(700_000, 800_000), AngleDegrees = 90, Reflected = true, Magnification = 2 });
         library.Cells.Add(top.Name, top);
         library.Cells.Add(leaf.Name, leaf);
-        var preview = new GdsReviewPreview { Scene = new GdsReviewSceneBuilder(library).Build("TOP") };
+        var preview = new GdsReviewPreview { IsolateSelectedLayer = true, Scene = new GdsReviewSceneBuilder(library).Build("TOP") };
         var window = Open(preview);
         GdsLayerPair? picked = null;
         preview.LayerPicked += pair => picked = pair;
@@ -174,7 +174,9 @@ public class GdsReviewPreviewTests
         {
             using var frame = new RenderTargetBitmap(new PixelSize(248, 248));
             using (var context = frame.CreateDrawingContext()) preview.Render(context);
-            ReadGreen(frame, 124, 124).ShouldBeGreaterThan((byte)100);
+            // Text anchors are hollow squares; verify the visible marker around its center.
+            Enumerable.Range(120, 9).SelectMany(x => Enumerable.Range(120, 9)
+                .Select(y => ReadGreen(frame, x, y))).Max().ShouldBeGreaterThan((byte)(ReadGreen(frame, 124, 124) + 40));
         }
         finally { window.Close(); }
     }

@@ -2363,5 +2363,14 @@
   "GdsReview.NextRouteSuggestion": "显示布线候选",
   "GdsReview.RouteSuggestion": "{1} 个单元中有 {0} 个线路状原始图形。仅凭形状无法确定其用途是光学还是电气。",
   "GdsReview.UseOpticalSuggestion": "用作光学布线",
-  "GdsReview.UseElectricalSuggestion": "用作电气布线"
+  "GdsReview.UseElectricalSuggestion": "用作电气布线",
+  "GdsReview.CombinedRouteLayerWarning": "多个核心层或导体层将合并进行二维分析，重叠区域可能被视为连接。替代掩模、层高度和通孔不会被区分。仅指定已确认的布线层，不确定的层请保留为未知。",
+  "GdsReview.SelectionLegend": "金色：所选层 · 灰色：布局背景。右键单击可仅显示所选层。方框标记文字位置，并非已确认的引脚。",
+  "GdsReview.HierarchyPath": "层级路径",
+  "GdsReview.ParentAssembly": "上级组件",
+  "GdsReview.ChildCells": "子单元",
+  "GdsReview.OpenSelectedChild": "打开所选子单元",
+  "GdsReview.ChildCellCounts": "{0} 个实例 · {1} 种子单元",
+  "GdsReview.HierarchyChildrenHelp": "选择要检查的子单元。打开后，此组件的子单元将作为独立部件导入；撤销可恢复原组件。",
+  "GdsReview.HierarchyLeafHelp": "此单元没有子单元。仅凭形状无法可靠识别独立的MMI或MZI组件。"
 }

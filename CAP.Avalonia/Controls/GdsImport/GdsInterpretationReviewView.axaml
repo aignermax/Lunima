@@ -57,7 +57,7 @@
         <local:GdsReviewPreview x:Name="ReviewPreview" Scene="{Binding Scene}" HighlightLayer="{Binding HighlightLayer}"
                                 HighlightCellName="{Binding HighlightCellName}"
                                 AllowPortEditing="{Binding IsPortEditing}"
-                                IsolateSelectedLayer="{Binding IsolateSelectedLayer}"
+                                IsolateSelectedLayer="{Binding IsolateSelectedLayer, Mode=TwoWay}"
                                 DetailLevel="{Binding PreviewDetailLevel}"
                                 Ports="{Binding PreviewPorts}" SelectedPortIndex="{Binding SelectedPortIndex}"
                                 ShowPorts="{Binding IsPortStep}" MinHeight="300"/>
@@ -74,6 +74,7 @@
             <CheckBox Content="{loc:Localize GdsReview.IsolateLayer}" IsChecked="{Binding IsolateSelectedLayer}"
                       IsVisible="{Binding IsLayerStep}"/>
           </WrapPanel>
+          <TextBlock Classes="caption" Foreground="#FFD166" IsVisible="{Binding IsLayerStep}" TextWrapping="Wrap" Text="{loc:Localize GdsReview.SelectionLegend}"/>
           <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.PreviewHint}" TextWrapping="Wrap"/>
           <TextBlock Classes="caption warning" Text="{loc:Localize GdsReview.PreviewLimited}"
                      IsVisible="{Binding #ReviewPreview.IsPreviewLimited}" TextWrapping="Wrap"/>
@@ -96,7 +97,7 @@
             <Button Content="{loc:Localize GdsReview.FocusLayer}" Click="OnFocusLayer"/>
             <Button Content="{loc:Localize GdsReview.NextRouteSuggestion}" Command="{Binding NextSuggestedRouteCommand}"
                     IsVisible="{Binding HasRouteSuggestions}"/>
-            <ListBox ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}" MaxHeight="150">
+            <ListBox x:Name="GdsReviewLayerList" ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}" MaxHeight="150">
               <ListBox.ItemTemplate><DataTemplate x:DataType="vm:GdsLayerReviewRow">
                 <Grid ColumnDefinitions="70,*" Margin="4">
                   <TextBlock Text="{Binding Label}" Classes="mono"/>
@@ -127,6 +128,7 @@
             </ListBox>
             <TextBlock Text="{Binding SelectedLayer.SelectedRole.Description}" TextWrapping="Wrap" Classes="caption"/>
             <TextBlock Text="{loc:Localize GdsReview.UnknownSafe}" TextWrapping="Wrap" Classes="caption secondary"/>
+            <TextBlock Text="{Binding CombinedRouteLayerWarning}" IsVisible="{Binding HasCombinedRouteLayers}" TextWrapping="Wrap" Classes="caption warning"/>
             <Expander Header="{loc:Localize GdsReview.Profiles}">
               <StackPanel Spacing="8" Margin="0,8">
                 <TextBlock Text="{loc:Localize GdsReview.ProfileHelp}" TextWrapping="Wrap" Classes="caption secondary"/>
@@ -142,9 +144,23 @@
           <StackPanel IsVisible="{Binding IsCellStep}" Spacing="12">
             <TextBlock Classes="strong" Text="{loc:Localize GdsReview.CellMeaning}"/>
             <TextBox Text="{Binding SelectedCell.DisplayName}" Watermark="{loc:Localize GdsReview.ComponentName}"/>
-            <Button x:Name="GdsReviewOpenAssembly" Content="{loc:Localize GdsReview.OpenAssembly}" Command="{Binding OpenAssemblyCommand}"
-                    IsVisible="{Binding CanOpenAssembly}" Classes="primary"/>
+            <TextBlock Text="{loc:Localize GdsReview.HierarchyPath}" Classes="caption secondary"/>
+            <TextBlock Text="{Binding HierarchyPath}" TextWrapping="Wrap" Classes="caption"/>
+            <Button Content="{loc:Localize GdsReview.ParentAssembly}" Command="{Binding ParentAssemblyCommand}"
+                    IsVisible="{Binding CanNavigateParent}"/>
             <TextBlock Text="{Binding CellHierarchyHint}" TextWrapping="Wrap" Classes="caption secondary"/>
+            <TextBlock Text="{loc:Localize GdsReview.ChildCells}" IsVisible="{Binding CanOpenAssembly}" Classes="strong"/>
+            <ListBox x:Name="GdsReviewChildCells" ItemsSource="{Binding ChildCells}" SelectedItem="{Binding SelectedChild}"
+                     IsVisible="{Binding CanOpenAssembly}" MaxHeight="210">
+              <ListBox.ItemTemplate><DataTemplate x:DataType="vm:GdsChildCellReviewRow">
+                <StackPanel Spacing="3" Margin="0,4">
+                  <TextBlock Text="{Binding CellName}" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding Counts}" Classes="caption secondary"/>
+                </StackPanel>
+              </DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+            <Button x:Name="GdsReviewOpenAssembly" Content="{loc:Localize GdsReview.OpenSelectedChild}" Command="{Binding OpenSelectedChildCommand}"
+                    IsVisible="{Binding CanOpenAssembly}" Classes="primary"/>
             <CheckBox x:Name="GdsReviewExpand" Content="{loc:Localize GdsReview.ExpandChildren}"
                       IsChecked="{Binding SelectedCell.ExpandChildren}" IsVisible="{Binding CanOpenAssembly}"/>
             <TextBlock Classes="caption secondary" TextWrapping="Wrap" Text="{loc:Localize GdsReview.CellScope}"/>

@@ -46,7 +46,7 @@ public sealed class GdsReviewPreview : Control
         AvaloniaProperty.Register<GdsReviewPreview, bool>(nameof(AllowPortEditing));
     /// <summary>Hide and exclude unselected layers from picking while a layer is selected.</summary>
     public static readonly StyledProperty<bool> IsolateSelectedLayerProperty =
-        AvaloniaProperty.Register<GdsReviewPreview, bool>(nameof(IsolateSelectedLayer), true);
+        AvaloniaProperty.Register<GdsReviewPreview, bool>(nameof(IsolateSelectedLayer));
     /// <summary>0 automatic detail, 1 fast overview, 2 exact detail.</summary>
     public static readonly StyledProperty<int> DetailLevelProperty =
         AvaloniaProperty.Register<GdsReviewPreview, int>(nameof(DetailLevel));
@@ -127,11 +127,16 @@ public sealed class GdsReviewPreview : Control
             _cache = _hierarchy is null && Scene is { } scene ? new GdsReviewGeometryCache(scene) : null;
             SetAndRaise(IsPreviewLimitedProperty, ref _isPreviewLimited, _cache?.IsLimited == true);
             Fit();
-            FocusHighlightedLayer();
+            if (IsolateSelectedLayer) FocusHighlightedLayer();
         }
         if (change.Property == HighlightLayerProperty)
         {
-            if (HighlightLayer.HasValue) FocusHighlightedLayer();
+            if (HighlightLayer.HasValue && IsolateSelectedLayer) FocusHighlightedLayer();
+            else if (!HighlightLayer.HasValue) Fit();
+        }
+        if (change.Property == IsolateSelectedLayerProperty)
+        {
+            if (IsolateSelectedLayer) FocusHighlightedLayer();
             else Fit();
         }
         if (change.Property == ShowPortsProperty && !ShowPorts) CancelGesture();
@@ -168,14 +173,16 @@ public sealed class GdsReviewPreview : Control
             {
                 if (IsolateSelectedLayer && HighlightLayer.HasValue && HighlightLayer != layer.Pair) continue;
                 var selected = HighlightLayer == layer.Pair;
-                using var opacity = context.PushOpacity(selected ? 0.95 : HighlightLayer.HasValue ? 0.12 : 0.68);
+                using var opacity = context.PushOpacity(selected ? 1 : HighlightLayer.HasValue ? GdsReviewSelectionStyle.ContextOpacity : 0.68);
+                var fill = selected ? GdsReviewSelectionStyle.Selected : HighlightLayer.HasValue ? GdsReviewSelectionStyle.Context : layer.Fill;
                 var pen = selected ? new Pen(Brushes.White, 1 / scale) : null;
                 foreach (var geometry in layer.Geometries)
                 {
-                    context.DrawGeometry(layer.Fill, pen, geometry);
+                    context.DrawGeometry(fill, pen, geometry);
                 }
                 foreach (var text in layer.Texts)
-                    context.DrawEllipse(layer.Fill, pen, text, 3 / scale, 3 / scale);
+                    context.DrawRectangle(null, new Pen(fill, 1 / scale),
+                        new Rect(text.X - 3 / scale, text.Y - 3 / scale, 6 / scale, 6 / scale));
             }
         }
         if (!ShowPorts || Ports is null) return;
@@ -198,6 +205,12 @@ public sealed class GdsReviewPreview : Control
         if (Scene is null) return;
         var point = e.GetPosition(this);
         var buttons = e.GetCurrentPoint(this).Properties;
+        if (buttons.IsRightButtonPressed && HighlightLayer.HasValue)
+        {
+            SetCurrentValue(IsolateSelectedLayerProperty, !IsolateSelectedLayer);
+            e.Handled = true;
+            return;
+        }
         if (buttons.IsMiddleButtonPressed) _panStart = point;
         else if (buttons.IsLeftButtonPressed)
         {

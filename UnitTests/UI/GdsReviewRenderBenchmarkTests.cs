@@ -29,6 +29,7 @@ public class GdsReviewRenderBenchmarkTests(ITestOutputHelper output)
         using var frame = new RenderTargetBitmap(new PixelSize(1000, 700));
         var denseLayer = library.Cells.Values.SelectMany(c => c.Elements.OfType<GdsPolygon>()).GroupBy(p => new GdsLayerPair(p.Layer, p.DataType)).OrderByDescending(g => g.Sum(p => (long)p.Points.Count)).First().Key;
         foreach (var selected in new GdsLayerPair?[] { null, denseLayer })
+        foreach (var isolate in new[] { false, true })
         foreach (var detail in new[] { 0, 1, 2 })
         foreach (var zoom in new[] { 1d, 10d, 100d })
         {
@@ -37,10 +38,10 @@ public class GdsReviewRenderBenchmarkTests(ITestOutputHelper output)
             for (int i = 0; i < 6; i++)
             {
                 var timer = Stopwatch.StartNew();
-                using (var context = frame.CreateDrawingContext()) cache.Render(context, view, new Rect(0, 0, 1000, 700), selected, null, true, detail);
+                using (var context = frame.CreateDrawingContext()) cache.Render(context, view, new Rect(0, 0, 1000, 700), selected, null, isolate, detail);
                 times.Add(timer.Elapsed.TotalMilliseconds);
             }
-            output.WriteLine($"selected={selected} detail={detail} zoom={zoom} cold={times[0]:F2}ms warm={times.Skip(1).Average():F2}ms {cache.LastRenderStats}");
+            output.WriteLine($"selected={selected} isolate={isolate} detail={detail} zoom={zoom} cold={times[0]:F2}ms warm={times.Skip(1).Average():F2}ms {cache.LastRenderStats}");
         }
     }
 }

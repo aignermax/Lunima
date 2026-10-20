@@ -84,7 +84,14 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
         ? "RouteLayersChosen" : "NoRouteLayers");
     public string GroupSummary => string.Join(", ", _groups.Select(x => x.Name));
     public string GuideToggleText => Text(GuideEnabled ? "PauseGuide" : "ShowMe");
-    public object? GuideTargetItem => IsLayerStep ? SelectedLayer?.SelectedRole : null;
+    private bool _hasPickedLayer;
+    public object? GuideTargetItem => IsLayerStep ? (_hasPickedLayer ? (object?)SelectedLayer?.SelectedRole : SelectedLayer) : null;
+    public void MarkLayerInteraction()
+    {
+        _hasPickedLayer = true;
+        OnPropertyChanged(nameof(GuideTargetName));
+        OnPropertyChanged(nameof(GuideTargetItem));
+    }
     [RelayCommand]
     private void ToggleGuide()
     {
@@ -103,7 +110,7 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     public string GuideTargetName => StageIndex switch
     {
         0 => "GdsReviewNext",
-        1 => "GdsReviewRole",
+        1 => _hasPickedLayer ? "GdsReviewRole" : "GdsReviewLayerList",
         2 => SelectedCell?.CanExpand == true ? "GdsReviewOpenAssembly" : "GdsReviewCellSelector",
         3 => SelectedPort != null ? "GdsReviewPortKind" : "GdsReviewAddPort",
         4 => HasCompatibleModels ? "GdsReviewModel" : "GdsReviewGeometryOnly",
@@ -203,11 +210,13 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     private void RefreshSteps() { foreach (var step in Steps) step.IsCurrent = step.Index == StageIndex; }
     private void RefreshPresentation()
     {
+        RefreshHierarchyPresentation();
         foreach (var property in new[]{nameof(IsLayoutStep),nameof(IsLayerStep),nameof(IsCellStep),nameof(IsPortStep),
             nameof(IsModelStep),nameof(IsSummaryStep),nameof(ShowCellSelector),nameof(StageTitle),nameof(StageDescription),
             nameof(NextText),nameof(Summary),nameof(Scene),nameof(HighlightLayer),nameof(PreviewPorts),nameof(GuideTargetName),
             nameof(SelectedPortIndex),nameof(LayersConfirmed),nameof(CanApply),nameof(GroupSummary),nameof(HasSelectedModel),
             nameof(HighlightCellName),nameof(ConnectionReadiness),nameof(RouteReadiness),
+            nameof(HasCombinedRouteLayers),nameof(CombinedRouteLayerWarning),
             nameof(CompatibleModels),nameof(HasCompatibleModels),nameof(GuideTargetItem),
             nameof(CanOpenAssembly),nameof(CellHierarchyHint)})
             OnPropertyChanged(property);

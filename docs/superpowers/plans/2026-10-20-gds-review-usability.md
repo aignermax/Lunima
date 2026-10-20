@@ -46,7 +46,7 @@ anchors. Two valid labels cannot promote unrelated annotations elsewhere.
 
 Local verification includes 697 regression tests, a subsequent 78-test handoff
 pass, and real-layout native screenshots. A real-layout review prepared in
-225 ms; bitmap captures took 117–324 ms. These are local review measurements,
+225 ms; bitmap captures took 117â€“324 ms. These are local review measurements,
 not simulation or arbitrary-layout performance guarantees.
 
 The final label-evidence guard passed 21 targeted tests, including the public
@@ -98,7 +98,7 @@ between candidates. No network model or API key is needed.
 Local native bitmap benchmark on the private layout: complete overview warm
 rendering fell from 70.18 ms to 1.00 ms; the first overview setup took 245.90 ms.
 The dense selected layer rendered at 0.90 ms warm. Occupied centered zoomed
-regions took 3.64 ms (10×) and 1.21 ms (100×). These are local render timings,
+regions took 3.64 ms (10Ã—) and 1.21 ms (100Ã—). These are local render timings,
 not application-wide frame-rate guarantees. Fine detail intentionally costs more.
 
 The advisory geometry scan finds 19 raw candidate layer pairs in this file.
@@ -109,3 +109,39 @@ Verification: 741 combined regressions passed, followed by 25 native
 dialog/spatial/localization checks and 16 preview checks. The final Release
 build passed. Independent review findings (hidden-array pick pruning, bitmap
 ownership/disposal, and snapshot marker padding) are addressed.
+
+
+## Context, mask ambiguity, and hierarchy follow-up
+
+Default to muted layout context with a gold selected layer. Right-click toggles
+isolation; isolation focuses the chosen layer and returning restores overview.
+Keep bounded overview/geometry/raster caches and LOD, with no geometry pulse.
+Text anchors are hollow squares; reviewed connection ports remain circles.
+The first-use guide points to the layer list before the role selector and
+supports pointer and keyboard interaction. Explicit guide dismissal is respected.
+
+Expose direct named child cells and placement counts, with a source breadcrumb
+and parent navigation. Opening a child changes the import boundary in one undo
+step. Source leaves cannot be subdivided through hierarchy navigation.
+
+The private EAM/SOA assembly contains 87 direct placements across 10 cell types,
+including two MZI switches, six 1x2 MMIs, and one 2x2 MMI. Several layer pairs are
+nearly coincident; geometry overlap does not establish their fabrication role.
+Multiple core layers, or electrical/heater layers, form planar routing networks.
+Show a nonblocking warning about XY overlap and missing stack/via semantics.
+Synthetic tests cover duplicate-mask deduplication and cross-layer overlap;
+no process-stack inference or import algorithm change is introduced.
+
+Independent review found an encoding roundtrip in UI symbols and missing
+keyboard guide advancement. Symbols are restored as UTF-8 and keyboard
+selection advances the guide. Localization covers all five supported languages.
+
+Verification: 753 regression cases passed; the remaining localization coverage
+failure was an XML-entity spelling rejected by the existing literal-string
+allowlist. Restoring the original UTF-8 symbols resolves it. All 10 handoff
+checks then pass, including coverage, native UI, keyboard guide and benchmark.
+Release build succeeds (existing analyzer/XAML warnings remain).
+With a selected layer and context visible, local native overview rendering is
+0.89 ms warm / 173.15 ms initial; occupied 10x/100x views are 3.53/1.19 ms warm.
+No-selection overview is 1.02 ms warm / 298.32 ms initial. These are bounded
+preview-render measurements, not end-to-end loading or UI latency guarantees.

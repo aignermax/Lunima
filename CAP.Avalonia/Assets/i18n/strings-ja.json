@@ -2363,5 +2363,14 @@
   "GdsReview.NextRouteSuggestion": "配線候補を表示",
   "GdsReview.RouteSuggestion": "{1} 個のセルに配線状の元形状が {0} 個あります。形状だけでは光学用か電気用かは判断できません。",
   "GdsReview.UseOpticalSuggestion": "光配線として使用",
-  "GdsReview.UseElectricalSuggestion": "電気配線として使用"
+  "GdsReview.UseElectricalSuggestion": "電気配線として使用",
+  "GdsReview.CombinedRouteLayerWarning": "複数のコア層または導体層は2Dでまとめて評価され、重なりが接続と見なされる場合があります。代替マスク、層の高さ、ビアは区別されません。確認済みの配線層のみを割り当て、不明な層は未指定のままにしてください。",
+  "GdsReview.SelectionLegend": "金色：選択した層・灰色：レイアウトの周辺形状。右クリックで選択層のみ表示します。四角はテキスト位置を示し、確認済みのピンではありません。",
+  "GdsReview.HierarchyPath": "階層パス",
+  "GdsReview.ParentAssembly": "親アセンブリ",
+  "GdsReview.ChildCells": "子セル",
+  "GdsReview.OpenSelectedChild": "選択した子セルを開く",
+  "GdsReview.ChildCellCounts": "{0} 個の配置・{1} 種類の子セル",
+  "GdsReview.HierarchyChildrenHelp": "確認する子セルを選択してください。開くと、このアセンブリの子セルを個別の部品としてインポートします。「元に戻す」でアセンブリを復元できます。",
+  "GdsReview.HierarchyLeafHelp": "このセルに子セルはありません。形状だけから個別のMMIやMZIコンポーネントを確実に識別することはできません。"
 }

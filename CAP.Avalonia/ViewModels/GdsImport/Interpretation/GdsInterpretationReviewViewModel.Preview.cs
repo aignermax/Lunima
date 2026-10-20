@@ -5,7 +5,7 @@ namespace CAP.Avalonia.ViewModels.GdsImport.Interpretation;
 
 public sealed partial class GdsInterpretationReviewViewModel
 {
-    [ObservableProperty] private bool _isolateSelectedLayer = true;
+    [ObservableProperty] private bool _isolateSelectedLayer;
     [ObservableProperty] private int _previewDetailLevel;
     private readonly Dictionary<string, GdsLayerGeometryScene> _sceneCache = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _sceneLock = new(1, 1);

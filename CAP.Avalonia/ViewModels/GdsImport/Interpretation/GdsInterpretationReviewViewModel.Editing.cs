@@ -87,7 +87,13 @@ public sealed partial class GdsInterpretationReviewViewModel
     [RelayCommand] private void Back() { if (StageIndex > 0) StageIndex--; }
     [RelayCommand] private void ChooseStep(GdsReviewStep step) { if (step != null) StageIndex = step.Index; }
     [RelayCommand] private void PauseGuide() { GuideEnabled = false; RememberGuideDismissal(); }
-    [RelayCommand] private void RestartGuide() => GuideEnabled = true;
+    [RelayCommand] private void RestartGuide()
+    {
+        _hasPickedLayer = false;
+        OnPropertyChanged(nameof(GuideTargetName));
+        OnPropertyChanged(nameof(GuideTargetItem));
+        GuideEnabled = true;
+    }
     private void RememberGuideDismissal()
     {
         try { _profiles.DismissGuide(); }
@@ -195,8 +201,11 @@ public sealed partial class GdsInterpretationReviewViewModel
         finally { _restoring = false; }
         FinishEdit();
     }
-    public void PickLayer(CAP_DataAccess.Import.Gds.LayerPicker.GdsLayerPair pair) =>
+    public void PickLayer(CAP_DataAccess.Import.Gds.LayerPicker.GdsLayerPair pair)
+    {
         SelectedLayer = Layers.FirstOrDefault(x => x.Pair == pair);
+        MarkLayerInteraction();
+    }
     public void PickPort(int index)
     {
         if (SelectedCell is { } cell && index >= 0 && index < cell.Ports.Count) SelectedPort = cell.Ports[index];

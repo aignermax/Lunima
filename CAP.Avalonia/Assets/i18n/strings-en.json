@@ -2363,5 +2363,14 @@
   "GdsReview.NextRouteSuggestion": "Show routing candidates",
   "GdsReview.RouteSuggestion": "{0} route-like source shapes in {1} cells. Shape alone does not determine optical or electrical purpose.",
   "GdsReview.UseOpticalSuggestion": "Use as optical",
-  "GdsReview.UseElectricalSuggestion": "Use as electrical"
+  "GdsReview.UseElectricalSuggestion": "Use as electrical",
+  "GdsReview.CombinedRouteLayerWarning": "Multiple core or conductor layers are combined in 2D; overlaps may connect. Alternative masks, layer heights and vias are not distinguished. Assign only verified routing layers; leave uncertain layers unknown.",
+  "GdsReview.SelectionLegend": "Gold: selected layer · Gray: layout context. Right-click to isolate. Squares mark text positions, not confirmed pins.",
+  "GdsReview.HierarchyPath": "Hierarchy path",
+  "GdsReview.ParentAssembly": "Parent assembly",
+  "GdsReview.ChildCells": "Child cells",
+  "GdsReview.OpenSelectedChild": "Open selected child",
+  "GdsReview.ChildCellCounts": "{0} placements · {1} child cell types",
+  "GdsReview.HierarchyChildrenHelp": "Select a child cell to inspect it. Opening it exposes this assembly’s children as separate import parts; Undo restores the assembly.",
+  "GdsReview.HierarchyLeafHelp": "This cell has no child cells. Its shapes cannot reliably identify separate MMI or MZI components."
 }
