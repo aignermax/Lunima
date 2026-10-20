@@ -7,6 +7,27 @@ namespace UnitTests.Import.Gds;
 public class GdsReviewSceneBuilderTests
 {
     [Fact]
+    public void LayerBoundsUseAllArrayOccurrencesWithoutIncludingOtherLayers()
+    {
+        var library = Library();
+        library.Cells["TOP"].Elements.Add(new GdsReference
+        {
+            CellName = "leaf", Columns = 1_000_000, Rows = 1_000_000,
+            ColumnSpacingMicrometers = 3, RowSpacingMicrometers = 4,
+            AngleDegrees = 90, Magnification = 2, Reflected = true, Offset = new(10, 20)
+        });
+        var expected = new GdsReviewSceneBuilder(library).GetBounds("TOP");
+        library.Cells["TOP"].Elements.Add(new GdsText { Layer = 99, Position = new(-1e9, -1e9) });
+        var builder = new GdsReviewSceneBuilder(library);
+        var bounds = builder.GetLayerBounds("TOP", new(1, 0));
+        bounds.ShouldNotBeNull();
+        // The unrelated text must affect whole-cell bounds but not layer bounds.
+        bounds.Value.ShouldBe(expected);
+        builder.GetBounds("TOP").MinX.ShouldBe(-1e9);
+        builder.GetLayerBounds("TOP", new(77, 0)).ShouldBeNull();
+    }
+
+    [Fact]
     public void HugeArray_IsBoundedButRetainsFullExtentAndEveryLayer()
     {
         var library = Library();

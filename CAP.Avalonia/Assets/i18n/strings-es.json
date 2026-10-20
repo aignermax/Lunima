@@ -613,6 +613,7 @@
   "Home.ConnectChipletsTour": "Conectar dos chiplets",
   "Home.ConnectChipletsTourTip": "Recorrido guiado con el ejemplo de dos chiplets: mueve un dado, mira caer la luz y arréglalo con un clic",
   "Home.LearnTutorial": "Aprender Lunima",
+  "Home.LearningExampleMissing": "Esta lección necesita un ejemplo incluido que falta en esta instalación. Instala el paquete completo de Lunima e inténtalo de nuevo. Puedes abrir tu propio diseño y exportarlo desde el editor.",
   "Home.LearnTutorialTip": "Aprende construyendo: elige dos componentes, conecta sus pines y simula. Tu trabajo existente se conserva.",
   "Home.RunProgramTour": "Ejecuta un programa en tu chip",
   "Home.RunProgramTourTip": "Recorrido guiado sobre el ejemplo del sumador de 4 bits: construye el chip y luego ejecuta un programa ensamblador cuyas sumas calcula la luz",
@@ -2267,7 +2268,7 @@
   "GdsReview.CellMeaning": "Component interpretation",
   "GdsReview.ComponentName": "Component name",
   "GdsReview.ExpandChildren": "Import child cells separately",
-  "GdsReview.CellScope": "Changes apply to every instance of this cell. Keep the cell together, or expand its child cells.",
+  "GdsReview.CellScope": "El amarillo resalta todas las instancias de este tipo de celda. Cada instancia se importa por separado; los cambios se aplican a todas.",
   "GdsReview.GroupCells": "Group selected cells",
   "GdsReview.ClearGroups": "Clear groups",
   "GdsReview.Ports": "Ports",
@@ -2277,7 +2278,7 @@
   "GdsReview.PortCoordinates": "Coordinates are relative to the cell's top-left corner, in micrometers.",
   "GdsReview.Direction": "Direction · °",
   "GdsReview.Width": "Width · µm",
-  "GdsReview.PortDrag": "Select a port to edit its values, or drag it in the preview.",
+  "GdsReview.PortDrag": "Los puertos son puntos de conexión, incluidos los extremos internos de las guías de onda. Las posiciones permanecen bloqueadas hasta que actives las correcciones. Deshacer revierte una corrección.",
   "GdsReview.Model": "Simulation model",
   "GdsReview.GeometryOnly": "Geometry only",
   "GdsReview.ModelWarning": "Geometry alone does not define simulation behavior. Assign a compatible model and match its ports to enable simulation.",
@@ -2347,5 +2348,11 @@
   "GdsReview.PinEvidence": "Propuesta basada en {0} etiquetas coincidentes con la geometría de conexión. Revísala.",
   "GdsReview.NoCompatibleModels": "Ningún modelo coincide con estas conexiones. Conserva la geometría o revisa los pines.",
   "GdsReview.CheckSignalType": "La etiqueta no define el tipo de señal. Óptico es provisional; comprueba si el pin es eléctrico.",
-  "GdsReview.ConfirmSignalType": "Confirmar el tipo de señal mostrado"
+  "GdsReview.ConfirmSignalType": "Confirmar el tipo de señal mostrado",
+  "GdsReview.FocusLayer": "Mostrar la capa seleccionada",
+  "GdsReview.OpenAssembly": "Abrir conjunto →",
+  "GdsReview.AssemblyHint": "Contiene celdas secundarias. Ábrelo para importar esas partes por separado. Deshacer restaura el conjunto.",
+  "GdsReview.LeafHint": "Esta celda GDS no contiene celdas secundarias. Las formas por sí solas no identifican componentes MMI o MZI separados.",
+  "GdsReview.EditPortPositions": "Corregir posiciones de puertos",
+  "Status.SelectedElementsDeleted": "{0} elementos seleccionados eliminados"
 }

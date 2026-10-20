@@ -56,6 +56,7 @@
       <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
         <local:GdsReviewPreview x:Name="ReviewPreview" Scene="{Binding Scene}" HighlightLayer="{Binding HighlightLayer}"
                                 HighlightCellName="{Binding HighlightCellName}"
+                                AllowPortEditing="{Binding IsPortEditing}"
                                 Ports="{Binding PreviewPorts}" SelectedPortIndex="{Binding SelectedPortIndex}"
                                 ShowPorts="{Binding IsPortStep}" MinHeight="300"/>
       </Border>
@@ -80,6 +81,7 @@
           </StackPanel>
           <StackPanel IsVisible="{Binding IsLayerStep}" Spacing="10">
             <TextBlock Classes="strong" Text="{loc:Localize GdsReview.LayerRoles}"/>
+            <Button Content="{loc:Localize GdsReview.FocusLayer}" Click="OnFocusLayer"/>
             <ListBox ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}" MaxHeight="150">
               <ListBox.ItemTemplate><DataTemplate x:DataType="vm:GdsLayerReviewRow">
                 <Grid ColumnDefinitions="70,*" Margin="4">
@@ -117,8 +119,11 @@
           <StackPanel IsVisible="{Binding IsCellStep}" Spacing="12">
             <TextBlock Classes="strong" Text="{loc:Localize GdsReview.CellMeaning}"/>
             <TextBox Text="{Binding SelectedCell.DisplayName}" Watermark="{loc:Localize GdsReview.ComponentName}"/>
+            <Button x:Name="GdsReviewOpenAssembly" Content="{loc:Localize GdsReview.OpenAssembly}" Command="{Binding OpenAssemblyCommand}"
+                    IsVisible="{Binding CanOpenAssembly}" Classes="primary"/>
+            <TextBlock Text="{Binding CellHierarchyHint}" TextWrapping="Wrap" Classes="caption secondary"/>
             <CheckBox x:Name="GdsReviewExpand" Content="{loc:Localize GdsReview.ExpandChildren}"
-                      IsChecked="{Binding SelectedCell.ExpandChildren}" IsEnabled="{Binding SelectedCell.CanExpand}"/>
+                      IsChecked="{Binding SelectedCell.ExpandChildren}" IsVisible="{Binding CanOpenAssembly}"/>
             <TextBlock Classes="caption secondary" TextWrapping="Wrap" Text="{loc:Localize GdsReview.CellScope}"/>
             <Expander Header="{loc:Localize GdsReview.GroupCells}">
               <StackPanel Spacing="8" Margin="0,8">
@@ -146,6 +151,8 @@
               <Button Content="−" Command="{Binding RemovePortCommand}" ToolTip.Tip="{loc:Localize GdsReview.RemovePort}"/>
             </StackPanel>
             <TextBlock Text="{loc:Localize GdsReview.PortsOptional}" Classes="caption secondary" TextWrapping="Wrap"/>
+            <CheckBox Content="{loc:Localize GdsReview.EditPortPositions}" IsChecked="{Binding IsPortEditing}"
+                      IsVisible="{Binding HasSelectedPort}"/>
             <StackPanel x:Name="GdsReviewPortEditor" IsVisible="{Binding HasSelectedPort}" Spacing="8">
             <TextBox Text="{Binding SelectedPort.Name}" Watermark="{loc:Localize GdsReview.PortName}"/>
             <ComboBox x:Name="GdsReviewPortKind" ItemsSource="{x:Static vm:GdsPortReviewRow.Kinds}"
@@ -154,8 +161,9 @@
                        TextWrapping="Wrap" Classes="caption warning"/>
             <Button Content="{loc:Localize GdsReview.ConfirmSignalType}" IsVisible="{Binding SelectedPort.NeedsKindReview}"
                     Command="{Binding ConfirmPortKindCommand}"/>
-            <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.PortCoordinates}" TextWrapping="Wrap"/>
-            <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,Auto,Auto,Auto">
+            <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.PortCoordinates}" TextWrapping="Wrap"
+                       IsVisible="{Binding IsPortEditing}"/>
+            <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,Auto,Auto,Auto" IsVisible="{Binding IsPortEditing}">
               <TextBlock Text="X · µm" Classes="caption secondary"/>
               <TextBlock Grid.Column="2" Text="Y · µm" Classes="caption secondary"/>
               <NumericUpDown Grid.Row="1" Value="{Binding SelectedPort.XUm}" Increment="0.1" FormatString="0.###"/>

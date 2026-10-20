@@ -613,6 +613,7 @@
   "Home.ConnectChipletsTour": "连接两个芯粒",
   "Home.ConnectChipletsTourTip": "双芯粒示例的引导教程：移动一个芯片，观察光功率下降，一键修复",
   "Home.LearnTutorial": "学习 Lunima",
+  "Home.LearningExampleMissing": "本课程需要的随附示例在此安装中缺失。请安装完整的 Lunima 软件包后重试。你仍可打开自己的版图并从编辑器导出。",
   "Home.LearnTutorialTip": "边搭建边学习：选择两个元件，连接引脚，然后仿真。已有设计会被保留。",
   "Home.RunProgramTour": "在你的芯片上运行程序",
   "Home.RunProgramTourTip": "在 4 位加法器示例上进行引导教程：构建芯片，然后运行一个由光完成加法计算的汇编程序",
@@ -2267,7 +2268,7 @@
   "GdsReview.CellMeaning": "Component interpretation",
   "GdsReview.ComponentName": "Component name",
   "GdsReview.ExpandChildren": "Import child cells separately",
-  "GdsReview.CellScope": "Changes apply to every instance of this cell. Keep the cell together, or expand its child cells.",
+  "GdsReview.CellScope": "黄色标出此单元类型的所有实例。每个实例分别导入；修改会应用于所有实例。",
   "GdsReview.GroupCells": "Group selected cells",
   "GdsReview.ClearGroups": "Clear groups",
   "GdsReview.Ports": "Ports",
@@ -2277,7 +2278,7 @@
   "GdsReview.PortCoordinates": "Coordinates are relative to the cell's top-left corner, in micrometers.",
   "GdsReview.Direction": "Direction · °",
   "GdsReview.Width": "Width · µm",
-  "GdsReview.PortDrag": "Select a port to edit its values, or drag it in the preview.",
+  "GdsReview.PortDrag": "端口是连接端点，包括波导内部的端点。在启用修正前，端口位置保持锁定。撤销可还原修正。",
   "GdsReview.Model": "Simulation model",
   "GdsReview.GeometryOnly": "Geometry only",
   "GdsReview.ModelWarning": "Geometry alone does not define simulation behavior. Assign a compatible model and match its ports to enable simulation.",
@@ -2347,5 +2348,11 @@
   "GdsReview.PinEvidence": "根据 {0} 个与连接几何形状匹配的引脚名称建议。请确认。",
   "GdsReview.NoCompatibleModels": "没有匹配这些连接的库模型。请保留几何图形，或先检查引脚。",
   "GdsReview.CheckSignalType": "标签未指定信号类型。光学仅为暂定值，请确认此引脚是否为电气引脚。",
-  "GdsReview.ConfirmSignalType": "确认显示的信号类型"
+  "GdsReview.ConfirmSignalType": "确认显示的信号类型",
+  "GdsReview.FocusLayer": "显示所选图层",
+  "GdsReview.OpenAssembly": "展开组件组 →",
+  "GdsReview.AssemblyHint": "包含子单元。展开后可分别导入这些部分。撤销可恢复组件组。",
+  "GdsReview.LeafHint": "此 GDS 单元不包含子单元。仅凭形状无法识别独立的 MMI 或 MZI 元件。",
+  "GdsReview.EditPortPositions": "修正端口位置",
+  "Status.SelectedElementsDeleted": "已删除 {0} 个所选元素"
 }

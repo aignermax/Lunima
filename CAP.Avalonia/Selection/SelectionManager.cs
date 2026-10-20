@@ -20,6 +20,9 @@ public class SelectionManager
     /// </summary>
     public ObservableCollection<WaveguideConnectionViewModel> SelectedConnections { get; } = new();
 
+    /// <summary>Selected pin-less imported paths, separate from routable connections.</summary>
+    public ObservableCollection<CanvasFrozenPathViewModel> SelectedFrozenPaths { get; } = new();
+
     /// <summary>
     /// Whether a box-selection drag is currently in progress.
     /// </summary>
@@ -117,6 +120,9 @@ public class SelectionManager
         }
         SelectedComponents.Clear();
         ClearConnectionSelection();
+        foreach (var path in SelectedFrozenPaths)
+            path.IsSelected = false;
+        SelectedFrozenPaths.Clear();
     }
 
     /// <summary>

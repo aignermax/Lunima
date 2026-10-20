@@ -17,4 +17,5 @@ public partial class GdsInterpretationReviewView : UserControl
         ReviewPreview.PortDragCompleted += () => (DataContext as GdsInterpretationReviewViewModel)?.EndPortDrag();
     }
     private void OnFit(object? sender, RoutedEventArgs e) => ReviewPreview.Fit();
+    private void OnFocusLayer(object? sender, RoutedEventArgs e) => ReviewPreview.FocusHighlightedLayer();
 }

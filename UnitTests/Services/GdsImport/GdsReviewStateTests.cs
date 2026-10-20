@@ -34,6 +34,32 @@ public sealed class GdsReviewStateTests : IDisposable
     }
 
     [Fact]
+    public async Task OpeningAssemblySelectsChildAndCanBeUndone()
+    {
+        var vm = await Create(nested: true);
+        vm.StageIndex = 2;
+        vm.OpenAssemblyCommand.Execute(null);
+        Assert.Equal("leaf", vm.SelectedCell!.CellName);
+        Assert.True(vm.Cells.Single(x => x.CellName == "parent").ExpandChildren);
+        vm.UndoCommand.Execute(null);
+        Assert.Equal("parent", vm.SelectedCell!.CellName);
+        Assert.Single(vm.ActiveCells);
+        vm.Close();
+    }
+
+    [Fact]
+    public async Task PortPositionEditingResetsWhenLeavingConnections()
+    {
+        var vm = await Create();
+        vm.StageIndex = 3;
+        Assert.False(vm.IsPortEditing);
+        vm.IsPortEditing = true;
+        vm.StageIndex = 4;
+        Assert.False(vm.IsPortEditing);
+        vm.Close();
+    }
+
+    [Fact]
     public async Task UndoBeforeDetectionDoesNotSuppressLaterDetectedPins()
     {
         var vm = await Create();

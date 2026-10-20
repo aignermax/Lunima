@@ -42,6 +42,7 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     [ObservableProperty] private string _groupName = "";
     [ObservableProperty] private bool _isPreparing;
     [ObservableProperty] private bool _isSceneLoading;
+    [ObservableProperty] private bool _isPortEditing;
     public bool IsWorking => IsPreparing || IsSceneLoading;
     public Action? ApplyRequested { get; set; }
     public bool LayersConfirmed => _confirmed[1];
@@ -93,7 +94,7 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     {
         0 => "GdsReviewNext",
         1 => "GdsReviewRole",
-        2 => SelectedCell?.CanExpand == true ? "GdsReviewExpand" : "GdsReviewCellSelector",
+        2 => SelectedCell?.CanExpand == true ? "GdsReviewOpenAssembly" : "GdsReviewCellSelector",
         3 => SelectedPort != null ? "GdsReviewPortKind" : "GdsReviewAddPort",
         4 => HasCompatibleModels ? "GdsReviewModel" : "GdsReviewGeometryOnly",
         _ => "GdsReviewNext"
@@ -159,7 +160,7 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
         return new(library, topCell, sourceHash, prepared.scene, prepared.cells, suggestions, models, profiles ?? new(), prepared.builder, prepared.firstScene);
     }
 
-    partial void OnStageIndexChanged(int value) { RefreshCellSelection(); RefreshSteps(); RefreshPresentation(); }
+    partial void OnStageIndexChanged(int value) { IsPortEditing = false; RefreshCellSelection(); RefreshSteps(); RefreshPresentation(); }
     partial void OnSelectedLayerChanged(GdsLayerReviewRow? value)
     {
         OnPropertyChanged(nameof(HighlightLayer));
@@ -167,6 +168,7 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     }
     partial void OnSelectedCellChanged(GdsCellReviewRow? value)
     {
+        IsPortEditing = false;
         SelectedPort = value?.Ports.FirstOrDefault();
         RefreshPresentation();
         if (value != null) _ = PrepareSelectedSceneAsync(value);
@@ -193,7 +195,8 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
             nameof(NextText),nameof(Summary),nameof(Scene),nameof(HighlightLayer),nameof(PreviewPorts),nameof(GuideTargetName),
             nameof(SelectedPortIndex),nameof(LayersConfirmed),nameof(CanApply),nameof(GroupSummary),nameof(HasSelectedModel),
             nameof(HighlightCellName),nameof(ConnectionReadiness),nameof(RouteReadiness),
-            nameof(CompatibleModels),nameof(HasCompatibleModels),nameof(GuideTargetItem)})
+            nameof(CompatibleModels),nameof(HasCompatibleModels),nameof(GuideTargetItem),
+            nameof(CanOpenAssembly),nameof(CellHierarchyHint)})
             OnPropertyChanged(property);
     }
 

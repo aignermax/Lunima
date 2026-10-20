@@ -52,3 +52,27 @@ not simulation or arbitrary-layout performance guarantees.
 The final label-evidence guard passed 21 targeted tests, including the public
 gdsfactory example and the native import-dialog smoke test. Independent source
 review found no remaining blocking findings.
+
+## Follow-up from native layout testing
+
+- Ship guided example assets with desktop builds, and explain missing assets
+  instead of silently ignoring the manufacturing chapter button.
+- Frame the complete selected layer and pulse briefly; stop animation when hidden
+  and respect reduced motion. Retain the full-layout fit action.
+- Offer a guided, explicit assembly-opening action. Interpretation is per source
+  cell type; repeated placements remain separate instances after expansion.
+  Flattened leaf geometry is not falsely presented as recognized MMI/MZI parts.
+- Lock port positions by default and reveal coordinate corrections only on request.
+  Leaving the stage or switching cells locks them again.
+- Include imported frozen paths in marquee selection, with ordinary route
+  selection and a single undoable delete for mixed selections.
+
+Follow-up validation uses real headless pointer events, transformed tiny geometry,
+huge array bounds without flattening, pulse lifecycle checks, repeated assembly
+placements, and selection/delete/undo regression tests.
+
+The final combined follow-up run passed 730 tests (no failures or skips).
+Desktop Release build passed with existing warnings; its output includes all
+29 example designs and the manifest. Independent review findings about stale
+primary selection and no-op crossing deletion undo were fixed and covered by
+regressions before the final run.

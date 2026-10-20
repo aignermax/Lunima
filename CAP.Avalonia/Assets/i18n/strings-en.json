@@ -613,6 +613,7 @@
   "Home.ConnectChipletsTour": "Connect two chiplets",
   "Home.ConnectChipletsTourTip": "Guided tour on the two-chiplets example: move a die, watch the light drop, fix it with one click",
   "Home.LearnTutorial": "Learn Lunima",
+  "Home.LearningExampleMissing": "This lesson needs a bundled example that is missing from this installation. Install the complete Lunima package and try again. You can still open your own layout and export it from the editor.",
   "Home.LearnTutorialTip": "Learn by building: choose two components, connect their pins, then simulate. Your existing work is kept.",
   "Home.RunProgramTour": "Run a program on your chip",
   "Home.RunProgramTourTip": "Guided tour on the 4-bit adder example: build the chip, then run an assembly program whose ADDs are computed by light",
@@ -2267,7 +2268,7 @@
   "GdsReview.CellMeaning": "Selected part",
   "GdsReview.ComponentName": "Component name",
   "GdsReview.ExpandChildren": "Import child cells separately",
-  "GdsReview.CellScope": "Changes apply to every instance of this cell. Keep the cell together, or expand its child cells.",
+  "GdsReview.CellScope": "Yellow highlights every occurrence of this cell type. Each occurrence is imported separately; edits apply to all of them.",
   "GdsReview.GroupCells": "Combine parts into a group",
   "GdsReview.ClearGroups": "Clear groups",
   "GdsReview.Ports": "Connection points (pins)",
@@ -2277,7 +2278,7 @@
   "GdsReview.PortCoordinates": "Coordinates are relative to the cell's top-left corner, in micrometers.",
   "GdsReview.Direction": "Direction · °",
   "GdsReview.Width": "Width · µm",
-  "GdsReview.PortDrag": "Select a port to edit its values, or drag it in the preview.",
+  "GdsReview.PortDrag": "Ports are connection endpoints, including internal waveguide endpoints. Positions stay locked until you enable corrections. Undo restores a correction.",
   "GdsReview.Model": "Simulation model",
   "GdsReview.GeometryOnly": "Geometry only",
   "GdsReview.ModelWarning": "Geometry alone does not define simulation behavior. Assign a compatible model and match its ports to enable simulation.",
@@ -2347,5 +2348,11 @@
   "GdsReview.PinEvidence": "Suggested from {0} pin labels matching connection geometry. Check before confirming.",
   "GdsReview.NoCompatibleModels": "No library model matches these connections. Keep the geometry, or review the pins first.",
   "GdsReview.CheckSignalType": "The label does not specify the signal type. Optical is provisional; check whether this pin is electrical.",
-  "GdsReview.ConfirmSignalType": "Confirm displayed signal type"
+  "GdsReview.ConfirmSignalType": "Confirm displayed signal type",
+  "GdsReview.FocusLayer": "Show selected layer",
+  "GdsReview.OpenAssembly": "Open assembly →",
+  "GdsReview.AssemblyHint": "Contains child cells. Open it to import those parts separately. Undo restores the assembly.",
+  "GdsReview.LeafHint": "No child cells in this GDS cell. Shapes alone do not identify separate MMI or MZI components.",
+  "GdsReview.EditPortPositions": "Correct port positions",
+  "Status.SelectedElementsDeleted": "{0} selected elements deleted"
 }

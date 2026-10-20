@@ -16,7 +16,7 @@ public sealed class GdsReviewSceneBuilder
     private readonly Dictionary<BoundsKey, GdsBoundingBox?> _bounds = new();
     private readonly Dictionary<string, IReadOnlyList<GdsLayerPair>> _layerPairs = new(StringComparer.Ordinal);
     private readonly object _boundsGate = new();
-    private readonly record struct BoundsKey(string CellName, GdsTransform Linear);
+    private readonly record struct BoundsKey(string CellName, GdsTransform Linear, GdsLayerPair? Layer);
 
     public GdsReviewSceneBuilder(GdsLibrary library)
     {
@@ -27,6 +27,10 @@ public sealed class GdsReviewSceneBuilder
     public GdsBoundingBox GetBounds(string cellName, CancellationToken cancellationToken = default) =>
         Bounds(cellName, GdsTransform.Identity, new HashSet<string>(StringComparer.Ordinal), cancellationToken)
         ?? GdsBoundingBox.Empty;
+
+    /// <summary>Exact bounds of every occurrence of a layer, without expanding arrays or shared cells.</summary>
+    public GdsBoundingBox? GetLayerBounds(string cellName, GdsLayerPair layer, CancellationToken cancellationToken = default) =>
+        Bounds(cellName, GdsTransform.Identity, new HashSet<string>(StringComparer.Ordinal), cancellationToken, layer);
 
     public GdsLayerGeometryScene Build(string cellName, CancellationToken cancellationToken = default)
     {
@@ -95,10 +99,10 @@ public sealed class GdsReviewSceneBuilder
     }
 
     private GdsBoundingBox? Bounds(
-        string name, GdsTransform linear, HashSet<string> active, CancellationToken ct)
+        string name, GdsTransform linear, HashSet<string> active, CancellationToken ct, GdsLayerPair? layer = null)
     {
         ct.ThrowIfCancellationRequested();
-        var key = new BoundsKey(name, linear);
+        var key = new BoundsKey(name, linear, layer);
         lock (_boundsGate)
             if (_bounds.TryGetValue(key, out var cached))
                 return cached;
@@ -112,17 +116,17 @@ public sealed class GdsReviewSceneBuilder
                 ct.ThrowIfCancellationRequested();
                 switch (element)
                 {
-                    case GdsPolygon polygon:
+                    case GdsPolygon polygon when layer is null || layer == new GdsLayerPair(polygon.Layer, polygon.DataType):
                         foreach (var point in polygon.Points)
                         {
                             ct.ThrowIfCancellationRequested();
                             Include(ref box, linear.Apply(point));
                         }
                         break;
-                    case GdsText text:
+                    case GdsText text when layer is null || layer == new GdsLayerPair(text.Layer, text.TextType):
                         Include(ref box, linear.Apply(text.Position));
                         break;
-                    case GdsPath path:
+                    case GdsPath path when layer is null || layer == new GdsLayerPair(path.Layer, path.DataType):
                         double scale = Math.Sqrt(linear.A * linear.A + linear.D * linear.D);
                         double halfWidth = path.WidthMicrometers * scale / 2;
                         foreach (var point in path.Points)
@@ -136,7 +140,7 @@ public sealed class GdsReviewSceneBuilder
                     case GdsReference reference when reference.Columns > 0 && reference.Rows > 0:
                         var transform = GdsTransform.FromReference(reference, 0, 0).Then(linear);
                         var childLinear = transform with { C = 0, F = 0 };
-                        var child = Bounds(reference.CellName, childLinear, active, ct);
+                        var child = Bounds(reference.CellName, childLinear, active, ct, layer);
                         if (child is not { } childBox)
                             break;
                         // Translation is affine in the two array indices, so all

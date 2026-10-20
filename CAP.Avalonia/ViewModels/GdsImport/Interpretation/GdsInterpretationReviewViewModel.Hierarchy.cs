@@ -1,9 +1,24 @@
 using CAP_DataAccess.Import.Gds;
+using CommunityToolkit.Mvvm.Input;
 
 namespace CAP.Avalonia.ViewModels.GdsImport.Interpretation;
 
 public sealed partial class GdsInterpretationReviewViewModel
 {
+    public bool CanOpenAssembly => SelectedCell?.CanExpand == true;
+    public string CellHierarchyHint => Text(CanOpenAssembly ? "AssemblyHint" : "LeafHint");
+
+    [RelayCommand]
+    private void OpenAssembly()
+    {
+        if (!IsCellStep || SelectedCell is not { CanExpand: true } parent) return;
+        // Expanding changes the import boundary and already records one undo step.
+        parent.ExpandChildren = true;
+        var names = _library.Cells[parent.CellName].Elements.OfType<GdsReference>()
+            .Select(reference => reference.CellName).ToHashSet(StringComparer.Ordinal);
+        SelectedCell = DisplayCells.FirstOrDefault(cell => names.Contains(cell.CellName)) ?? parent;
+    }
+
     /// <summary>Selects the exposed component containing a clicked source cell.</summary>
     public void PickCell(IReadOnlyList<string> cellPath)
     {

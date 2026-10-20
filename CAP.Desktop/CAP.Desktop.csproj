@@ -32,6 +32,14 @@
     <ProjectReference Include="..\CAP.Avalonia\CAP.Avalonia.csproj" />
   </ItemGroup>
 
+  <!-- Home's guided chapters load these designs beside the installed application. -->
+  <ItemGroup>
+    <Content Include="..\examples\**\*.lun;..\examples\examples.json"
+             Link="examples\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- Python helper script for the PDK Offset Editor's Nazca/SiEPIC preview.
        FindPreviewScript() in App.axaml.cs looks for `<baseDir>/scripts/render_component_preview.py`,
        so the file must land next to the published binary. Without this entry

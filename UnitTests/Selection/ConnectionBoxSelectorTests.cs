@@ -4,6 +4,7 @@ using CAP_Core.Components;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.LightCalculation;
+using CAP_Core.Routing;
 using CAP_Core.Tiles;
 using Shouldly;
 using Xunit;
@@ -17,6 +18,34 @@ namespace UnitTests.Selection;
 /// </summary>
 public class ConnectionBoxSelectorTests
 {
+    [Theory]
+    [InlineData(true, 68, -73, 74, -67, true)]
+    [InlineData(false, 68, -73, 74, -67, true)]
+    [InlineData(true, 48, -52, 52, -48, false)]
+    [InlineData(false, 48, -52, 52, -48, false)]
+    public void CurvedRoute_BoxUsesDrawnArcRatherThanEndpointChord(
+        bool frozen, double minX, double minY, double maxX, double maxY, bool expected)
+    {
+        // Quarter circle (0,-100) -> (100,0) bulges through (70.7,-70.7).
+        // Its endpoint chord passes (50,-50), where nothing is drawn.
+        var path = new RoutedPath();
+        path.Segments.Add(new BendSegment(0, 0, 100, 0, 90));
+        var selection = new SelectionManager();
+        if (frozen)
+        {
+            var imported = new CanvasFrozenPathViewModel(new FrozenWaveguidePath { Path = path });
+            ConnectionBoxSelector.SelectFrozenPathsInRectangle(selection, new[] { imported }, minX, minY, maxX, maxY);
+            imported.IsSelected.ShouldBe(expected);
+        }
+        else
+        {
+            var connection = CreateConnectionVm(MatterType.Light, 0, -100, 100, 0);
+            connection.Connection.RestoreCachedPath(path);
+            ConnectionBoxSelector.SelectInRectangle(selection, new[] { connection }, minX, minY, maxX, maxY);
+            connection.IsSelected.ShouldBe(expected);
+        }
+    }
+
     [Fact]
     public void SelectInRectangle_AddsConnectionCrossingTheBox()
     {

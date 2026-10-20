@@ -61,7 +61,7 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
         return cached;
     }
 
-    internal void Render(DrawingContext context, Matrix screen, Rect viewport, GdsLayerPair? highlight, string? highlightCell)
+    internal void Render(DrawingContext context, Matrix screen, Rect viewport, GdsLayerPair? highlight, string? highlightCell, double pulse = 0)
     {
         int blocks = 0;
         int cells = 0;
@@ -87,10 +87,12 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
                 double scale = Math.Max(1e-12, Math.Sqrt(matrix.M11 * matrix.M11 + matrix.M12 * matrix.M12));
                 foreach (var layer in cell.Layers)
                 {
-                    using var opacity = context.PushOpacity(highlight == layer.Pair ? .95 : highlight.HasValue ? .22 : .68);
+                    using var opacity = context.PushOpacity(highlight == layer.Pair ? .95 : highlight.HasValue ? .12 : .68);
                     var fill = _brushes[layer.Pair];
-                    var pen = highlight == layer.Pair ? new Pen(Brushes.White, 1.5 / scale) : null;
+                    var pen = highlight == layer.Pair ? new Pen(Brushes.White, (2 + 3 * pulse) / scale) : null;
                     context.DrawGeometry(fill, pen, layer.Geometry);
+                    if (highlight == layer.Pair && pulse > 0)
+                        using (context.PushOpacity(.45 * pulse)) context.DrawGeometry(Brushes.White, null, layer.Geometry);
                     foreach (var text in layer.Texts)
                         context.DrawEllipse(fill, pen, new Point(text.Position.X, text.Position.Y), 3 / scale, 3 / scale);
                 }
@@ -134,9 +136,11 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
                     Math.Max(1, pixels.Width), Math.Max(1, pixels.Height));
             var pairs = _source.GetLayerPairs(name);
             bool emphasized = highlight is { } selected && pairs.Contains(selected);
-            using var opacity = context.PushOpacity(emphasized ? .95 : highlight.HasValue ? .22 : .68);
+            using var opacity = context.PushOpacity(emphasized ? .95 : highlight.HasValue ? .12 : .68);
             if (pairs.Count > 0)
                 context.FillRectangle(_brushes[emphasized ? highlight!.Value : pairs[0]], pixels);
+            if (emphasized)
+                context.DrawRectangle(null, new Pen(Brushes.White, 2 + 3 * pulse), pixels);
             if (name == highlightCell)
                 context.DrawRectangle(null, new Pen(Brushes.Yellow, 2), pixels);
         }

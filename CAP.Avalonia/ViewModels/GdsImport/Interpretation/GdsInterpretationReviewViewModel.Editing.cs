@@ -103,6 +103,7 @@ public sealed partial class GdsInterpretationReviewViewModel
         while (cell.Ports.Any(x => x.Name == $"o{n}")) n++;
         var row = new GdsPortReviewRow(new DetectedPin { Name = $"o{n}", XUm = cell.Bounds.Width, YUm = cell.Bounds.Height / 2, WidthUm = .5 });
         cell.Ports.Add(row); row.PropertyChanged += OnRowChanged; cell.PortsEdited = true; SelectedPort = row;
+        IsPortEditing = true;
         FinishEdit();
     }
     [RelayCommand]

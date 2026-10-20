@@ -18,6 +18,151 @@ namespace UnitTests.UI;
 public class GdsReviewPreviewTests
 {
     [AvaloniaFact]
+    public async Task HighlightPulseEndsAndStopsWhenHiddenOrDetached()
+    {
+        var preview = new GdsReviewPreview { Scene = Scene() };
+        var window = Open(preview);
+        var previous = CAP.Avalonia.Behaviors.RevealOnShowBehavior.AnimationsEnabled;
+        var reduced = Environment.GetEnvironmentVariable(CAP.Avalonia.Behaviors.MotionPreferences.ReduceMotionVariable);
+        CAP.Avalonia.Behaviors.RevealOnShowBehavior.AnimationsEnabled = true;
+        Environment.SetEnvironmentVariable(CAP.Avalonia.Behaviors.MotionPreferences.ReduceMotionVariable, null);
+        try
+        {
+            preview.HighlightLayer = new(7, 2);
+            preview.IsHighlightPulsing.ShouldBeTrue();
+            await Task.Delay(1800);
+            Dispatcher.UIThread.RunJobs();
+            preview.IsHighlightPulsing.ShouldBeFalse();
+            preview.FocusHighlightedLayer();
+            preview.IsHighlightPulsing.ShouldBeTrue();
+            preview.IsVisible = false;
+            preview.IsHighlightPulsing.ShouldBeFalse();
+            preview.IsVisible = true;
+            preview.FocusHighlightedLayer();
+            preview.IsHighlightPulsing.ShouldBeTrue();
+            window.Content = null;
+            preview.IsHighlightPulsing.ShouldBeFalse();
+        }
+        finally
+        {
+            window.Close();
+            CAP.Avalonia.Behaviors.RevealOnShowBehavior.AnimationsEnabled = previous;
+            Environment.SetEnvironmentVariable(CAP.Avalonia.Behaviors.MotionPreferences.ReduceMotionVariable, reduced);
+        }
+    }
+
+    [AvaloniaFact]
+    public void ReducedMotionKeepsLayerFocusWithoutStartingPulse()
+    {
+        var previous = CAP.Avalonia.Behaviors.RevealOnShowBehavior.AnimationsEnabled;
+        CAP.Avalonia.Behaviors.RevealOnShowBehavior.AnimationsEnabled = false;
+        var preview = new GdsReviewPreview { Scene = Scene() };
+        var window = Open(preview);
+        try
+        {
+            preview.HighlightLayer = new(7, 2);
+            preview.IsHighlightPulsing.ShouldBeFalse();
+            using var frame = new RenderTargetBitmap(new PixelSize(248, 248));
+            using (var context = frame.CreateDrawingContext()) preview.Render(context);
+            ReadGreen(frame, 124, 124).ShouldBeGreaterThan((byte)100);
+        }
+        finally
+        {
+            window.Close();
+            CAP.Avalonia.Behaviors.RevealOnShowBehavior.AnimationsEnabled = previous;
+        }
+    }
+
+    [AvaloniaFact]
+    public void SelectingTinyLayerFramesItsTransformedGeometryAndKeepsItPickable()
+    {
+        var library = new GdsLibrary();
+        var top = new GdsCell { Name = "TOP" };
+        top.Elements.Add(new GdsPolygon { Layer = 1, Points = [new(0, 0), new(1_000_000, 0), new(1_000_000, 1_000_000), new(0, 1_000_000)] });
+        var leaf = new GdsCell { Name = "tiny" };
+        leaf.Elements.Add(new GdsPolygon { Layer = 9, Points = [new(0, 0), new(.01, 0), new(.01, .02), new(0, .02)] });
+        top.Elements.Add(new GdsReference { CellName = leaf.Name, Offset = new(700_000, 800_000), AngleDegrees = 90, Reflected = true, Magnification = 2 });
+        library.Cells.Add(top.Name, top);
+        library.Cells.Add(leaf.Name, leaf);
+        var preview = new GdsReviewPreview { Scene = new GdsReviewSceneBuilder(library).Build("TOP") };
+        var window = Open(preview);
+        GdsLayerPair? picked = null;
+        preview.LayerPicked += pair => picked = pair;
+        try
+        {
+            preview.HighlightLayer = new GdsLayerPair(9, 0);
+            using var frame = new RenderTargetBitmap(new PixelSize(248, 248));
+            using (var context = frame.CreateDrawingContext()) preview.Render(context);
+            ReadGreen(frame, 124, 124).ShouldBeGreaterThan((byte)100);
+            window.MouseDown(new Point(124, 124), MouseButton.Left);
+            window.MouseUp(new Point(124, 124), MouseButton.Left);
+            picked.ShouldBe(new GdsLayerPair(9, 0));
+            preview.Fit();
+            picked = null;
+            window.MouseDown(new Point(124, 124), MouseButton.Left);
+            window.MouseUp(new Point(124, 124), MouseButton.Left);
+            picked.ShouldBe(new GdsLayerPair(1, 0));
+            preview.FocusHighlightedLayer();
+            window.MouseDown(new Point(124, 124), MouseButton.Left);
+            window.MouseUp(new Point(124, 124), MouseButton.Left);
+            picked.ShouldBe(new GdsLayerPair(9, 0));
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void LockedPortCanBeSelectedButCannotBeDragged()
+    {
+        var preview = new GdsReviewPreview
+        {
+            Scene = Scene(), ShowPorts = true,
+            Ports = [new DetectedPin { XUm = 50, YUm = 50 }]
+        };
+        var selected = -1;
+        var moved = false;
+        var started = false;
+        preview.PortPicked += index => selected = index;
+        preview.PortMoved += (_, _, _) => moved = true;
+        preview.PortDragStarted += () => started = true;
+        var window = Open(preview);
+        try
+        {
+            window.MouseDown(new Point(124, 124), MouseButton.Left, RawInputModifiers.LeftMouseButton);
+            window.MouseMove(new Point(160, 160), RawInputModifiers.LeftMouseButton);
+            window.MouseUp(new Point(160, 160), MouseButton.Left);
+            selected.ShouldBe(0);
+            moved.ShouldBeFalse();
+            started.ShouldBeFalse();
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void LockingPortsCancelsAnActiveDrag()
+    {
+        var preview = new GdsReviewPreview
+        {
+            Scene = Scene(), ShowPorts = true, AllowPortEditing = true,
+            Ports = [new DetectedPin { XUm = 50, YUm = 50 }]
+        };
+        var moves = 0;
+        var completions = 0;
+        preview.PortMoved += (_, _, _) => moves++;
+        preview.PortDragCompleted += () => completions++;
+        var window = Open(preview);
+        try
+        {
+            window.MouseDown(new Point(124, 124), MouseButton.Left, RawInputModifiers.LeftMouseButton);
+            preview.AllowPortEditing = false;
+            window.MouseMove(new Point(160, 160), RawInputModifiers.LeftMouseButton);
+            window.MouseUp(new Point(160, 160), MouseButton.Left);
+            moves.ShouldBe(0);
+            completions.ShouldBe(1);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void TextOnlyHierarchyRetainsVisibleAnchor()
     {
         var library = new GdsLibrary();
@@ -257,6 +402,7 @@ public class GdsReviewPreviewTests
         {
             Scene = Scene(),
             ShowPorts = true,
+            AllowPortEditing = true,
             Ports = [new DetectedPin { XUm = 50, YUm = 50 }]
         };
         var picked = -1;
@@ -285,6 +431,7 @@ public class GdsReviewPreviewTests
         {
             Scene = Scene(),
             ShowPorts = true,
+            AllowPortEditing = true,
             Ports = [new DetectedPin { XUm = 50, YUm = 50 }]
         };
         var changes = 0;

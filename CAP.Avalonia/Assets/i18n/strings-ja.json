@@ -613,6 +613,7 @@
   "Home.ConnectChipletsTour": "2 つのチップレットをつなぐ",
   "Home.ConnectChipletsTourTip": "2 チップレット例のガイドツアー：ダイを動かし、光の低下を見て、ワンクリックで修正",
   "Home.LearnTutorial": "Lunima を学ぶ",
+  "Home.LearningExampleMissing": "このレッスンに必要な同梱サンプルが見つかりません。Lunima の完全なパッケージをインストールしてから、もう一度お試しください。自分のレイアウトを開き、エディターからエクスポートすることはできます。",
   "Home.LearnTutorialTip": "作りながら学びましょう。2つの部品を選び、ピンを接続してシミュレーションします。既存の作業は保持されます。",
   "Home.RunProgramTour": "チップでプログラムを実行",
   "Home.RunProgramTourTip": "4 ビット加算器の例でガイドツアー：チップを構築し、加算が光で計算されるアセンブリプログラムを実行する",
@@ -2267,7 +2268,7 @@
   "GdsReview.CellMeaning": "Component interpretation",
   "GdsReview.ComponentName": "Component name",
   "GdsReview.ExpandChildren": "Import child cells separately",
-  "GdsReview.CellScope": "Changes apply to every instance of this cell. Keep the cell together, or expand its child cells.",
+  "GdsReview.CellScope": "このセル型のすべての配置を黄色で強調します。各配置は個別にインポートされ、編集はすべての配置に適用されます。",
   "GdsReview.GroupCells": "Group selected cells",
   "GdsReview.ClearGroups": "Clear groups",
   "GdsReview.Ports": "Ports",
@@ -2277,7 +2278,7 @@
   "GdsReview.PortCoordinates": "Coordinates are relative to the cell's top-left corner, in micrometers.",
   "GdsReview.Direction": "Direction · °",
   "GdsReview.Width": "Width · µm",
-  "GdsReview.PortDrag": "Select a port to edit its values, or drag it in the preview.",
+  "GdsReview.PortDrag": "ポートは接続端点で、導波路内部の端点も含みます。修正を有効にするまで位置はロックされます。元に戻す操作で修正前の状態に戻せます。",
   "GdsReview.Model": "Simulation model",
   "GdsReview.GeometryOnly": "Geometry only",
   "GdsReview.ModelWarning": "Geometry alone does not define simulation behavior. Assign a compatible model and match its ports to enable simulation.",
@@ -2347,5 +2348,11 @@
   "GdsReview.PinEvidence": "接続形状と一致する{0}個の名前からの提案です。確認してください。",
   "GdsReview.NoCompatibleModels": "接続に一致するライブラリモデルがありません。図形を保持するか、ピンを確認してください。",
   "GdsReview.CheckSignalType": "名前だけでは信号の種類は分かりません。光は仮の設定です。電気端子かどうか確認してください。",
-  "GdsReview.ConfirmSignalType": "表示中の信号タイプを確認"
+  "GdsReview.ConfirmSignalType": "表示中の信号タイプを確認",
+  "GdsReview.FocusLayer": "選択したレイヤーを表示",
+  "GdsReview.OpenAssembly": "アセンブリを開く →",
+  "GdsReview.AssemblyHint": "子セルを含んでいます。開くと各部分を個別にインポートできます。元に戻す操作でアセンブリを復元できます。",
+  "GdsReview.LeafHint": "この GDS セルには子セルがありません。形状だけでは、独立した MMI や MZI コンポーネントを識別できません。",
+  "GdsReview.EditPortPositions": "ポート位置を修正",
+  "Status.SelectedElementsDeleted": "選択した {0} 個の要素を削除しました"
 }

@@ -22,6 +22,46 @@ namespace UnitTests.UI;
 public class GdsInterpretationReviewViewTests
 {
     [AvaloniaFact]
+    public async Task GuidedAssemblyButtonOpensChildWithRealPointerClick()
+    {
+        var bytes = GdsTestWriter.Create().StandardPrologue()
+            .BeginCell("TOP").SRef("assembly", 0, 0).SRef("assembly", 100000, 0).EndCell()
+            .BeginCell("assembly").SRef("MMI", 0, 0).EndCell()
+            .BeginCell("MMI").Boundary(1, 0, (0, 0), (60000, 0), (60000, 12000), (0, 12000), (0, 0))
+            .EndCell().EndLibrary().ToArray();
+        using var stream = new MemoryStream(bytes);
+        var library = await new GdsReader().ReadAsync(stream);
+        var vm = await GdsInterpretationReviewViewModel.CreateAsync(library, "TOP", "assembly-fixture",
+            [new GdsLayerAssignment(1, 0, GdsLayerRole.OpticalCore)], [],
+            new GdsLayerProfileStore(Path.Combine(ScreenshotDirectory, $"profiles-{Guid.NewGuid():N}.json")));
+        var view = new GdsInterpretationReviewView { DataContext = vm };
+        var window = new Window { Width = 1180, Height = 780, Content = view };
+        try
+        {
+            vm.StageIndex = 2;
+            window.Show();
+            Layout(window);
+            vm.GuideTargetName.ShouldBe("GdsReviewOpenAssembly");
+            var button = view.FindControl<Button>("GdsReviewOpenAssembly")!;
+            Capture(view, "assembly-before-open.png");
+            var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(point, MouseButton.Left);
+            window.MouseUp(point, MouseButton.Left);
+            Layout(window);
+            vm.SelectedCell!.CellName.ShouldBe("MMI");
+            vm.ActiveCells.ShouldHaveSingleItem().CellName.ShouldBe("MMI");
+            var imported = CAP_DataAccess.Import.Gds.Interpretation.GdsInterpretationExpander
+                .Expand(library, vm.BuildInterpretation());
+            imported.Cells["TOP"].Elements.OfType<GdsReference>().Count().ShouldBe(2);
+            imported.Cells["TOP"].Elements.OfType<GdsReference>().ShouldAllBe(r => r.CellName == "MMI");
+            Capture(view, "assembly-after-open.png");
+            vm.UndoCommand.Execute(null);
+            vm.ActiveCells.ShouldHaveSingleItem().CellName.ShouldBe("assembly");
+        }
+        finally { vm.Close(); window.Close(); }
+    }
+
+    [AvaloniaFact]
     public async Task ComponentOverviewClickSelectsPartAndModelsMatchItsSignalDomains()
     {
         var optical = new GdsModelCandidate("pdk", "two optical ports", ["in", "out"]);
@@ -211,6 +251,12 @@ public class GdsInterpretationReviewViewTests
             kind.SelectedItem.ShouldBe(vm.SelectedPort!.Kind);
             view.FindControl<GdsReviewPreview>("ReviewPreview")!.Ports!.Count
                 .ShouldBe(vm.SelectedCell.Ports.Count);
+            var preview = view.FindControl<GdsReviewPreview>("ReviewPreview")!;
+            preview.AllowPortEditing.ShouldBeFalse();
+            vm.IsPortEditing = true;
+            Dispatcher.UIThread.RunJobs();
+            preview.AllowPortEditing.ShouldBeTrue();
+            vm.IsPortEditing = false;
         }
         if (stage == 4)
             view.FindControl<Button>("GdsReviewGeometryOnly")!.Command.ShouldBeSameAs(vm.GeometryOnlyCommand);
