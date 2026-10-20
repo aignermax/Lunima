@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using CAP_DataAccess.Import.Gds;
 using CAP_DataAccess.Import.Gds.LayerPicker;
 using System.Runtime.CompilerServices;
@@ -10,7 +11,7 @@ namespace CAP.Avalonia.Controls.GdsImport;
 /// Shares cell-local geometry across placements. Arrays are traversed as spatial
 /// blocks, so even trillion-instance arrays cost only visible screen detail.
 /// </summary>
-internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
+internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene) : IDisposable
 {
     private static readonly string[] Palette = ["#36CFC9", "#819CF4", "#DBA5EC", "#D9B86C", "#86CBA0", "#DD8F87"];
     private static readonly ConditionalWeakTable<GdsReviewSceneBuilder, Dictionary<string, Cell>> SharedCells = new();
@@ -20,8 +21,20 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
         .Select((l, i) => (l.Pair, Brush: (IBrush)new SolidColorBrush(Color.Parse(Palette[i % Palette.Length]))))
         .ToDictionary(x => x.Pair, x => x.Brush);
     private readonly GdsReviewSceneBuilder _source = scene.ReviewSource!;
-    private sealed record Layer(GdsLayerPair Pair, Geometry Geometry, IReadOnlyList<GdsText> Texts);
+    private sealed record Layer(GdsLayerPair Pair, GdsReviewSpatialGeometry Geometry, IReadOnlyList<GdsText> Texts);
+    private static readonly ConditionalWeakTable<GdsReviewSceneBuilder, GdsReviewGeometryLru> SharedGeometry = new();
+    private readonly GdsReviewGeometryLru _geometry = SharedGeometry.GetValue(scene.ReviewSource!, _ => new());
+    private readonly GdsReviewRasterCache _raster = new();
+    internal GdsReviewRenderStats LastRenderStats { get; private set; }
     private sealed record Cell(GdsLayerGeometryScene Scene, IReadOnlyList<Layer> Layers, IReadOnlyList<GdsReference> References);
+
+    private readonly Dictionary<(double Scale, GdsLayerPair? Layer, string? Cell, bool Isolate, int Detail), (RenderTargetBitmap Image, Rect Destination)> _overviews = new();
+    public void Dispose()
+    {
+        _raster.Dispose();
+        foreach (var tile in _overviews.Values) tile.Image.Dispose();
+        _overviews.Clear();
+    }
 
     private Cell GetCell(string name)
     {
@@ -30,53 +43,58 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
         var layers = new List<Layer>();
         foreach (var layer in local.Layers)
         {
-            var geometry = new StreamGeometry();
-            using (var builder = geometry.Open())
-            {
-                // Same winding normalization as the main canvas batcher: overlapping
-                // polygons of a layer union instead of cancelling each other.
-                builder.SetFillRule(FillRule.NonZero);
-                foreach (var polygon in layer.Polygons)
-                {
-                    var points = polygon.Points;
-                    if (points.Count < 3) continue;
-                    double area = 0;
-                    for (int i = 0, j = points.Count - 1; i < points.Count; j = i++)
-                        area += points[j].X * points[i].Y - points[i].X * points[j].Y;
-                    GdsPoint At(int i) => points[area < 0 ? points.Count - 1 - i : i];
-                    var first = At(0);
-                    builder.BeginFigure(new Point(first.X, first.Y), true);
-                    for (int i = 1; i < points.Count; i++)
-                    {
-                        var p = At(i);
-                        builder.LineTo(new Point(p.X, p.Y));
-                    }
-                    builder.EndFigure(true);
-                }
-            }
-            layers.Add(new(layer.Pair, geometry, layer.Texts));
+            layers.Add(new(layer.Pair, new GdsReviewSpatialGeometry(layer.Polygons), layer.Texts));
         }
         cached = new(local, layers, _source.GetReferences(name));
         _cells.Add(name, cached);
         return cached;
     }
 
-    internal void Render(DrawingContext context, Matrix screen, Rect viewport, GdsLayerPair? highlight, string? highlightCell, double pulse = 0)
+    internal void Render(DrawingContext context, Matrix screen, Rect viewport, GdsLayerPair? highlight, string? highlightCell, bool isolateSelectedLayer = true, int detailLevel = 0, bool allowOverview = true)
     {
+        double viewScale = Math.Max(1e-12, Math.Sqrt(screen.M11 * screen.M11 + screen.M12 * screen.M12));
+        if (allowOverview && detailLevel != 2 && Math.Max(scene.Bounds.Width, scene.Bounds.Height) * viewScale <= 1024)
+        {
+            double rasterScale = Math.Pow(2, Math.Ceiling(Math.Log2(viewScale)));
+            var key = (rasterScale, highlight, highlightCell, isolateSelectedLayer, detailLevel);
+            if (!_overviews.TryGetValue(key, out var tile))
+            {
+                int width = Math.Max(1, (int)Math.Ceiling(scene.Bounds.Width * rasterScale)) + 8;
+                int height = Math.Max(1, (int)Math.Ceiling(scene.Bounds.Height * rasterScale)) + 8;
+                var image = new RenderTargetBitmap(new PixelSize(width, height), new Vector(96, 96));
+                using (var drawing = image.CreateDrawingContext())
+                    Render(drawing, new Matrix(rasterScale, 0, 0, rasterScale,
+                        4 - scene.Bounds.MinX * rasterScale, 4 - scene.Bounds.MinY * rasterScale),
+                        new Rect(0, 0, width, height), highlight, highlightCell, isolateSelectedLayer, detailLevel, false);
+                tile = (image, new Rect(scene.Bounds.MinX - 4 / rasterScale, scene.Bounds.MinY - 4 / rasterScale,
+                    width / rasterScale, height / rasterScale));
+                if (_overviews.Count >= 2)
+                {
+                    var oldest = _overviews.First(); oldest.Value.Image.Dispose(); _overviews.Remove(oldest.Key);
+                }
+                _overviews.Add(key, tile);
+            }
+            else LastRenderStats = new(0, 0, 1, 0);
+            using (context.PushTransform(screen)) context.DrawImage(tile.Image, tile.Destination);
+            return;
+        }
+        int vertices = 0, polygons = 0, proxies = 0, culled = 0;
         int blocks = 0;
         int cells = 0;
         var drawn = new HashSet<(string, GdsTransform)>();
         DrawCell(scene.CellName, GdsTransform.Identity);
+        LastRenderStats = new(vertices, polygons, proxies, culled);
 
         void DrawCell(string name, GdsTransform placement)
         {
+            if (isolateSelectedLayer && highlight is { } only && !_source.GetLayerPairs(name).Contains(only)) return;
             if (!drawn.Add((name, placement))) return;
             var matrix = MatrixFor(placement) * screen;
             var localBounds = _source.GetBounds(name);
             var bounds = RectFor(localBounds).TransformToAABB(matrix);
             if (!viewport.Intersects(bounds.Inflate(3))) return;
             if (++cells > 20_000 ||
-                (localBounds.Width > 0 && localBounds.Height > 0 && Math.Max(bounds.Width, bounds.Height) < .75))
+                (localBounds.Width > 0 && localBounds.Height > 0 && Math.Max(bounds.Width, bounds.Height) < (detailLevel == 2 ? .75 : detailLevel == 1 ? 12 : 4)))
             {
                 DrawProxy(bounds, name);
                 return;
@@ -87,14 +105,43 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
                 double scale = Math.Max(1e-12, Math.Sqrt(matrix.M11 * matrix.M11 + matrix.M12 * matrix.M12));
                 foreach (var layer in cell.Layers)
                 {
+                    if (isolateSelectedLayer && highlight is { } onlyLayer && layer.Pair != onlyLayer) continue;
                     using var opacity = context.PushOpacity(highlight == layer.Pair ? .95 : highlight.HasValue ? .12 : .68);
                     var fill = _brushes[layer.Pair];
-                    var pen = highlight == layer.Pair ? new Pen(Brushes.White, (2 + 3 * pulse) / scale) : null;
-                    context.DrawGeometry(fill, pen, layer.Geometry);
-                    if (highlight == layer.Pair && pulse > 0)
-                        using (context.PushOpacity(.45 * pulse)) context.DrawGeometry(Brushes.White, null, layer.Geometry);
+                    var pen = highlight == layer.Pair ? new Pen(Brushes.White, 1 / scale) : null;
+                    DrawNode(layer.Geometry.Root);
                     foreach (var text in layer.Texts)
-                        context.DrawEllipse(fill, pen, new Point(text.Position.X, text.Position.Y), 3 / scale, 3 / scale);
+                    {
+                        var anchor = new Point(text.Position.X, text.Position.Y);
+                        if (viewport.Inflate(3).Contains(matrix.Transform(anchor)))
+                            context.DrawEllipse(fill, pen, anchor, 3 / scale, 3 / scale);
+                    }
+
+                    void DrawNode(GdsReviewSpatialGeometry.Node? node)
+                    {
+                        if (node is null) return;
+                        var pixels = node.Bounds.TransformToAABB(matrix);
+                        if (!viewport.Intersects(pixels.Inflate(2))) { culled++; return; }
+                        double extent = Math.Max(pixels.Width, pixels.Height);
+                        if (detailLevel != 2 && extent <= (detailLevel == 1 ? 6 : 2))
+                        {
+                            proxies++;
+                            context.DrawRectangle(fill, null, node.Bounds);
+                            return;
+                        }
+                        if (detailLevel != 2 && node.PolygonCount > 32 && extent <= 256)
+                        {
+                            var tile = _raster.Get(node, scale, (SolidColorBrush)fill, highlight == layer.Pair, detailLevel, _geometry);
+                            vertices += tile.NewVertices; polygons += node.PolygonCount;
+                            context.DrawImage(tile.Bitmap, tile.Destination);
+                            return;
+                        }
+                        if (node.Polygon is null && (node.PolygonCount > 32 || !viewport.Contains(pixels))) { DrawNode(node.Left); DrawNode(node.Right); return; }
+                        int resolution = detailLevel == 2 || extent > (detailLevel == 1 ? 4096 : 1024) ? 0 : extent <= 256 ? 512 : 2048;
+                        var geometry = _geometry.Get(node, resolution);
+                        vertices += geometry.Vertices; polygons += node.PolygonCount;
+                        context.DrawGeometry(fill, pen, geometry.Geometry);
+                    }
                 }
             }
             foreach (var reference in cell.References)
@@ -109,6 +156,7 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
 
         void DrawArray(GdsReference reference, GdsTransform parent, int c0, int c1, int r0, int r1)
         {
+            if (isolateSelectedLayer && highlight is { } only && !_source.GetLayerPairs(reference.CellName).Contains(only)) return;
             var block = ArrayBounds(_source.GetBounds(reference.CellName), reference, parent, c0, c1, r0, r1);
             var pixels = RectFor(block).TransformToAABB(screen);
             if (!viewport.Intersects(pixels.Inflate(3))) return;
@@ -135,19 +183,21 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
                     pixels.Center.Y - Math.Max(1, pixels.Height) / 2,
                     Math.Max(1, pixels.Width), Math.Max(1, pixels.Height));
             var pairs = _source.GetLayerPairs(name);
+            if (isolateSelectedLayer && highlight is { } only && !pairs.Contains(only)) return;
+            proxies++;
             bool emphasized = highlight is { } selected && pairs.Contains(selected);
             using var opacity = context.PushOpacity(emphasized ? .95 : highlight.HasValue ? .12 : .68);
             if (pairs.Count > 0)
                 context.FillRectangle(_brushes[emphasized ? highlight!.Value : pairs[0]], pixels);
             if (emphasized)
-                context.DrawRectangle(null, new Pen(Brushes.White, 2 + 3 * pulse), pixels);
+                context.DrawRectangle(null, new Pen(Brushes.White, 1), pixels);
             if (name == highlightCell)
                 context.DrawRectangle(null, new Pen(Brushes.Yellow, 2), pixels);
         }
     }
 
     internal bool TryPick(double x, double y, double tolerance, out GdsLayerPair pair, out string? cellName,
-        out IReadOnlyList<string> cellPath)
+        out IReadOnlyList<string> cellPath, GdsLayerPair? onlyLayer = null)
     {
         var point = new GdsPoint(x, y);
         GdsLayerPair result = default;
@@ -165,6 +215,7 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
 
         void PickCell(string name, GdsTransform placement)
         {
+            if (onlyLayer is { } only && !_source.GetLayerPairs(name).Contains(only)) return;
             if (!seen.Add((name, placement)) || ++visited > 20_000) return;
             var cell = GetCell(name);
             var determinant = placement.A * placement.E - placement.B * placement.D;
@@ -174,7 +225,8 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
             double localX = (placement.E * dx - placement.B * dy) / determinant;
             double localY = (-placement.D * dx + placement.A * dy) / determinant;
             var scale = Math.Sqrt(placement.A * placement.A + placement.D * placement.D);
-            if (GdsLayerHitTester.TryPick(cell.Scene, localX, localY, tolerance / scale,
+            var pickScene = onlyLayer is { } filter ? cell.Scene with { Layers = cell.Scene.Layers.Where(l => l.Pair == filter).ToArray() } : cell.Scene;
+            if (GdsLayerHitTester.TryPick(pickScene, localX, localY, tolerance / scale,
                 out var candidate, out double area, out double textDistance))
             {
                 area *= Math.Abs(determinant);
@@ -196,6 +248,7 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene)
 
         void PickArray(GdsReference reference, GdsTransform parent, int c0, int c1, int r0, int r1)
         {
+            if (onlyLayer is { } only && !_source.GetLayerPairs(reference.CellName).Contains(only)) return;
             if (++visited > 20_000) return;
             var bounds = ArrayBounds(_source.GetBounds(reference.CellName), reference, parent, c0, c1, r0, r1);
             if (x < bounds.MinX - tolerance || x > bounds.MaxX + tolerance ||

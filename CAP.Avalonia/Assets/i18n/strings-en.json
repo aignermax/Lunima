@@ -2354,5 +2354,14 @@
   "GdsReview.AssemblyHint": "Contains child cells. Open it to import those parts separately. Undo restores the assembly.",
   "GdsReview.LeafHint": "No child cells in this GDS cell. Shapes alone do not identify separate MMI or MZI components.",
   "GdsReview.EditPortPositions": "Correct port positions",
-  "Status.SelectedElementsDeleted": "{0} selected elements deleted"
+  "Status.SelectedElementsDeleted": "{0} selected elements deleted",
+  "GdsReview.DetailAuto": "Auto detail",
+  "GdsReview.DetailOverview": "Fast overview",
+  "GdsReview.DetailExact": "Fine detail",
+  "GdsReview.DetailHelp": "Overview simplifies small shapes. Auto restores detail as you zoom. Fine detail may be slower; dense arrays may remain summarized. Import always uses original geometry.",
+  "GdsReview.IsolateLayer": "Only selected layer",
+  "GdsReview.NextRouteSuggestion": "Show routing candidates",
+  "GdsReview.RouteSuggestion": "{0} route-like source shapes in {1} cells. Shape alone does not determine optical or electrical purpose.",
+  "GdsReview.UseOpticalSuggestion": "Use as optical",
+  "GdsReview.UseElectricalSuggestion": "Use as electrical"
 }

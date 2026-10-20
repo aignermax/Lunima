@@ -18,30 +18,25 @@ namespace UnitTests.UI;
 public class GdsReviewPreviewTests
 {
     [AvaloniaFact]
-    public async Task HighlightPulseEndsAndStopsWhenHiddenOrDetached()
+    public async Task SelectingLayerKeepsStaticHighlightAcrossFrames()
     {
-        var preview = new GdsReviewPreview { Scene = Scene() };
-        var window = Open(preview);
         var previous = CAP.Avalonia.Behaviors.RevealOnShowBehavior.AnimationsEnabled;
         var reduced = Environment.GetEnvironmentVariable(CAP.Avalonia.Behaviors.MotionPreferences.ReduceMotionVariable);
         CAP.Avalonia.Behaviors.RevealOnShowBehavior.AnimationsEnabled = true;
         Environment.SetEnvironmentVariable(CAP.Avalonia.Behaviors.MotionPreferences.ReduceMotionVariable, null);
+        var preview = new GdsReviewPreview { Scene = Scene() };
+        var window = Open(preview);
         try
         {
             preview.HighlightLayer = new(7, 2);
-            preview.IsHighlightPulsing.ShouldBeTrue();
-            await Task.Delay(1800);
+            using var before = new RenderTargetBitmap(new PixelSize(248, 248));
+            using (var context = before.CreateDrawingContext()) preview.Render(context);
+            var green = ReadGreen(before, 124, 124);
+            await Task.Delay(120);
             Dispatcher.UIThread.RunJobs();
-            preview.IsHighlightPulsing.ShouldBeFalse();
-            preview.FocusHighlightedLayer();
-            preview.IsHighlightPulsing.ShouldBeTrue();
-            preview.IsVisible = false;
-            preview.IsHighlightPulsing.ShouldBeFalse();
-            preview.IsVisible = true;
-            preview.FocusHighlightedLayer();
-            preview.IsHighlightPulsing.ShouldBeTrue();
-            window.Content = null;
-            preview.IsHighlightPulsing.ShouldBeFalse();
+            using var after = new RenderTargetBitmap(new PixelSize(248, 248));
+            using (var context = after.CreateDrawingContext()) preview.Render(context);
+            ReadGreen(after, 124, 124).ShouldBe(green);
         }
         finally
         {
@@ -61,7 +56,6 @@ public class GdsReviewPreviewTests
         try
         {
             preview.HighlightLayer = new(7, 2);
-            preview.IsHighlightPulsing.ShouldBeFalse();
             using var frame = new RenderTargetBitmap(new PixelSize(248, 248));
             using (var context = frame.CreateDrawingContext()) preview.Render(context);
             ReadGreen(frame, 124, 124).ShouldBeGreaterThan((byte)100);
@@ -101,7 +95,12 @@ public class GdsReviewPreviewTests
             picked = null;
             window.MouseDown(new Point(124, 124), MouseButton.Left);
             window.MouseUp(new Point(124, 124), MouseButton.Left);
+            picked.ShouldBeNull("hidden context must not intercept clicks");
+            preview.IsolateSelectedLayer = false;
+            window.MouseDown(new Point(124, 124), MouseButton.Left);
+            window.MouseUp(new Point(124, 124), MouseButton.Left);
             picked.ShouldBe(new GdsLayerPair(1, 0));
+            preview.IsolateSelectedLayer = true;
             preview.FocusHighlightedLayer();
             window.MouseDown(new Point(124, 124), MouseButton.Left);
             window.MouseUp(new Point(124, 124), MouseButton.Left);

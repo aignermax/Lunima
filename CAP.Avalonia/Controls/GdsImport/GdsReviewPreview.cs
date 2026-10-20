@@ -2,11 +2,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using Avalonia.Threading;
-using CAP.Avalonia.Behaviors;
 using CAP_DataAccess.Import.Gds;
 using CAP_DataAccess.Import.Gds.LayerPicker;
-using System.Diagnostics;
 
 namespace CAP.Avalonia.Controls.GdsImport;
 
@@ -26,21 +23,6 @@ public sealed class GdsReviewPreview : Control
     private int _dragPort = -1;
     private IPointer? _capturedPointer;
     private GdsBoundingBox? _focusBounds;
-    private readonly Stopwatch _highlightClock = new();
-    private readonly DispatcherTimer _highlightTimer;
-    private bool _attached;
-
-    public GdsReviewPreview()
-    {
-        _highlightTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(33) };
-        _highlightTimer.Tick += (_, _) =>
-        {
-            if (!_attached || !IsEffectivelyVisible || MotionPreferences.ReduceMotion || _highlightClock.Elapsed.TotalSeconds >= 1.6)
-                StopHighlightPulse();
-            else InvalidateVisual();
-        };
-    }
-
     /// <summary>The GDS geometry and optional complete hierarchy to review.</summary>
     public static readonly StyledProperty<GdsLayerGeometryScene?> SceneProperty =
         AvaloniaProperty.Register<GdsReviewPreview, GdsLayerGeometryScene?>(nameof(Scene));
@@ -62,6 +44,14 @@ public sealed class GdsReviewPreview : Control
     /// <summary>Whether visible ports can be dragged. Selection remains available while locked.</summary>
     public static readonly StyledProperty<bool> AllowPortEditingProperty =
         AvaloniaProperty.Register<GdsReviewPreview, bool>(nameof(AllowPortEditing));
+    /// <summary>Hide and exclude unselected layers from picking while a layer is selected.</summary>
+    public static readonly StyledProperty<bool> IsolateSelectedLayerProperty =
+        AvaloniaProperty.Register<GdsReviewPreview, bool>(nameof(IsolateSelectedLayer), true);
+    /// <summary>0 automatic detail, 1 fast overview, 2 exact detail.</summary>
+    public static readonly StyledProperty<int> DetailLevelProperty =
+        AvaloniaProperty.Register<GdsReviewPreview, int>(nameof(DetailLevel));
+    public bool IsolateSelectedLayer { get => GetValue(IsolateSelectedLayerProperty); set => SetValue(IsolateSelectedLayerProperty, value); }
+    public int DetailLevel { get => GetValue(DetailLevelProperty); set => SetValue(DetailLevelProperty, value); }
     /// <summary>Whether the display omits geometry to stay responsive.</summary>
     public static readonly DirectProperty<GdsReviewPreview, bool> IsPreviewLimitedProperty =
         AvaloniaProperty.RegisterDirect<GdsReviewPreview, bool>(nameof(IsPreviewLimited), c => c.IsPreviewLimited);
@@ -81,8 +71,6 @@ public sealed class GdsReviewPreview : Control
     public bool ShowPorts { get => GetValue(ShowPortsProperty); set => SetValue(ShowPortsProperty, value); }
     /// <summary>Gets or sets whether dragging ports is explicitly enabled.</summary>
     public bool AllowPortEditing { get => GetValue(AllowPortEditingProperty); set => SetValue(AllowPortEditingProperty, value); }
-    /// <summary>Whether the finite layer selection cue is currently animating.</summary>
-    public bool IsHighlightPulsing => _highlightClock.IsRunning;
     /// <summary>Gets whether this preview is limited; source geometry remains intact.</summary>
     public bool IsPreviewLimited => _isPreviewLimited;
     /// <summary>Raised when visible source geometry is picked.</summary>
@@ -99,7 +87,7 @@ public sealed class GdsReviewPreview : Control
     public event Action? PortDragCompleted;
 
     static GdsReviewPreview() =>
-        AffectsRender<GdsReviewPreview>(SceneProperty, HighlightLayerProperty, HighlightCellNameProperty, PortsProperty, SelectedPortIndexProperty, ShowPortsProperty);
+        AffectsRender<GdsReviewPreview>(SceneProperty, HighlightLayerProperty, HighlightCellNameProperty, PortsProperty, SelectedPortIndexProperty, ShowPortsProperty, IsolateSelectedLayerProperty, DetailLevelProperty);
 
     /// <summary>Resets zoom and pan to fit the entire scene.</summary>
     public void Fit()
@@ -110,7 +98,7 @@ public sealed class GdsReviewPreview : Control
         InvalidateVisual();
     }
 
-    /// <summary>Frames all occurrences of the selected source layer and briefly emphasizes them.</summary>
+    /// <summary>Frames all occurrences of the selected source layer without animation.</summary>
     public void FocusHighlightedLayer()
     {
         if (Scene is not { } scene || HighlightLayer is not { } pair) return;
@@ -124,19 +112,6 @@ public sealed class GdsReviewPreview : Control
         _focusBounds = bounds;
         _zoom = 1;
         _pan = default;
-        StopHighlightPulse();
-        if (_attached && IsEffectivelyVisible && !MotionPreferences.ReduceMotion)
-        {
-            _highlightClock.Restart();
-            _highlightTimer.Start();
-        }
-        InvalidateVisual();
-    }
-
-    private void StopHighlightPulse()
-    {
-        _highlightTimer?.Stop();
-        _highlightClock.Reset();
         InvalidateVisual();
     }
 
@@ -147,22 +122,20 @@ public sealed class GdsReviewPreview : Control
         if (change.Property == SceneProperty)
         {
             CancelGesture();
+            _hierarchy?.Dispose();
             _hierarchy = Scene is { ReviewSource: not null } full ? new GdsReviewHierarchyCache(full) : null;
             _cache = _hierarchy is null && Scene is { } scene ? new GdsReviewGeometryCache(scene) : null;
             SetAndRaise(IsPreviewLimitedProperty, ref _isPreviewLimited, _cache?.IsLimited == true);
-            StopHighlightPulse();
             Fit();
             FocusHighlightedLayer();
         }
         if (change.Property == HighlightLayerProperty)
         {
-            StopHighlightPulse();
             if (HighlightLayer.HasValue) FocusHighlightedLayer();
             else Fit();
         }
         if (change.Property == ShowPortsProperty && !ShowPorts) CancelGesture();
         if (change.Property == AllowPortEditingProperty && !AllowPortEditing) CancelGesture();
-        if (change.Property == IsVisibleProperty && !IsVisible) StopHighlightPulse();
     }
 
     private (double Scale, Point Offset) Transform()
@@ -184,24 +157,22 @@ public sealed class GdsReviewPreview : Control
         context.FillRectangle(BackgroundBrush, new Rect(Bounds.Size));
         if (Scene is null || (_cache is null && _hierarchy is null)) return;
         var (scale, offset) = Transform();
-        var pulse = _highlightClock.IsRunning ? .5 + .5 * Math.Cos(_highlightClock.Elapsed.TotalSeconds * Math.PI * 5) : 0;
         using var clip = context.PushClip(new Rect(Bounds.Size));
         if (_hierarchy is not null)
             _hierarchy.Render(context,
                 new Matrix(scale, 0, 0, -scale, offset.X - Scene.Bounds.MinX * scale, offset.Y + Scene.Bounds.MaxY * scale),
-                new Rect(Bounds.Size), HighlightLayer, HighlightCellName, pulse);
+                new Rect(Bounds.Size), HighlightLayer, HighlightCellName, IsolateSelectedLayer, DetailLevel);
         else using (context.PushTransform(new Matrix(scale, 0, 0, scale, offset.X, offset.Y)))
         {
             foreach (var layer in _cache!.Layers)
             {
+                if (IsolateSelectedLayer && HighlightLayer.HasValue && HighlightLayer != layer.Pair) continue;
                 var selected = HighlightLayer == layer.Pair;
                 using var opacity = context.PushOpacity(selected ? 0.95 : HighlightLayer.HasValue ? 0.12 : 0.68);
-                var pen = selected ? new Pen(Brushes.White, (2 + 3 * pulse) / scale) : null;
+                var pen = selected ? new Pen(Brushes.White, 1 / scale) : null;
                 foreach (var geometry in layer.Geometries)
                 {
                     context.DrawGeometry(layer.Fill, pen, geometry);
-                    if (selected && pulse > 0)
-                        using (context.PushOpacity(.45 * pulse)) context.DrawGeometry(Brushes.White, null, geometry);
                 }
                 foreach (var text in layer.Texts)
                     context.DrawEllipse(layer.Fill, pen, text, 3 / scale, 3 / scale);
@@ -249,8 +220,10 @@ public sealed class GdsReviewPreview : Control
                 string? pickedCell = null;
                 IReadOnlyList<string> pickedPath = [];
                 bool picked = _hierarchy is not null
-                    ? _hierarchy.TryPick(x, y, PickRadius / scale, out pair, out pickedCell, out pickedPath)
-                    : _cache is { } cache && GdsLayerHitTester.TryPick(cache.PickScene, x, y, PickRadius / scale, out pair);
+                    ? _hierarchy.TryPick(x, y, PickRadius / scale, out pair, out pickedCell, out pickedPath, IsolateSelectedLayer ? HighlightLayer : null)
+                    : _cache is { } cache && GdsLayerHitTester.TryPick(IsolateSelectedLayer && HighlightLayer is { } selectedLayer
+                        ? cache.PickScene with { Layers = cache.PickScene.Layers.Where(l => l.Pair == selectedLayer).ToArray() }
+                        : cache.PickScene, x, y, PickRadius / scale, out pair);
                 if (picked)
                 {
                     LayerPicked?.Invoke(pair);
@@ -289,10 +262,8 @@ public sealed class GdsReviewPreview : Control
     { base.OnPointerCaptureLost(e); CancelGesture(); }
     /// <inheritdoc/>
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    { _attached = false; StopHighlightPulse(); CancelGesture(); base.OnDetachedFromVisualTree(e); }
+    { _hierarchy?.Dispose(); CancelGesture(); base.OnDetachedFromVisualTree(e); }
 
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-    { base.OnAttachedToVisualTree(e); _attached = true; }
 
     private void CancelGesture()
     {

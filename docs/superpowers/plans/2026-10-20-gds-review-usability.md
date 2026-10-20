@@ -76,3 +76,36 @@ Desktop Release build passed with existing warnings; its output includes all
 29 example designs and the manifest. Independent review findings about stale
 primary selection and no-op crossing deletion undo were fixed and covered by
 regressions before the final run.
+
+## Large-layout rendering follow-up
+
+Native feedback showed that cell-level culling still submits a dense top cell's
+entire layer. Repainting it for a pulse made this worse. Remove the pulse and
+isolate the selected layer by default, including picking; keep context opt-in.
+
+Use spatial subdivision inside cell layers and screen-space detail selection.
+Expose automatic, fast overview, and fine-detail modes. Simplification is
+display-only: preserve the source polygons, hierarchy, and exact import.
+Fine detail still aggregates pathological dense hierarchy arrays. Bound retained
+render geometry and raster caches; dispose raster resources on scene changes and
+detach. Measure both complete overview and occupied zoomed regions locally.
+
+Restore visible local routing hints without resurrecting unsafe legacy material
+inference. Route-shaped source geometry suggests a candidate, not an optical or
+electrical classification. Provide explicit, undoable choices and navigation
+between candidates. No network model or API key is needed.
+
+Local native bitmap benchmark on the private layout: complete overview warm
+rendering fell from 70.18 ms to 1.00 ms; the first overview setup took 245.90 ms.
+The dense selected layer rendered at 0.90 ms warm. Occupied centered zoomed
+regions took 3.64 ms (10×) and 1.21 ms (100×). These are local render timings,
+not application-wide frame-rate guarantees. Fine detail intentionally costs more.
+
+The advisory geometry scan finds 19 raw candidate layer pairs in this file.
+It does not resolve duplicate/helper layers or infer fabrication materials;
+known port assignments suppress their corresponding route suggestions.
+
+Verification: 741 combined regressions passed, followed by 25 native
+dialog/spatial/localization checks and 16 preview checks. The final Release
+build passed. Independent review findings (hidden-array pick pruning, bitmap
+ownership/disposal, and snapshot marker padding) are addressed.

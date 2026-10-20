@@ -4,6 +4,7 @@ using CAP.Avalonia.Services.Localization;
 using CAP_DataAccess.Import.Gds;
 using CAP_DataAccess.Import.Gds.LayerPicker;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace CAP.Avalonia.ViewModels.GdsImport.Interpretation;
 
@@ -22,6 +23,15 @@ public sealed partial class GdsLayerReviewRow : ObservableObject
     public string Label => $"{Layer} / {Datatype}";
     public string Counts { get; }
     public IReadOnlyList<GdsRoleChoice> Choices { get; }
+    public GdsReviewRouteSuggestion? RouteSuggestion { get; }
+    public bool HasRouteSuggestion => RouteSuggestion != null;
+    public string RouteSuggestionText => RouteSuggestion is { } suggestion
+        ? string.Format(LocalizationService.Instance.Translate("GdsReview.RouteSuggestion"), suggestion.ShapeCount, suggestion.CellCount)
+        : "";
+    [RelayCommand]
+    private void ApplyOpticalSuggestion() { if (HasRouteSuggestion) Role = GdsLayerRole.OpticalCore; }
+    [RelayCommand]
+    private void ApplyElectricalSuggestion() { if (HasRouteSuggestion) Role = GdsLayerRole.Electrical; }
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPinEvidence))]
     [NotifyPropertyChangedFor(nameof(PinEvidenceText))]
@@ -35,9 +45,10 @@ public sealed partial class GdsLayerReviewRow : ObservableObject
         get => Choices.FirstOrDefault(x => x.Role == Role) ?? Choices[0];
         set { if (value != null) Role = value.Role; }
     }
-    public GdsLayerReviewRow(GdsLayerGeometry geometry, GdsLayerRole role)
+    public GdsLayerReviewRow(GdsLayerGeometry geometry, GdsLayerRole role, GdsReviewRouteSuggestion? routeSuggestion = null)
     {
         Layer = geometry.Pair.Layer; Datatype = geometry.Pair.Datatype;
+        RouteSuggestion = (role & (GdsLayerRole.PortMarker | GdsLayerRole.PortLabel)) == 0 ? routeSuggestion : null;
         Counts = $"{geometry.Polygons.Count} ◇  ·  {geometry.Texts.Count} T";
         Choices = new[]
         {

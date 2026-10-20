@@ -2354,5 +2354,14 @@
   "GdsReview.AssemblyHint": "包含子单元。展开后可分别导入这些部分。撤销可恢复组件组。",
   "GdsReview.LeafHint": "此 GDS 单元不包含子单元。仅凭形状无法识别独立的 MMI 或 MZI 元件。",
   "GdsReview.EditPortPositions": "修正端口位置",
-  "Status.SelectedElementsDeleted": "已删除 {0} 个所选元素"
+  "Status.SelectedElementsDeleted": "已删除 {0} 个所选元素",
+  "GdsReview.DetailAuto": "自动细节",
+  "GdsReview.DetailOverview": "快速概览",
+  "GdsReview.DetailExact": "精细显示",
+  "GdsReview.DetailHelp": "概览会简化较小的形状。自动模式会在放大时恢复细节。精细显示可能较慢；密集阵列可能仍以汇总形式显示。导入始终使用原始几何形状。",
+  "GdsReview.IsolateLayer": "仅显示选中图层",
+  "GdsReview.NextRouteSuggestion": "显示布线候选",
+  "GdsReview.RouteSuggestion": "{1} 个单元中有 {0} 个线路状原始图形。仅凭形状无法确定其用途是光学还是电气。",
+  "GdsReview.UseOpticalSuggestion": "用作光学布线",
+  "GdsReview.UseElectricalSuggestion": "用作电气布线"
 }

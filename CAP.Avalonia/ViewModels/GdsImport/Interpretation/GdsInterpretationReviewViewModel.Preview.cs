@@ -1,9 +1,12 @@
 using CAP_DataAccess.Import.Gds.LayerPicker;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CAP.Avalonia.ViewModels.GdsImport.Interpretation;
 
 public sealed partial class GdsInterpretationReviewViewModel
 {
+    [ObservableProperty] private bool _isolateSelectedLayer = true;
+    [ObservableProperty] private int _previewDetailLevel;
     private readonly Dictionary<string, GdsLayerGeometryScene> _sceneCache = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _sceneLock = new(1, 1);
     private int _sceneRequest;

@@ -57,11 +57,23 @@
         <local:GdsReviewPreview x:Name="ReviewPreview" Scene="{Binding Scene}" HighlightLayer="{Binding HighlightLayer}"
                                 HighlightCellName="{Binding HighlightCellName}"
                                 AllowPortEditing="{Binding IsPortEditing}"
+                                IsolateSelectedLayer="{Binding IsolateSelectedLayer}"
+                                DetailLevel="{Binding PreviewDetailLevel}"
                                 Ports="{Binding PreviewPorts}" SelectedPortIndex="{Binding SelectedPortIndex}"
                                 ShowPorts="{Binding IsPortStep}" MinHeight="300"/>
       </Border>
       <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-        <StackPanel>
+        <StackPanel Spacing="6">
+          <WrapPanel>
+            <ComboBox x:Name="GdsReviewDetail" SelectedIndex="{Binding PreviewDetailLevel}" MinWidth="145"
+                      ToolTip.Tip="{loc:Localize GdsReview.DetailHelp}" Margin="0,0,12,4">
+              <ComboBoxItem Content="{loc:Localize GdsReview.DetailAuto}"/>
+              <ComboBoxItem Content="{loc:Localize GdsReview.DetailOverview}"/>
+              <ComboBoxItem Content="{loc:Localize GdsReview.DetailExact}"/>
+            </ComboBox>
+            <CheckBox Content="{loc:Localize GdsReview.IsolateLayer}" IsChecked="{Binding IsolateSelectedLayer}"
+                      IsVisible="{Binding IsLayerStep}"/>
+          </WrapPanel>
           <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.PreviewHint}" TextWrapping="Wrap"/>
           <TextBlock Classes="caption warning" Text="{loc:Localize GdsReview.PreviewLimited}"
                      IsVisible="{Binding #ReviewPreview.IsPreviewLimited}" TextWrapping="Wrap"/>
@@ -82,6 +94,8 @@
           <StackPanel IsVisible="{Binding IsLayerStep}" Spacing="10">
             <TextBlock Classes="strong" Text="{loc:Localize GdsReview.LayerRoles}"/>
             <Button Content="{loc:Localize GdsReview.FocusLayer}" Click="OnFocusLayer"/>
+            <Button Content="{loc:Localize GdsReview.NextRouteSuggestion}" Command="{Binding NextSuggestedRouteCommand}"
+                    IsVisible="{Binding HasRouteSuggestions}"/>
             <ListBox ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}" MaxHeight="150">
               <ListBox.ItemTemplate><DataTemplate x:DataType="vm:GdsLayerReviewRow">
                 <Grid ColumnDefinitions="70,*" Margin="4">
@@ -92,6 +106,15 @@
             </ListBox>
             <TextBlock Text="{Binding SelectedLayer.PinEvidenceText}" IsVisible="{Binding SelectedLayer.HasPinEvidence}"
                        Classes="caption success" TextWrapping="Wrap"/>
+            <StackPanel IsVisible="{Binding SelectedLayer.HasRouteSuggestion}" Spacing="5">
+              <TextBlock Text="{Binding SelectedLayer.RouteSuggestionText}" Classes="caption" TextWrapping="Wrap"/>
+              <WrapPanel>
+                <Button x:Name="GdsReviewUseOptical" Content="{loc:Localize GdsReview.UseOpticalSuggestion}"
+                        Command="{Binding SelectedLayer.ApplyOpticalSuggestionCommand}" Margin="0,0,5,4"/>
+                <Button x:Name="GdsReviewUseElectrical" Content="{loc:Localize GdsReview.UseElectricalSuggestion}"
+                        Command="{Binding SelectedLayer.ApplyElectricalSuggestionCommand}" Margin="0,0,0,4"/>
+              </WrapPanel>
+            </StackPanel>
             <ListBox x:Name="GdsReviewRole" ItemsSource="{Binding SelectedLayer.Choices}"
                       SelectedItem="{Binding SelectedLayer.SelectedRole}" HorizontalAlignment="Stretch" MaxHeight="360">
               <ListBox.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2"/></ItemsPanelTemplate></ListBox.ItemsPanel>

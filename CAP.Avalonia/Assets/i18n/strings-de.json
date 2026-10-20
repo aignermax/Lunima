@@ -2354,5 +2354,14 @@
   "GdsReview.AssemblyHint": "Enthält Unterzellen. Öffnen importiert diese Teile einzeln. Rückgängig stellt die Baugruppe wieder her.",
   "GdsReview.LeafHint": "Diese GDS-Zelle enthält keine Unterzellen. Einzelne Formen kennzeichnen noch keine separaten MMI- oder MZI-Bauteile.",
   "GdsReview.EditPortPositions": "Portpositionen korrigieren",
-  "Status.SelectedElementsDeleted": "{0} ausgewählte Elemente gelöscht"
+  "Status.SelectedElementsDeleted": "{0} ausgewählte Elemente gelöscht",
+  "GdsReview.DetailAuto": "Automatische Details",
+  "GdsReview.DetailOverview": "Schnelle Übersicht",
+  "GdsReview.DetailExact": "Feine Details",
+  "GdsReview.DetailHelp": "Die Übersicht vereinfacht kleine Formen. Automatisch werden beim Zoomen Details wiederhergestellt. Feine Details können langsamer sein; dichte Arrays bleiben möglicherweise zusammengefasst. Der Import verwendet immer die Originalgeometrie.",
+  "GdsReview.IsolateLayer": "Nur ausgewählter Layer",
+  "GdsReview.NextRouteSuggestion": "Routing-Kandidaten zeigen",
+  "GdsReview.RouteSuggestion": "{0} leitungsartige Quellformen in {1} Zellen. Die Form allein verrät nicht, ob sie optisch oder elektrisch sind.",
+  "GdsReview.UseOpticalSuggestion": "Als optisch nutzen",
+  "GdsReview.UseElectricalSuggestion": "Als elektrisch nutzen"
 }

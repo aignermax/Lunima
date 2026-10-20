@@ -2354,5 +2354,14 @@
   "GdsReview.AssemblyHint": "子セルを含んでいます。開くと各部分を個別にインポートできます。元に戻す操作でアセンブリを復元できます。",
   "GdsReview.LeafHint": "この GDS セルには子セルがありません。形状だけでは、独立した MMI や MZI コンポーネントを識別できません。",
   "GdsReview.EditPortPositions": "ポート位置を修正",
-  "Status.SelectedElementsDeleted": "選択した {0} 個の要素を削除しました"
+  "Status.SelectedElementsDeleted": "選択した {0} 個の要素を削除しました",
+  "GdsReview.DetailAuto": "詳細度を自動調整",
+  "GdsReview.DetailOverview": "高速な全体表示",
+  "GdsReview.DetailExact": "細部を表示",
+  "GdsReview.DetailHelp": "全体表示では小さな形状を簡略化します。自動モードでは拡大すると詳細が復元されます。細部の表示は遅くなる場合があり、密集した配列は引き続き集約表示されることがあります。インポートでは常に元のジオメトリを使用します。",
+  "GdsReview.IsolateLayer": "選択したレイヤーのみ",
+  "GdsReview.NextRouteSuggestion": "配線候補を表示",
+  "GdsReview.RouteSuggestion": "{1} 個のセルに配線状の元形状が {0} 個あります。形状だけでは光学用か電気用かは判断できません。",
+  "GdsReview.UseOpticalSuggestion": "光配線として使用",
+  "GdsReview.UseElectricalSuggestion": "電気配線として使用"
 }

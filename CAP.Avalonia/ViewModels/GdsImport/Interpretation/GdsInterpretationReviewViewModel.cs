@@ -46,6 +46,16 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     public bool IsWorking => IsPreparing || IsSceneLoading;
     public Action? ApplyRequested { get; set; }
     public bool LayersConfirmed => _confirmed[1];
+    public int SuggestedRouteLayerCount => Layers.Count(x => x.HasRouteSuggestion);
+    public bool HasRouteSuggestions => SuggestedRouteLayerCount > 0;
+    [RelayCommand]
+    private void NextSuggestedRoute()
+    {
+        var candidates = Layers.Where(x => x.HasRouteSuggestion).ToArray();
+        if (candidates.Length == 0) return;
+        StageIndex = 1;
+        SelectedLayer = candidates[(Array.IndexOf(candidates, SelectedLayer) + 1) % candidates.Length];
+    }
     public bool CanApply => _confirmed.Take(5).All(x => x) && Validate() == null && !IsWorking;
     public bool IsLayoutStep => StageIndex == 0;
     public bool IsLayerStep => StageIndex == 1;
@@ -109,14 +119,16 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     private GdsInterpretationReviewViewModel(GdsLibrary library, string topCell, string hash,
         GdsLayerGeometryScene scene, IReadOnlyList<GdsCellReviewRow> cells,
         IReadOnlyList<GdsLayerAssignment> suggestions, IReadOnlyList<GdsModelCandidate> models, GdsLayerProfileStore profiles,
-        GdsReviewSceneBuilder sceneBuilder, GdsLayerGeometryScene firstScene)
+        GdsReviewSceneBuilder sceneBuilder, GdsLayerGeometryScene firstScene,
+        IReadOnlyList<GdsReviewRouteSuggestion> routeSuggestions)
     {
         _library = library; _topCell = topCell; _sourceHash = hash; _topScene = scene; _profiles = profiles; Models = models;
         _sceneBuilder = sceneBuilder; _sceneCache[firstScene.CellName] = firstScene;
         _guideEnabled = !profiles.GuideDismissed;
         foreach (var geometry in scene.Layers)
         {
-            var row = new GdsLayerReviewRow(geometry, suggestions.FirstOrDefault(x => x.Layer == geometry.Pair.Layer && x.Datatype == geometry.Pair.Datatype)?.Role ?? GdsLayerRole.Unknown);
+            var row = new GdsLayerReviewRow(geometry, suggestions.FirstOrDefault(x => x.Layer == geometry.Pair.Layer && x.Datatype == geometry.Pair.Datatype)?.Role ?? GdsLayerRole.Unknown,
+                routeSuggestions.FirstOrDefault(x => x.Layer == geometry.Pair.Layer && x.Datatype == geometry.Pair.Datatype));
             Layers.Add(row); row.PropertyChanged += OnRowChanged;
         }
         foreach (var cell in cells) { Cells.Add(cell); cell.PropertyChanged += OnRowChanged; }
@@ -155,9 +167,10 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
                     new GdsLayerGeometryScene { CellName = name, Bounds = builder.GetBounds(name, cancellationToken) }));
             }
             var firstScene = names[0] == topCell ? scene : builder.Build(names[0], cancellationToken);
-            return (scene, cells, builder, firstScene);
+            var routeSuggestions = GdsReviewRouteEvidence.Suggest(library, topCell, cancellationToken);
+            return (scene, cells, builder, firstScene, routeSuggestions);
         }, cancellationToken);
-        return new(library, topCell, sourceHash, prepared.scene, prepared.cells, suggestions, models, profiles ?? new(), prepared.builder, prepared.firstScene);
+        return new(library, topCell, sourceHash, prepared.scene, prepared.cells, suggestions, models, profiles ?? new(), prepared.builder, prepared.firstScene, prepared.routeSuggestions);
     }
 
     partial void OnStageIndexChanged(int value) { IsPortEditing = false; RefreshCellSelection(); RefreshSteps(); RefreshPresentation(); }

@@ -22,6 +22,37 @@ namespace UnitTests.UI;
 public class GdsInterpretationReviewViewTests
 {
     [AvaloniaFact]
+    public async Task RouteSuggestionCanBeConfirmedByPointerAndUndone()
+    {
+        var library = new GdsLibrary();
+        var cell = new GdsCell { Name = "TOP" };
+        cell.Elements.Add(new GdsPolygon { Layer = 42, Points = [new(0, 0), new(100, 0), new(100, 1), new(0, 1)] });
+        library.Cells.Add(cell.Name, cell);
+        var vm = await GdsInterpretationReviewViewModel.CreateAsync(library, "TOP", "route-hint",
+            [], [], new GdsLayerProfileStore(Path.Combine(ScreenshotDirectory, $"profiles-{Guid.NewGuid():N}.json")));
+        var view = new GdsInterpretationReviewView { DataContext = vm };
+        var window = new Window { Width = 1180, Height = 780, Content = view };
+        try
+        {
+            vm.StageIndex = 1;
+            window.Show();
+            Layout(window);
+            var button = view.FindControl<Button>("GdsReviewUseOptical")!;
+            button.IsEffectivelyVisible.ShouldBeTrue();
+            AssertActionableTarget(view, "GdsReviewUseOptical");
+            var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(point, MouseButton.Left);
+            window.MouseUp(point, MouseButton.Left);
+            Layout(window);
+            vm.SelectedLayer!.Role.ShouldBe(GdsLayerRole.OpticalCore);
+            Capture(view, "route-layer-suggestion.png");
+            vm.UndoCommand.Execute(null);
+            vm.SelectedLayer.Role.ShouldBe(GdsLayerRole.Unknown);
+        }
+        finally { vm.Close(); window.Close(); }
+    }
+
+    [AvaloniaFact]
     public async Task GuidedAssemblyButtonOpensChildWithRealPointerClick()
     {
         var bytes = GdsTestWriter.Create().StandardPrologue()
@@ -239,6 +270,20 @@ public class GdsInterpretationReviewViewTests
         if (stage is 2 or 3 or 4) selector.SelectedItem.ShouldBeSameAs(vm.SelectedCell);
         if (stage == 1)
         {
+            var preview = view.FindControl<GdsReviewPreview>("ReviewPreview")!;
+            preview.IsolateSelectedLayer.ShouldBeTrue();
+            vm.IsolateSelectedLayer = false;
+            Dispatcher.UIThread.RunJobs();
+            preview.IsolateSelectedLayer.ShouldBeFalse();
+            vm.IsolateSelectedLayer = true;
+            var detail = view.FindControl<ComboBox>("GdsReviewDetail")!;
+            detail.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            preview.DetailLevel.ShouldBe(1);
+            detail.SelectedIndex = 2;
+            Dispatcher.UIThread.RunJobs();
+            preview.DetailLevel.ShouldBe(2);
+            detail.SelectedIndex = 0;
             var role = view.FindControl<ListBox>("GdsReviewRole").ShouldNotBeNull();
             role.SelectedItem.ShouldBeSameAs(vm.SelectedLayer!.SelectedRole);
             role.Items.Count.ShouldBeGreaterThan(5);

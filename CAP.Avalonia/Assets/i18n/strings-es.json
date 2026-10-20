@@ -2354,5 +2354,14 @@
   "GdsReview.AssemblyHint": "Contiene celdas secundarias. Ábrelo para importar esas partes por separado. Deshacer restaura el conjunto.",
   "GdsReview.LeafHint": "Esta celda GDS no contiene celdas secundarias. Las formas por sí solas no identifican componentes MMI o MZI separados.",
   "GdsReview.EditPortPositions": "Corregir posiciones de puertos",
-  "Status.SelectedElementsDeleted": "{0} elementos seleccionados eliminados"
+  "Status.SelectedElementsDeleted": "{0} elementos seleccionados eliminados",
+  "GdsReview.DetailAuto": "Detalle automático",
+  "GdsReview.DetailOverview": "Vista general rápida",
+  "GdsReview.DetailExact": "Detalle fino",
+  "GdsReview.DetailHelp": "La vista general simplifica las formas pequeñas. El modo automático recupera el detalle al ampliar. El detalle fino puede ser más lento; las matrices densas pueden seguir resumidas. La importación siempre usa la geometría original.",
+  "GdsReview.IsolateLayer": "Solo la capa seleccionada",
+  "GdsReview.NextRouteSuggestion": "Mostrar posibles rutas",
+  "GdsReview.RouteSuggestion": "{0} formas de trazado en {1} celdas. La forma por sí sola no determina su función óptica o eléctrica.",
+  "GdsReview.UseOpticalSuggestion": "Usar como óptica",
+  "GdsReview.UseElectricalSuggestion": "Usar como eléctrica"
 }
