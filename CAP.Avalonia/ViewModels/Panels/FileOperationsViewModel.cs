@@ -76,6 +76,7 @@ public partial class FileOperationsViewModel : ObservableObject
     /// loading so a .lun that wires a pin more than once never shrinks silently.
     /// </summary>
     private readonly List<string> _displacedConnectionsDuringLoad = new();
+    private readonly List<string> _verticalPortConnectionsDuringLoad = new();
 
     /// <summary>
     /// Groups whose reconstruction failed during the current load (corrupted or
@@ -1185,6 +1186,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 _commandManager.ClearHistory();
                 _pinCalibrationMigratedComponents.Clear();
                 _displacedConnectionsDuringLoad.Clear();
+                _verticalPortConnectionsDuringLoad.Clear();
                 _failedGroupsDuringLoad.Clear();
 
                 // Design-scoped imported components (#830): restore the sets embedded
@@ -1406,6 +1408,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 UpdateStatus?.Invoke($"Loaded {Path.GetFileName(filePath)} ({_canvas.Components.Count} components, {_canvas.Connections.Count} connections, {groupCount} groups)");
                 ReportDisplacedConnections();
                 ReportFailedGroups();
+                ReportVerticalPortConnections();
                 _commandManager.NotifyStateChanged();
 
                 // Rebuild hierarchy tree after loading
@@ -1477,11 +1480,16 @@ public partial class FileOperationsViewModel : ObservableObject
     /// proceed in that case. An empty canvas is no substitute for this signal: the
     /// canvas can be empty while the operation was still cancelled.
     /// </summary>
-    public async Task<bool> TryNewProjectAsync()
+    public Task<bool> TryNewProjectAsync() => TryNewProjectAsync(null);
+
+    /// <summary>Creates a project only while the initiating navigation request is still current.</summary>
+    public async Task<bool> TryNewProjectAsync(Func<bool>? canProceed)
     {
+        if (canProceed?.Invoke() == false) return false;
         if (!await ConfirmUnsavedChangesAsync(
                 "Do you want to save your changes before creating a new project?"))
             return false;
+        if (canProceed?.Invoke() == false) return false;
 
         // Exit group edit mode if active
         if (_canvas.IsInGroupEditMode)
@@ -1993,6 +2001,15 @@ public partial class FileOperationsViewModel : ObservableObject
         if (startPin == null || endPin == null)
             return;
 
+        // Older PDK exports lost the fiber role and allowed physically impossible
+        // planar routes. Preserve the components/ports, but report each refused wire.
+        if (!startPin.IsPlanarRoutable || !endPin.IsPlanarRoutable)
+        {
+            _verticalPortConnectionsDuringLoad.Add(
+                $"{startComp.Identifier}.{startPin.Name} -> {endComp.Identifier}.{endPin.Name}");
+            return;
+        }
+
         var cachedPath = PathSegmentConverter.ToRoutedPath(
             connData.CachedSegments, connData.IsBlockedFallback ?? false,
             connData.IsInvalidGeometry ?? false, connData.IsPlaceholderGeometry);
@@ -2129,6 +2146,18 @@ public partial class FileOperationsViewModel : ObservableObject
     private static string DescribeConnectionForLoadReport(WaveguideConnection connection) =>
         $"{connection.StartPin.ParentComponent?.Identifier}.{connection.StartPin.Name} ↔ "
         + $"{connection.EndPin.ParentComponent?.Identifier}.{connection.EndPin.Name}";
+
+    private void ReportVerticalPortConnections()
+    {
+        if (_verticalPortConnectionsDuringLoad.Count == 0) return;
+        var count = _verticalPortConnectionsDuringLoad.Count;
+        UpdateStatus?.Invoke(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            Services.Localization.LocalizationService.Instance.Translate("Load.VerticalPortConnectionsDropped"), count));
+        _errorConsole?.LogWarning(
+            $"{count} connection(s) skipped while loading: vertical fiber ports cannot carry planar waveguides. "
+            + "Reconnect using the waveguide port: " + string.Join("; ", _verticalPortConnectionsDuringLoad));
+        _verticalPortConnectionsDuringLoad.Clear();
+    }
 
     /// <summary>
     /// Surfaces connections that were displaced during the load: a .lun whose netlist

@@ -1,4 +1,9 @@
 {
+  "Load.VerticalPortConnectionsDropped": "已跳过 {0} 条连接：垂直光纤端口不能连接芯片平面内的波导。详情请查看错误控制台。",
+  "Tutorial.Process.Title": "学习工艺",
+  "Tutorial.Process.NewProjectBody": "本章使用 Demo SOI 220nm。是否新建独立的学习项目？切换前可以保存当前工作。",
+  "Tutorial.Process.Create": "开始学习项目",
+  "Tutorial.Process.Keep": "保留当前项目",
   "PythonStartup.Preparing": "正在后台准备 Python 预览。您可以继续工作。",
   "PythonStartup.Working": "Python 设置已在后台运行。",
   "PythonStartup.Failed": "Python 设置未能完成。您可以继续工作，稍后重试。",

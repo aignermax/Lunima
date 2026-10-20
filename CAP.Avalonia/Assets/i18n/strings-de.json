@@ -1,4 +1,9 @@
 {
+  "Load.VerticalPortConnectionsDropped": "{0} Verbindung(en) übersprungen: Senkrechte Faseranschlüsse können nicht mit Wellenleitern auf dem Chip verbunden werden. Details stehen in der Fehlerkonsole.",
+  "Tutorial.Process.Title": "Prozess für den Lernpfad",
+  "Tutorial.Process.NewProjectBody": "Dieses Kapitel verwendet Demo SOI 220nm. Ein eigenes Lernprojekt starten? Vor dem Wechsel kannst du deine aktuelle Arbeit speichern.",
+  "Tutorial.Process.Create": "Lernprojekt starten",
+  "Tutorial.Process.Keep": "Aktuelles Projekt behalten",
   "PythonStartup.Preparing": "Python-Vorschauen werden im Hintergrund vorbereitet. Sie können weiterarbeiten.",
   "PythonStartup.Working": "Die Python-Einrichtung läuft bereits im Hintergrund.",
   "PythonStartup.Failed": "Die Python-Einrichtung konnte nicht abgeschlossen werden. Sie können weiterarbeiten und es später erneut versuchen.",

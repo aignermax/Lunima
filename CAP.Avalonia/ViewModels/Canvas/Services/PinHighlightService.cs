@@ -55,6 +55,7 @@ public class PinHighlightService
 
         foreach (var pinVm in _allPins)
         {
+            if (!pinVm.Pin.IsPlanarRoutable) continue;
             if (excludePin != null)
             {
                 if (pinVm.Pin == excludePin) continue;
@@ -109,6 +110,7 @@ public class PinHighlightService
 
         foreach (var pinVm in _allPins)
         {
+            if (!pinVm.Pin.IsPlanarRoutable) continue;
             var (pinX, pinY) = pinVm.Pin.GetAbsolutePosition();
             double dist = Math.Sqrt(Math.Pow(x - pinX, 2) + Math.Pow(y - pinY, 2));
 

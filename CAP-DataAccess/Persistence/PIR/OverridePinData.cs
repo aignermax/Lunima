@@ -9,6 +9,7 @@ public class OverridePinData
 {
     /// <summary>Pin name as defined in the override cell (e.g. "a0", "b0").</summary>
     public string Name { get; set; } = string.Empty;
+    public string? PortType { get; set; }
 
     /// <summary>
     /// X offset from the component bounding-box left edge in micrometers.
@@ -42,6 +43,7 @@ public class OverridePinData
     public OverridePinData Clone() => new()
     {
         Name = Name,
+        PortType = PortType,
         OffsetXMicrometers = OffsetXMicrometers,
         OffsetYMicrometers = OffsetYMicrometers,
         AngleDegrees = AngleDegrees,

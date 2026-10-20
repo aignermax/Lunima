@@ -865,6 +865,7 @@
         },
         {
           "name": "o2",
+          "portType": "vertical_te",
           "offsetXMicrometers": 19.018,
           "offsetYMicrometers": 22.097,
           "angleDegrees": 0.0
@@ -970,6 +971,7 @@
         },
         {
           "name": "o2",
+          "portType": "vertical_te",
           "offsetXMicrometers": 209.652,
           "offsetYMicrometers": 5.5,
           "angleDegrees": 0.0

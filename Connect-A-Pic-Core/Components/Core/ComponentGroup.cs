@@ -934,6 +934,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
                 AngleDegrees = externalPin.AngleDegrees,
                 LogicalPin = externalPin.InternalPin.LogicalPin,
                 WaveguideWidthMicrometers = externalPin.InternalPin.WaveguideWidthMicrometers,
+                PortType = externalPin.InternalPin.PortType,
                 Layer = externalPin.InternalPin.Layer
             };
 

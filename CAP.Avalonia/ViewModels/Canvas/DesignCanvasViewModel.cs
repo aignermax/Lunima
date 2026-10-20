@@ -408,6 +408,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     public async Task<WaveguideConnectionViewModel?> ConnectPinsAsync(
         PhysicalPin startPin, PhysicalPin endPin)
     {
+        if (!startPin.IsPlanarRoutable || !endPin.IsPlanarRoutable) return null;
         RemoveConnectionsForPin(startPin);
         RemoveConnectionsForPin(endPin);
         var connection = ConnectionManager.AddConnectionDeferred(startPin, endPin);
@@ -420,6 +421,7 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     public WaveguideConnectionViewModel? ConnectPins(PhysicalPin startPin, PhysicalPin endPin)
     {
+        if (!startPin.IsPlanarRoutable || !endPin.IsPlanarRoutable) return null;
         RemoveConnectionsForPin(startPin);
         RemoveConnectionsForPin(endPin);
         var connection = ConnectionManager.AddConnectionDeferred(startPin, endPin);
@@ -432,6 +434,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     public WaveguideConnectionViewModel? ConnectPinsWithCachedRoute(
         PhysicalPin startPin, PhysicalPin endPin, RoutedPath cachedRoute)
     {
+        if (!startPin.IsPlanarRoutable || !endPin.IsPlanarRoutable) return null;
         RemoveConnectionsForPin(startPin);
         RemoveConnectionsForPin(endPin);
         var connection = ConnectionManager.AddConnectionWithCachedRoute(startPin, endPin, cachedRoute);

@@ -15,12 +15,12 @@ internal static class PinConnectionAffordance
 {
     /// <summary>
     /// True when <paramref name="candidate"/> cannot be connected to <paramref name="dragStart"/>:
-    /// either a different signal domain (optical vs. electrical — see
-    /// <see cref="PinKindHelper.AreKindsCompatible"/>) or an incompatible polarization (TE vs.
-    /// TM — see <see cref="PolarizationRules.CanConnect"/>). Connection rules themselves are
-    /// untouched; this only decides what the drag preview shows.
+    /// a vertical fiber terminal, a different signal domain (optical vs. electrical — see
+    /// <see cref="PinKindHelper.ArePlanarRoutingCompatible"/>) or an incompatible polarization (TE vs.
+    /// TM — see <see cref="PolarizationRules.CanConnect"/>). The preview uses the same planar
+    /// compatibility policy as connection creation.
     /// </summary>
     public static bool IsIncompatibleTarget(PhysicalPin dragStart, PhysicalPin candidate)
-        => !PinKindHelper.AreKindsCompatible(dragStart, candidate)
+        => !PinKindHelper.ArePlanarRoutingCompatible(dragStart, candidate)
            || !PolarizationRules.CanConnect(dragStart.Polarization, candidate.Polarization);
 }

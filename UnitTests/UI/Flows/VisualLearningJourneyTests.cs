@@ -124,6 +124,8 @@ public class VisualLearningJourneyTests
         await RefreshTarget();
         Save(window, language, "simulate");
         UiInput.Click(window, window.FindControl<Button>("RunSimulationButton")!);
+        Assert.NotNull(vm.RunWorkspaceCommand.ExecutionTask);
+        await vm.RunWorkspaceCommand.ExecutionTask;
         Pump();
         Assert.True(vm.Tutorial.IsCompleted);
         Assert.False(vm.Tutorial.IsActive);

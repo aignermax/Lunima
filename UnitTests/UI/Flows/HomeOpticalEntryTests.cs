@@ -23,6 +23,9 @@ public class HomeOpticalEntryTests
         host.Window.Width = width; host.Window.Height = 800;
         LocalizationService.Instance.SetLanguage(language);
         var vm = host.Vm;
+        if (hasWork)
+            vm.FileOperations.SetActiveProcess(CAP_Core.Components.Process.ActiveProcessSelection.ForGroup(
+                vm.FileOperations.ProcessCatalogProvider!().Single(g => g.MemberPdkNames.Contains("Demo PDK"))), markDirty: false);
         var existing = hasWork ? vm.Canvas.AddComponent(TestComponentFactory.CreateStraightWaveGuide()) : null;
         vm.Home.Show();
         await Task.Delay(180);

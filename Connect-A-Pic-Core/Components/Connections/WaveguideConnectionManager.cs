@@ -118,8 +118,15 @@ public partial class WaveguideConnectionManager
     /// <summary>Re-entrancy guard: sub-connection recalcs must not trigger nested crossing passes.</summary>
     private bool _isCrossingPassRunning;
 
+    private static void ValidatePlanarEndpoints(PhysicalPin startPin, PhysicalPin endPin)
+    {
+        if (startPin?.IsPlanarRoutable == false || endPin?.IsPlanarRoutable == false)
+            throw new InvalidOperationException("Vertical fiber ports cannot connect to planar waveguides.");
+    }
+
     public WaveguideConnection AddConnection(PhysicalPin startPin, PhysicalPin endPin)
     {
+        ValidatePlanarEndpoints(startPin, endPin);
         NoteWireSetChanged();
         var connection = new WaveguideConnection
         {
@@ -152,6 +159,7 @@ public partial class WaveguideConnectionManager
         PhysicalPin endPin,
         RoutedPath cachedPath)
     {
+        ValidatePlanarEndpoints(startPin, endPin);
         var connection = new WaveguideConnection
         {
             StartPin = startPin,
@@ -212,6 +220,7 @@ public partial class WaveguideConnectionManager
     /// </summary>
     public WaveguideConnection AddConnectionDeferred(PhysicalPin startPin, PhysicalPin endPin)
     {
+        ValidatePlanarEndpoints(startPin, endPin);
         NoteWireSetChanged();
         var connection = new WaveguideConnection
         {
@@ -376,6 +385,7 @@ public partial class WaveguideConnectionManager
 
     public void AddExistingConnection(WaveguideConnection connection)
     {
+        ValidatePlanarEndpoints(connection.StartPin, connection.EndPin);
         NoteWireSetChanged();
         lock (_connectionsSync)
         {

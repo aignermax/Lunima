@@ -106,7 +106,8 @@ public static class ComponentTemplates
                 AngleDegrees = def.AngleDegrees,
                 LogicalPin = logicalPins[i],
                 WaveguideWidthMicrometers = def.WaveguideWidthMicrometers,
-                Layer = def.Layer
+                Layer = def.Layer,
+                PortType = def.PortType
             });
         }
 
@@ -281,10 +282,11 @@ public class PinDefinition
 
     /// <summary>GDS layer number of this pin's waveguide from the PDK; null when undeclared.</summary>
     public int? Layer { get; }
+    public string? PortType { get; }
 
     public PinDefinition(string name, double offsetX, double offsetY, double angleDegrees,
         MatterType kind = MatterType.Light, PolarizationKind polarization = PolarizationKind.TE,
-        double? waveguideWidthMicrometers = null, int? layer = null)
+        double? waveguideWidthMicrometers = null, int? layer = null, string? portType = null)
     {
         Name = name;
         OffsetX = offsetX;
@@ -294,5 +296,6 @@ public class PinDefinition
         Polarization = polarization;
         WaveguideWidthMicrometers = waveguideWidthMicrometers;
         Layer = layer;
+        PortType = portType;
     }
 }

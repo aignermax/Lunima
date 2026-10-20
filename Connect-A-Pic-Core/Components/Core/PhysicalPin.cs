@@ -9,6 +9,12 @@ namespace CAP_Core.Components.Core
     public class PhysicalPin : ICloneable
     {
         public string Name { get; set; }
+
+        /// <summary>Source port type; vertical fiber ports remain simulation terminals but cannot carry planar routes.</summary>
+        public string? PortType { get; set; }
+
+        public bool IsPlanarRoutable => !string.Equals(PortType, "vertical_te", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(PortType, "vertical_tm", StringComparison.OrdinalIgnoreCase);
         public double OffsetXMicrometers { get; set; }
         public double OffsetYMicrometers { get; set; }
         public double AngleDegrees { get; set; }
@@ -88,6 +94,7 @@ namespace CAP_Core.Components.Core
             return new PhysicalPin
             {
                 Name = Name,
+                PortType = PortType,
                 OffsetXMicrometers = OffsetXMicrometers,
                 OffsetYMicrometers = OffsetYMicrometers,
                 AngleDegrees = AngleDegrees,
