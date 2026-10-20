@@ -84,7 +84,8 @@ public partial class FirstGateTourViewModel
 
     private string? ResolveTargetName()
     {
-        if (!IsActive || IsIntroduction || ShowRevealGate) return null;
+        if (!IsActive || ShowRevealGate) return null;
+        if (IsIntroduction) return "FirstGateStartButton";
         if (CurrentStepIndex == 1)
         {
             if (_workspace?.IsLogic == true) return "LayoutWorkspaceButton";

@@ -171,11 +171,12 @@ public partial class TourAnchorOverlay : UserControl
         _offscreenPoint = null;
         var target = FindTarget();
         target = ResolveItemTarget(target);
+        var targetInsideCard = target != null && target.GetVisualAncestors().Contains(CardHost);
         var targetRect = target == null ? default : TargetRectInOverlay(target);
         if (Demonstrate && target != null)
             targetRect = ResolveDemonstrationRect(target, targetRect);
 
-        if (target != null) RevealAfterLayoutChange(target);
+        if (target != null && !targetInsideCard) RevealAfterLayoutChange(target);
 
         var hasSpotlight = targetRect.Width > 0 && targetRect.Height > 0;
         ApplyDim(viewport, hasSpotlight ? targetRect : default);
@@ -184,7 +185,8 @@ public partial class TourAnchorOverlay : UserControl
         var cardSize = CardHost.DesiredSize;
         if (!double.IsFinite(cardSize.Width) || !double.IsFinite(cardSize.Height))
             return;
-        var pos = TourCardPlacement.Place(viewport, targetRect, cardSize, out var side);
+        // A card action must not move the card toward its own previous position.
+        var pos = TourCardPlacement.Place(viewport, targetInsideCard ? default : targetRect, cardSize, out var side);
         ACanvas.SetLeft(CardHost, pos.X);
         ACanvas.SetTop(CardHost, pos.Y);
         GuideShowTarget.IsVisible = _offscreenPoint != null;
