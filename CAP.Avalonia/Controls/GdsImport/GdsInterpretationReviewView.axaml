@@ -75,7 +75,7 @@
             <CheckBox Content="{loc:Localize GdsReview.IsolateLayer}" IsChecked="{Binding IsolateSelectedLayer}"
                       IsVisible="{Binding IsLayerStep}"/>
           </WrapPanel>
-          <TextBlock Classes="caption" Foreground="#FFD166" IsVisible="{Binding IsLayerStep}" TextWrapping="Wrap" Text="{loc:Localize GdsReview.SelectionLegend}"/>
+          <TextBlock Classes="caption" Foreground="{DynamicResource Brush.GdsSelection}" IsVisible="{Binding IsLayerStep}" TextWrapping="Wrap" Text="{loc:Localize GdsReview.SelectionLegend}"/>
           <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.PreviewHint}" TextWrapping="Wrap"/>
           <TextBlock Classes="caption warning" Text="{loc:Localize GdsReview.PreviewLimited}"
                      IsVisible="{Binding #ReviewPreview.IsPreviewLimited}" TextWrapping="Wrap"/>

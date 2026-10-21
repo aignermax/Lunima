@@ -40,8 +40,8 @@ internal sealed class OutlineRasterCache
 
     /// <summary>Draws an existing image level without requesting source geometry.</summary>
     public bool TryDrawCached(DrawingContext context, IReadOnlyList<OutlinePolygon> outlines,
-        double zoom, GdsLayerVisibilityState? layerVisibility) =>
-        TryDraw(context, outlines, Array.Empty<OutlineBatch>(), zoom, layerVisibility);
+        double zoom, GdsLayerVisibilityState? layerVisibility, IBrush? highlightBrush = null) =>
+        TryDraw(context, outlines, Array.Empty<OutlineBatch>(), zoom, layerVisibility, highlightBrush);
 
     /// <summary>Draws or builds a raster level; false asks the caller to draw its vector batches.</summary>
     public bool TryDraw(
@@ -49,9 +49,10 @@ internal sealed class OutlineRasterCache
         IReadOnlyList<OutlinePolygon> outlines,
         OutlineBatch[] batches,
         double zoom,
-        GdsLayerVisibilityState? layerVisibility)
+        GdsLayerVisibilityState? layerVisibility,
+        IBrush? highlightBrush = null)
     {
-        if (_disabled || zoom >= VectorFromZoom || zoom <= 0) return false;
+        if (_disabled || zoom >= VectorFromZoom || zoom <= 0 || highlightBrush is not null and not ISolidColorBrush) return false;
         if (!_entries.TryGetValue(outlines, out var entry))
         {
             if (batches.Length == 0) return false;
@@ -65,28 +66,51 @@ internal sealed class OutlineRasterCache
         int height = (int)Math.Ceiling(bounds.Height * density);
         if (width > MaxBitmapEdgePx || height > MaxBitmapEdgePx) return false;
 
-        var key = new SlotKey(density, VisibilityKey(entry.Layers, layerVisibility));
+        var key = new SlotKey(density, VisibilityKey(entry.Layers, layerVisibility), (highlightBrush as ISolidColorBrush)?.Color);
         // Keep a real image pyramid: derive coarse levels from a sharper image,
         // avoiding both full-resolution sampling and source vertex resubmission.
         var slot = entry.Slots.Find(s => s.Key == key);
         if (slot is null)
         {
-            var sharper = entry.Slots.Where(s => s.Key.Density > density && s.Key.Visibility == key.Visibility)
+            var sharper = entry.Slots.Where(s => s.Key.Density > density && s.Key.Visibility == key.Visibility && s.Key.Tint == key.Tint)
                 .OrderBy(s => s.Key.Density).FirstOrDefault();
             if (sharper is not null)
                 slot = Downsample(entry, key, sharper, density, width, height) ?? sharper;
         }
+        if (slot is null && highlightBrush is not null && entry.Slots.Any(s => s.Key == key with { Tint = null }))
+            slot = Create(entry, key, batches, bounds, density, width, height, layerVisibility, highlightBrush);
         if (slot is null)
         {
             if (batches.Length == 0) return false;
-            if (!entry.SeenKeys.Add(key)) slot = Create(entry, key, batches, bounds, density, width, height, layerVisibility);
+            if (!entry.SeenKeys.Add(key)) slot = Create(entry, key, batches, bounds, density, width, height, layerVisibility, highlightBrush);
             if (slot is null) return false;
         }
         Touch(slot);
-        context.DrawImage(slot.Bitmap, new Rect(0, 0, slot.Bitmap.PixelSize.Width, slot.Bitmap.PixelSize.Height),
+        DrawImage(context, slot.Bitmap,
             new Rect(bounds.X, bounds.Y, slot.Bitmap.PixelSize.Width / slot.Key.Density,
-                slot.Bitmap.PixelSize.Height / slot.Key.Density));
+                slot.Bitmap.PixelSize.Height / slot.Key.Density), null);
         return true;
+    }
+
+    /// <summary>Draws the source image or tints its alpha while building a cached emphasis bitmap.</summary>
+    internal static void DrawImage(DrawingContext context, RenderTargetBitmap bitmap, Rect bounds, IBrush? highlightBrush)
+    {
+        if (highlightBrush is null)
+        {
+            context.DrawImage(bitmap, new Rect(0, 0, bitmap.PixelSize.Width, bitmap.PixelSize.Height), bounds);
+            return;
+        }
+        using (context.PushOpacityMask(new ImageBrush(bitmap) { Stretch = Stretch.Fill }, bounds))
+            context.FillRectangle(highlightBrush, bounds);
+    }
+
+    /// <summary>Bakes an emphasis color once; drawing an opacity layer every frame is expensive.</summary>
+    internal static RenderTargetBitmap TintBitmap(RenderTargetBitmap source, IBrush tint)
+    {
+        var bitmap = new RenderTargetBitmap(source.PixelSize);
+        using var context = bitmap.CreateDrawingContext();
+        DrawImage(context, source, new Rect(0, 0, source.PixelSize.Width, source.PixelSize.Height), tint);
+        return bitmap;
     }
 
     private Slot? Downsample(Entry entry, SlotKey key, Slot source, double density, int width, int height)
@@ -111,12 +135,24 @@ internal sealed class OutlineRasterCache
         }
     }
     private Slot? Create(Entry entry, SlotKey key, OutlineBatch[] batches, Rect bounds, double density,
-        int width, int height, GdsLayerVisibilityState? layerVisibility)
+        int width, int height, GdsLayerVisibilityState? layerVisibility, IBrush? highlightBrush)
     {
         RenderTargetBitmap bitmap;
         try
         {
-            bitmap = Render(batches, bounds, density, width, height, layerVisibility);
+            var sourceSlot = entry.Slots.Find(s => s.Key == key with { Tint = null });
+            if (highlightBrush is not null && sourceSlot is not null)
+                bitmap = TintBitmap(sourceSlot.Bitmap, highlightBrush);
+            else
+            {
+                bitmap = Render(batches, bounds, density, width, height, layerVisibility);
+                if (highlightBrush is not null)
+                {
+                    var tinted = TintBitmap(bitmap, highlightBrush);
+                    bitmap.Dispose();
+                    bitmap = tinted;
+                }
+            }
         }
         catch (Exception)
         {
@@ -190,7 +226,7 @@ internal sealed class OutlineRasterCache
         return rect;
     }
 
-    private readonly record struct SlotKey(double Density, string Visibility);
+    private readonly record struct SlotKey(double Density, string Visibility, Color? Tint);
 
     /// <summary>Bitmaps of one outline list plus the keys requested once (bitmap on the second request).</summary>
     private sealed class Entry

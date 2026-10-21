@@ -114,7 +114,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         bool pathIsStale = segments.Count > 0 && UsesStaleFallback(conn) && IsPathStale(segments, conn);
         bool drawsFallbackLine = segments.Count == 0 || pathIsStale;
 
-        if (isBlocked)
+        if (isBlocked && rc.Zoom >= ComponentRenderer.GroupOverviewZoom)
         {
             blockedMarkers.Collect(conn.Connection.Id, new Point(conn.StartX, conn.StartY), new Point(conn.EndX, conn.EndY),
                 drawsFallbackLine ? Array.Empty<CAP_Core.Routing.PathSegment>() : segments);
@@ -128,14 +128,13 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
 
         if (asDrawn is not null)
         {
-            // An untouched import draws exactly as drawn; the centerline only appears as
-            // the selection/hover/power-flow highlight on top of the drawn polygons.
+            // Fitted centerlines can diverge from imported masks. Emphasis recolors
+            // the cached source geometry without inventing a different visible route.
             bool showsPowerFlow = vm.ShowPowerFlow && vm.PowerFlowVisualizer.CurrentResult != null;
-            AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility, isDimmed: showsPowerFlow,
-                visibleWorld: cullRect);
-            if (conn.IsSelected || isHovered || showsPowerFlow)
-                DrawPathSegments(context, pen, segments);
-            if (hasImportedEndpointMismatch)
+            AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility,
+                visibleWorld: cullRect,
+                highlightBrush: conn.IsSelected || isHovered || showsPowerFlow ? pen.Brush : null);
+            if (hasImportedEndpointMismatch && rc.Zoom >= ComponentRenderer.GroupOverviewZoom)
             {
                 // Dashed gaps are warnings, never replacement geometry or exported routes.
                 var start = segments[0].StartPoint;
@@ -169,6 +168,9 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
     private static void DrawConnectionOverlays(DrawingContext context, WaveguideConnectionViewModel conn,
         DesignCanvasViewModel vm, bool isHovered, double zoom, DeferredLabelLayer labels, bool hasImportedEndpointMismatch)
     {
+        if (zoom < ComponentRenderer.GroupOverviewZoom)
+            return;
+
         var midX = (conn.StartX + conn.EndX) / 2;
         var midY = (conn.StartY + conn.EndY) / 2;
         bool isElectrical = IsElectricalTrace(conn);

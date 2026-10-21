@@ -211,18 +211,24 @@ public partial class HierarchyPanelViewModel : ObservableObject
     {
         RunSuppressed(() =>
         {
-            ClearAllSelections();
-            var selectionSet = _canvas.Selection.SelectedComponents;
-            if (selectionSet.Count > 0)
-            {
-                foreach (var comp in selectionSet)
-                    SelectNodeFor(comp);
-            }
-            else
-            {
-                SelectNodeFor(_canvas.SelectedComponent);
-            }
+            var selected = new HashSet<Component>(
+                _canvas.Selection.SelectedComponents.Select(c => c.Component), ReferenceEqualityComparer.Instance);
+            if (selected.Count == 0 && _canvas.SelectedComponent is { } primary)
+                selected.Add(primary.Component);
+            // One traversal for the complete batch, rather than searching and expanding
+            // the entire hierarchy again for every selected component.
+            foreach (var root in RootNodes) ApplySelectionToSubtree(root, selected);
         });
+    }
+
+    private static bool ApplySelectionToSubtree(HierarchyNodeViewModel node, HashSet<Component> selected)
+    {
+        node.IsSelected = selected.Contains(node.Component);
+        bool selectedDescendant = false;
+        foreach (var child in node.Children)
+            selectedDescendant |= ApplySelectionToSubtree(child, selected);
+        if (selectedDescendant) node.IsExpanded = true;
+        return node.IsSelected || selectedDescendant;
     }
 
     private void SelectNodeFor(ComponentViewModel? component)

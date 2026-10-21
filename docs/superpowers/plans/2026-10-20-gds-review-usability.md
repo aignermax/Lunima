@@ -280,3 +280,54 @@ Externally connected cells, unsupported magnification and ambiguous ports refuse
 expansion before changing the design. Flat source cells without child references do
 not acquire invented components. Auxiliary physical layer meaning is not inferred by
 the collision code: existing background flags stay nonblocking; other outlines block.
+
+## Selection and conversion responsiveness (2026-10-21)
+
+Keep overview detail limits active for selected and hovered content. Component names,
+route warnings and group warning badges must not bypass zoom limits. Highlight the
+source polygon mask of imported routes rather than an approximate fitted centerline;
+reuse overview raster caches for dense selected geometry as well as ordinary drawing.
+
+Provide Ctrl+A through the canvas and global window shortcut paths, preserving text
+field shortcuts. Select the current editable scope, not children of closed groups or
+root background paths while editing a group. Publish one completed selection per
+collection so status, hierarchy and properties panels do not rebuild for every item.
+Expose Select all in the canvas context menu and localized shortcut help.
+
+Prepare imported-route undo snapshots from detached scalar values off the UI thread.
+Yield before conversion, guard stale document/scope/targets, avoid duplicate routing
+passes and record already-applied results without reapplying them. Keep final history
+recording atomic; deferred redo geometry must own its snapshot and produce fresh data.
+Queue group-edit grid initialization before subsequent routing without building the
+grid synchronously on the UI thread.
+
+Zero physical pins do not make an imported cell nonblocking: imported pads still
+occupy their source polygons. Keep enclosing die frames as background. Preserve the
+smallest positive fitted source bend radius as routing intent (without lowering a
+larger existing setting), including legacy conversion and undo/redo. This does not
+infer a foundry rule. Previously saved nonblocking flags are not silently migrated;
+reimport applies the corrected classification.
+
+Verification includes real Ctrl+A input versus text selection, all four workspaces,
+large batched selection, source-mask hover pixels, outline selection raster work,
+conversion dispatcher heartbeat, stale target removal and repeated undo/redo. Private
+EAM layout measurements stay outside the repository. Independent review specifically
+checks selection cache bypass and history races during asynchronous preparation.
+
+Measured private-source selection after ungrouping: 1,535 components and 11,051
+frozen paths. Selected warm frames improved from 61.52 ms to 31.97 ms, with the
+first selected frame at 67.13 ms. Per-frame opacity masks were rejected after
+measuring 486.78 ms; the final implementation caches tinted image variants within
+the existing pixel budget. The private selected-image render was inspected: source
+curves and layer contrast remain visible, and no overview name flood returns.
+Cold first-import raster setup still costs hundreds of milliseconds (731 ms in this
+probe); these headless measurements are not a universal desktop frame-rate guarantee.
+
+Pre-existing conversion limitations remain: crossing-insertion history ownership is
+not redesigned here, and Stop cancels the current routing pass rather than the whole
+outer multi-group batch. Group cancellation now preserves imported source routes
+instead of serializing null paths and silently dropping them.
+
+Final focused verification: 822 tests passed, including real canvas/text Ctrl+A input,
+hierarchy batching and both previous CI failures. The 200,000-segment conversion
+probe measured 28.8 ms total and a 14.9 ms maximum dispatcher heartbeat gap.

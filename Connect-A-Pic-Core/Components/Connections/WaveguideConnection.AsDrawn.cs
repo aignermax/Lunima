@@ -53,6 +53,21 @@ namespace CAP_Core.Components.Connections
         }
 
         /// <summary>
+        /// Keeps the smallest observed optical source bend as routing intent before
+        /// converting an imported drawing to an editable route. This is not a fabrication
+        /// minimum, and never reduces an explicitly larger connection radius.
+        /// </summary>
+        public void PreserveImportedBendRadius()
+        {
+            if (IsElectrical || AsDrawnGeometry is null || RoutedPath is null) return;
+            var radius = RoutedPath.Segments.OfType<BendSegment>()
+                .Select(b => b.RadiusMicrometers)
+                .Where(r => double.IsFinite(r) && r > 0)
+                .DefaultIfEmpty(BendRadiusMicrometers).Min();
+            BendRadiusMicrometers = Math.Max(BendRadiusMicrometers, radius);
+        }
+
+        /// <summary>
         /// Records that an endpoint move is about to unfreeze a route that still showed its
         /// drawn polygons, so <see cref="TryRestoreDrawnRoute"/> can bring it back.
         /// </summary>

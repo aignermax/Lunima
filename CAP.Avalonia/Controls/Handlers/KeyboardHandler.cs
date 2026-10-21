@@ -46,6 +46,10 @@ public sealed class KeyboardHandler
 
         switch (e.Key)
         {
+            case Key.A when ctrl || e.KeyModifiers.HasFlag(KeyModifiers.Meta):
+                mainVm.SelectAllCommand.Execute(null);
+                e.Handled = true;
+                break;
             case Key.S:
                 HandleSKey(ctrl, mainVm);
                 e.Handled = true;

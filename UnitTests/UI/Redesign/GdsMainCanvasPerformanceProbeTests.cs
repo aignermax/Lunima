@@ -118,6 +118,29 @@ public class GdsMainCanvasPerformanceProbeTests(ITestOutputHelper output)
             }
             output.WriteLine($"Ungrouped: {canvas.CanvasFrozenPaths.Count} canvas paths; warm median {samples.Skip(2).Order().ElementAt(2):F2}ms");
         }
+        if (Environment.GetEnvironmentVariable("GDS_MAIN_CANVAS_SELECTION") == "1")
+        {
+            control.InteractionState.HoveredGroup = null;
+            foreach (var component in canvas.Components) component.IsSelected = true;
+            foreach (var connection in canvas.Connections) connection.IsSelected = true;
+            foreach (var pathVm in canvas.CanvasFrozenPaths) pathVm.IsSelected = true;
+            var samples = new List<double>();
+            for (int i = 0; i < 20; i++)
+            {
+                control.InteractionState.HoveredComponent = canvas.Components[i % canvas.Components.Count];
+                control.InteractionState.HoveredConnection = canvas.Connections.Count > 0
+                    ? canvas.Connections[i % canvas.Connections.Count] : null;
+                watch.Restart();
+                CanvasRenderHarness.RenderInto(control, bitmap);
+                samples.Add(watch.Elapsed.TotalMilliseconds);
+            }
+            output.WriteLine($"Selected components + routes, changing hover: first {samples[0]:F2}ms; warm median {samples.Skip(2).Order().ElementAt(8):F2}ms; max {samples.Max():F2}ms");
+            var frozenRenderer = (CanvasFrozenPathRenderer)control.GetType().GetField("_canvasFrozenPathRenderer",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(control)!;
+            output.WriteLine($"Frozen source image draws after selection: {frozenRenderer.IssuedSourceImageCount}");
+            if (Environment.GetEnvironmentVariable("GDS_MAIN_CANVAS_SNAPSHOT_DIR") is { Length: > 0 } selectedSnapshotDirectory)
+                bitmap.Save(Path.Combine(selectedSnapshotDirectory, "main-canvas-selected.png"));
+        }
         Assert.True(report.PlacedCount > 0);
     }
 }

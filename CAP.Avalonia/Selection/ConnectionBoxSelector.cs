@@ -30,6 +30,8 @@ public static class ConnectionBoxSelector
         double rectMaxX, double rectMaxY,
         bool removeFromSelection = false)
     {
+        using var update = selection.BeginUpdate();
+        var selected = selection.SelectedConnections.ToHashSet();
         foreach (var conn in connections)
         {
             if (conn.Connection.IsElectrical) continue;
@@ -40,7 +42,7 @@ public static class ConnectionBoxSelector
                 if (selection.SelectedConnections.Remove(conn))
                     conn.IsSelected = false;
             }
-            else if (!selection.SelectedConnections.Contains(conn))
+            else if (selected.Add(conn))
             {
                 selection.SelectedConnections.Add(conn);
                 conn.IsSelected = true;
@@ -56,6 +58,8 @@ public static class ConnectionBoxSelector
         SelectionManager selection, IEnumerable<CanvasFrozenPathViewModel> paths,
         double minX, double minY, double maxX, double maxY, bool removeFromSelection = false)
     {
+        using var update = selection.BeginUpdate();
+        var selected = selection.SelectedFrozenPaths.ToHashSet();
         foreach (var path in paths)
         {
             if (!path.Path.Path.Segments.Any(segment =>
@@ -64,7 +68,7 @@ public static class ConnectionBoxSelector
             {
                 if (selection.SelectedFrozenPaths.Remove(path)) path.IsSelected = false;
             }
-            else if (!selection.SelectedFrozenPaths.Contains(path))
+            else if (selected.Add(path))
             {
                 selection.SelectedFrozenPaths.Add(path);
                 path.IsSelected = true;

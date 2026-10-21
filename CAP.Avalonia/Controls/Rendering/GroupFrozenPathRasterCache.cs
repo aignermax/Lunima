@@ -39,7 +39,7 @@ internal sealed class GroupFrozenPathRasterCache
         internal readonly HashSet<Key> Seen = new();
     }
 
-    internal readonly record struct Key(double Density, string Visibility);
+    internal readonly record struct Key(double Density, string Visibility, Color? Tint);
     internal sealed record Slot(WeakReference<Snapshot> Owner, Key Key, RenderTargetBitmap Bitmap, Rect Bounds, long Pixels)
     {
         internal LinkedListNode<Slot>? Node;
@@ -50,19 +50,22 @@ internal sealed class GroupFrozenPathRasterCache
     /// individual drawing when a mixed group, high zoom or oversized raster falls back.
     /// </summary>
     internal Snapshot Prepare(ComponentGroup group) =>
-        Prepare(group, group.InternalPaths, static path => path);
+        Prepare(group, group.InternalPaths, static path => path.AsDrawnGeometry);
 
     internal Snapshot Prepare(IReadOnlyList<CanvasFrozenPathViewModel> paths) =>
-        Prepare(paths, paths, static path => path.Path);
+        Prepare(paths, paths, static path => path.Path.AsDrawnGeometry);
 
-    private Snapshot Prepare<T>(object owner, IReadOnlyList<T> paths, Func<T, FrozenWaveguidePath> getPath)
+    internal Snapshot Prepare(IReadOnlyList<AsDrawnGeometry?> sources) =>
+        Prepare(sources, sources, static source => source);
+
+    private Snapshot Prepare<T>(object owner, IReadOnlyList<T> paths, Func<T, AsDrawnGeometry?> getSource)
     {
         var snapshot = _snapshots.GetOrCreateValue(owner);
         bool changed = snapshot.Sources.Length != paths.Count;
         if (changed) snapshot.Sources = new AsDrawnGeometry?[paths.Count];
         for (int i = 0; i < snapshot.Sources.Length; i++)
         {
-            var source = getPath(paths[i]).AsDrawnGeometry;
+            var source = getSource(paths[i]);
             changed |= !ReferenceEquals(source, snapshot.Sources[i]);
             snapshot.Sources[i] = source;
         }
@@ -88,9 +91,10 @@ internal sealed class GroupFrozenPathRasterCache
     }
 
     internal bool TryDraw(DrawingContext context, Snapshot snapshot, double zoom,
-        GdsLayerVisibilityState? visibility)
+        GdsLayerVisibilityState? visibility, IBrush? highlightBrush = null)
     {
-        if (_disabled || !snapshot.Eligible || !double.IsFinite(zoom) || zoom <= 0 || zoom >= OutlineRasterCache.VectorFromZoom)
+        if (_disabled || !snapshot.Eligible || !double.IsFinite(zoom) || zoom <= 0 || zoom >= OutlineRasterCache.VectorFromZoom
+            || highlightBrush is not null and not ISolidColorBrush)
             return false;
         double density = Math.Pow(2, Math.Ceiling(Math.Log2(zoom)));
         double extent = Math.Max(snapshot.Bounds.Width, snapshot.Bounds.Height);
@@ -108,24 +112,25 @@ internal sealed class GroupFrozenPathRasterCache
         if (!double.IsFinite(pixelWidth) || !double.IsFinite(pixelHeight)
             || pixelWidth <= 0 || pixelHeight <= 0 || pixelWidth > MaxEdge || pixelHeight > MaxEdge) return false;
         int width = (int)pixelWidth, height = (int)pixelHeight;
-        var key = new Key(density, VisibilityKey(snapshot.Layers, visibility));
+        var key = new Key(density, VisibilityKey(snapshot.Layers, visibility), (highlightBrush as ISolidColorBrush)?.Color);
         var slot = snapshot.Slots.Find(candidate => candidate.Key == key);
         if (slot is null)
         {
-            var sharper = snapshot.Slots.Where(candidate => candidate.Key.Density > density && candidate.Key.Visibility == key.Visibility)
+            var sharper = snapshot.Slots.Where(candidate => candidate.Key.Density > density && candidate.Key.Visibility == key.Visibility && candidate.Key.Tint == key.Tint)
                 .OrderBy(candidate => candidate.Key.Density).FirstOrDefault();
-            if (sharper is null && snapshot.Seen.Add(key)) return false;
-            slot = Build(snapshot, key, bounds, width, height, visibility, sharper);
+            bool canTintCached = highlightBrush is not null && snapshot.Slots.Any(s => s.Key == key with { Tint = null });
+            if (sharper is null && !canTintCached && snapshot.Seen.Add(key)) return false;
+            slot = Build(snapshot, key, bounds, width, height, visibility, sharper, highlightBrush);
             if (slot is null) return false;
         }
         Touch(slot);
-        context.DrawImage(slot.Bitmap, new Rect(0, 0, slot.Bitmap.PixelSize.Width, slot.Bitmap.PixelSize.Height), slot.Bounds);
+        OutlineRasterCache.DrawImage(context, slot.Bitmap, slot.Bounds, null);
         IssuedImageCount++;
         return true;
     }
 
     private Slot? Build(Snapshot snapshot, Key key, Rect bounds, int width, int height,
-        GdsLayerVisibilityState? visibility, Slot? sharper)
+        GdsLayerVisibilityState? visibility, Slot? sharper, IBrush? highlightBrush)
     {
         RenderTargetBitmap? bitmap = null;
         try
@@ -134,11 +139,18 @@ internal sealed class GroupFrozenPathRasterCache
             using (var context = bitmap.CreateDrawingContext())
             using (context.PushTransform(Matrix.CreateTranslation(-bounds.X, -bounds.Y) * Matrix.CreateScale(key.Density, key.Density)))
             {
-                if (sharper is not null)
-                    context.DrawImage(sharper.Bitmap, new Rect(0, 0, sharper.Bitmap.PixelSize.Width, sharper.Bitmap.PixelSize.Height), sharper.Bounds);
+                var source = sharper ?? snapshot.Slots.Find(s => s.Key == key with { Tint = null });
+                if (source is not null)
+                    context.DrawImage(source.Bitmap, new Rect(0, 0, source.Bitmap.PixelSize.Width, source.Bitmap.PixelSize.Height), source.Bounds);
                 else
-                    foreach (var source in snapshot.Sources)
-                        AsDrawnGeometryRenderer.Draw(context, source!, key.Density, visibility);
+                    foreach (var geometry in snapshot.Sources)
+                        AsDrawnGeometryRenderer.Draw(context, geometry!, key.Density, visibility);
+            }
+            if (highlightBrush is not null && sharper is null)
+            {
+                var tinted = OutlineRasterCache.TintBitmap(bitmap, highlightBrush);
+                bitmap.Dispose();
+                bitmap = tinted;
             }
         }
         catch (Exception)

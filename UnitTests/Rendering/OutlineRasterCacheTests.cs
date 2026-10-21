@@ -29,6 +29,22 @@ public class OutlineRasterCacheTests
         renderer.Draw(context, 0, 0, 4000, 50, 0, outlines, false, 0.05);
     }
 
+    [AvaloniaFact]
+    public void SelectionTint_ReusesWarmRasterInsteadOfReturningToVectorBatches()
+    {
+        var renderer = new ComponentOutlineRenderer();
+        DrawZoomedOut(renderer, .1, null).Dispose();
+        DrawZoomedOut(renderer, .1, null).Dispose();
+        renderer.ResetDrawCounters();
+        using var bitmap = new RenderTargetBitmap(new PixelSize(500, 100));
+        using (var ctx = bitmap.CreateDrawingContext())
+        using (ctx.PushTransform(Matrix.CreateScale(.1, .1)))
+            renderer.Draw(ctx, 0, 0, 4000, 50, 0, ManyPolygons, false, .1,
+                highlightBrush: Brushes.Magenta);
+        renderer.IssuedGeometryCount.ShouldBe(1, "selection must keep the warmed raster path");
+        CountLitPixels(bitmap, new PixelRect(0, 0, 400, 5)).ShouldBeGreaterThan(100);
+    }
+
     private sealed class GuardedOutlines(OutlinePolygon[] source) : IReadOnlyList<OutlinePolygon>
     {
         public bool AllowEnumeration { get; set; } = true;

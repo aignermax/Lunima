@@ -1217,6 +1217,7 @@
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Shapes}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
+                    <MenuItem Header="{loc:Localize Context.SelectAll}" Command="{Binding SelectAllCommand}" InputGesture="Ctrl+A"/>
                     <MenuItem Header="{loc:Localize Context.Copy}" Command="{Binding CopySelectedCommand}" InputGesture="Ctrl+C">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Copy}"/></MenuItem.Icon>
                     </MenuItem>

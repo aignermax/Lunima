@@ -117,14 +117,16 @@ public class SelectionBoxGestureRecognizer : IGestureRecognizer
                 canvas.Selection.SelectedConnections.Add(previousConnection);
             }
         }
+        using var selectionUpdate = canvas.Selection.BeginUpdate();
         canvas.Selection.SelectInRectangle(canvas.InteractiveComponents, minX, minY, maxX, maxY, addToSelection: ctrl, removeFromSelection: alt);
         // Also collect optical connections crossing the box (issue #862) so the routing-style
         // control can restyle them all at once. The component pass above already cleared the
         // selection for a plain drag, so this pass only adds/removes.
         Selection.ConnectionBoxSelector.SelectInRectangle(
             canvas.Selection, canvas.Connections, minX, minY, maxX, maxY, removeFromSelection: alt);
-        Selection.ConnectionBoxSelector.SelectFrozenPathsInRectangle(
-            canvas.Selection, canvas.CanvasFrozenPaths, minX, minY, maxX, maxY, removeFromSelection: alt);
+        if (!canvas.IsInGroupEditMode)
+            Selection.ConnectionBoxSelector.SelectFrozenPathsInRectangle(
+                canvas.Selection, canvas.CanvasFrozenPaths, minX, minY, maxX, maxY, removeFromSelection: alt);
         if (mainVm?.CanvasInteraction.SelectedWaveguideConnection is { IsSelected: false })
             mainVm.CanvasInteraction.SelectedWaveguideConnection = null;
         _invalidate();

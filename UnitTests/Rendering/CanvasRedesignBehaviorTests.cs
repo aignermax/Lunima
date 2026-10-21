@@ -84,7 +84,7 @@ public class CanvasRedesignBehaviorTests
     [Theory]
     [InlineData(100, 200, false, true)]
     [InlineData(20, 200, false, false)]
-    [InlineData(20, 200, true, true)]
+    [InlineData(20, 200, true, false)]
     public void NameLabel_IsDroppedWhenItsOwnerIsTooSmallOnScreen(double ownerWidth, double labelWidth, bool emphasized, bool expected)
     {
         ComponentRenderer.IsNameLegibleAtZoom(ownerWidth, labelWidth, zoom: 1.0, emphasized).ShouldBe(expected);

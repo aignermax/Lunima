@@ -5,7 +5,7 @@ namespace CAP.Avalonia.Services.GdsImport;
 
 /// <summary>
 /// Background detection of <see cref="GdsPlacementExecutor"/>: imported geometry that
-/// is not a device — pin-less cells (logos, marks) and die frames whose box encloses
+/// is not a device — die frames whose box encloses
 /// other placed cells (a chip-sized "area" cell). As a routing obstacle or placement
 /// collider such a component would wall off the whole chip: no route could be found
 /// and nothing inside it could move. It stays visible and exportable.
@@ -41,12 +41,12 @@ public sealed partial class GdsPlacementExecutor
         for (int i = 0; i < placed.Count; i++)
         {
             if (placed[i]?.Component is not { IsRoutingObstacle: true } component) continue;
-            bool pinLess = component.PhysicalPins.Count == 0;
-            bool frame = !pinLess && !connected.Contains(i) && IsFrame(component, devices);
-            if (!pinLess && !frame) continue;
+            // Missing port labels do not make a pad or other physical cell background.
+            bool frame = !connected.Contains(i) && IsFrame(component, devices);
+            if (!frame) continue;
             component.IsRoutingObstacle = false;
             _canvas.Router.RemoveComponentObstacle(component);
-            if (frame) frames.Add(component.Identifier);
+            frames.Add(component.Identifier);
         }
         if (frames.Count > 0)
             report.Warnings.Add(

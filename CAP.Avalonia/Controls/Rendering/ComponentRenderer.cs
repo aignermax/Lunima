@@ -30,7 +30,7 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
 
     /// <summary>A name is drawn only while its owner is at least this fraction of the label's
     /// width on screen — farther out the name would dwarf the block it labels (level of detail).
-    /// Selected and hovered names are exempt.</summary>
+    /// Selection and hover obey the same level of detail.</summary>
     internal const double NameLodMinOwnerFraction = 0.35;
 
     /// <summary>Below this zoom a group reads as one block named by its (enlarged) group tag;
@@ -81,13 +81,15 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
     private void DrawComponentDecorations(DrawingContext context, ComponentViewModel comp, CanvasRenderContext rc,
         Rect rect, IReadOnlySet<Guid> visibleNameIds, bool isHovered, bool isDimmed)
     {
+        bool hidePins = rc.Zoom < GroupOverviewZoom
+            || RenderCulling.IsBelowPinLodThreshold(comp.Width, comp.Height, rc.Zoom);
+        if (!hidePins || ReferenceEquals(rc.ViewModel.HighlightedPin?.Pin.ParentComponent, comp.Component))
+            _pinRenderer.DrawComponentPins(context, comp, rc, isDimmed, focusedOnly: hidePins);
+
         // Below the LOD threshold, pins, labels and icons are sub-pixel noise —
         // the body drawn above is all that remains visible at that scale.
         if (RenderCulling.IsBelowLodThreshold(comp.Width, comp.Height, rc.Zoom))
             return;
-
-        if (!RenderCulling.IsBelowPinLodThreshold(comp.Width, comp.Height, rc.Zoom))
-            _pinRenderer.DrawComponentPins(context, comp, rc, isDimmed);
 
         // A name overlapping a higher-priority (selected > hovered > rest) label is skipped
         // rather than drawn as illegible overlapping text.
@@ -109,9 +111,9 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
     }
 
     /// <summary>Name-label level of detail: the owner must be at least
-    /// <see cref="NameLodMinOwnerFraction"/> of the label's width on screen, unless emphasized.</summary>
+    /// <see cref="NameLodMinOwnerFraction"/> of the label's width on screen, including emphasized names.</summary>
     internal static bool IsNameLegibleAtZoom(double ownerWidthWorld, double labelWidthWorld, double zoom, bool isEmphasized) =>
-        isEmphasized || ownerWidthWorld >= NameLodMinOwnerFraction * labelWidthWorld;
+        zoom >= GroupOverviewZoom && ownerWidthWorld >= NameLodMinOwnerFraction * labelWidthWorld;
 
     private static IDisposable? PushDim(DrawingContext context, bool isDimmed) =>
         isDimmed ? context.PushOpacity(DimmedOpacity) : null;
@@ -213,7 +215,7 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
             else
                 ComponentGroupRenderer.RenderGroupBorder(context, bounds, isHovered, rc.Pens);
 
-            if (GroupBrokenPathMarkerRenderer.NeedsMarker(group))
+            if (rc.Zoom >= GroupOverviewZoom && GroupBrokenPathMarkerRenderer.NeedsMarker(group))
                 GroupBrokenPathMarkerRenderer.Render(context, bounds, rc.Pens);
 
             ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, false,

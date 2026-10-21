@@ -94,10 +94,11 @@ public static class ComponentGroupRenderer
         if (frozenPath?.Path?.Segments == null || frozenPath.Path.Segments.Count == 0)
             return;
 
-        if (penOverride == null && powerFlowResult == null && frozenPath.AsDrawnGeometry is { } asDrawn)
+        if (powerFlowResult == null && frozenPath.AsDrawnGeometry is { } asDrawn)
         {
             // An untouched imported path draws exactly as drawn.
-            AsDrawnGeometryRenderer.Draw(context, asDrawn, zoom, layerVisibility, visibleWorld: cullRect);
+            AsDrawnGeometryRenderer.Draw(context, asDrawn, zoom, layerVisibility, visibleWorld: cullRect,
+                highlightBrush: penOverride?.Brush);
             return;
         }
 

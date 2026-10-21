@@ -96,10 +96,11 @@ internal sealed class ComponentOutlineRenderer
     /// <param name="visibleWorld">The visible world rectangle, or null to draw everything:
     /// batches (tiled, see <see cref="OutlineGeometryBatcher"/>) entirely outside it are
     /// skipped, so zooming into a corner of a huge cell no longer processes all of it.</param>
+    /// <param name="highlightBrush">Optional fill tint for exact-source selection or hover.</param>
     public void Draw(DrawingContext context, double x, double y, double width, double height,
         double rotationDegrees, IReadOnlyList<OutlinePolygon> outlines, bool isDimmed, double zoom,
         double recordedUnrotatedWidth = 0, double recordedUnrotatedHeight = 0,
-        GdsLayerVisibilityState? layerVisibility = null, bool mirrored = false, Rect? visibleWorld = null)
+        GdsLayerVisibilityState? layerVisibility = null, bool mirrored = false, Rect? visibleWorld = null, IBrush? highlightBrush = null)
     {
         double centerX = x + width / 2.0;
         double centerY = y + height / 2.0;
@@ -114,7 +115,7 @@ internal sealed class ComponentOutlineRenderer
         // An opacity push renders into an offscreen layer: only pay for it when dimmed.
         using (isDimmed ? context.PushOpacity(128.0 / 255.0) : (IDisposable?)null)
         {
-            if (_rasterCache?.TryDrawCached(context, outlines, zoom, layerVisibility) == true)
+            if (_rasterCache?.TryDrawCached(context, outlines, zoom, layerVisibility, highlightBrush) == true)
             {
                 IssuedGeometryCount++;
                 return;
@@ -136,7 +137,7 @@ internal sealed class ComponentOutlineRenderer
                 levels[density] = geometries;
             }
 
-            if (_rasterCache?.TryDraw(context, outlines, geometries, zoom, layerVisibility) == true)
+            if (_rasterCache?.TryDraw(context, outlines, geometries, zoom, layerVisibility, highlightBrush) == true)
             {
                 IssuedGeometryCount++;
                 return;
@@ -166,11 +167,11 @@ internal sealed class ComponentOutlineRenderer
                 if (layerOpacity < 1.0)
                 {
                     using (context.PushOpacity(layerOpacity))
-                        context.DrawGeometry(cached.Fill, cached.Outline, cached.Geometry);
+                        context.DrawGeometry(highlightBrush ?? cached.Fill, highlightBrush is null ? cached.Outline : null, cached.Geometry);
                 }
                 else
                 {
-                    context.DrawGeometry(cached.Fill, cached.Outline, cached.Geometry);
+                    context.DrawGeometry(highlightBrush ?? cached.Fill, highlightBrush is null ? cached.Outline : null, cached.Geometry);
                 }
             }
         }
