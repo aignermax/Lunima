@@ -52,7 +52,8 @@ internal sealed class OutlineRasterCache
         GdsLayerVisibilityState? layerVisibility)
     {
         if (_disabled || batches.Length == 0 || zoom >= VectorFromZoom || zoom <= 0) return false;
-        var bounds = Union(batches);
+        var entry = _entries.GetValue(outlines, _ => new Entry(batches));
+        var bounds = entry.Bounds;
         if (bounds.Width <= 0 || bounds.Height <= 0) return false;
 
         double density = Math.Pow(2, Math.Ceiling(Math.Log2(zoom)));
@@ -60,9 +61,12 @@ internal sealed class OutlineRasterCache
         int height = (int)Math.Ceiling(bounds.Height * density);
         if (width > MaxBitmapEdgePx || height > MaxBitmapEdgePx) return false;
 
-        var entry = _entries.GetValue(outlines, _ => new Entry());
-        var key = new SlotKey(density, VisibilityKey(batches, layerVisibility));
-        var slot = entry.Slots.Find(s => s.Key == key);
+        var key = new SlotKey(density, VisibilityKey(entry.Layers, layerVisibility));
+        // A sharper bitmap already contains every source polygon. Reuse it while
+        // zooming out instead of falling back to vectors and rasterizing the same
+        // chip again at every power-of-two boundary. Visibility must still match.
+        var slot = entry.Slots.Find(s => s.Key == key)
+            ?? entry.Slots.Find(s => s.Key.Density >= density && s.Key.Visibility == key.Visibility);
         if (slot is null)
         {
             if (!entry.SeenKeys.Add(key)) slot = Create(entry, key, batches, bounds, density, width, height, layerVisibility);
@@ -70,7 +74,8 @@ internal sealed class OutlineRasterCache
         }
         Touch(slot);
         context.DrawImage(slot.Bitmap, new Rect(0, 0, slot.Bitmap.PixelSize.Width, slot.Bitmap.PixelSize.Height),
-            new Rect(bounds.X, bounds.Y, width / density, height / density));
+            new Rect(bounds.X, bounds.Y, slot.Bitmap.PixelSize.Width / slot.Key.Density,
+                slot.Bitmap.PixelSize.Height / slot.Key.Density));
         return true;
     }
 
@@ -140,10 +145,10 @@ internal sealed class OutlineRasterCache
     }
 
     /// <summary>The exact opacities the bitmap is rendered with, so any layer toggle re-renders it.</summary>
-    private static string VisibilityKey(OutlineBatch[] batches, GdsLayerVisibilityState? layerVisibility) =>
+    private static string VisibilityKey((int Layer, int DataType)[] layers, GdsLayerVisibilityState? layerVisibility) =>
         layerVisibility is null
             ? ""
-            : string.Join(";", batches.Select(b => (b.Layer, b.DataType)).Distinct()
+            : string.Join(";", layers
                 .Select(l => layerVisibility.EffectiveOpacity(l.Layer, l.DataType).ToString("R", System.Globalization.CultureInfo.InvariantCulture)));
 
     private static Rect Union(OutlineBatch[] batches)
@@ -159,6 +164,14 @@ internal sealed class OutlineRasterCache
     /// <summary>Bitmaps of one outline list plus the keys requested once (bitmap on the second request).</summary>
     private sealed class Entry
     {
+        public Entry(OutlineBatch[] batches)
+        {
+            Bounds = Union(batches);
+            Layers = batches.Select(b => (b.Layer, b.DataType)).Distinct().ToArray();
+        }
+
+        public Rect Bounds { get; }
+        public (int Layer, int DataType)[] Layers { get; }
         public List<Slot> Slots { get; } = new();
         public HashSet<SlotKey> SeenKeys { get; } = new();
     }

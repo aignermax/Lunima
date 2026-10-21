@@ -21,6 +21,7 @@ public partial class GdsInterpretationReviewView : UserControl
                 (DataContext as GdsInterpretationReviewViewModel)?.MarkLayerInteraction();
         }, RoutingStrategies.Tunnel);
         ReviewPreview.LayerPicked += pair => (DataContext as GdsInterpretationReviewViewModel)?.PickLayer(pair);
+        ReviewPreview.PlacementPicked += (path, additive) => (DataContext as GdsInterpretationReviewViewModel)?.PickPlacement(path, additive);
         ReviewPreview.CellPathPicked += path => (DataContext as GdsInterpretationReviewViewModel)?.PickCell(path);
         ReviewPreview.PortPicked += index => (DataContext as GdsInterpretationReviewViewModel)?.PickPort(index);
         ReviewPreview.PortMoved += (index, x, y) => (DataContext as GdsInterpretationReviewViewModel)?.MovePort(index, x, y);

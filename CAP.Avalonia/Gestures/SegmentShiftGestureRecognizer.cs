@@ -51,7 +51,7 @@ public sealed class SegmentShiftGestureRecognizer : IGestureRecognizer
         if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed) return false;
 
         var selected = mainVm.CanvasInteraction.SelectedWaveguideConnection;
-        if (selected == null) return false;
+        if (selected == null || selected.Connection.AsDrawnGeometry is not null) return false;
 
         double grab = GrabRadiusPx / Zoom();
         foreach (var handle in SegmentShiftGeometry.GetHandles(selected.Connection.GetPathSegments()))

@@ -1,3 +1,4 @@
+using CAP.Avalonia.Services.GdsImport;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -197,13 +198,15 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene) : IDi
     }
 
     internal bool TryPick(double x, double y, double tolerance, out GdsLayerPair pair, out string? cellName,
-        out IReadOnlyList<string> cellPath, GdsLayerPair? onlyLayer = null)
+        out IReadOnlyList<string> cellPath, GdsLayerPair? onlyLayer = null, Action<IReadOnlyList<GdsReviewCellPlacement>>? placementPicked = null)
     {
         var point = new GdsPoint(x, y);
         GdsLayerPair result = default;
         string? selectedCell = null;
         IReadOnlyList<string> selectedPath = [];
         var path = new List<string>();
+        var placements = new List<GdsReviewCellPlacement>();
+        IReadOnlyList<GdsReviewCellPlacement> selectedPlacements = [];
         double bestArea = double.PositiveInfinity, bestTextDistance = double.PositiveInfinity;
         var seen = new HashSet<(string, GdsTransform)>();
         int visited = 0;
@@ -211,6 +214,7 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene) : IDi
         pair = result;
         cellName = selectedCell;
         cellPath = selectedPath;
+        if (selectedCell != null) placementPicked?.Invoke(selectedPlacements);
         return selectedCell is not null;
 
         void PickCell(string name, GdsTransform placement)
@@ -221,6 +225,7 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene) : IDi
             var determinant = placement.A * placement.E - placement.B * placement.D;
             if (Math.Abs(determinant) < 1e-30) return;
             path.Add(name);
+            placements.Add(new(name, placement));
             double dx = point.X - placement.C, dy = point.Y - placement.F;
             double localX = (placement.E * dx - placement.B * dy) / determinant;
             double localY = (-placement.D * dx + placement.A * dy) / determinant;
@@ -237,6 +242,7 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene) : IDi
                     result = candidate;
                     selectedCell = name;
                     selectedPath = path.ToArray();
+                    selectedPlacements = placements.ToArray();
                     bestArea = area;
                     bestTextDistance = textDistance;
                 }
@@ -244,6 +250,7 @@ internal sealed class GdsReviewHierarchyCache(GdsLayerGeometryScene scene) : IDi
             foreach (var reference in cell.References)
                 PickArray(reference, placement, 0, EffectiveColumns(reference), 0, EffectiveRows(reference));
             path.RemoveAt(path.Count - 1);
+            placements.RemoveAt(placements.Count - 1);
         }
 
         void PickArray(GdsReference reference, GdsTransform parent, int c0, int c1, int r0, int r1)

@@ -145,3 +145,49 @@ With a selected layer and context visible, local native overview rendering is
 0.89 ms warm / 173.15 ms initial; occupied 10x/100x views are 3.53/1.19 ms warm.
 No-selection overview is 1.02 ms warm / 298.32 ms initial. These are bounded
 preview-render measurements, not end-to-end loading or UI latency guarantees.
+
+
+## 2026-10-21: concrete grouping and non-destructive imported editing
+
+Keep the approved layer review UI unchanged. Components support exact placed
+occurrences: click selects one placement, Ctrl/Shift-click adds/removes another.
+The visible selection card creates a named component group, not a new physical
+simulation model. Single exposed cells already import as separate components.
+Instance keys follow the expanded import's per-cell occurrence order. Persist
+explicit instance membership while keeping legacy cell-type groups readable.
+Opening/collapsing source hierarchy invalidates occurrence groups with an explicit
+message and undo. Review selection is bounded with a visible large-hierarchy notice.
+
+Preserve exact imported mask polygons when only one endpoint moves. Indicate the
+resulting gap separately from geometric path validity so the retained shape stays
+an obstacle. Disconnected imports transmit zero light. Explicit rerouting converts
+to generated paths; fitted bend/shift handles are hidden on exact polygon routes.
+Joint translations and undo retain all imported layer polygons.
+
+Main-canvas outline rendering already has bounded raster detail. Its zoom-tier
+transition unnecessarily fell back to vectors (and sometimes culled everything)
+before rebuilding a bitmap. Reuse a sufficiently sharp cached bitmap when zooming
+out and cache immutable bounds/layer metadata. Source geometry and export stay exact.
+
+Separate per-die export already exists. Improve discoverability, unique filenames,
+shared environment/backend checks, per-file error reporting and true GDS success
+counts. Scope component dependencies to the selected die while retaining the global
+process-interconnect plan whose activation distinguishes heterogeneous process stacks.
+Existing global metal process settings are not converted into a new per-die stack model.
+
+Review catches: refresh group command after undo; preserve unselected membership
+when regrouping; selection-limit explanation; UTF-8 preservation; consistent backend
+exclusion in die export; valid empty-cell Python bodies.
+
+Verification: 846 broad regressions passed. Subsequent review reproductions caught
+legacy-group membership loss, inconsistent backend exclusion, and invalid empty-die
+Python; those are corrected. All 91 final targeted tests pass, including native
+Ctrl-click/create/undo, occurrence import, group migration, source polygon
+preservation, export preflight/results, Python AST syntax, and localization.
+Release build succeeds with existing analyzer/XAML warnings.
+Synthetic main-canvas test with 10,000 polygons now draws one cached image across
+four successive zoom-out tiers (0.37/0.09/0.05/0.04 ms in the local run), rather
+than 100 vector calls followed by missing geometry. This is a renderer fixture,
+not a full-frame measurement of the private imported design. Per-die GDS execution
+in workflow tests uses a fake service; actual generated Python syntax is checked
+independently, and no new foundry validation or independent metal-stack support is claimed.

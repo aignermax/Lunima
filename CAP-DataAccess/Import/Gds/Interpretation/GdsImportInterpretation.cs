@@ -36,11 +36,13 @@ public sealed record GdsCellInterpretation
     public Dictionary<string, string> ModelPinMap { get; init; } = new(StringComparer.Ordinal);
 }
 
-/// <summary>Groups every imported instance of the named cell types.</summary>
+/// <summary>Groups explicit imported occurrences, or legacy sets of whole cell types.</summary>
 public sealed record GdsInterpretationGroup
 {
     /// <summary>Group display name.</summary>
     public string Name { get; init; } = string.Empty;
     /// <summary>Original cell names, each owned by at most one group.</summary>
     public List<string> CellNames { get; init; } = [];
+    /// <summary>Explicit placed occurrences; empty retains legacy cell-type grouping.</summary>
+    public List<string> InstanceNames { get; init; } = [];
 }

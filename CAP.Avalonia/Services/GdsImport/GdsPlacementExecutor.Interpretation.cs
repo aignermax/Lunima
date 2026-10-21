@@ -12,9 +12,12 @@ public sealed partial class GdsPlacementExecutor
         {
             if (string.IsNullOrWhiteSpace(group.Name))
                 throw new InvalidDataException("A reviewed group must have a name.");
-            foreach (var cell in group.CellNames)
-                if (!seen.Add(cell))
-                    throw new InvalidDataException($"Cell '{cell}' belongs to more than one reviewed group.");
+            var names = group.InstanceNames.ToHashSet(StringComparer.Ordinal);
+            var cells = group.CellNames.ToHashSet(StringComparer.Ordinal);
+            foreach (var placement in plan.Placements.Where(p => names.Count > 0
+                ? names.Contains(p.InstanceName) : cells.Contains(p.CellName)))
+                if (!seen.Add(placement.InstanceName))
+                    throw new InvalidDataException($"Instance '{placement.InstanceName}' belongs to more than one reviewed group.");
         }
     }
 
@@ -25,7 +28,10 @@ public sealed partial class GdsPlacementExecutor
         foreach (var group in plan.Groups)
         {
             var names = group.CellNames.ToHashSet(StringComparer.Ordinal);
-            var members = placed.Where((_, i) => names.Contains(plan.Placements[i].CellName))
+            var occurrences = group.InstanceNames.ToHashSet(StringComparer.Ordinal);
+            var members = placed.Where((_, i) => occurrences.Count > 0
+                    ? occurrences.Contains(plan.Placements[i].InstanceName)
+                    : names.Contains(plan.Placements[i].CellName))
                 .OfType<ComponentViewModel>().ToList();
             if (members.Count < 2)
             {

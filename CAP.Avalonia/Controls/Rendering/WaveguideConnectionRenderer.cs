@@ -125,6 +125,14 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
                 visibleWorld: RenderCulling.ComputeViewportWorld(vm.PanX, vm.PanY, rc.Bounds, rc.Zoom));
             if (conn.IsSelected || isHovered || showsPowerFlow)
                 DrawPathSegments(context, pen, segments);
+            if (conn.Connection.HasImportedEndpointMismatch)
+            {
+                // Dashed gaps are warnings, never replacement geometry or exported routes.
+                var start = segments[0].StartPoint;
+                var end = segments[^1].EndPoint;
+                context.DrawLine(rc.Pens.Blocked, new Point(start.X, start.Y), new Point(conn.StartX, conn.StartY));
+                context.DrawLine(rc.Pens.Blocked, new Point(end.X, end.Y), new Point(conn.EndX, conn.EndY));
+            }
         }
         else
         {
@@ -135,7 +143,8 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
 
     /// <summary>A route the router could not place (blocked fallback) or whose geometry is invalid.</summary>
     private static bool IsBlocked(WaveguideConnectionViewModel conn) =>
-        conn.IsBlockedFallback || conn.Connection.RoutedPath?.IsInvalidGeometry == true;
+        conn.IsBlockedFallback || conn.Connection.RoutedPath?.IsInvalidGeometry == true
+        || conn.Connection.HasImportedEndpointMismatch;
 
     /// <summary>
     /// Draws whichever of the three independent text overlays apply, each with its own
@@ -163,7 +172,15 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         // readout — their own length-only label takes that slot instead (#682).
         bool showsPowerFlow = !isElectrical && vm.ShowPowerFlow && vm.PowerFlowVisualizer.CurrentResult != null;
 
-        if (showsPowerFlow)
+        if (conn.Connection.HasImportedEndpointMismatch)
+        {
+            string warning = Services.Localization.LocalizationService.Instance.Translate("Routing.ImportedEndpointMismatch");
+            labels.Enqueue(new FormattedText(warning, System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight, CanvasTypography.Ui,
+                    PinScreenSize.ClampWorldFontSize(LabelFontSizeWorld, zoom), CanvasPalette.DangerBrush),
+                CanvasPalette.DangerBrush, new Point(midX, midY - 15));
+        }
+        else if (showsPowerFlow)
             DrawPowerFlowReadout(labels, conn, vm, midX, midY, zoom);
         else if (ShouldShowLengthLossLabel(isHovered, conn.IsSelected))
             DrawLengthLossLabel(labels, conn, isElectrical, midX, midY, zoom);

@@ -22,6 +22,41 @@ namespace UnitTests.UI;
 public class GdsInterpretationReviewViewTests
 {
     [AvaloniaFact]
+    public async Task CtrlClickSelectsOnlyTwoConcretePlacementsForGrouping()
+    {
+        var vm = await UnitTests.Services.GdsImport.GdsOccurrenceGroupingTests.Create();
+        vm.StageIndex = 2;
+        var view = new GdsInterpretationReviewView { DataContext = vm };
+        var window = new Window { Width = 1180, Height = 780, Content = view };
+        try
+        {
+            window.Show(); Layout(window);
+            var preview = view.FindControl<GdsReviewPreview>("ReviewPreview")!;
+            var scale = (preview.Bounds.Width - 48) / 58;
+            Point Location(double x) => preview.TranslatePoint(new Point(24 + x * scale, preview.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(Location(4), MouseButton.Left);
+            window.MouseUp(Location(4), MouseButton.Left);
+            window.MouseDown(Location(14), MouseButton.Left, RawInputModifiers.Control);
+            window.MouseUp(Location(14), MouseButton.Left, RawInputModifiers.Control);
+            Layout(window);
+            vm.SelectedOccurrences.Select(x => x.InstanceName).ShouldBe(new[] { "front#0", "rear#0" });
+            vm.GroupName = "Diode";
+            var create = view.FindControl<Button>("GdsReviewCreateOccurrenceGroup")!;
+            create.BringIntoView(); Layout(window);
+            var point = create.TranslatePoint(new Point(create.Bounds.Width / 2, create.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(point, MouseButton.Left);
+            window.MouseUp(point, MouseButton.Left);
+            Layout(window);
+            vm.BuildInterpretation().Groups.ShouldHaveSingleItem().InstanceNames.Count.ShouldBe(2);
+            Capture(view, "occurrence-group-created.png");
+            vm.UndoCommand.Execute(null);
+            Layout(window);
+            create.IsEnabled.ShouldBeTrue("undo should allow grouping the still-selected parts again");
+        }
+        finally { vm.Close(); window.Close(); }
+    }
+
+    [AvaloniaFact]
     public async Task LayerGuideStartsAtListAndRightClickTogglesContext()
     {
         var vm = await CreateReview();
@@ -155,7 +190,9 @@ public class GdsInterpretationReviewViewTests
             window.MouseDown(point, MouseButton.Left);
             window.MouseUp(point, MouseButton.Left);
             vm.SelectedCell.ShouldNotBeNull().CellName.ShouldBe("coupler");
-            vm.HighlightCellName.ShouldBe("coupler");
+            vm.HighlightCellName.ShouldBeNull();
+            vm.SelectedOccurrences.ShouldHaveSingleItem().CellName.ShouldBe("coupler");
+            vm.SelectedOccurrenceBounds.Count.ShouldBe(1);
             vm.CompatibleModels.ShouldBe([optical]);
             vm.SelectedCell.Ports[0].Kind = "vertical_te";
             vm.CompatibleModels.ShouldBe([optical]);

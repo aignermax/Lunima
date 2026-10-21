@@ -56,6 +56,7 @@
       <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
         <local:GdsReviewPreview x:Name="ReviewPreview" Scene="{Binding Scene}" HighlightLayer="{Binding HighlightLayer}"
                                 HighlightCellName="{Binding HighlightCellName}"
+                                SelectedOccurrenceBounds="{Binding SelectedOccurrenceBounds}"
                                 AllowPortEditing="{Binding IsPortEditing}"
                                 IsolateSelectedLayer="{Binding IsolateSelectedLayer, Mode=TwoWay}"
                                 DetailLevel="{Binding PreviewDetailLevel}"
@@ -164,19 +165,25 @@
             <CheckBox x:Name="GdsReviewExpand" Content="{loc:Localize GdsReview.ExpandChildren}"
                       IsChecked="{Binding SelectedCell.ExpandChildren}" IsVisible="{Binding CanOpenAssembly}"/>
             <TextBlock Classes="caption secondary" TextWrapping="Wrap" Text="{loc:Localize GdsReview.CellScope}"/>
-            <Expander Header="{loc:Localize GdsReview.GroupCells}">
-              <StackPanel Spacing="8" Margin="0,8">
-                <ItemsControl ItemsSource="{Binding ActiveCells}">
-                  <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GdsCellReviewRow">
-                    <CheckBox Content="{Binding CellName}" IsChecked="{Binding IncludeInGroup}"/>
+            <Border BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="8" Padding="10">
+              <StackPanel Spacing="8">
+                <TextBlock Text="{loc:Localize GdsReview.GroupCells}" Classes="strong" TextWrapping="Wrap"/>
+                <TextBlock Text="{loc:Localize GdsReview.OccurrenceHelp}" Classes="caption secondary" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding OccurrenceSelectionText}" Classes="caption"/>
+                <TextBlock Text="{loc:Localize GdsReview.OccurrenceLimit}" Classes="caption warning" TextWrapping="Wrap" IsVisible="{Binding OccurrenceSelectionLimited}"/>
+                <ItemsControl ItemsSource="{Binding SelectedOccurrences}">
+                  <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GdsReviewOccurrence">
+                    <Button Classes="ghost" Content="{Binding InstanceName}"
+                            Command="{ReflectionBinding $parent[UserControl].DataContext.RemoveOccurrenceCommand}"
+                            CommandParameter="{Binding}" ToolTip.Tip="{loc:Localize GdsReview.RemoveFromSelection}"/>
                   </DataTemplate></ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBox Text="{Binding GroupName}"/>
-                <Button Content="{loc:Localize GdsReview.GroupCells}" Command="{Binding GroupCellsCommand}"/>
+                <TextBox Text="{Binding GroupName}" Watermark="{loc:Localize GdsReview.GroupName}"/>
+                <Button x:Name="GdsReviewCreateOccurrenceGroup" Content="{loc:Localize GdsReview.CreateGroup}" Command="{Binding CreateOccurrenceGroupCommand}"/>
                 <TextBlock Text="{Binding GroupSummary}" Classes="caption success" TextWrapping="Wrap"/>
                 <Button Classes="ghost" Content="{loc:Localize GdsReview.ClearGroups}" Command="{Binding ClearGroupsCommand}"/>
               </StackPanel>
-            </Expander>
+            </Border>
           </StackPanel>
           <StackPanel IsVisible="{Binding IsPortStep}" Spacing="8">
             <TextBlock Classes="strong" Text="{loc:Localize GdsReview.Ports}"/>

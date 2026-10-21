@@ -1,3 +1,4 @@
+using CAP.Avalonia.Services.GdsImport;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -86,8 +87,16 @@ public sealed class GdsReviewPreview : Control
     public event Action? PortDragStarted;
     public event Action? PortDragCompleted;
 
+    public event Action<IReadOnlyList<GdsReviewCellPlacement>, bool>? PlacementPicked;
+    public static readonly StyledProperty<IReadOnlyList<GdsBoundingBox>?> SelectedOccurrenceBoundsProperty =
+        AvaloniaProperty.Register<GdsReviewPreview, IReadOnlyList<GdsBoundingBox>?>(nameof(SelectedOccurrenceBounds));
+    public IReadOnlyList<GdsBoundingBox>? SelectedOccurrenceBounds
+    {
+        get => GetValue(SelectedOccurrenceBoundsProperty);
+        set => SetValue(SelectedOccurrenceBoundsProperty, value);
+    }
     static GdsReviewPreview() =>
-        AffectsRender<GdsReviewPreview>(SceneProperty, HighlightLayerProperty, HighlightCellNameProperty, PortsProperty, SelectedPortIndexProperty, ShowPortsProperty, IsolateSelectedLayerProperty, DetailLevelProperty);
+        AffectsRender<GdsReviewPreview>(SceneProperty, HighlightLayerProperty, HighlightCellNameProperty, PortsProperty, SelectedPortIndexProperty, ShowPortsProperty, IsolateSelectedLayerProperty, DetailLevelProperty, SelectedOccurrenceBoundsProperty);
 
     /// <summary>Resets zoom and pan to fit the entire scene.</summary>
     public void Fit()
@@ -185,6 +194,12 @@ public sealed class GdsReviewPreview : Control
                         new Rect(text.X - 3 / scale, text.Y - 3 / scale, 6 / scale, 6 / scale));
             }
         }
+        if (SelectedOccurrenceBounds is { } selectedBounds)
+            foreach (var box in selectedBounds)
+                context.DrawRectangle(null, new Pen(GdsReviewSelectionStyle.Selected, 3),
+                    new Rect(offset.X + (box.MinX - Scene.Bounds.MinX) * scale,
+                        offset.Y + (Scene.Bounds.MaxY - box.MaxY) * scale,
+                        Math.Max(2, box.Width * scale), Math.Max(2, box.Height * scale)));
         if (!ShowPorts || Ports is null) return;
         for (var i = 0; i < Ports.Count; i++)
         {
@@ -233,7 +248,8 @@ public sealed class GdsReviewPreview : Control
                 string? pickedCell = null;
                 IReadOnlyList<string> pickedPath = [];
                 bool picked = _hierarchy is not null
-                    ? _hierarchy.TryPick(x, y, PickRadius / scale, out pair, out pickedCell, out pickedPath, IsolateSelectedLayer ? HighlightLayer : null)
+                    ? _hierarchy.TryPick(x, y, PickRadius / scale, out pair, out pickedCell, out pickedPath, IsolateSelectedLayer ? HighlightLayer : null,
+                        placements => PlacementPicked?.Invoke(placements, (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Shift)) != 0))
                     : _cache is { } cache && GdsLayerHitTester.TryPick(IsolateSelectedLayer && HighlightLayer is { } selectedLayer
                         ? cache.PickScene with { Layers = cache.PickScene.Layers.Where(l => l.Pair == selectedLayer).ToArray() }
                         : cache.PickScene, x, y, PickRadius / scale, out pair);

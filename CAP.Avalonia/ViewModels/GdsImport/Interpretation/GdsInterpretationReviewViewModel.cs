@@ -73,7 +73,7 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
                 .SequenceEqual(cell.Ports.Select(port => port.Kind == "electrical" ? "electrical" : "optical").Order(StringComparer.OrdinalIgnoreCase),
                     StringComparer.OrdinalIgnoreCase)).ToArray();
     public bool HasCompatibleModels => CompatibleModels.Count > 0;
-    public string? HighlightCellName => IsCellStep ? SelectedCell?.CellName : null;
+    public string? HighlightCellName => IsCellStep && _selectedOccurrences.Count == 0 ? SelectedCell?.CellName : null;
     public string StageTitle => Text("Step" + StageIndex);
     public string StageDescription => Text("Description" + StageIndex);
     public string NextText => Text(StageIndex == 5 ? "Apply" : "ConfirmNext");
@@ -111,7 +111,8 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     {
         0 => "GdsReviewNext",
         1 => _hasPickedLayer ? "GdsReviewRole" : "GdsReviewLayerList",
-        2 => SelectedCell?.CanExpand == true ? "GdsReviewOpenAssembly" : "GdsReviewCellSelector",
+        2 => _selectedOccurrences.Count >= 2 ? (CanCreateOccurrenceGroup ? "GdsReviewCreateOccurrenceGroup" : "GdsReviewNext")
+            : SelectedCell?.CanExpand == true ? "GdsReviewOpenAssembly" : "GdsReviewCellSelector",
         3 => SelectedPort != null ? "GdsReviewPortKind" : "GdsReviewAddPort",
         4 => HasCompatibleModels ? "GdsReviewModel" : "GdsReviewGeometryOnly",
         _ => "GdsReviewNext"
@@ -211,6 +212,8 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     private void RefreshPresentation()
     {
         RefreshHierarchyPresentation();
+        RefreshOccurrences();
+        NotifyOccurrenceSelection();
         foreach (var property in new[]{nameof(IsLayoutStep),nameof(IsLayerStep),nameof(IsCellStep),nameof(IsPortStep),
             nameof(IsModelStep),nameof(IsSummaryStep),nameof(ShowCellSelector),nameof(StageTitle),nameof(StageDescription),
             nameof(NextText),nameof(Summary),nameof(Scene),nameof(HighlightLayer),nameof(PreviewPorts),nameof(GuideTargetName),
@@ -239,7 +242,8 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
         {
             RefreshCellSelection();
             var activeNames = ActiveCells.Select(x => x.CellName).ToHashSet(StringComparer.Ordinal);
-            _groups.RemoveAll(x => x.CellNames.Any(name => !activeNames.Contains(name)));
+            var removed = _groups.RemoveAll(x => x.InstanceNames.Count > 0 || x.CellNames.Any(name => !activeNames.Contains(name)));
+            if (removed > 0) Message = Text("GroupsResetForHierarchy");
         }
         if (_lastSnapshot != null) PushUndo(_lastSnapshot);
         Array.Fill(_confirmed, false, sender is GdsLayerReviewRow ? 1 : 2, sender is GdsLayerReviewRow ? 5 : 4);

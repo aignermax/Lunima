@@ -186,6 +186,8 @@ public partial class WaveguideConnectionManager
                 connection.ReplaceRoutedPath(proxy.RoutedPath);
                 connection.IsRouteFrozen = proxy.IsRouteFrozen;
                 CopyManualEdits(proxy, connection);
+                if (proxy.AsDrawnGeometry is { } asDrawn)
+                    connection.AttachAsDrawnGeometry(asDrawn);
             }
             else
             {
