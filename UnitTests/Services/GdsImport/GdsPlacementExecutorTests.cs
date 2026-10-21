@@ -74,6 +74,24 @@ public class GdsPlacementExecutorTests
     private static ComponentGroup SingleGroupOn(DesignCanvasViewModel canvas) =>
         canvas.Components.ShouldHaveSingleItem().Component.ShouldBeOfType<ComponentGroup>();
 
+    [Fact]
+    public async Task ReviewedGroupContainsOnlySelectedOccurrencesOfRepeatedCell()
+    {
+        var (canvas, _, executor) = CreateExecutor(WaveguideTemplate());
+        var group = System.Text.Json.JsonSerializer.Deserialize<CAP_DataAccess.Import.Gds.Interpretation.GdsInterpretationGroup>(
+            """{"Name":"diode","InstanceNames":["wg#0","wg#2"]}""")!;
+        await executor.ExecuteAsync(new GdsPlacementPlan
+        {
+            GroupName = "TOP",
+            Placements = Enumerable.Range(0, 4).Select(i => Placement($"wg#{i}", i * 30, 0) with { CellName = "wg" }).ToArray(),
+            Groups = [group]
+        });
+        var top = SingleGroupOn(canvas);
+        var composite = top.ChildComponents.OfType<ComponentGroup>().ShouldHaveSingleItem();
+        composite.ChildComponents.Count.ShouldBe(2);
+        top.ChildComponents.Count.ShouldBe(3);
+    }
+
     // ── Happy path: place → connect → group ──────────────────────────────────
 
     [Fact]

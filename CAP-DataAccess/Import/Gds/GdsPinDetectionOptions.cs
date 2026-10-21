@@ -20,6 +20,13 @@ public sealed record GdsPinDetectionOptions
     public IReadOnlyList<(int Layer, int Datatype)> PortLayers { get; init; } = [(1, 10), (501, 1)];
 
     /// <summary>
+    /// Explicit polygon-marker layers. An empty list disables marker detection.
+    /// Null preserves legacy behavior: boundary shapes use <see cref="PortLayers"/>
+    /// and arrow pairs are discovered on any dedicated marker-shaped layer.
+    /// </summary>
+    public IReadOnlyList<(int Layer, int Datatype)>? PortMarkerLayers { get; init; }
+
+    /// <summary>
     /// (Layer, Datatype) pairs whose polygons count as waveguides for the
     /// bounding-box edge heuristic. Default: (1, 0).
     /// </summary>

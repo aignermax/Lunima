@@ -10,12 +10,6 @@ public partial class RerouteImportedRoutesViewModel
     private sealed record DrawnRouteSnapshot(
         WaveguideConnectionViewModel Target, RoutedPath Path, AsDrawnGeometry? AsDrawn);
 
-    private static List<DrawnRouteSnapshot> SnapshotDrawnRoutes(IEnumerable<WaveguideConnectionViewModel> targets) =>
-        targets
-            .Where(t => t.Connection.RoutedPath is not null)
-            .Select(t => new DrawnRouteSnapshot(t, t.Connection.RoutedPath!.DeepCopy(), t.Connection.AsDrawnGeometry))
-            .ToList();
-
     /// <summary>
     /// Puts the imported route back on every target the router could only connect with a
     /// blocked fallback (no free path through the frozen layout around it): a dashed

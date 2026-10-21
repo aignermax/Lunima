@@ -11,27 +11,52 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// </summary>
 public sealed class CanvasFrozenPathRenderer : ICanvasRenderer
 {
+    private readonly GroupFrozenPathRasterCache _sourceRaster = new();
+    private readonly List<CAP_Core.Components.Connections.AsDrawnGeometry?> _selectedSources = new();
+    internal long IssuedSourceImageCount => _sourceRaster.IssuedImageCount;
 
     /// <inheritdoc/>
     public void Render(DrawingContext context, CanvasRenderContext rc)
     {
         if (rc.ViewModel.CanvasFrozenPaths.Count == 0)
+        {
+            _selectedSources.Clear();
+            _sourceRaster.Prepare(rc.ViewModel.CanvasFrozenPaths);
+            _sourceRaster.Prepare(_selectedSources);
             return;
+        }
 
         var viewport = RenderCulling.ComputeViewportWorld(rc.ViewModel.PanX, rc.ViewModel.PanY, rc.Bounds, rc.Zoom);
         var cullRect = RenderCulling.InflateForCulling(viewport, rc.Zoom);
 
-        foreach (var pathVm in rc.ViewModel.CanvasFrozenPaths)
+        var snapshot = _sourceRaster.Prepare(rc.ViewModel.CanvasFrozenPaths);
+        bool drewSources = _sourceRaster.TryDraw(context, snapshot, rc.Zoom, rc.LayerVisibility);
+        _selectedSources.Clear();
+        for (int i = 0; i < snapshot.Sources.Length; i++)
+            if (rc.ViewModel.CanvasFrozenPaths[i].IsSelected) _selectedSources.Add(snapshot.Sources[i]);
+        int selectedCount = _selectedSources.Count;
+        bool allSelected = selectedCount == snapshot.Sources.Length;
+        var selectedSnapshot = allSelected ? snapshot : _sourceRaster.Prepare(_selectedSources);
+        if (allSelected)
         {
-            if (RenderCulling.GetFrozenPathBounds(pathVm.Path) is { } bounds && !cullRect.Intersects(bounds))
+            _selectedSources.Clear();
+            _sourceRaster.Prepare(_selectedSources);
+        }
+        bool drewSelection = drewSources && selectedCount > 0
+            && _sourceRaster.TryDraw(context, selectedSnapshot, rc.Zoom, rc.LayerVisibility, rc.Pens.WaveguideSelected.Brush);
+        for (int i = 0; i < rc.ViewModel.CanvasFrozenPaths.Count; i++)
+        {
+            var pathVm = rc.ViewModel.CanvasFrozenPaths[i];
+            if (drewSources && (!pathVm.IsSelected || drewSelection)) continue;
+            var asDrawn = snapshot.Sources[i];
+            if (RenderCulling.GetFrozenPathBounds(pathVm.Path, asDrawn) is { } bounds && !cullRect.Intersects(bounds))
                 continue;
 
-            if (pathVm.Path.AsDrawnGeometry is { } asDrawn)
+            if (asDrawn is not null)
             {
-                // Drawn polygons replace the traced line; selection still highlights the path.
-                AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility);
-                if (!pathVm.IsSelected)
-                    continue;
+                AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility, visibleWorld: cullRect,
+                    highlightBrush: pathVm.IsSelected ? rc.Pens.WaveguideSelected.Brush : null);
+                continue;
             }
 
             // Canvas-level paths never carry simulated power (pin-less ⇒ not simulated),

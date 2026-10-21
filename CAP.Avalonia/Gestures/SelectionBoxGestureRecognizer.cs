@@ -103,12 +103,32 @@ public class SelectionBoxGestureRecognizer : IGestureRecognizer
 
         bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         bool alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+        if (mainVm?.CanvasInteraction.SelectedWaveguideConnection is { } previousConnection)
+        {
+            if (!ctrl && !alt)
+            {
+                previousConnection.IsSelected = false;
+                mainVm.CanvasInteraction.SelectedWaveguideConnection = null;
+            }
+            else if (previousConnection.IsSelected && !canvas.Selection.SelectedConnections.Contains(previousConnection))
+            {
+                // A direct click uses the primary selection. Bring it into the batch
+                // before Ctrl/Alt so adding and subtracting have the same semantics.
+                canvas.Selection.SelectedConnections.Add(previousConnection);
+            }
+        }
+        using var selectionUpdate = canvas.Selection.BeginUpdate();
         canvas.Selection.SelectInRectangle(canvas.InteractiveComponents, minX, minY, maxX, maxY, addToSelection: ctrl, removeFromSelection: alt);
         // Also collect optical connections crossing the box (issue #862) so the routing-style
         // control can restyle them all at once. The component pass above already cleared the
         // selection for a plain drag, so this pass only adds/removes.
         Selection.ConnectionBoxSelector.SelectInRectangle(
             canvas.Selection, canvas.Connections, minX, minY, maxX, maxY, removeFromSelection: alt);
+        if (!canvas.IsInGroupEditMode)
+            Selection.ConnectionBoxSelector.SelectFrozenPathsInRectangle(
+                canvas.Selection, canvas.CanvasFrozenPaths, minX, minY, maxX, maxY, removeFromSelection: alt);
+        if (mainVm?.CanvasInteraction.SelectedWaveguideConnection is { IsSelected: false })
+            mainVm.CanvasInteraction.SelectedWaveguideConnection = null;
         _invalidate();
     }
 

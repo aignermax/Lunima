@@ -21,18 +21,31 @@ public static class GdsLayerHitTester
     /// <returns>True when a text anchor or polygon was hit.</returns>
     public static bool TryPick(
         GdsLayerGeometryScene scene, double x, double y, double textToleranceUm, out GdsLayerPair hit)
+        => TryPick(scene, x, y, textToleranceUm, out hit, out _, out _);
+
+    /// <summary>
+    /// Returns local hit metrics for comparing candidates across hierarchy placements.
+    /// Text hits have finite squared distance; polygon hits have finite area.
+    /// Scale both metrics by the placement's squared magnification before comparing.
+    /// </summary>
+    public static bool TryPick(
+        GdsLayerGeometryScene scene, double x, double y, double textToleranceUm, out GdsLayerPair hit,
+        out double area, out double textDistanceSquared)
     {
         ArgumentNullException.ThrowIfNull(scene);
-        if (TryPickText(scene, x, y, textToleranceUm, out hit))
+        area = double.PositiveInfinity;
+        if (TryPickText(scene, x, y, textToleranceUm, out hit, out textDistanceSquared))
             return true;
-        return TryPickPolygon(scene, x, y, out hit);
+        textDistanceSquared = double.PositiveInfinity;
+        return TryPickPolygon(scene, x, y, out hit, out area);
     }
 
     private static bool TryPickText(
-        GdsLayerGeometryScene scene, double x, double y, double toleranceUm, out GdsLayerPair hit)
+        GdsLayerGeometryScene scene, double x, double y, double toleranceUm, out GdsLayerPair hit,
+        out double bestDistanceSquared)
     {
         hit = default;
-        var bestDistanceSquared = toleranceUm * toleranceUm;
+        bestDistanceSquared = toleranceUm * toleranceUm;
         var found = false;
         foreach (var layer in scene.Layers)
         {
@@ -53,10 +66,10 @@ public static class GdsLayerHitTester
     }
 
     private static bool TryPickPolygon(
-        GdsLayerGeometryScene scene, double x, double y, out GdsLayerPair hit)
+        GdsLayerGeometryScene scene, double x, double y, out GdsLayerPair hit, out double bestArea)
     {
         hit = default;
-        var bestArea = double.MaxValue;
+        bestArea = double.PositiveInfinity;
         var found = false;
         foreach (var layer in scene.Layers)
         {

@@ -91,7 +91,7 @@ public sealed partial class GdsPlacementExecutor
             // Re-routing sends route-derived pairs to the live router; abutment
             // straights keep their frozen geometry in both modes.
             var liveRoute = ShouldLiveRoute(connection, reroute, rerouteImportedConnections);
-            var centerline = liveRoute ? null : TryBuildCenterline(connection, startPin, endPin, originOffset);
+            var centerline = TryBuildCenterline(connection, startPin, endPin, originOffset);
             var cachedRoute = liveRoute
                 ? null
                 : centerline?.Path ?? TryBuildCachedRoute(connection, startPin, endPin, originOffset);
@@ -126,6 +126,16 @@ public sealed partial class GdsPlacementExecutor
 
             if (connectionVm is not null)
             {
+                if (centerline is not null && !connectionVm.Connection.IsElectrical)
+                {
+                    // Preserve the observed geometry as routing intent, not a foundry rule.
+                    var radius = centerline.Path.Segments.OfType<BendSegment>()
+                        .Select(b => b.RadiusMicrometers)
+                        .Where(r => double.IsFinite(r) && r > 0)
+                        .DefaultIfEmpty(connectionVm.Connection.BendRadiusMicrometers).Min();
+                    connectionVm.Connection.BendRadiusMicrometers =
+                        Math.Max(connectionVm.Connection.BendRadiusMicrometers, radius);
+                }
                 // Route-derived connections keep a tag of the layer their source
                 // polygons were drawn on — but only when that layer is unambiguous
                 // (every source polygon shares one (layer, datatype)): a re-created

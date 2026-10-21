@@ -9,6 +9,8 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.GdsImport;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.Views.Dialogs;
+using CAP.Avalonia.Controls.GdsImport;
+using CAP.Avalonia.ViewModels.GdsImport.Interpretation;
 using Shouldly;
 using UnitTests.Import.Gds;
 using UnitTests.Services.GdsImport;
@@ -17,12 +19,8 @@ using Xunit;
 namespace UnitTests.UI;
 
 /// <summary>
-/// Render smoke test for the GDS import dialog's census/suggestion UI (#848):
-/// with analysis results present, showing the dialog must build the chip and
-/// census DataTemplates without throwing. Regression guard for the field crash
-/// where the <c>$parent[Window].((vm:…)DataContext)</c> casts failed runtime
-/// type resolution (<c>using:</c> xmlns form) the moment the suggestions
-/// rendered — the ViewModel-level tests never exercised the view.
+/// Renders the actual dialog after its single OnOpened analysis. This covers
+/// native review templates and parent command bindings, not hidden legacy chips.
 /// </summary>
 [Collection("LocalizationSingleton")]
 public class GdsImportDialogRenderTests : IDisposable
@@ -55,7 +53,7 @@ public class GdsImportDialogRenderTests : IDisposable
         .ToArray();
 
     [AvaloniaFact]
-    public async Task Dialog_WithSuggestionsAndCensus_RendersWithoutThrowing()
+    public async Task Dialog_WithNativeReview_RendersWithoutThrowing()
     {
         Directory.CreateDirectory(_root);
         var gdsPath = Path.Combine(_root, "census.gds");
@@ -63,7 +61,8 @@ public class GdsImportDialogRenderTests : IDisposable
         var service = _host.CreateService();
         var executor = new GdsPlacementExecutor(
             new DesignCanvasViewModel(), new CommandManager(), () => new List<ComponentTemplate>());
-        var vm = new GdsImportDialogViewModel(gdsPath, service, executor);
+        var vm = new GdsImportDialogViewModel(gdsPath, service, executor)
+        { ReviewProfileStore = new GdsLayerProfileStore(Path.Combine(_root, "profiles.json")) };
         var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var starts = 0;
         void OnAnalysisChanged(object? sender, PropertyChangedEventArgs e)
@@ -82,23 +81,22 @@ public class GdsImportDialogRenderTests : IDisposable
             await completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
             starts.ShouldBe(1);
             vm.HasError.ShouldBeFalse(vm.ErrorText);
-            vm.HasSuggestions.ShouldBeTrue("the shown chips must have analyzed data");
-            vm.HasCensus.ShouldBeTrue("the shown census must have analyzed data");
-
-            var layers = dialog.FindControl<Expander>("LayerAssignmentExpander").ShouldNotBeNull();
-            layers.IsExpanded = true;
+            vm.HasReview.ShouldBeTrue();
+            var review = vm.Review.ShouldNotBeNull();
+            review.Layers.ShouldNotBeEmpty();
+            review.Scene.Layers.Sum(layer => layer.Polygons.Count).ShouldBeGreaterThan(0);
             dialog.UpdateLayout();
             Dispatcher.UIThread.RunJobs();
-            // Census has its own nested expander; expand it too so both formerly
-            // crashing parent-Window command bindings are actually materialized.
-            layers.GetVisualDescendants().OfType<Expander>().Single().IsExpanded = true;
+            var view = dialog.GetVisualDescendants().OfType<GdsInterpretationReviewView>().Single();
+            view.IsEffectivelyVisible.ShouldBeTrue();
+            view.FindControl<GdsReviewPreview>("ReviewPreview")!.Scene.ShouldBeSameAs(review.Scene);
+            var steps = view.GetVisualDescendants().OfType<Button>()
+                .Where(button => button.DataContext is GdsReviewStep).ToArray();
+            steps.Length.ShouldBe(6);
+            steps.ShouldAllBe(button => ReferenceEquals(button.Command, review.ChooseStepCommand));
+            await review.NextCommand.ExecuteAsync(null);
             dialog.UpdateLayout();
-            Dispatcher.UIThread.RunJobs();
-            var buttons = dialog.GetVisualDescendants().OfType<Button>().ToArray();
-            buttons.ShouldContain(b => b.DataContext is GdsLayerSuggestionChip
-                && ReferenceEquals(b.Command, vm.AcceptSuggestionCommand));
-            buttons.ShouldContain(b => b.DataContext is GdsLayerCensusRow
-                && ReferenceEquals(b.Command, vm.AppendCensusRowCommand));
+            view.FindControl<ListBox>("GdsReviewRole")!.Items.Count.ShouldBe(10);
         }
         finally
         {

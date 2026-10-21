@@ -76,6 +76,25 @@ public class NazcaExportIntegrationTests
     }
 
     [Fact]
+    public void Export_EmptyDie_HasValidPythonSyntax()
+    {
+        var python = FindPython() ?? (OperatingSystem.IsWindows() && CachedPythonProbe.CanRun("py", "pass") ? "py" : null);
+        if (python == null) return;
+        var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
+        var die = UnitTests.Dies.DieTestFixtures.Die("Empty", 0, 0, 100, 100);
+        canvas.AddComponent(die);
+        var script = new SimpleNazcaExporter().ExportAssembly(canvas, die);
+        var path = Path.Combine(Path.GetTempPath(), $"empty_die_{Guid.NewGuid():N}.py");
+        try
+        {
+            File.WriteAllText(path, script);
+            var (code, _, error) = RunPython(python,
+                $"-c \"import ast,pathlib; ast.parse(pathlib.Path('{path.Replace("\\", "/")}').read_text(encoding='utf-8'))\"");
+            code.ShouldBe(0, error);
+        }
+        finally { File.Delete(path); }
+    }
+    [Fact]
     public void ExportedScript_IsValidPythonSyntax()
     {
         var python = FindPython();

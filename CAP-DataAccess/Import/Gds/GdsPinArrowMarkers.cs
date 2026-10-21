@@ -45,7 +45,9 @@ internal static class GdsPinArrowMarkers
     /// candidates are scanned in element order, each arrow pairs at most once
     /// (with its earliest partner), results are ordered by first appearance.
     /// </summary>
-    internal static IReadOnlyList<Marker> Find(FlattenedGdsCell cell, GdsBoundingBox cellBBox)
+    internal static IReadOnlyList<Marker> Find(
+        FlattenedGdsCell cell, GdsBoundingBox cellBBox,
+        IReadOnlyList<(int Layer, int Datatype)>? allowedLayers = null)
     {
         // A marker layer carries ONLY marker-shaped polygons. A layer that
         // also carries real geometry (cores, routes, tapers) is never a
@@ -55,6 +57,8 @@ internal static class GdsPinArrowMarkers
         var candidates = new List<(List<GdsPoint> Points, int Layer, int Datatype)>();
         foreach (var layerGroup in cell.Polygons.GroupBy(p => (p.Layer, p.DataType)))
         {
+            if (allowedLayers is not null && !allowedLayers.Contains(layerGroup.Key))
+                continue;
             var normalized = layerGroup
                 .Select(p => (Points: Normalize(p.Points), p.Layer, p.DataType))
                 .ToList();

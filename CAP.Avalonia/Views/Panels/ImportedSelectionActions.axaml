@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.ImportedSelectionActions"
+             x:DataType="vm:MainViewModel">
+    <StackPanel Spacing="8" MaxWidth="360">
+        <Border IsVisible="{Binding ImportedHierarchy.IsVisible}"
+                Background="{DynamicResource Brush.Surface.Panel}"
+                BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                CornerRadius="{DynamicResource Radius.S}" Padding="12">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="strong" Text="{loc:Localize GdsSelection.SourceCell}"/>
+                <TextBlock Classes="caption secondary" TextWrapping="Wrap"
+                           Text="{loc:Localize GdsSelection.ExpandHint}"/>
+                <Button Content="{loc:Localize GdsSelection.Expand}"
+                        Command="{Binding ImportedHierarchy.ExpandCommand}" HorizontalAlignment="Stretch"/>
+                <ProgressBar IsIndeterminate="True" Height="3" IsVisible="{Binding ImportedHierarchy.IsBusy}"/>
+                <Button Content="{loc:Localize Common.Cancel}" Command="{Binding ImportedHierarchy.CancelCommand}"
+                        IsVisible="{Binding ImportedHierarchy.IsBusy}"/>
+                <TextBlock Classes="caption secondary" TextWrapping="Wrap"
+                           Text="{Binding ImportedHierarchy.ResultText}"
+                           IsVisible="{Binding ImportedHierarchy.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+        </Border>
+        <Border IsVisible="{Binding BottomPanel.RerouteImported.HasSelectedDrawnRoute}"
+                Background="{DynamicResource Brush.Surface.Panel}"
+                BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                CornerRadius="{DynamicResource Radius.S}" Padding="12">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="strong" Text="{loc:Localize GdsSelection.PreservedRoute}"/>
+                <TextBlock Classes="caption secondary" TextWrapping="Wrap"
+                           Text="{loc:Localize Routing.Reroute.EditImportedHint}"/>
+                <Button Content="{loc:Localize Routing.Reroute.ConvertToEditable}"
+                        Command="{Binding BottomPanel.RerouteImported.RerouteSelectedCommand}"
+                        HorizontalAlignment="Stretch"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

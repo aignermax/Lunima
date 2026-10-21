@@ -43,12 +43,17 @@ public partial class SimpleNazcaExporter
         var metal = metalSpec ?? MetalRoutingSpec.Default;
         var interconnectSettings = SettingsSource?.Invoke() ?? new InterconnectSettings();
         var interconnectPlan = NazcaProcessInterconnectPlan.Build(canvas, interconnectSettings);
-        var rawCodePlan = NazcaRawCodeCellWriter.BuildPlan(canvas, include: null, library, exportWarnings);
-        var wrapperPlan = NazcaPinLabelWrapperWriter.BuildPlan(canvas, include: null, rawCodePlan, library);
+        // Keep the canvas-wide interconnect plan: it detects heterogeneous process stacks.
+        // Geometry dependencies, however, must belong to the selected fabrication die.
+        var members = onlyDie == null ? null : new HashSet<Component>(onlyDie.GetAllComponentsRecursive());
+        Func<Component, bool> include = component => (members == null || members.Contains(component))
+            && string.IsNullOrEmpty(component.GdsFactoryFunction);
+        var rawCodePlan = NazcaRawCodeCellWriter.BuildPlan(canvas, include, library, exportWarnings);
+        var wrapperPlan = NazcaPinLabelWrapperWriter.BuildPlan(canvas, include, rawCodePlan, library);
 
         AppendHeader(sb, interconnectSettings, metal);
         interconnectPlan.AppendTo(sb);
-        AppendPdkComponentStubs(sb, canvas, include: null, rawCodePlan, wrapperPlan, false);
+        AppendPdkComponentStubs(sb, canvas, include, rawCodePlan, wrapperPlan, false);
         NazcaRawCodeCellWriter.AppendCells(sb, rawCodePlan, CultureInfo.InvariantCulture);
         NazcaPinLabelWrapperWriter.AppendCells(sb, wrapperPlan);
 
@@ -86,9 +91,13 @@ public partial class SimpleNazcaExporter
         var members = new HashSet<Component>(die.GetAllComponentsRecursive());
         var cellName = DieCellName(die);
         sb.AppendLine($"# Die '{die.GroupName}' ({die.ProcessBinding?.DisplayName ?? "no process"})");
-        var componentNames = AppendComponents(sb, canvas, emitVerification: false, include: members.Contains,
+        var componentNames = AppendComponents(sb, canvas, emitVerification: false, include: component => members.Contains(component) && string.IsNullOrEmpty(component.GdsFactoryFunction),
             topCellName: $"{cellName}_content", rawCodePlan: rawCodePlan, wrapperPlan: wrapperPlan,
             functionName: $"create_die_{index}_content");
+        // Empty dies (including dies whose backend-only components were omitted) still
+        // need a Python statement inside the content cell's with block.
+        if (componentNames.Count == 0)
+            sb.AppendLine("        pass");
         AppendGroupFrozenPaths(sb, die, metal.ToTraceStyle(), componentNames, skippedConnections, interconnectPlan);
         // A die is a work surface: its wires live on the assembly canvas but belong to the die.
         foreach (var wire in DieWires(canvas, die))

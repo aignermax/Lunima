@@ -16,6 +16,20 @@ namespace UnitTests.Commands;
 /// </summary>
 public class BoxSelectionDeleteTests
 {
+    [Fact]
+    public void DeleteConnection_AlreadyRemovedByEarlierBatchStep_UndoDoesNotResurrectIt()
+    {
+        var (canvas, _, _, vm1, _, _) = CreateSetup();
+        var connection = canvas.Connections.Single();
+        var command = new DeleteConnectionCommand(canvas, connection);
+        // An earlier component/crossing deletion in a mixed batch has removed this wire.
+        canvas.DeleteComponent(vm1);
+        command.Execute();
+        command.Undo();
+        canvas.Connections.ShouldBeEmpty();
+        canvas.ConnectionManager.Connections.ShouldBeEmpty();
+    }
+
     private static (DesignCanvasViewModel canvas, CommandManager commandManager,
         CanvasInteractionViewModel interaction,
         ComponentViewModel vm1, ComponentViewModel vm2, ComponentViewModel vm3) CreateSetup()

@@ -34,7 +34,7 @@ public sealed class BendHandleRenderer : ICanvasRenderer
     public void Render(DrawingContext context, CanvasRenderContext rc)
     {
         var selected = rc.MainViewModel?.CanvasInteraction.SelectedWaveguideConnection;
-        if (selected == null)
+        if (selected == null || selected.Connection.AsDrawnGeometry is not null)
             return;
 
         double zoom = rc.Zoom <= 0 ? 1.0 : rc.Zoom;

@@ -13,7 +13,7 @@
     <BuiltInComInteropSupport Condition="'$(RuntimeIdentifier)' == '' Or $(RuntimeIdentifier.StartsWith('win'))">true</BuiltInComInteropSupport>
     <!-- Add macOS ARM64 and x64 support alongside Windows and Linux -->
     <RuntimeIdentifiers>win-x64;linux-x64;osx-arm64;osx-x64</RuntimeIdentifiers>
-    <Version>0.19.0</Version>
+    <Version>0.20.0</Version>
     <!-- Windows icon (embedded in the .exe; macOS uses the .icns inside the bundle) -->
     <ApplicationIcon Condition="'$(RuntimeIdentifier)' == '' Or $(RuntimeIdentifier.StartsWith('win'))">LunimaIcon.ico</ApplicationIcon>
   </PropertyGroup>
@@ -30,6 +30,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CAP.Avalonia\CAP.Avalonia.csproj" />
+  </ItemGroup>
+
+  <!-- Home's guided chapters load these designs beside the installed application. -->
+  <ItemGroup>
+    <Content Include="..\examples\**\*.lun;..\examples\examples.json"
+             Link="examples\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Python helper script for the PDK Offset Editor's Nazca/SiEPIC preview.

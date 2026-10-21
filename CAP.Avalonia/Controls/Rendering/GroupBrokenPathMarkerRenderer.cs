@@ -30,6 +30,8 @@ public static class GroupBrokenPathMarkerRenderer
     /// <param name="pens">The zoom-dependent pen set of the frame.</param>
     public static void Render(DrawingContext context, Rect bounds, CanvasPens pens)
     {
+        if (pens.Zoom < ComponentRenderer.GroupOverviewZoom)
+            return;
         context.DrawRectangle(null, pens.Blocked, bounds);
 
         double zoom = pens.Zoom <= 0 ? 1.0 : pens.Zoom;

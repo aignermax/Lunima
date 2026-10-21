@@ -197,7 +197,8 @@ public partial class GdsImportDialogViewModel : ObservableObject
     public Action<double, double>? ApplyChipSizeAfterImport { get; set; }
 
     /// <summary>True when the Import button can run (analysis done, top cell picked, not busy).</summary>
-    public bool CanImport => AnalysisReady && !IsBusy && SelectedTopCell is not null;
+    public bool CanImport => AnalysisReady && !IsBusy && SelectedTopCell is not null
+        && (!EnableReview || Review?.CanApply == true);
 
     /// <summary>True while the options section (top cell, mode, layers) is shown.</summary>
     public bool ShowOptions => AnalysisReady && !ImportCompleted;
@@ -285,6 +286,8 @@ public partial class GdsImportDialogViewModel : ObservableObject
         {
             var analysis = await GdsImportService.AnalyzeAsync(GdsFilePath, token);
             _analyzedLibrary = analysis.Library;
+            _reviewSourceBytes = analysis.SourceBytes;
+            _reviewSourceHash = analysis.SourceSha256;
             ClearFactoryDefaultsOnForeignFile(analysis.Library);
             PopulateCensus(analysis.LayerCensus);
             TopCells.Clear();
@@ -292,6 +295,7 @@ public partial class GdsImportDialogViewModel : ObservableObject
                 TopCells.Add(topCell);
             SelectedTopCell = TopCells.FirstOrDefault();
             AnalysisReady = true;
+            await PrepareReviewAsync(token);
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("GdsImport.StatusAnalyzed"),
                 analysis.CellCount, TopCells.Count);
@@ -322,6 +326,7 @@ public partial class GdsImportDialogViewModel : ObservableObject
     private async Task ImportAsync()
     {
         if (SelectedTopCell is null) return;
+        if (EnableReview && Review?.CanApply != true) return;
 
         if (!TryBuildOptions(out var options, out var optionsError))
         {
@@ -348,21 +353,31 @@ public partial class GdsImportDialogViewModel : ObservableObject
         // status text, and every warning/info is mirrored to the error console
         // when the run completes. The window close must NOT cancel this run —
         // OnWindowClosed checks the flag.
-        _continueRunAfterWindowClose = true;
-        OnClose?.Invoke();
+        if(!EnableReview)
+        {
+            _continueRunAfterWindowClose = true;
+            OnClose?.Invoke();
+        }
 
         try
         {
             var progress = new Progress<string>(msg => StatusText = msg);
             var outcome = await _importService.ImportAsync(
                 GdsFilePath, SelectedTopCell.CellName, options, progress, token,
-                preParsedLibrary: _analyzedLibrary);
+                preParsedLibrary: _analyzedLibrary, interpretation: Review?.BuildInterpretation(),
+                sourceBytes: EnableReview ? _reviewSourceBytes : null);
             ImportServiceCompletedTestHook?.Invoke();
 
             token.ThrowIfCancellationRequested();
+            if(EnableReview)
+            {
+                _continueRunAfterWindowClose=true;
+                OnClose?.Invoke();
+            }
             var plan = GdsPlacementPlan.FromOutcome(outcome);
             var report = await _placementExecutor.ExecuteAsync(
-                plan, progress, token, RerouteConnectionsRequested, AutoConnectAllPinsRequested, GroupImportRequested);
+                plan, progress, token, !EnableReview && RerouteConnectionsRequested,
+                !EnableReview && AutoConnectAllPinsRequested, GroupImportRequested);
 
             foreach (var warning in outcome.Warnings)
                 Warnings.Add(warning);

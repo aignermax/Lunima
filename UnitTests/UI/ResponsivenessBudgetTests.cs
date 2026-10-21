@@ -93,6 +93,7 @@ public class ResponsivenessBudgetTests
         "RefreshSystemOverviewCommand",
         "SwitchToLayoutCommand",
         "ShowInLayoutCommand",
+        "SelectAllCommand",
     };
 
     /// <summary>

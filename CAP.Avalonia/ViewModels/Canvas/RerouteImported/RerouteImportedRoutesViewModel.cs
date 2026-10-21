@@ -23,6 +23,7 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly CommandManager _commandManager;
+    private int _editRevision;
 
     /// <summary>Number of frozen imported routes the router may replace.</summary>
     [ObservableProperty]
@@ -89,6 +90,9 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
 
     private WaveguideConnectionViewModel? _selectedConnection;
 
+    /// <summary>Shows the source-preservation explanation and explicit editing action.</summary>
+    public bool HasSelectedDrawnRoute => SelectedConnection?.Connection.AsDrawnGeometry is not null;
+
     /// <summary>The currently selected connection, fed by <c>MainViewModel</c>.</summary>
     public WaveguideConnectionViewModel? SelectedConnection
     {
@@ -96,7 +100,10 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         set
         {
             if (SetProperty(ref _selectedConnection, value))
+            {
+                OnPropertyChanged(nameof(HasSelectedDrawnRoute));
                 RerouteSelectedCommand.NotifyCanExecuteChanged();
+            }
         }
     }
 
@@ -112,7 +119,8 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         // Routing passes flip IsRouteFrozen outside commands (e.g. an endpoint moved
         // unfreezes the route); StateChanged fires after every pass.
         _canvas.Routing.StateChanged += Refresh;
-        _commandManager.StateChanged += (_, _) => Refresh();
+        _commandManager.StateChanged += (_, _) => { _editRevision++; Refresh(); };
+        _commandManager.HistoryCleared += () => _editRevision++;
     }
 
     /// <summary>
@@ -122,6 +130,7 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
     /// </summary>
     public void Refresh()
     {
+        if (IsRerouting) return;
         var eligible = 0;
         var handEdited = 0;
         foreach (var connection in _canvas.Connections)
@@ -140,6 +149,7 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         if (_canvas.Components.Count == 0 && _canvas.Connections.Count == 0)
             ResultText = "";
         RerouteSelectedCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(HasSelectedDrawnRoute));
     }
 
     /// <summary>Re-routes every eligible frozen imported route in the design.</summary>
@@ -179,58 +189,67 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
     {
         IsRerouting = true;
         var expectedScope = _canvas.CurrentEditGroup;
+        var originalScopeChildren = expectedScope?.ChildComponents.ToArray();
+        RerouteImportedRoutesStateCommand? stateCommand = null;
+        bool stopped = false;
+        void OnStop() => stopped = true;
+        _canvas.Routing.StopRequested += OnStop;
         try
         {
-            var originalScopePaths = expectedScope != null && canvasTargets.Count > 0
-                ? CaptureScopePaths(expectedScope) : null;
+            var sourcePaths = canvasTargets.Select(t => t.Connection.RoutedPath).ToArray();
+            var generation = _canvas.Routing.MutationGeneration;
+            var revision = _editRevision;
+            var scopePaths = expectedScope != null && canvasTargets.Count > 0 ? CaptureScopePaths(expectedScope) : null;
+            var rootTopology = expectedScope == null && canvasTargets.Count > 0 && _canvas.ConnectionManager.CrossingService != null
+                ? new RerouteImportedRootTopology(_canvas) : null;
+            var (connectionStates, groupStates, originalScopePaths) = await PrepareSnapshotsAsync(canvasTargets, groupTargets, scopePaths, rootTopology);
+            if (stopped || generation != _canvas.Routing.MutationGeneration || revision != _editRevision
+                || !ReferenceEquals(_canvas.CurrentEditGroup, expectedScope)
+                || canvasTargets.Where((t, i) => !_canvas.Connections.Contains(t)
+                    || !ReferenceEquals(t.Connection.RoutedPath, sourcePaths[i])
+                    || !ImportedRouteRerouteEligibility.IsEligible(t.Connection)).Any()
+                || groupTargets.Any(g => !ContainsCurrentGroup(g.Group))) return;
+
             var allConnectionTargets = canvasTargets.Select(t => t.Connection).ToList();
             var allGroupPaths = groupTargets.SelectMany(g => g.Paths).ToList();
             var before = RouteMetricsSnapshot.Capture(allConnectionTargets, allGroupPaths);
 
-            var connectionStates = canvasTargets.Select(t =>
-                new RerouteImportedRoutesStateCommand.ConnectionState
-                {
-                    Connection = t.Connection,
-                    OldPath = t.Connection.RoutedPath!.DeepCopy(),
-                    OldIsFrozen = t.Connection.IsRouteFrozen,
-                    OldAsDrawn = t.Connection.AsDrawnGeometry,
-                }).ToList();
-
-            var groupStates = groupTargets.Select(g =>
-                new RerouteImportedRoutesStateCommand.GroupState
-                {
-                    Group = g.Group,
-                    OldPaths = g.Group.InternalPaths
-                        .Select(RerouteImportedRoutesStateCommand.CloneWithPins)
-                        .ToList()
-                }).ToList();
+            stateCommand = new RerouteImportedRoutesStateCommand(_canvas, connectionStates, groupStates);
+            stateCommand.RootTopology = rootTopology;
+            stateCommand.RoutingGroup = expectedScope;
+            _commandManager.BeginExecution(stateCommand);
 
             // Canvas-level targets are mutated directly; the state command handles undo.
             int kept = 0;
             if (canvasTargets.Count > 0)
             {
-                var drawn = SnapshotDrawnRoutes(canvasTargets);
-                new RerouteImportedRoutesCommand(_canvas, canvasTargets).Execute();
+                var drawn = canvasTargets.Select((target, index) => new DrawnRouteSnapshot(
+                    target, connectionStates[index].OldPath, connectionStates[index].OldAsDrawn)).ToList();
+                UnfreezeTargets(canvasTargets);
                 await _canvas.RecalculateRoutesAsync();
                 kept = KeepDrawnRouteWhereBlocked(drawn);
+                stateCommand.RootTopology?.CaptureAfter();
             }
 
             // Group-internal targets are routed inside a temporary group-edit sub-canvas.
             var completedGroups = new HashSet<ComponentGroup>();
             foreach (var (group, paths) in groupTargets)
             {
-                if (!ReferenceEquals(_canvas.CurrentEditGroup, expectedScope)) break;
-                if (await RerouteGroupInternalAsync(group, paths, expectedScope))
+                if (stopped || !ReferenceEquals(_canvas.CurrentEditGroup, expectedScope)) break;
+                var result = await RerouteGroupInternalAsync(group, paths, expectedScope, () => stopped, stateCommand);
+                if (result.Completed)
                     completedGroups.Add(group);
+                kept += result.Kept;
             }
             groupStates.RemoveAll(state => !completedGroups.Contains(state.Group));
-            if (originalScopePaths != null && !ReferenceEquals(_canvas.CurrentEditGroup, expectedScope))
+            if (originalScopePaths != null)
             {
                 // Leaving an edited group serializes its wires and discards the live objects.
                 // Preserve that completed work through the existing group-path undo snapshot.
                 groupStates.Add(new RerouteImportedRoutesStateCommand.GroupState
                 {
-                    Group = expectedScope!, OldPaths = originalScopePaths
+                    Group = expectedScope!, OldPaths = originalScopePaths, OldChildren = originalScopeChildren,
+                    TargetPins = canvasTargets.Select(target => ((PhysicalPin?)target.Connection.StartPin, (PhysicalPin?)target.Connection.EndPin)).ToArray()
                 });
             }
 
@@ -238,45 +257,47 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
             // Keep successful work on surviving objects, never old-document undo snapshots.
             var liveConnections = (expectedScope == null ? _canvas.Groups.RootConnections : _canvas.Connections)
                 .Select(vm => vm.Connection).ToHashSet(ReferenceEqualityComparer.Instance);
-            connectionStates.RemoveAll(state => !liveConnections.Contains(state.Connection));
+            if (expectedScope != null) connectionStates.Clear();
+            connectionStates.RemoveAll(state => (!liveConnections.Contains(state.Connection)
+                && stateCommand.RootTopology?.Replaced(state.Connection) != true)
+                || state.Connection.RoutedPath is null);
             groupStates.RemoveAll(state => !_canvas.Groups.RootComponents
                 .Select(vm => vm.Component).OfType<ComponentGroup>()
                 .Any(group => ContainsGroup(group, state.Group)));
-            if (connectionStates.Count == 0 && groupStates.Count == 0) return;
+            if (connectionStates.Count == 0 && groupStates.Count == 0
+                && stateCommand.RootTopology?.HasChanges != true) return;
 
-            foreach (var state in connectionStates)
+            CaptureFinalSnapshots(connectionStates, groupStates);
+            if (originalScopePaths != null && ReferenceEquals(_canvas.CurrentEditGroup, expectedScope))
             {
-                state.NewPath = state.Connection.RoutedPath!.DeepCopy();
-                state.NewIsFrozen = state.Connection.IsRouteFrozen;
+                var scopeState = groupStates.First(s => ReferenceEquals(s.Group, expectedScope));
+                var paths = CaptureScopePaths(expectedScope!);
+                scopeState.NewChildren = _canvas.Components.Select(c => c.Component).ToArray();
+                scopeState.NewPathCount = paths.Count;
+                scopeState.CreateNewPaths = () => paths.Select(build => build()).ToList();
             }
 
-            foreach (var state in groupStates)
-            {
-                state.NewPaths = state.Group.InternalPaths
-                    .Select(RerouteImportedRoutesStateCommand.CloneWithPins)
-                    .ToList();
-            }
-
-            var stateCommand = new RerouteImportedRoutesStateCommand(
-                _canvas, connectionStates, groupStates);
+            stateCommand.SealGroupTopology();
             _commandManager.ExecuteCommand(stateCommand);
-            await _canvas.RecalculateRoutesAsync();
 
             var afterConnections = connectionStates.Select(s => s.Connection);
-            var afterGroupPaths = groupStates.SelectMany(s => s.NewPaths);
+            var afterGroupPaths = groupStates.SelectMany(s => s.Group.InternalPaths);
             var after = RouteMetricsSnapshot.Capture(afterConnections, afterGroupPaths);
             ResultText = WithKeptNote(FormatDelta(
                 canvasTargets.Count + groupTargets.Sum(g => g.Paths.Count), before, after), kept);
         }
         finally
         {
+            if (stateCommand != null) _commandManager.CancelExecution(stateCommand);
+            _canvas.Routing.StopRequested -= OnStop;
             IsRerouting = false;
             Refresh();
         }
     }
 
-    private async Task<bool> RerouteGroupInternalAsync(
-        ComponentGroup group, IReadOnlyList<FrozenWaveguidePath> paths, ComponentGroup? expectedScope)
+    private async Task<(bool Completed, int Kept)> RerouteGroupInternalAsync(
+        ComponentGroup group, IReadOnlyList<FrozenWaveguidePath> paths, ComponentGroup? expectedScope,
+        Func<bool> stopped, RerouteImportedRoutesStateCommand stateCommand)
     {
         // Drain the previous canvas worker before replacing its live connection list.
         // The gate also rejects queued crossing callbacks from the old scope.
@@ -284,26 +305,36 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         {
             _canvas.EnterGroupEditMode(group);
             return true;
-        }, () => ReferenceEquals(_canvas.CurrentEditGroup, expectedScope) && ContainsCurrentGroup(group));
-        if (!entered) return false;
+        }, () => !stopped() && ReferenceEquals(_canvas.CurrentEditGroup, expectedScope) && ContainsCurrentGroup(group));
+        if (!entered) return (false, 0);
+        int kept = 0;
         try
         {
+            if (stopped()) return (false, 0);
+            stateCommand.RoutingGroup = group;
+            var sourcePaths = paths.GroupBy(p => (p.StartPin, p.EndPin))
+                .ToDictionary(g => g.Key, g => g.First());
             var targets = _canvas.Connections
-                .Where(vm => paths.Any(p =>
-                    ReferenceEquals(vm.Connection.StartPin, p.StartPin) &&
-                    ReferenceEquals(vm.Connection.EndPin, p.EndPin)))
+                .Where(vm => sourcePaths.ContainsKey((vm.Connection.StartPin, vm.Connection.EndPin)))
                 .ToList();
+            var drawn = targets.Select(target =>
+            {
+                var source = sourcePaths[(target.Connection.StartPin, target.Connection.EndPin)];
+                return new DrawnRouteSnapshot(target, source.Path, source.AsDrawnGeometry);
+            }).ToList();
 
             if (targets.Count > 0)
-                new RerouteImportedRoutesCommand(_canvas, targets).Execute();
+                UnfreezeTargets(targets);
 
             await _canvas.RecalculateRoutesAsync();
+            kept = KeepDrawnRouteWhereBlocked(drawn);
         }
         finally
         {
-            _canvas.ExitGroupEditMode();
+            if (ReferenceEquals(_canvas.CurrentEditGroup, group))
+                _canvas.ExitGroupEditMode();
         }
-        return true;
+        return (true, kept);
     }
 
     /// <summary>
@@ -322,25 +353,6 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
             count,
             before.LengthMicrometers, after.LengthMicrometers,
             before.EquivalentBends, after.EquivalentBends);
-
-    private List<FrozenWaveguidePath> CaptureScopePaths(ComponentGroup scope)
-    {
-        var paths = scope.InternalPaths.Where(path => path.StartPin == null || path.EndPin == null)
-            .Select(RerouteImportedRoutesStateCommand.CloneWithPins).ToList();
-        foreach (var vm in _canvas.Connections)
-        {
-            var connection = vm.Connection;
-            if (connection.RoutedPath == null) continue;
-            var path = new FrozenWaveguidePath
-            {
-                StartPin = connection.StartPin, EndPin = connection.EndPin,
-                Path = connection.RoutedPath.DeepCopy()
-            };
-            path.CaptureSettingsFrom(connection);
-            paths.Add(path);
-        }
-        return paths;
-    }
 
     private bool ContainsCurrentGroup(ComponentGroup target) =>
         _canvas.Components.Select(vm => vm.Component).OfType<ComponentGroup>()

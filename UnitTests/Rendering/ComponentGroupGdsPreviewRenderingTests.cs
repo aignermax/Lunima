@@ -27,6 +27,35 @@ public class ComponentGroupGdsPreviewRenderingTests
 {
     // World == pixels at zoom 1. Child bbox (20,20)..(80,60); the preview polygon covers
     // only the LEFT half of the footprint, so the right half shows the plain body fill.
+    [AvaloniaTheory]
+    [Xunit.InlineData(false)]
+    [Xunit.InlineData(true)]
+    public async Task TinyFootprint_DoesNotRequestInvisiblePreview(bool grouped)
+    {
+        var child = CreateChild();
+        var nazca = new Mock<NazcaComponentPreviewService>("py", "s.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
+        nazca.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LeftHalfPolygon());
+        var directory = Path.Combine(Path.GetTempPath(), "lunima-tiny-preview-" + Guid.NewGuid().ToString("N"));
+        var service = new GdsPreviewRenderService(nazca.Object, new GdsPreviewDiskCache(directory));
+        var canvas = new DesignCanvasViewModel();
+        if (grouped)
+        {
+            var group = new ComponentGroup("G");
+            group.AddChild(child);
+            canvas.AddComponent(group);
+        }
+        else canvas.AddComponent(child);
+        var rc = new CanvasRenderContext
+        {
+            ViewModel = canvas, InteractionState = new CanvasInteractionState(),
+            Zoom = 0.01, Bounds = new Rect(0, 0, 100, 80), GdsPreviewRenderService = service,
+        };
+        using var bitmap = new RenderTargetBitmap(new PixelSize(100, 80));
+        using (var ctx = bitmap.CreateDrawingContext()) new ComponentRenderer().Render(ctx, rc);
+        await service.WaitForPendingAsync();
+        nazca.Verify(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
     private const double ChildX = 20, ChildY = 20, ChildWidth = 60, ChildHeight = 40;
 
     private static readonly PixelRect PreviewRegion = new(24, 28, 20, 24);

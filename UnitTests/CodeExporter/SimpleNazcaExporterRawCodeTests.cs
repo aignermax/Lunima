@@ -32,6 +32,42 @@ public class SimpleNazcaExporterRawCodeTests : IDisposable
         if (Directory.Exists(_root)) Directory.Delete(_root, true);
     }
 
+    [Fact]
+    public void Export_OneDie_DoesNotLoadOtherDiesRawCode()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var selected = UnitTests.Dies.DieTestFixtures.Die("Selected", 0, 0, 100, 100);
+        var other = UnitTests.Dies.DieTestFixtures.Die("Other", 200, 0, 100, 100,
+            children: new[] { GdsComponent("wgA_1", 0, 0) });
+        canvas.AddComponent(selected);
+        canvas.AddComponent(other);
+        var template = GdsTemplate(WriteGds("other-die.gds"));
+
+        var script = new SimpleNazcaExporter().ExportAssembly(canvas, selected, library: new[] { template });
+
+        script.ShouldNotContain("other-die.gds");
+        script.ShouldNotContain("def component_wgA");
+    }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Export_DieWithGdsFactoryChild_OmitsItsPlacementAndDependencies(bool separateDie)
+    {
+        var canvas = new DesignCanvasViewModel();
+        var child = GdsComponent("gf_only_child", 0, 0);
+        child.GdsFactoryFunction = "gf.components.straight";
+        var die = UnitTests.Dies.DieTestFixtures.Die("Fabrication", 0, 0, 100, 100,
+            children: new[] { child });
+        canvas.AddComponent(die);
+        var warnings = new List<string>();
+        var script = new SimpleNazcaExporter().ExportAssembly(canvas, separateDie ? die : null,
+            library: new[] { GdsTemplate(Path.Combine(_root, "deleted.gds")) }, exportWarnings: warnings);
+
+        script.ShouldNotContain("# COORD: gf_only_child");
+        script.ShouldNotContain("component_wgA");
+        script.ShouldNotContain("def nazca_wga");
+        warnings.ShouldBeEmpty();
+    }
     // ── Inlining ─────────────────────────────────────────────────────────────
 
     [Fact]

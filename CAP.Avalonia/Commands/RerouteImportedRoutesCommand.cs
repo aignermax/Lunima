@@ -17,6 +17,7 @@ public sealed class RerouteImportedRoutesCommand : IUndoableCommand
     private readonly IReadOnlyList<WaveguideConnectionViewModel> _targets;
     private readonly Dictionary<WaveguideConnectionViewModel, RoutedPath> _frozenPaths = new();
     private readonly Dictionary<WaveguideConnectionViewModel, AsDrawnGeometry> _asDrawn = new();
+    private readonly Dictionary<WaveguideConnectionViewModel, double> _bendRadii = new();
 
     /// <summary>Initializes the command for the given frozen imported connections.</summary>
     /// <param name="canvas">The design canvas hosting the connections.</param>
@@ -43,10 +44,12 @@ public sealed class RerouteImportedRoutesCommand : IUndoableCommand
             if (!_frozenPaths.ContainsKey(target) && connection.RoutedPath is { } path)
             {
                 _frozenPaths[target] = path.DeepCopy();
+                _bendRadii[target] = connection.BendRadiusMicrometers;
                 if (connection.AsDrawnGeometry is { } asDrawn)
                     _asDrawn[target] = asDrawn;
             }
 
+            connection.PreserveImportedBendRadius();
             connection.IsRouteFrozen = false;
             // Incremental routing keeps any route whose endpoints still match, so the
             // frozen geometry must be dropped explicitly for the router to replace it.
@@ -66,6 +69,7 @@ public sealed class RerouteImportedRoutesCommand : IUndoableCommand
                 continue;
             // A private copy per undo so a later redo/undo cycle cannot alias the
             // restored live path with the stored snapshot.
+            target.Connection.BendRadiusMicrometers = _bendRadii[target];
             target.Connection.RestoreCachedPath(frozenPath.DeepCopy());
             target.Connection.IsRouteFrozen = true;
             if (_asDrawn.TryGetValue(target, out var asDrawn))

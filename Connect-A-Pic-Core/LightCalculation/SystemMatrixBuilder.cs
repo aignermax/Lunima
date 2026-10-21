@@ -182,6 +182,9 @@ namespace CAP_Core.LightCalculation
             if (component.PhysicalPins.Count == 0)
                 return;
 
+            if (component.SimulationModelStatus == "geometry-only")
+                throw new InvalidDataException($"Component '{component.Name}' is geometry-only; assign a simulation model first.");
+
             if (component.WaveLengthToSMatrixMap.Count > 0)
             {
                 // Use WavelengthInterpolator: exact match → linear interpolation → nearest-neighbour

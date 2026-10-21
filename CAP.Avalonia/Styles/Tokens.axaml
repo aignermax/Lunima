@@ -33,6 +33,7 @@
   <Color x:Key="Color.Success">#3DBE84</Color>
   <Color x:Key="Color.SuccessSubtle">#243DBE84</Color>
   <Color x:Key="Color.Warning">#F0B13E</Color>
+  <Color x:Key="Color.GdsSelection">#FFD166</Color>
   <Color x:Key="Color.WarningSubtle">#24F0B13E</Color>
   <Color x:Key="Color.Danger">#F2676E</Color>
   <Color x:Key="Color.DangerSubtle">#24F2676E</Color>
@@ -86,6 +87,7 @@
   <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource Color.Success}"/>
   <SolidColorBrush x:Key="Brush.Success.Subtle" Color="{StaticResource Color.SuccessSubtle}"/>
   <SolidColorBrush x:Key="Brush.Warning" Color="{StaticResource Color.Warning}"/>
+  <SolidColorBrush x:Key="Brush.GdsSelection" Color="{StaticResource Color.GdsSelection}"/>
   <SolidColorBrush x:Key="Brush.Warning.Subtle" Color="{StaticResource Color.WarningSubtle}"/>
   <SolidColorBrush x:Key="Brush.Danger" Color="{StaticResource Color.Danger}"/>
   <SolidColorBrush x:Key="Brush.Danger.Subtle" Color="{StaticResource Color.DangerSubtle}"/>

@@ -2,10 +2,10 @@ namespace CAP_DataAccess.Import.Gds;
 
 /// <summary>
 /// 2D affine transform as a 2×3 matrix mapping (x, y) to
-/// (A·x + B·y + C, D·x + E·y + F). Used by <see cref="GdsCellFlattener"/> to
-/// push cell-reference transforms down the hierarchy.
+/// (A·x + B·y + C, D·x + E·y + F). Shared by the flattener and hierarchical
+/// review renderer so reference, reflection and array placement semantics agree.
 /// </summary>
-internal readonly record struct GdsTransform(double A, double B, double C, double D, double E, double F)
+public readonly record struct GdsTransform(double A, double B, double C, double D, double E, double F)
 {
     /// <summary>The identity transform.</summary>
     public static GdsTransform Identity => new(1, 0, 0, 0, 1, 0);

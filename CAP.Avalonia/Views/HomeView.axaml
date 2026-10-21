@@ -249,6 +249,9 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         </Expander>
+                        <TextBlock Text="{loc:Localize Home.LearningExampleMissing}"
+                                   IsVisible="{Binding IsLearningExampleMissing}"
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
 
                     <!-- Shipped example designs in learning-path order; the one-line

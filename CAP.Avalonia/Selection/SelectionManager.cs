@@ -7,18 +7,21 @@ namespace CAP.Avalonia.Selection;
 /// Manages multi-selection state for components on the design canvas.
 /// Tracks selected components and provides operations on the selection group.
 /// </summary>
-public class SelectionManager
+public partial class SelectionManager
 {
     /// <summary>
     /// Currently selected components. Observable for UI binding.
     /// </summary>
-    public ObservableCollection<ComponentViewModel> SelectedComponents { get; } = new();
+    public ObservableCollection<ComponentViewModel> SelectedComponents { get; } = new SelectionCollection<ComponentViewModel>();
 
     /// <summary>
     /// Currently selected waveguide connections (issue #862): rubber-band selection collects
     /// optical connections here so the routing-style control can restyle them all at once.
     /// </summary>
-    public ObservableCollection<WaveguideConnectionViewModel> SelectedConnections { get; } = new();
+    public ObservableCollection<WaveguideConnectionViewModel> SelectedConnections { get; } = new SelectionCollection<WaveguideConnectionViewModel>();
+
+    /// <summary>Selected pin-less imported paths, separate from routable connections.</summary>
+    public ObservableCollection<CanvasFrozenPathViewModel> SelectedFrozenPaths { get; } = new SelectionCollection<CanvasFrozenPathViewModel>();
 
     /// <summary>
     /// Whether a box-selection drag is currently in progress.
@@ -111,12 +114,16 @@ public class SelectionManager
     /// </summary>
     public void ClearSelection()
     {
+        using var update = BeginUpdate();
         foreach (var comp in SelectedComponents)
         {
             comp.IsSelected = false;
         }
         SelectedComponents.Clear();
         ClearConnectionSelection();
+        foreach (var path in SelectedFrozenPaths)
+            path.IsSelected = false;
+        SelectedFrozenPaths.Clear();
     }
 
     /// <summary>
@@ -148,11 +155,13 @@ public class SelectionManager
         bool addToSelection = false,
         bool removeFromSelection = false)
     {
+        using var update = BeginUpdate();
         if (!addToSelection && !removeFromSelection)
         {
             ClearSelection();
         }
 
+        var selected = SelectedComponents.ToHashSet();
         foreach (var comp in allComponents)
         {
             if (Intersects(comp, rectMinX, rectMinY, rectMaxX, rectMaxY))
@@ -160,7 +169,7 @@ public class SelectionManager
                 if (removeFromSelection)
                 {
                     // Alt: Remove from selection
-                    if (SelectedComponents.Contains(comp))
+                    if (selected.Remove(comp))
                     {
                         SelectedComponents.Remove(comp);
                         comp.IsSelected = false;
@@ -169,7 +178,7 @@ public class SelectionManager
                 else
                 {
                     // Normal or Ctrl: Add to selection
-                    if (!SelectedComponents.Contains(comp))
+                    if (selected.Add(comp))
                     {
                         comp.IsSelected = true;
                         SelectedComponents.Add(comp);
@@ -274,6 +283,8 @@ public class SelectionManager
             return false;
         }
 
+        if (!component.Component.IsRoutingObstacle) return true;
+
         // For ComponentGroups, use specialized collision detection
         if (component.Component is CAP_Core.Components.Core.ComponentGroup group)
         {
@@ -296,11 +307,14 @@ public class SelectionManager
         {
             if (other == component) continue;
             if (SelectedComponents.Contains(other)) continue;
+            if (!other.Component.IsRoutingObstacle) continue;
 
-            if (other.Component is CAP_Core.Components.Core.ComponentGroup otherGroup)
+            if (other.Component is CAP_Core.Components.Core.ComponentGroup ||
+                other.Component.OutlinePolygons is { Count: > 0 } ||
+                component.Component.OutlinePolygons is { Count: > 0 })
             {
                 if (!footprintDetector.CanPlaceFootprint(x, y, component.Width, component.Height,
-                        new[] { otherGroup }, component.Component))
+                        new[] { other.Component }, component.Component))
                     return false;
                 continue;
             }

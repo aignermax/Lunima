@@ -74,6 +74,25 @@ public class GdsGeometryOnlyComponentTests : IDisposable
     // ── Service level: register, warn, store in the design scope ─────────────
 
     [Fact]
+    public async Task ExecuteAsync_UnlabelledPad_RemainsRoutingObstacle()
+    {
+        var outcome = await _host.CreateService().ImportAsync(
+            WriteGds(PinlessOnlyLibrary()), "TOP", null, null);
+        var canvas = new DesignCanvasViewModel();
+        canvas.InitializeAStarRouting(-20, -20, 100, 100);
+        await new GdsPlacementExecutor(canvas, null, () => _host.Templates.ToList())
+            .ExecuteAsync(GdsPlacementPlan.FromOutcome(outcome), groupImport: false);
+
+        var pad = canvas.Components.ShouldHaveSingleItem().Component;
+        pad.PhysicalPins.ShouldBeEmpty();
+        pad.IsRoutingObstacle.ShouldBeTrue("missing port metadata does not make physical geometry nonblocking");
+        var grid = canvas.Router.PathfindingGrid.ShouldNotBeNull();
+        var (x, y) = grid.PhysicalToGrid(pad.PhysicalX + pad.WidthMicrometers / 2,
+            pad.PhysicalY + pad.HeightMicrometers / 2);
+        grid.IsBlockedByComponent(x, y).ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task ImportAsync_GeometryOnlyCell_RegistersWithOutlinesWarningAndDesignScopedDraft()
     {
         var service = _host.CreateService();

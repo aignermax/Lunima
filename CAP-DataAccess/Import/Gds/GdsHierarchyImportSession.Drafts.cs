@@ -76,6 +76,8 @@ internal sealed partial class GdsHierarchyImportSession
     /// </summary>
     private IReadOnlyList<DetectedPin> GetBlackBoxPins(string cellName, GdsBoundingBox bbox)
     {
+        if (GetReviewedPins(cellName) is { } reviewed)
+            return reviewed;
         var flat = GetFlattened(cellName);
         var detectionCell = new FlattenedGdsCell { CellName = cellName };
         detectionCell.Polygons.AddRange(flat.Polygons);

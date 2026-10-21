@@ -117,6 +117,9 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public CanvasInteractionViewModel CanvasInteraction { get; }
 
+    /// <summary>Selection actions that expose embedded imported GDS children.</summary>
+    public GdsImport.GdsHierarchyActionsViewModel ImportedHierarchy { get; }
+
     /// <summary>Left icon rail: which section (library, hierarchy, PDKs) fills the left pane.</summary>
     public Shell.LeftRailViewModel LeftRail { get; } = new();
 
@@ -404,6 +407,9 @@ public partial class MainViewModel : ObservableObject
         // Design-scoped GDS imports (#830): save embeds them in the .lun, load
         // restores/migrates them, New Project clears them.
         FileOperations.DesignScopedGdsComponents = designScopedGdsComponents;
+        ImportedHierarchy = new GdsImport.GdsHierarchyActionsViewModel(_canvas, commandManager,
+            designScopedGdsComponents is null ? null : new Services.GdsImport.GdsHierarchyExpansionService(designScopedGdsComponents))
+        { ReportStatus = text => StatusText = text };
         // Per-layer visibility of imported GDS geometry (#858): edits mark the
         // design dirty, and save/load/new-project round-trip through the .lun.
         LayerVisibility = layerVisibility ?? new ViewModels.GdsImport.LayerVisibility.GdsLayerVisibilityViewModel(_canvas);
@@ -665,6 +671,7 @@ public partial class MainViewModel : ObservableObject
         // Wire up callbacks
         CanvasInteraction.OnSelectionChanged = comp =>
         {
+            ImportedHierarchy.ConfigureForSelection(comp);
             RightPanel.Sweep.ConfigureForComponent(comp, Canvas);
             RightPanel.TruthTable.ConfigureForSelection(comp, Canvas);
             RightPanel.MakeGate.ConfigureForSelection(comp, Canvas);

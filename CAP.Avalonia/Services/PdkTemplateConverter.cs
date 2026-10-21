@@ -110,7 +110,8 @@ public static class PdkTemplateConverter
         }
         else
         {
-            template.CreateSMatrix = pins => CreateSMatrixFromPdk(pins, pdkComp.SMatrix);
+            template.CreateSMatrix = pins => CreateSMatrixFromPdk(pins,
+                pdkComp.ImportedModelStatus == "geometry-only" ? new PdkSMatrixDraft() : pdkComp.SMatrix);
         }
 
         return template;

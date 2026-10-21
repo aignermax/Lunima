@@ -29,9 +29,9 @@ public partial class DesignCanvasViewModel
     private void InitializeRoutingForEditScope()
     {
         if (Dies?.ActiveDie != null)
-            Dies.ApplyScopeBounds();
+            _ = Dies.ApplyScopeBoundsInBackground();
         else
-            Routing.InitializeAStarRouting();
+            _ = Routing.ReinitializeDefaultRoutingInBackgroundAsync();
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public partial class DesignCanvasViewModel
             return;
         if (Dies.IsAssemblyRoot)
             RefreshDieInterfaces();
-        Dies.ApplyScopeBounds();
+        _ = Dies.ApplyScopeBoundsInBackground();
         NotifyDiesChanged();
         _ = RecalculateRoutesAsync();
     }

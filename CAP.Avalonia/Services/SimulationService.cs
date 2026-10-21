@@ -38,6 +38,11 @@ public class SimulationService
         if (canvas.Components.Count == 0)
             return SimulationResult.Empty("No components placed");
 
+        var unresolved = ImportedModelReadiness.FindUnresolved(canvas.Components.Select(c => c.Component));
+        if (unresolved.Count > 0)
+            return SimulationResult.Empty("Simulation unavailable: geometry-only imported components need models: "
+                + string.Join(", ", unresolved));
+
         // Check for connections: either external canvas connections OR internal paths in groups
         var hasConnections = canvas.Connections.Count > 0 || HasInternalPathsInGroups(canvas);
         if (!hasConnections)

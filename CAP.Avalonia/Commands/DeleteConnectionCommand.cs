@@ -16,6 +16,7 @@ public class DeleteConnectionCommand : IUndoableCommand
 
     /// <summary>The connection to remove on Execute and restore on Undo.</summary>
     private WaveguideConnection _target;
+    private bool _removed;
 
     public DeleteConnectionCommand(DesignCanvasViewModel canvas, WaveguideConnectionViewModel connectionVm)
     {
@@ -27,6 +28,7 @@ public class DeleteConnectionCommand : IUndoableCommand
 
     public void Execute()
     {
+        _removed = false;
         // Don't delete locked connections
         if (_target.IsLocked)
             return;
@@ -61,12 +63,16 @@ public class DeleteConnectionCommand : IUndoableCommand
         // binder syncs the remaining connection view-models).
         _canvas.ConnectionManager.RemoveConnectionDeferred(_target);
         _target = restoreTarget;
+        _removed = true;
 
         _ = _canvas.RecalculateRoutesAsync();
     }
 
     public void Undo()
     {
+        // A preceding component/crossing deletion in a mixed batch may already have
+        // removed this segment. A no-op must not resurrect it with orphaned endpoints.
+        if (!_removed) return;
         _canvas.RestoreConnectionAndViewModel(_target);
         _ = _canvas.RecalculateRoutesAsync();
     }

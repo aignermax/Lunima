@@ -55,6 +55,13 @@ public sealed class CrossingUndoJournal
         {
             if (_current.Value is not { } owner || owner.Generation != _historyGeneration) return;
             var command = owner.Command;
+            // Conversion snapshots include both root and group topology. Replaying these
+            // changes against the currently open group's manager would target another scope.
+            if (command is RerouteImportedRoutesStateCommand conversion)
+            {
+                conversion.RecordCrossingChange(change);
+                return;
+            }
             if (!_changes.TryGetValue(command, out var list))
                 _changes[command] = list = new List<CrossingChange>();
             list.Add(change);
@@ -80,6 +87,7 @@ public sealed class CrossingUndoJournal
                 _orders.Clear();
             }
             // A merged edit keeps the order from before its first part.
+            if (command is RerouteImportedRoutesStateCommand) return;
             if (!_changes.ContainsKey(command) && !_orders.ContainsKey(command))
                 _orders[command] = CrossingCanvasSync.SnapshotConnections(_canvas);
         }

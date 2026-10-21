@@ -41,6 +41,15 @@ public sealed record GdsLayerGeometryScene
     /// <summary>Bounding box over all polygons and text anchors, micrometers, Y-up.</summary>
     public GdsBoundingBox Bounds { get; init; }
 
+    /// <summary>True when the review preview omits geometry to stay within its rendering budget.</summary>
+    public bool IsLimited { get; init; }
+
+    /// <summary>
+    /// Complete hierarchy backing a bounded review sample. Native viewers render
+    /// each cell once and reuse it at reference placements rather than flattening arrays.
+    /// </summary>
+    public GdsReviewSceneBuilder? ReviewSource { get; init; }
+
     /// <summary>
     /// Flattens <paramref name="topCellName"/> and groups its geometry by
     /// (layer, datatype). Texts group by their texttype so the pairs line up

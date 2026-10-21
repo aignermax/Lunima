@@ -51,7 +51,9 @@ public partial class MainViewModel
     {
         var navigation = _learningNavigationVersion;
         var example = Home.Examples.FirstOrDefault(item => Path.GetFileName(item.FilePath) == ManufacturingTourViewModel.ExampleFileName);
-        if (example == null || !await FileOperations.OpenDesignAsCopyAsync(example.FilePath, () => navigation == _learningNavigationVersion)) return;
+        Home.IsLearningExampleMissing = example == null || !File.Exists(example.FilePath);
+        if (Home.IsLearningExampleMissing) return;
+        if (!await FileOperations.OpenDesignAsCopyAsync(example!.FilePath, () => navigation == _learningNavigationVersion)) return;
         if (navigation != _learningNavigationVersion) return;
         WorkspaceSwitch.Current = Workspaces.Workspace.Layout;
         ManufacturingTour.Start();

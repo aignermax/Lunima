@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Headless.XUnit;
 using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP_Core.Components.Core;
 using CAP_Core.Export;
@@ -200,6 +201,35 @@ public sealed class GdsPreviewRenderServiceTests
 
     // ── TryGetPreview — fallback behaviour ─────────────────────────────────
 
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AnalyzerPreview_UsesSchematicFallbackWithoutPythonFailure(bool placedComponent)
+    {
+        var backend = new Mock<NazcaComponentPreviewService>("python", "script.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
+        backend.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(NazcaPreviewResult.Fail("module 'nazca.demofab' has no attribute '__analyzer__'"));
+        var diskDir = Path.Combine(Path.GetTempPath(), "lunima-analyzer-" + Guid.NewGuid().ToString("N"));
+        var service = new GdsPreviewRenderService(backend.Object, new GdsPreviewDiskCache(diskDir));
+        var failures = new List<string>();
+        service.ReportPreviewFailure = failures.Add;
+        var component = TestComponentFactory.CreateComponentViewModel(
+            nazcaFunctionName: Component.AnalysisToolNazcaSentinel).Component;
+        component.NazcaModuleName = "nazca.demofab";
+
+        if (placedComponent)
+            service.TryGetPreview(component).ShouldBeNull();
+        else
+            service.TryGetGeometry(new GdsPreviewKey("nazca.demofab", "__analyzer__", null)).ShouldBeNull();
+        await service.WaitForPendingAsync();
+
+        service.HasUnavailablePreviews.ShouldBeFalse();
+        failures.ShouldBeEmpty();
+        backend.Verify(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(),
+            It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        Directory.Exists(diskDir).ShouldBeFalse();
+    }
+
     [Fact]
     public void TryGetPreview_ComponentWithoutNazcaFunction_ReturnsNull()
     {
@@ -301,7 +331,11 @@ public sealed class GdsPreviewRenderServiceTests
 
     private static NazcaPreviewResult Ok() => new()
     {
-        Success = true, XMin = 0, YMin = 0, XMax = 4, YMax = 2,
+        Success = true,
+        XMin = 0,
+        YMin = 0,
+        XMax = 4,
+        YMax = 2,
         Polygons = new List<NazcaPreviewPolygon>
         {
             new() { Layer = 1, Vertices = new List<(double, double)> { (0, 0), (4, 0), (4, 2) } }

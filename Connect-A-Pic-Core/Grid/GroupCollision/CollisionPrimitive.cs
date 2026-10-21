@@ -68,6 +68,15 @@ internal sealed class CollisionPrimitive
     /// <summary>Stamp used by the spatial index to report each primitive once per query.</summary>
     internal int QueryStamp { get; set; }
 
+    /// <summary>Exact imported outline, when the footprint is not a rectangle.</summary>
+    public IReadOnlyList<OutlinePoint>? Polygon { get; private init; }
+
+    public static CollisionPrimitive Outline(OutlineCollisionGeometry.PolygonBounds polygon,
+        Component owner, double deltaX, double deltaY) =>
+        new(false, polygon.MinX + deltaX, polygon.MinY + deltaY,
+            polygon.MaxX + deltaX, polygon.MaxY + deltaY, 0, owner)
+        { Polygon = OutlineCollisionGeometry.Shift(polygon.Points, deltaX, deltaY) };
+
     /// <summary>Creates the footprint rectangle of <paramref name="leaf"/> shifted by the given delta.</summary>
     public static CollisionPrimitive Footprint(Component leaf, double deltaX, double deltaY)
     {

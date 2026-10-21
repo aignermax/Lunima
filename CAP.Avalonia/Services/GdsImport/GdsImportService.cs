@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using CAP_DataAccess.Import.Gds.Interpretation;
 using CAP.Avalonia.Services.GdsImport.DesignScope;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
@@ -88,11 +90,14 @@ public sealed partial class GdsImportService
         // Parse (and census-count) on a thread-pool thread: the record loop is
         // CPU-bound and would otherwise pin the caller's (UI) context for the
         // whole file — the census is one more pass over every element.
-        var (library, layerCensus) = await Task.Run(async () =>
+        var (library, layerCensus, sourceBytes) = await Task.Run(async () =>
         {
-            var lib = await ReadLibraryAsync(gdsPath, ct).ConfigureAwait(false);
+            if (!File.Exists(gdsPath))
+                throw new FileNotFoundException($"GDS file not found: {gdsPath}", gdsPath);
+            var bytes = await File.ReadAllBytesAsync(gdsPath, ct).ConfigureAwait(false);
+            var lib = await ParseSnapshotAsync(bytes, gdsPath, ct).ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
-            return (lib, GdsLayerCensus.Build(lib));
+            return (lib, GdsLayerCensus.Build(lib), bytes);
         }, ct);
         var candidates = library.TopCellCandidates
             .Select(name => UnwrapPassThroughTopCell(library, name))
@@ -103,6 +108,8 @@ public sealed partial class GdsImportService
             throw new InvalidDataException(NoLayoutTopCellMessage(library, gdsPath));
         return new GdsImportAnalysis
         {
+            SourceBytes = sourceBytes,
+            SourceSha256 = Convert.ToHexString(SHA256.HashData(sourceBytes)),
             LibraryName = library.Name,
             CellCount = library.Cells.Count,
             TopCellCandidates = candidates,
@@ -209,10 +216,27 @@ public sealed partial class GdsImportService
         GdsHierarchyImportOptions? options = null,
         IProgress<string>? progress = null,
         CancellationToken ct = default,
-        GdsLibrary? preParsedLibrary = null)
+        GdsLibrary? preParsedLibrary = null,
+        GdsImportInterpretation? interpretation = null,
+        byte[]? sourceBytes = null)
     {
         options ??= new GdsHierarchyImportOptions();
-        options = WithOwnExportPinLayers(options);
+        interpretation ??= options.Interpretation;
+        if (interpretation is not null)
+        {
+            if (interpretation.Version != 1 || interpretation.TopCellName != topCellName)
+                throw new InvalidDataException("The interpretation version or top cell does not match this import.");
+            options = GdsLayerRoleMapping.Apply(options, interpretation.Layers) with
+            {
+                Interpretation = interpretation,
+                ResolveKnownComponent = _ => null,
+                ResolveKnownComponentCandidates = _ => Array.Empty<KnownComponent>(),
+            };
+        }
+        if (options.AllowAnyLayerLabelFallback)
+            options = WithOwnExportPinLayers(options);
+        var modelTemplates = interpretation is null ? Array.Empty<ComponentTemplate>()
+            : (_templateProvider?.Invoke() ?? Array.Empty<ComponentTemplate>()).ToArray();
 
         var warnings = new List<string>();
         var infos = new List<string>();
@@ -235,8 +259,9 @@ public sealed partial class GdsImportService
         // default width is likewise read here, on the caller's context.
         var processDefaultWidthUm = _processDefaultWidthProvider?.Invoke();
         var prepared = await Task.Run(
-            () => ParseAndPrepareAsync(gdsPath, topCellName, options, warnings, infos, progress, ct, preParsedLibrary, processDefaultWidthUm), ct);
+            () => ParseAndPrepareAsync(gdsPath, topCellName, options, warnings, infos, progress, ct, preParsedLibrary, processDefaultWidthUm, sourceBytes, modelTemplates), ct);
 
+        ct.ThrowIfCancellationRequested();
         if (prepared.PdkDrafts.Count > 0)
         {
             progress?.Report("Registering components in the library…");
@@ -246,6 +271,7 @@ public sealed partial class GdsImportService
                 GdsFileName = prepared.GdsFileName!,
                 GdsBytes = prepared.GdsBytes!,
                 Drafts = prepared.PdkDrafts,
+                Interpretation = prepared.Interpretation,
             });
         }
         else if (prepared.Import.ImportedCellDrafts.Count > 0)
@@ -255,6 +281,7 @@ public sealed partial class GdsImportService
 
         return new GdsImportOutcome
         {
+            Interpretation = prepared.Interpretation,
             TopCellName = prepared.Import.TopCellName,
             Mode = prepared.Import.Mode,
             RegisteredComponents = prepared.Registered,
@@ -284,13 +311,33 @@ public sealed partial class GdsImportService
         IProgress<string>? progress,
         CancellationToken ct,
         GdsLibrary? preParsedLibrary = null,
-        double? processDefaultWidthUm = null)
+        double? processDefaultWidthUm = null,
+        byte[]? sourceBytes = null,
+        IReadOnlyList<ComponentTemplate>? modelTemplates = null)
     {
         progress?.Report($"Reading '{Path.GetFileName(gdsPath)}'…");
-        var library = preParsedLibrary ?? await ReadLibraryAsync(gdsPath, ct);
+        if (sourceBytes is null && !File.Exists(gdsPath))
+            throw new FileNotFoundException($"GDS file not found: {gdsPath}", gdsPath);
+        sourceBytes ??= await File.ReadAllBytesAsync(gdsPath, ct).ConfigureAwait(false);
+        var sourceHash = Convert.ToHexString(SHA256.HashData(sourceBytes));
+        var interpretation = options.Interpretation;
+        if (interpretation is not null)
+        {
+            if (!string.IsNullOrEmpty(interpretation.SourceSha256)
+                && !string.Equals(interpretation.SourceSha256, sourceHash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("The source GDS changed since review. Analyze it again before applying.");
+            interpretation = interpretation with { SourceSha256 = sourceHash };
+            options = options with { Interpretation = interpretation };
+        }
+        var library = preParsedLibrary ?? await ParseSnapshotAsync(sourceBytes, gdsPath, ct);
         ValidateImportTarget(library, gdsPath, topCellName);
 
         progress?.Report($"Analyzing hierarchy of '{topCellName}'…");
+        if (interpretation is not null && options.Mode == GdsHierarchyImportMode.ExplodeHierarchy)
+        {
+            options = options with { SourceTopBoundingBox = new GdsCellFlattener(library).GetBoundingBox(topCellName) };
+            library = GdsInterpretationExpander.Expand(library, interpretation);
+        }
         var import = await GdsHierarchyImporter.ImportAsync(library, topCellName, options, ct);
 
         warnings.AddRange(import.Warnings);
@@ -309,7 +356,7 @@ public sealed partial class GdsImportService
         {
             progress?.Report("Embedding the GDS file into the design…");
             ct.ThrowIfCancellationRequested();
-            gdsBytes = await File.ReadAllBytesAsync(gdsPath, ct).ConfigureAwait(false);
+            gdsBytes = sourceBytes;
             gdsFileName = Path.GetFileName(gdsPath);
             pdkName = _designScope.ResolveAvailablePdkName(pdkName);
 
@@ -325,6 +372,8 @@ public sealed partial class GdsImportService
                 // the runtime path is substituted only into the registration
                 // copies (see DesignScopedGdsComponentService.AddAndRegister).
                 var pdkDraft = GdsCellDraftMapper.Map(cellDraft, GdsHierarchyImporter.GdsFileNameToken, warnings, processDefaultWidthUm);
+                if (interpretation is not null)
+                    ApplyReviewedModel(pdkDraft, cellDraft.CellName, interpretation, modelTemplates ?? Array.Empty<ComponentTemplate>());
                 pdkDraft.Name = DeduplicateName(pdkDraft.Name, cellDraft.CellName, usedNames, warnings);
                 pdkDrafts.Add(pdkDraft);
                 registered.Add(new GdsRegisteredComponent(cellDraft.CellName, pdkDraft.Name));
@@ -335,6 +384,7 @@ public sealed partial class GdsImportService
 
         return new PreparedImport
         {
+            Interpretation = interpretation,
             Import = import,
             PdkDrafts = pdkDrafts,
             Registered = registered,
@@ -351,6 +401,8 @@ public sealed partial class GdsImportService
     /// </summary>
     private sealed record PreparedImport
     {
+        public GdsImportInterpretation? Interpretation { get; init; }
+
         /// <summary>The hierarchy import result (drafts, instances, connections).</summary>
         public required GdsCircuitImport Import { get; init; }
 
@@ -400,16 +452,11 @@ public sealed partial class GdsImportService
 
     // ── Stages ───────────────────────────────────────────────────────────────
 
-    private static async Task<GdsLibrary> ReadLibraryAsync(string gdsPath, CancellationToken ct)
+    private static async Task<GdsLibrary> ParseSnapshotAsync(byte[] bytes, string gdsPath, CancellationToken ct)
     {
-        if (!File.Exists(gdsPath))
-            throw new FileNotFoundException($"GDS file not found: {gdsPath}", gdsPath);
-
         try
         {
-            await using var stream = new FileStream(
-                gdsPath, FileMode.Open, FileAccess.Read, FileShare.Read,
-                bufferSize: 81920, useAsync: true);
+            using var stream = new MemoryStream(bytes, writable: false);
             return await new GdsReader().ReadAsync(stream, ct).ConfigureAwait(false);
         }
         catch (InvalidDataException ex)
