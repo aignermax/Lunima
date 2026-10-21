@@ -169,6 +169,7 @@ def build_component(pdk, name):
         ori = getattr(p, "orientation", 0.0)
         pins.append({
             "name": p.name,
+            "portType": getattr(p, "port_type", "optical"),
             "offsetXMicrometers": round(x - left, 3),
             # Lunima pin offsets are measured from the bounding box TOP-left, y-down
             # (see docs/PDK_JSON_FORMAT.md). bottom-up ("y - bottom") only coincides for

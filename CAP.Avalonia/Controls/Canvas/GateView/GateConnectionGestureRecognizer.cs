@@ -96,7 +96,7 @@ internal sealed class GateConnectionGestureRecognizer(
     {
         if (start.IsOutput == target.IsOutput)
             return LocalizationService.Instance.Translate("GateView.ConnectDirection");
-        if (!PinKindHelper.AreKindsCompatible(start.Pin, target.Pin))
+        if (!PinKindHelper.ArePlanarRoutingCompatible(start.Pin, target.Pin))
             return PinKindHelper.DescribeIncompatibility(start.Pin, target.Pin);
         return PolarizationRules.CanConnect(start.Pin.Polarization, target.Pin.Polarization)
             ? null : PolarizationRules.GetMismatchMessage(start.Pin, target.Pin);

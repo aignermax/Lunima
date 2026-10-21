@@ -1,4 +1,9 @@
 {
+  "Load.VerticalPortConnectionsDropped": "{0} connection(s) skipped: vertical fiber ports cannot carry planar waveguides. See the error console.",
+  "Tutorial.Process.Title": "Learning process",
+  "Tutorial.Process.NewProjectBody": "This chapter uses Demo SOI 220nm. Start a separate learning project? You can save your current work before switching.",
+  "Tutorial.Process.Create": "Start learning project",
+  "Tutorial.Process.Keep": "Keep current project",
   "PythonStartup.Preparing": "Preparing Python previews in the background. You can keep working.",
   "PythonStartup.Working": "Python setup is already running in the background.",
   "PythonStartup.Failed": "Python setup could not finish. You can keep working and retry when ready.",

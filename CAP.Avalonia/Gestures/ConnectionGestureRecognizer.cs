@@ -45,6 +45,12 @@ public class ConnectionGestureRecognizer : IGestureRecognizer
         // the actual press.
         var pin = DesignCanvasHitTesting.HitTestPin(canvasPoint, canvas, _getZoom())
                   ?? canvas.HighlightedPin?.Pin;
+        if (pin != null && !pin.IsPlanarRoutable)
+        {
+            mainVm.StatusText = "Vertical fiber ports cannot connect to planar waveguides. Use the component's waveguide port.";
+            _invalidate();
+            return true;
+        }
         if (pin != null)
         {
             _state.WireRefusalHint = null;
@@ -101,7 +107,7 @@ public class ConnectionGestureRecognizer : IGestureRecognizer
             if (mainVm != null)
             {
                 mainVm.StatusText =
-                    !PinKindHelper.AreKindsCompatible(_state.ConnectionDragStartPin, targetPin)
+                    !PinKindHelper.ArePlanarRoutingCompatible(_state.ConnectionDragStartPin, targetPin)
                         ? PinKindHelper.DescribeIncompatibility(_state.ConnectionDragStartPin, targetPin)
                     : !PolarizationRules.CanConnect(_state.ConnectionDragStartPin.Polarization, targetPin.Polarization)
                         ? PolarizationRules.GetMismatchMessage(_state.ConnectionDragStartPin, targetPin)
@@ -130,7 +136,7 @@ public class ConnectionGestureRecognizer : IGestureRecognizer
                         ?? canvas.HighlightedPin?.Pin;
         bool isValidTarget = targetPin != null && targetPin != startPin;
 
-        if (isValidTarget && !PinKindHelper.AreKindsCompatible(startPin, targetPin!))
+        if (isValidTarget && !PinKindHelper.ArePlanarRoutingCompatible(startPin, targetPin!))
         {
             // Cross-domain connection (optical ↔ electrical) is physically meaningless — reject.
             if (mainVm != null)

@@ -75,6 +75,8 @@ public sealed class FacingPinPairFinder
     private static bool IsFacingPair(FacingPinCandidate a, FacingPinCandidate b, out double distance)
     {
         distance = 0;
+        if (!a.Pin.IsPlanarRoutable || !b.Pin.IsPlanarRoutable)
+            return false;
         if (a.IsElectrical != b.IsElectrical)
             return false;
         if (!AnglesOppose(a.AngleDegrees, b.AngleDegrees))

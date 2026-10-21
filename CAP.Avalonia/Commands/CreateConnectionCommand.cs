@@ -12,7 +12,7 @@ namespace CAP.Avalonia.Commands;
 /// Tracks and restores any connections that were overwritten.
 /// Cross-domain pairs (optical ↔ electrical) are rejected: <see cref="Execute"/> is a no-op
 /// for them — a defensive backstop. The UI connect paths (drag gesture, click-to-connect)
-/// pre-check <see cref="PinKindHelper.AreKindsCompatible"/> and do not issue this command for
+/// pre-check <see cref="PinKindHelper.ArePlanarRoutingCompatible"/> and do not issue this command for
 /// an incompatible pair (so no empty undo entry is created); this guard only catches a caller
 /// that skips that check.
 /// </summary>
@@ -70,7 +70,7 @@ public class CreateConnectionCommand : IUndoableCommand
     /// <summary>
     /// True when both pins belong to the same signal domain and may be connected.
     /// </summary>
-    public bool ArePinKindsCompatible => PinKindHelper.AreKindsCompatible(_startPin, _endPin);
+    public bool ArePinKindsCompatible => PinKindHelper.ArePlanarRoutingCompatible(_startPin, _endPin);
 
     public void Execute()
     {

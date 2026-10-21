@@ -66,7 +66,8 @@ internal sealed class OpticalTutorialState
         var pair = (from receiver in receivers
                     from start in source.Component.PhysicalPins.Where(p => !IsFacet(p))
                     from end in receiver.Component.PhysicalPins
-                    where !PinKindHelper.IsElectrical(start) && !PinKindHelper.IsElectrical(end)
+                    where start.IsPlanarRoutable && end.IsPlanarRoutable
+                        && !PinKindHelper.IsElectrical(start) && !PinKindHelper.IsElectrical(end)
                         && DieWiringPolicy.Evaluate(start, end).Verdict == DieWiringVerdict.Waveguide
                     let connected = connectedPins.Contains((start, end))
                     orderby connected descending, Distance(start, end)

@@ -62,6 +62,7 @@ public static class OverridePinMapper
             AngleDegrees = p.AngleDegrees,
             WaveguideWidthMicrometers = p.WaveguideWidthMicrometers,
             Layer = p.Layer,
+            PortType = p.PortType,
         }).ToList();
 
     /// <summary>
@@ -79,6 +80,10 @@ public static class OverridePinMapper
             .GroupBy(p => p.Name)
             .ToDictionary(g => g.Key, g => g.First().LogicalPin);
 
+        // Old saved overrides carry coordinates but no port type. Keep the updated
+        // template's role for matching pins instead of turning fiber ports into waveguides.
+        var portTypesByName = comp.PhysicalPins.GroupBy(p => p.Name)
+            .ToDictionary(g => g.Key, g => g.First().PortType);
         comp.PhysicalPins.Clear();
         foreach (var pd in pinData)
         {
@@ -92,6 +97,7 @@ public static class OverridePinMapper
                 LogicalPin = logicalByName.GetValueOrDefault(pd.Name),
                 WaveguideWidthMicrometers = pd.WaveguideWidthMicrometers,
                 Layer = pd.Layer,
+                PortType = pd.PortType ?? portTypesByName.GetValueOrDefault(pd.Name),
             });
         }
     }

@@ -451,7 +451,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
                 // loops, ring self-coupling, black-box GDS imports).
                 UpdateStatus?.Invoke("Cannot connect pin to itself");
             }
-            else if (!PinKindHelper.AreKindsCompatible(_connectionStartPin, pin))
+            else if (!PinKindHelper.ArePlanarRoutingCompatible(_connectionStartPin, pin))
             {
                 // Cross-domain connection (optical ↔ electrical) is physically meaningless — reject.
                 UpdateStatus?.Invoke(PinKindHelper.DescribeIncompatibility(_connectionStartPin, pin));

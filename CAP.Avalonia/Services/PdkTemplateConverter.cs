@@ -44,7 +44,7 @@ public static class PdkTemplateConverter
                 kind,
                 PolarizationRules.Resolve(p.Polarization, pdkComp.Name, pdkComp.NazcaFunction),
                 p.WaveguideWidthMicrometers ?? (isOptical ? opticalDefaults.WidthUm : null),
-                p.Layer ?? (isOptical ? opticalDefaults.Layer : null));
+                p.Layer ?? (isOptical ? opticalDefaults.Layer : null), p.PortType);
         }).ToArray();
 
         double nazcaOriginOffsetX = pdkComp.NazcaOriginOffsetX ?? 0;

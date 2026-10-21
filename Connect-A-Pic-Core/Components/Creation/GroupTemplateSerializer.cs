@@ -170,6 +170,7 @@ public static class GroupTemplateSerializer
             MatterType = p.MatterType,
             Polarization = p.LogicalPin?.Polarization.ToString(),
             WaveguideWidthMicrometers = p.WaveguideWidthMicrometers,
+            PortType = p.PortType,
             Layer = p.Layer
         }).ToList();
 
@@ -288,6 +289,7 @@ public static class GroupTemplateSerializer
                 AngleDegrees = p.AngleDegrees,
                 LogicalPin = logicalPin,
                 WaveguideWidthMicrometers = p.WaveguideWidthMicrometers,
+                PortType = p.PortType,
                 Layer = p.Layer
             };
         }).ToList();
@@ -760,6 +762,7 @@ public class PinDto
     /// Null in old prefab files — deserializes to the TE default.
     /// </summary>
     public string? Polarization { get; set; }
+    public string? PortType { get; set; }
 
     /// <summary>
     /// PDK-sourced waveguide width in µm at this pin (DRC-lite pin-mismatch rule).

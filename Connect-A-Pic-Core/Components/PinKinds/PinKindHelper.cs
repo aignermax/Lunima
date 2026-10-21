@@ -67,6 +67,10 @@ namespace CAP_Core.Components.PinKinds
         public static bool AreKindsCompatible(PhysicalPin first, PhysicalPin second)
             => IsElectrical(first.MatterType) == IsElectrical(second.MatterType);
 
+        /// <summary>Planar wires require two in-plane terminals in the same signal domain.</summary>
+        public static bool ArePlanarRoutingCompatible(PhysicalPin first, PhysicalPin second)
+            => first.IsPlanarRoutable && second.IsPlanarRoutable && AreKindsCompatible(first, second);
+
         /// <summary>True for the electrical domain; everything else (Light, None) is optical.</summary>
         private static bool IsElectrical(MatterType matterType)
             => matterType == MatterType.Electricity;
@@ -87,7 +91,9 @@ namespace CAP_Core.Components.PinKinds
         /// recognizers and click-to-connect) so the text can't drift between them (#519 review).
         /// </summary>
         public static string DescribeIncompatibility(PhysicalPin first, PhysicalPin second)
-            => $"Cannot connect {ToKindName(first.MatterType)} pin {first.Name} "
+            => !first.IsPlanarRoutable || !second.IsPlanarRoutable
+                ? "Vertical fiber ports cannot connect to planar waveguides. Use the component's waveguide port."
+                : $"Cannot connect {ToKindName(first.MatterType)} pin {first.Name} "
                + $"to {ToKindName(second.MatterType)} pin {second.Name}";
 
         /// <summary>

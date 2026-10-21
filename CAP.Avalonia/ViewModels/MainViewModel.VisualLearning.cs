@@ -41,13 +41,14 @@ public partial class MainViewModel
         StopLearningChapters();
         // File loads restore their own workspace, even when the saved design is empty.
         // Open-as-copy also still has its source path during ProjectOpened.
-        if (cameFromHome && FileOperations.CurrentFilePath == null && Canvas.Components.Count == 0 &&
+        if (!_choosingNewProjectProcess && !_preparingLearningProject && cameFromHome && FileOperations.CurrentFilePath == null && Canvas.Components.Count == 0 &&
             _guidancePreferences?.GetGuidedLearningEnabled() == true)
             StartVisualLearning();
     }
 
     private void StartVisualLearning()
     {
+        if (!PrepareFreshLearningProcess()) return;
         StopLearningChapters();
         Home.IsHomeVisible = false;
         WorkspaceSwitch.Current = Workspace.Layout;

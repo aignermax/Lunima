@@ -35,6 +35,9 @@ public class FirstGateVisualJourneyTests
         Assert.True(overlay.Demonstrate);
         await Task.Delay(180);
         UiInput.RunJobs();
+        Assert.Equal("FirstGateStartButton", tour.CurrentTargetName);
+        Assert.True(overlay.FindControl<Control>("GuidePointer")!.IsVisible);
+        Save("start");
         UiInput.Click(window, UiInput.Descendants<Button>(window).Single(b => b.Name == "FirstGateStartButton"));
         Assert.Equal(1, tour.CurrentStepIndex);
 

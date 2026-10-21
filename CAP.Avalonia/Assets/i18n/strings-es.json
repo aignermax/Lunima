@@ -1,4 +1,9 @@
 {
+  "Load.VerticalPortConnectionsDropped": "Se omitieron {0} conexiones: los puertos verticales de fibra no admiten guías de onda en el plano del chip. Consulta la consola de errores.",
+  "Tutorial.Process.Title": "Proceso de aprendizaje",
+  "Tutorial.Process.NewProjectBody": "Este capítulo usa Demo SOI 220nm. ¿Iniciar un proyecto de aprendizaje independiente? Puedes guardar tu trabajo actual antes de cambiar.",
+  "Tutorial.Process.Create": "Iniciar proyecto de aprendizaje",
+  "Tutorial.Process.Keep": "Conservar proyecto actual",
   "PythonStartup.Preparing": "Preparando las vistas previas de Python en segundo plano. Puede seguir trabajando.",
   "PythonStartup.Working": "La configuración de Python ya se está ejecutando en segundo plano.",
   "PythonStartup.Failed": "No se pudo completar la configuración de Python. Puede seguir trabajando y volver a intentarlo.",

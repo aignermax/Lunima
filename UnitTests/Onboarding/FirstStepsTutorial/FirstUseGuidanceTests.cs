@@ -27,6 +27,8 @@ public class FirstUseGuidanceTests
     public async Task ReplacingProject_AndResumingLearning_StopOtherChapters()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
+        vm.FileOperations.SetActiveProcess(CAP_Core.Components.Process.ActiveProcessSelection.ForGroup(
+            vm.FileOperations.ProcessCatalogProvider!().Single(g => g.MemberPdkNames.Contains("Demo PDK"))), markDirty: false);
         vm.Canvas.AddComponent(TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins());
         vm.FirstGateTour.Start();
         vm.WatchTour.Start();
@@ -79,6 +81,8 @@ public class FirstUseGuidanceTests
     public async Task ExplicitResume_PreservesExistingWork()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
+        vm.FileOperations.SetActiveProcess(CAP_Core.Components.Process.ActiveProcessSelection.ForGroup(
+            vm.FileOperations.ProcessCatalogProvider!().Single(g => g.MemberPdkNames.Contains("Demo PDK"))), markDirty: false);
         var part = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         vm.Canvas.AddComponent(part);
         await vm.Home.LearnTutorialCommand.ExecuteAsync(null);

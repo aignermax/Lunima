@@ -32,10 +32,10 @@
     <Ellipse x:Name="GuideDestination" Stroke="{DynamicResource Brush.Success}" StrokeThickness="2"
              Width="14" Height="14" IsVisible="False" IsHitTestVisible="False"/>
     <Ellipse x:Name="GuideClick" Stroke="{DynamicResource Brush.Success}" StrokeThickness="2"
-             IsVisible="False" IsHitTestVisible="False"/>
+             IsVisible="False" IsHitTestVisible="False" ZIndex="1"/>
     <Path x:Name="GuidePointer" Data="M1,1 L1,28 L8,21 L14,33 L20,30 L14,19 L25,19 Z"
           Fill="{DynamicResource Brush.Text.Primary}" Stroke="{DynamicResource Brush.Success}"
-          StrokeThickness="2" IsVisible="False" IsHitTestVisible="False"/>
+          StrokeThickness="2" IsVisible="False" IsHitTestVisible="False" ZIndex="1"/>
     <ContentControl x:Name="CardHost" IsHitTestVisible="True"/>
     <Button x:Name="GuideShowTarget" IsVisible="False"
             Content="{loc:Localize Tutorial.ShowTarget}" Click="ShowTarget_Click"/>

@@ -16,6 +16,10 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
+        /// <summary>Source port type (e.g. optical, vertical_te, vertical_tm); absent values retain legacy planar routing.</summary>
+        [JsonPropertyName("portType")]
+        public string? PortType { get; set; }
+
         /// <summary>
         /// X offset from the component origin in micrometers.
         /// </summary>

@@ -1,4 +1,9 @@
 {
+  "Load.VerticalPortConnectionsDropped": "{0} 件の接続をスキップしました。垂直ファイバーポートはチップ面内の導波路に接続できません。詳細はエラーコンソールを確認してください。",
+  "Tutorial.Process.Title": "学習用プロセス",
+  "Tutorial.Process.NewProjectBody": "この章では Demo SOI 220nm を使用します。別の学習プロジェクトを開始しますか？切り替える前に現在の作業を保存できます。",
+  "Tutorial.Process.Create": "学習プロジェクトを開始",
+  "Tutorial.Process.Keep": "現在のプロジェクトを保持",
   "PythonStartup.Preparing": "Python プレビューをバックグラウンドで準備しています。作業を続けられます。",
   "PythonStartup.Working": "Python のセットアップはバックグラウンドで実行中です。",
   "PythonStartup.Failed": "Python のセットアップを完了できませんでした。作業を続けながら、後で再試行できます。",

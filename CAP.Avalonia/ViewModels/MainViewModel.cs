@@ -985,6 +985,8 @@ public partial class MainViewModel : ObservableObject
         var p = FileOperations.ActiveProcess;
         UpdateActiveProcessLabel(p);
         LeftPanel.ApplyActiveProcess(p);
+        if (Tutorial?.IsActive == true && !HasLearningProcess)
+            Tutorial.Skip();
     }
 
     /// <summary>
@@ -1092,16 +1094,6 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private async Task SaveDesign() => await FileOperations.SaveDesignCommand.ExecuteAsync(null);
-
-    /// <summary>
-    /// Starts or resumes guidance in the current design without discarding work.
-    /// </summary>
-    private Task StartVisualTutorialAsync()
-    {
-        _guidancePreferences?.SetGuidedLearningEnabled(true);
-        StartVisualLearning();
-        return Task.CompletedTask;
-    }
 
     /// <summary>
     /// Starts the "Watch it compute" tour on the shipped Counter example (Home
@@ -1232,11 +1224,15 @@ public partial class MainViewModel : ObservableObject
         // usable success signal: the canvas can already be empty while the user cancels
         // the unsaved-changes prompt, and showing the picker then would overwrite the
         // process of a design the user explicitly chose to keep (issue #570).
-        var created = await FileOperations.TryNewProjectAsync();
-        if (!created)
-            return;
-
-        await PickAndApplyProcessAsync();
+        _choosingNewProjectProcess = true;
+        try
+        {
+            if (!await FileOperations.TryNewProjectAsync()) return;
+            await PickAndApplyProcessAsync();
+        }
+        finally { _choosingNewProjectProcess = false; }
+        if (HasLearningProcess && _guidancePreferences?.GetGuidedLearningEnabled() == true)
+            StartVisualLearning();
     }
 
     /// <summary>
@@ -1246,7 +1242,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task PromptForInitialProcessAsync()
     {
-        if (FileOperations.ActiveProcess != null)
+        if (_choosingNewProjectProcess || _preparingLearningProject || FileOperations.ActiveProcess != null)
             return;   // a design (with its process) is already established
 
         await PickAndApplyProcessAsync();

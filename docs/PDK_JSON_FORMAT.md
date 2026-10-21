@@ -238,6 +238,7 @@ and never appear in the process picker.
 | `offsetXMicrometers` | Yes | X position relative to the bounding box **top-left** corner (µm), increasing right |
 | `offsetYMicrometers` | Yes | Y position relative to the bounding box **top-left** corner (µm), increasing **down** |
 | `angleDegrees` | Yes | Port direction: `0`=right, `90`=up, `180`=left, `270`=down |
+| `portType` | No | Source port type. `"vertical_te"` and `"vertical_tm"` identify fiber terminals: retained for simulation, but unavailable for planar waveguide routing. Absent values keep legacy planar routing. |
 | `pinKind` | No | Signal domain: `"Optical"` (default when absent) or `"Electrical"`. Electrical pins (heater/modulator contacts, detector anode/cathode, bond pads) can only be connected to other electrical pins — never to optical ports — and are excluded from the optical S-matrix and the optical (Nazca/gdsfactory/photontorch) export. |
 | `waveguideWidthMicrometers` | No | Waveguide width at this pin (µm), used by the DRC-lite pin-mismatch design check. When absent, optical pins inherit the width of the process' first optical `xsections` entry; when neither exists the value stays unset and the check stays silent for this pin. |
 | `layer` | No | GDS layer number of this pin's waveguide, used by the DRC-lite pin-mismatch design check. When absent, optical pins inherit the layer of the process' default optical cross-section (resolved via the process `layers` stack). |
