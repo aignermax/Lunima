@@ -312,8 +312,9 @@ public partial class DesignCanvasViewModel : ObservableObject
         ComponentViewModel? excludeComponent = null)
         => Placement.CanPlaceComponent(x, y, width, height, excludeComponent);
 
-    public (double x, double y)? FindValidPlacement(double x, double y, double width, double height)
-        => Placement.FindValidPlacement(x, y, width, height);
+    public (double x, double y)? FindValidPlacement(double x, double y, double width, double height,
+        ComponentViewModel? candidate = null)
+        => Placement.FindValidPlacement(x, y, width, height, candidate);
 
     // ── Group editing delegation ──────────────────────────────────────────
 

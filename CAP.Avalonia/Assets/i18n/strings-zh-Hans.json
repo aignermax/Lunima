@@ -2386,5 +2386,11 @@
   "Dies.Export.Summary": "已导出 {0} 个 Nazca 脚本、{1} 个 GDS 文件",
   "Dies.Export.GdsSkipped": " — 已跳过 GDS",
   "Dies.Export.Failures": "；{0} 项失败：{1}",
-  "GdsReview.OccurrenceLimit": "此大型层级中的单个部件选择有数量限制。其余部件仍会原样导入。"
+  "GdsReview.OccurrenceLimit": "此大型层级中的单个部件选择有数量限制。其余部件仍会原样导入。",
+  "GdsSelection.PreservedRoute": "保留的 GDS 路由",
+  "GdsSelection.SourceCell": "导入的 GDS 单元",
+  "GdsSelection.ExpandHint": "展开原始子单元，以便单独移动和编辑。撤销可恢复此单元。",
+  "GdsSelection.Expand": "拆分为原始组件",
+  "GdsSelection.Preparing": "正在读取源层次结构…",
+  "GdsSelection.Expanded": "已展开原始组件。撤销可恢复原始单元。"
 }

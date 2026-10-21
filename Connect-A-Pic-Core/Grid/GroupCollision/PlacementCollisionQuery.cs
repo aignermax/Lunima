@@ -98,6 +98,18 @@ internal sealed class PlacementCollisionQuery
     /// <summary>True when the two primitives violate the placement clearance rules.</summary>
     internal static bool Collides(CollisionPrimitive a, CollisionPrimitive b)
     {
+        if (a.Polygon is not null || b.Polygon is not null)
+        {
+            var (polygon, other) = a.Polygon is not null ? (a, b) : (b, a);
+            if (other.Polygon is not null)
+                return OutlineCollisionGeometry.WithinDistance(polygon.Polygon!, other.Polygon,
+                    MinComponentGapMicrometers, polygon.Owner!);
+            double distance = other.IsWaveguide
+                    ? OutlineCollisionGeometry.ToSegment(polygon.Polygon!, other.Ax, other.Ay, other.Bx, other.By)
+                    : OutlineCollisionGeometry.ToRectangle(polygon.Polygon!, other.MinX, other.MinY, other.MaxX, other.MaxY);
+            return distance < (other.IsWaveguide
+                ? other.HalfWidth + MinWaveguideSpacingMicrometers : MinComponentGapMicrometers);
+        }
         if (!a.IsWaveguide && !b.IsWaveguide)
         {
             double gap = MinComponentGapMicrometers;

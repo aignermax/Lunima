@@ -201,10 +201,11 @@ public class ComponentPlacementService
         foreach (var comp in _components)
         {
             if (comp == excludeComponent || !comp.Component.IsRoutingObstacle) continue;
-            if (comp.Component is ComponentGroup group)
+            if (comp.Component is ComponentGroup || comp.Component.OutlinePolygons is { Count: > 0 } ||
+                excludeComponent?.Component.OutlinePolygons is { Count: > 0 })
             {
-                // A group blocks with its parts and waveguides, never with its bounding box.
-                groupObstacles.Add(group);
+                // Imported cells, like groups, may contain usable space inside their bounds.
+                groupObstacles.Add(comp.Component);
                 continue;
             }
             if (IsDragging && excludeComponent is not null &&
@@ -223,12 +224,13 @@ public class ComponentPlacementService
     /// <summary>
     /// Finds a valid position near the requested position if the exact position overlaps.
     /// </summary>
-    public (double x, double y)? FindValidPlacement(double x, double y, double width, double height)
+    public (double x, double y)? FindValidPlacement(double x, double y, double width, double height,
+        ComponentViewModel? candidate = null)
     {
         x = Math.Max(ChipMinX, Math.Min(x, ChipMaxX - width));
         y = Math.Max(ChipMinY, Math.Min(y, ChipMaxY - height));
 
-        if (CanPlaceComponent(x, y, width, height))
+        if (CanPlaceComponent(x, y, width, height, candidate))
             return (x, y);
 
         double searchStep = 50;
@@ -240,7 +242,7 @@ public class ComponentPlacementService
             {
                 double testX = x + radius * Math.Cos(angle * Math.PI / 180);
                 double testY = y + radius * Math.Sin(angle * Math.PI / 180);
-                if (CanPlaceComponent(testX, testY, width, height))
+                if (CanPlaceComponent(testX, testY, width, height, candidate))
                     return (testX, testY);
             }
         }

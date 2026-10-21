@@ -17,6 +17,8 @@ public partial class PathfindingGrid
     {
         private readonly int _width;
         private readonly int _height;
+        private readonly OutlineRasterRows? _outlineBody;
+        private readonly OutlineRasterRows? _outlinePadded;
 
         public ComponentFootprint(
             Component owner,
@@ -24,7 +26,9 @@ public partial class PathfindingGrid
             (int X1, int Y1, int X2, int Y2) body,
             HashSet<(int, int)> corridorCells,
             int gridWidth,
-            int gridHeight)
+            int gridHeight,
+            OutlineRasterRows? outlineBody = null,
+            OutlineRasterRows? outlinePadded = null)
         {
             Owner = owner;
             Padded = padded;
@@ -32,6 +36,8 @@ public partial class PathfindingGrid
             CorridorCells = corridorCells;
             _width = gridWidth;
             _height = gridHeight;
+            _outlineBody = outlineBody;
+            _outlinePadded = outlinePadded;
         }
 
         /// <summary>The component that blocks these cells.</summary>
@@ -53,6 +59,11 @@ public partial class PathfindingGrid
             if (x < Padded.X1 || x > Padded.X2 || y < Padded.Y1 || y > Padded.Y2) return false;
             if (x < 0 || y < 0 || x >= _width || y >= _height) return false;
             if (CorridorCells.Contains((x, y))) return false;
+            if (_outlinePadded is not null)
+            {
+                isBody = _outlineBody!.Contains(x, y);
+                return _outlinePadded.Contains(x, y);
+            }
             isBody = x >= Body.X1 && x <= Body.X2 && y >= Body.Y1 && y <= Body.Y2;
             return true;
         }
@@ -60,6 +71,12 @@ public partial class PathfindingGrid
         /// <inheritdoc/>
         public IEnumerator<(int x, int y)> GetEnumerator()
         {
+            if (_outlinePadded is not null)
+            {
+                foreach (var cell in _outlinePadded.Cells())
+                    if (!CorridorCells.Contains(cell)) yield return cell;
+                yield break;
+            }
             int x1 = Math.Max(0, Padded.X1), x2 = Math.Min(_width - 1, Padded.X2);
             int y1 = Math.Max(0, Padded.Y1), y2 = Math.Min(_height - 1, Padded.Y2);
             for (int x = x1; x <= x2; x++)

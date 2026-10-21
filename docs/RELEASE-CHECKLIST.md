@@ -316,6 +316,10 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 19. Performance & stability
 
+- [ ] Import a hierarchical GDS without expanding its cells. Place and route through empty space inside an outlined cell; actual polygon bodies and their clearance remain blocked, including after rotation/mirroring. Check single/multiple drag and library placement previews.
+- [ ] Select an imported cell and use the visible canvas action to split into source components. Own-cell geometry, layers, ports and collision occupancy survive; Undo/Redo and save/reload preserve the result. Unsupported/connected cells explain the refusal without changing the design.
+- [ ] Select a preserved imported route: the conversion action is visible over the canvas without opening a context menu. Conversion remains explicit; Undo restores original source polygons.
+
 - [ ] No `[RelayCommand]` on `MainViewModel` blocks the UI thread longer than 100 ms against the shipped 4-bit-adder example. `(auto: ResponsivenessBudgetTests)`
 - [ ] Large design (> 500 components) opens without UI hangs. `(manual)`
 - [ ] Memory usage remains stable after repeated open/save cycles. `(manual)`

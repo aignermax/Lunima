@@ -2386,5 +2386,11 @@
   "Dies.Export.Summary": "Exported {0} Nazca script(s), {1} GDS file(s)",
   "Dies.Export.GdsSkipped": " — GDS skipped",
   "Dies.Export.Failures": "; {0} failed: {1}",
-  "GdsReview.OccurrenceLimit": "Individual selection is limited in this very large hierarchy. Parts outside the limit still import unchanged."
+  "GdsReview.OccurrenceLimit": "Individual selection is limited in this very large hierarchy. Parts outside the limit still import unchanged.",
+  "GdsSelection.PreservedRoute": "Preserved GDS route",
+  "GdsSelection.SourceCell": "Imported GDS cell",
+  "GdsSelection.ExpandHint": "Expose the original child cells to move and edit them separately. Undo restores this cell.",
+  "GdsSelection.Expand": "Split into source components",
+  "GdsSelection.Preparing": "Reading source hierarchy…",
+  "GdsSelection.Expanded": "Source components exposed. Undo restores the original cell."
 }

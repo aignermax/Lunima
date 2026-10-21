@@ -9,7 +9,7 @@ namespace CAP.Avalonia.Commands;
 /// Unfreezes internal paths and restores waveguide connections.
 /// Preserves object identity across undo/redo cycles to prevent shadow components.
 /// </summary>
-public class UngroupCommand : IUndoableCommand
+public partial class UngroupCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly ComponentGroup _group;
@@ -68,6 +68,7 @@ public class UngroupCommand : IUndoableCommand
             // 2. Convert frozen paths back to WaveguideConnections
             _restoredConnectionViewModels.Clear();
             _releasedFrozenPathViewModels.Clear();
+            ReleaseBackgroundOutlines();
             foreach (var frozenPath in _group.InternalPaths)
             {
                 // Pin-less frozen geometry (GDS-imported route outlines) has no pins

@@ -54,6 +54,16 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
 
     public class PdkComponentDraft
     {
+        /// <summary>Original embedded GDS cell for expanded template variants.</summary>
+        [JsonPropertyName("importedSourceCellName")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ImportedSourceCellName { get; set; }
+
+        /// <summary>True for the own polygons of a source cell, excluding its references.</summary>
+        [JsonPropertyName("importedOwnGeometryOnly")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool ImportedOwnGeometryOnly { get; set; }
+
         /// <summary>Explicit imported model readiness; null preserves legacy component behavior.</summary>
         [JsonPropertyName("importedModelStatus")]
         public string? ImportedModelStatus { get; set; }

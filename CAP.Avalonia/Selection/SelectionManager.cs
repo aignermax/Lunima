@@ -280,6 +280,8 @@ public class SelectionManager
             return false;
         }
 
+        if (!component.Component.IsRoutingObstacle) return true;
+
         // For ComponentGroups, use specialized collision detection
         if (component.Component is CAP_Core.Components.Core.ComponentGroup group)
         {
@@ -302,11 +304,14 @@ public class SelectionManager
         {
             if (other == component) continue;
             if (SelectedComponents.Contains(other)) continue;
+            if (!other.Component.IsRoutingObstacle) continue;
 
-            if (other.Component is CAP_Core.Components.Core.ComponentGroup otherGroup)
+            if (other.Component is CAP_Core.Components.Core.ComponentGroup ||
+                other.Component.OutlinePolygons is { Count: > 0 } ||
+                component.Component.OutlinePolygons is { Count: > 0 })
             {
                 if (!footprintDetector.CanPlaceFootprint(x, y, component.Width, component.Height,
-                        new[] { otherGroup }, component.Component))
+                        new[] { other.Component }, component.Component))
                     return false;
                 continue;
             }

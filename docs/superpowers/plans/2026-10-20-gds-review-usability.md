@@ -238,3 +238,45 @@ are weak references so bitmap residency does not retain unloaded source geometry
 Source changes, translations and layer visibility invalidate images. The cache is
 bounded by pixels, entry count and image dimensions, and falls back to individually
 culled rendering where necessary. Original polygon masks remain exact for export.
+
+## Imported cell occupancy and post-import hierarchy (2026-10-21)
+
+Treat a flat imported component with outlines as occupied polygons rather than its
+outer rectangle in routing, placement, drag, multiselection and placement preview.
+Keep broad-phase bounds; cache transformed polygons and raster row spans so precise
+checks do not rewalk large source geometry on every pointer event. Pin escape must
+not tunnel through separate solid geometry. Keep the existing rendering LOD intact.
+
+Expose original embedded GDS child references through one cancellable preparation
+and one undoable replacement. Preserve pose, reflection, source masks, layer/datatype,
+parent interface metadata and own-cell geometry. Refuse unsupported source transforms
+or ambiguous interface mappings before mutation. Preserve source identity and any
+interface aliases in design-scoped templates so save/load and later expansion work.
+
+Placement: a compact contextual canvas action appears on selection, with a matching
+context-menu entry. This serves Peter's direct manipulation and Priya's own-GDS
+workflow, while making the action discoverable for Jonas without a modal tutorial.
+The preserved-route conversion uses the same surface; it remains explicit and undoable.
+
+Verify synthetic concave/internal-port cases, transformed hierarchy round trips,
+residual occupancy, stale/cancelled preparation, and the user's local EAM source.
+The private source and derived screenshots stay outside the repository. Obtain an
+independent code review before committing, and address its preservation/performance findings.
+
+Verification: 1,005 focused import, placement, collision, routing, rendering, UI and
+localization tests passed through smart_test.py. The local source probe expands the
+large assembly into 88 source/own-geometry components and compares every polygon in
+world coordinates and all eight original interface pins, then checks undo. Preparation
+took 208 ms off-thread; the atomic apply took 310 ms and undo 17 ms in the headless
+probe. Applying a large expansion can therefore still briefly block the UI; it is not
+a constant-time interaction. New tests cover cached dense outlines, spatial edge
+queries, actual external-to-inner-facet routing, persisted port aliases and unmatched
+parent-owned interfaces. Existing .lun frozen-mask persistence quantizes to 0.001 µm.
+
+Default grouped imports retain their own background masks when ungrouped. Backgrounds
+are released before internal route masks to retain painter order. Missing VM source
+metadata after ungroup resolves only when the embedded source template is unambiguous.
+Externally connected cells, unsupported magnification and ambiguous ports refuse
+expansion before changing the design. Flat source cells without child references do
+not acquire invented components. Auxiliary physical layer meaning is not inferred by
+the collision code: existing background flags stay nonblocking; other outlines block.

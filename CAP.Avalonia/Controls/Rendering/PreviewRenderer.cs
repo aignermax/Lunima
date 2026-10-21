@@ -11,6 +11,8 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// </summary>
 public sealed class PreviewRenderer : ICanvasRenderer
 {
+    private ViewModels.Library.ComponentTemplate? _previewTemplate;
+    private ComponentViewModel? _previewCandidate;
     /// <inheritdoc/>
     public void Render(DrawingContext context, CanvasRenderContext rc)
     {
@@ -33,14 +35,22 @@ public sealed class PreviewRenderer : ICanvasRenderer
             DrawSelectionRectangle(context, vm.Selection);
     }
 
-    private static void DrawPlacementPreview(DrawingContext context, CanvasInteractionState state, DesignCanvasViewModel vm)
+    private void DrawPlacementPreview(DrawingContext context, CanvasInteractionState state, DesignCanvasViewModel vm)
     {
         var template = state.PlacementPreviewTemplate!;
         double width = template.WidthMicrometers;
         double height = template.HeightMicrometers;
         double x = state.PlacementPreviewPosition.X - width / 2;
         double y = state.PlacementPreviewPosition.Y - height / 2;
-        bool canPlace = vm.CanPlaceComponent(x, y, width, height);
+        if (!ReferenceEquals(_previewTemplate, template) ||
+            !ReferenceEquals(_previewCandidate?.Component.OutlinePolygons, template.OutlinePolygons) ||
+            (_previewCandidate is not null && (_previewCandidate.Width != width || _previewCandidate.Height != height)))
+        {
+            _previewTemplate = template;
+            _previewCandidate = template.OutlinePolygons is { Count: > 0 }
+                ? new ComponentViewModel(ViewModels.Library.ComponentTemplates.CreateFromTemplate(template, 0, 0)) : null;
+        }
+        bool canPlace = vm.CanPlaceComponent(x, y, width, height, _previewCandidate);
 
         var (fillColor, borderColor) = GetPlacementColors(canPlace, 50, 200);
         var rect = new Rect(x, y, width, height);

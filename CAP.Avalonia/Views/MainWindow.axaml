@@ -1199,6 +1199,10 @@
                                    MainViewModel="{Binding}">
                 <controls:DesignCanvas.ContextMenu>
                 <ContextMenu>
+                    <MenuItem Header="{loc:Localize GdsSelection.Expand}"
+                              Command="{Binding ImportedHierarchy.ExpandCommand}"
+                              IsVisible="{Binding ImportedHierarchy.IsVisible}"
+                              ToolTip.Tip="{loc:Localize GdsSelection.ExpandHint}"/>
                     <MenuItem Header="{loc:Localize Routing.Reroute.ConvertToEditable}"
                               Command="{Binding BottomPanel.RerouteImported.RerouteSelectedCommand}"
                               IsVisible="{Binding BottomPanel.RerouteImported.HasSelectedDrawnRoute}"
@@ -1266,6 +1270,9 @@
 
             <!-- Workspace tint (~6 % alpha) and hairline edge over the canvas; hit-test invisible. -->
             <Border x:Name="WorkspaceCanvasTint" Classes="wsCanvasTint"/>
+
+            <panels:ImportedSelectionActions HorizontalAlignment="Center"
+                                             VerticalAlignment="Top" Margin="12"/>
 
             <!-- Mode-probe flyout: non-modal, anchored at the probe click point.
                  The overlay Canvas has no background, so canvas interaction stays live. -->
