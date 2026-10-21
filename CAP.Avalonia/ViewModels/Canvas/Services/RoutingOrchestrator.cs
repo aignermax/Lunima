@@ -191,7 +191,14 @@ public partial class RoutingOrchestrator
     /// Cancels the currently running routing pass (status-bar Stop button). Already-routed
     /// connections keep their new routes; the pass reports how far it got.
     /// </summary>
-    public void CancelRouting() => _routingCts?.Cancel();
+    public void CancelRouting()
+    {
+        StopRequested?.Invoke();
+        _routingCts?.Cancel();
+    }
+
+    /// <summary>Raised for an explicit Stop, including a batch spanning several passes.</summary>
+    public event Action? StopRequested;
 
     /// <summary>
     /// Asynchronously recalculates all waveguide routes on a background thread.

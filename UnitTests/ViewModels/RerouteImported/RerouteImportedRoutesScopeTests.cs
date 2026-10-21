@@ -10,9 +10,10 @@ namespace UnitTests.ViewModels.RerouteImported;
 public partial class RerouteImportedRoutesViewModelTests
 {
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task RerouteGroup_WaitsForPreviousWorkerBeforeReplacingTheCanvas(bool removeGroupWhileWaiting)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task RerouteGroup_WaitsForPreviousWorkerBeforeReplacingTheCanvas(bool removeGroupWhileWaiting, bool stopWhileWaiting)
     {
         var canvas = new DesignCanvasViewModel();
         var (startA, endA) = AddComponentPair(canvas, 0);
@@ -36,6 +37,11 @@ public partial class RerouteImportedRoutesViewModelTests
         var commands = new CommandManager();
         var viewModel = new RerouteImportedRoutesViewModel(canvas, commands);
         commands.ExecuteCommand(new CreateGroupCommand(canvas, selected, "ImportedTopCell"));
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        commands.Executing += command =>
+        {
+            if (command is RerouteImportedRoutesStateCommand) started.TrySetResult();
+        };
         bool enteredGroup = false;
         canvas.PropertyChanged += (_, args) =>
         {
@@ -52,12 +58,23 @@ public partial class RerouteImportedRoutesViewModelTests
             reroute.IsCompleted.ShouldBeFalse();
             if (removeGroupWhileWaiting)
                 canvas.Components.Clear();
+            if (stopWhileWaiting)
+            {
+                await started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                canvas.StopRouting();
+            }
         }
         finally
         {
             release.Set();
             if (reroute != null) await reroute;
             await canvas.RecalculateRoutesAsync();
+        }
+        if (stopWhileWaiting)
+        {
+            commands.UndoCount.ShouldBe(1);
+            enteredGroup.ShouldBeFalse("Stop during the drain must prevent the next routing pass");
+            return;
         }
         if (removeGroupWhileWaiting)
         {

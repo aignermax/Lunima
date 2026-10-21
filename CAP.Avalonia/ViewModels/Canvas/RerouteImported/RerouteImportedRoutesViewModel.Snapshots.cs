@@ -41,6 +41,8 @@ public partial class RerouteImportedRoutesViewModel
             : new StraightSegment(X, Y, A, B, Angle);
     }
 
+    internal static Func<FrozenWaveguidePath> CaptureTopologyPath(FrozenWaveguidePath source) => CaptureFrozenPath(source);
+
     private static Func<FrozenWaveguidePath> CaptureFrozenPath(FrozenWaveguidePath source, RouteCopyInput? capturedGeometry = null)
     {
         var geometry = capturedGeometry ?? RouteCopyInput.Capture(source.Path);
@@ -68,16 +70,19 @@ public partial class RerouteImportedRoutesViewModel
         List<RerouteImportedRoutesStateCommand.GroupState> Groups, List<FrozenWaveguidePath>? Scope)> PrepareSnapshotsAsync(
         IReadOnlyList<WaveguideConnectionViewModel> targets,
         IReadOnlyList<(ComponentGroup Group, List<FrozenWaveguidePath> Paths)> groups,
-        IReadOnlyList<Func<FrozenWaveguidePath>>? scope)
+        IReadOnlyList<Func<FrozenWaveguidePath>>? scope, RerouteImportedRootTopology? topology)
     {
         var connections = targets.Select(t => (t.Connection,
             Path: RouteCopyInput.Capture(t.Connection.RoutedPath!),
             Frozen: t.Connection.IsRouteFrozen, Drawn: t.Connection.AsDrawnGeometry,
             Radius: t.Connection.BendRadiusMicrometers)).ToArray();
-        var groupInputs = groups.Select(g => (g.Group,
+        var groupInputs = groups.Select(g => (g.Group, Targets: g.Paths.Select(path => (path.StartPin, path.EndPin)).ToArray(), Children: g.Group.ChildComponents.ToArray(),
             Paths: g.Group.InternalPaths.Select(path => CaptureFrozenPath(path)).ToArray())).ToArray();
         await Task.Yield();
-        return await Task.Run(() => (
+        return await Task.Run(() =>
+        {
+            topology?.Prepare();
+            return (
             connections.Select(c => new RerouteImportedRoutesStateCommand.ConnectionState
             {
                 Connection = c.Connection, OldPath = c.Path.Build(),
@@ -85,8 +90,9 @@ public partial class RerouteImportedRoutesViewModel
             }).ToList(),
             groupInputs.Select(g => new RerouteImportedRoutesStateCommand.GroupState
             {
-                Group = g.Group, OldPaths = g.Paths.Select(build => build()).ToList()
-            }).ToList(), scope?.Select(build => build()).ToList()));
+                Group = g.Group, TargetPins = g.Targets, OldChildren = g.Children, OldPaths = g.Paths.Select(build => build()).ToList()
+            }).ToList(), scope?.Select(build => build()).ToList());
+        });
     }
 
     private void UnfreezeTargets(IReadOnlyList<WaveguideConnectionViewModel> targets)
@@ -113,6 +119,7 @@ public partial class RerouteImportedRoutesViewModel
         }
         foreach (var state in groups)
         {
+            state.NewChildren = state.Group.ChildComponents.ToArray();
             var paths = state.Group.InternalPaths.Select(path => CaptureFrozenPath(path)).ToArray();
             state.NewPathCount = paths.Length;
             state.CreateNewPaths = () => paths.Select(build => build()).ToList();

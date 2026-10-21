@@ -4,6 +4,17 @@ All completed features and milestones in Lunima's development.
 
 ---
 
+## 0.20.0
+
+- Guided GDS import with visual layer review, reusable layer profiles, component grouping, explicit port interpretation and simulation-model assignment.
+- Large-layout previews and canvas rendering use cached overviews, spatial culling and zoom-dependent detail. Selection and route warnings respect overview detail limits.
+- Imported components use their actual outlines for placement and routing collisions. Embedded source hierarchies can be exposed as editable children when their geometry and interfaces can be preserved safely.
+- Preserved GDS routes have a visible conversion action. Conversion prepares geometry off the UI thread and retains source bend-radius intent.
+- Route conversion preserves crossing topology through undo/redo, keeps independent edits separate and stops the whole batch when cancelled.
+- Ctrl+A selects the current editable scope in every workspace without overriding text-field selection.
+- GDS export supports a separate file per die.
+- Tutorials choose a compatible fabrication process and highlight the NAND entry point. Grating-coupler fiber ports are distinguished from routable on-chip ports.
+
 ## Core Features
 
 ### Physical Design System

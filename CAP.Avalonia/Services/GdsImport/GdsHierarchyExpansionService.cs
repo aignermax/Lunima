@@ -38,6 +38,10 @@ public sealed partial class GdsHierarchyExpansionService(DesignScopedGdsComponen
         var templateName = selected.TemplateName ?? selected.Component.TemplateName;
         var sourceDraft = set.Drafts.SingleOrDefault(d => d.Name == templateName)
             ?? throw new InvalidOperationException("The imported source template is unavailable.");
+        // Older reviewed imports may have renamed cells without retaining source identity.
+        // A matching display name and bounding box cannot prove which geometry it came from.
+        if (sourceDraft.ImportedSourceCellName is null && set.Interpretation is not null)
+            throw new InvalidOperationException("The original source cell identity was not saved. Review and re-import the GDS before exposing its children.");
         var prepared = await Task.Run(async () =>
         {
             using var stream = new MemoryStream(set.GdsBytes, writable: false);

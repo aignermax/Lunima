@@ -11,11 +11,12 @@ namespace CAP.Avalonia.Commands;
 /// this command is pushed afterwards so one Ctrl+Z restores both canvas connections
 /// and group-internal frozen paths to their exact pre-reroute geometry.
 /// </summary>
-public sealed class RerouteImportedRoutesStateCommand : IUndoableCommand
+public sealed partial class RerouteImportedRoutesStateCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly IReadOnlyList<ConnectionState> _connections;
     private readonly IReadOnlyList<GroupState> _groups;
+    internal RerouteImportedRootTopology? RootTopology { get; set; }
     private bool _recordingInitialState = true;
 
     /// <summary>Mutable state of one canvas-level connection.</summary>
@@ -55,8 +56,17 @@ public sealed class RerouteImportedRoutesStateCommand : IUndoableCommand
         /// <summary>The group whose internal paths are swapped.</summary>
         public required ComponentGroup Group { get; set; }
 
+        /// <summary>Pin pairs explicitly requested for conversion; other routes remain independently editable.</summary>
+        public IReadOnlyCollection<(PhysicalPin? Start, PhysicalPin? End)>? TargetPins { get; init; }
+
         /// <summary>All internal paths before the re-route.</summary>
         public required IReadOnlyList<FrozenWaveguidePath> OldPaths { get; set; }
+
+        /// <summary>Child membership before conversion, including pre-existing crossings.</summary>
+        public IReadOnlyList<Component>? OldChildren { get; set; }
+
+        /// <summary>Child membership after conversion.</summary>
+        public IReadOnlyList<Component>? NewChildren { get; set; }
 
         /// <summary>Builds private redo paths from detached scalar geometry when needed.</summary>
         public Func<IReadOnlyList<FrozenWaveguidePath>> CreateNewPaths { get; set; } = null!;
@@ -72,8 +82,8 @@ public sealed class RerouteImportedRoutesStateCommand : IUndoableCommand
         IEnumerable<GroupState> groups)
     {
         _canvas = canvas;
-        _connections = connections.ToList();
-        _groups = groups.ToList();
+        _connections = connections as IReadOnlyList<ConnectionState> ?? connections.ToList();
+        _groups = groups as IReadOnlyList<GroupState> ?? groups.ToList();
     }
 
     /// <inheritdoc/>
@@ -81,7 +91,7 @@ public sealed class RerouteImportedRoutesStateCommand : IUndoableCommand
     {
         get
         {
-            var count = _connections.Count + _groups.Sum(g => g.NewPathCount);
+            var count = Math.Max(_connections.Count, RootTopology?.ReplacedCount ?? 0) + _groups.Sum(g => g.NewPathCount);
             return count == 1
                 ? "Re-route imported route"
                 : $"Re-route {count} imported routes";
@@ -104,6 +114,7 @@ public sealed class RerouteImportedRoutesStateCommand : IUndoableCommand
 
     private void Apply(bool useNew)
     {
+        RootTopology?.Apply(useNew);
         foreach (var state in _connections)
         {
             var path = useNew ? state.CreateNewPath() : state.OldPath.DeepCopy();
@@ -117,14 +128,14 @@ public sealed class RerouteImportedRoutesStateCommand : IUndoableCommand
         }
 
         foreach (var state in _groups)
-        {
-            var paths = useNew
-                ? state.CreateNewPaths()
-                : state.OldPaths.Select(CloneWithPins).ToList();
-            state.Group.InternalPaths.Clear();
-            state.Group.AddInternalPaths(paths);
-        }
+            ApplyGroup(state, useNew);
 
+        if (_canvas.ConnectionManager.CrossingService is { } crossings)
+        {
+            crossings.Reset();
+            CAP_Core.Routing.CrossingInsertion.CrossingRecordRebuilder.Rebuild(
+                crossings, _canvas.ConnectionManager, _canvas.Components.Select(c => c.Component));
+        }
         _canvas.InvalidateSimulation();
         _ = _canvas.RecalculateRoutesAsync();
     }

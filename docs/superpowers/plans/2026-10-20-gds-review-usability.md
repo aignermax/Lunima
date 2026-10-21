@@ -323,11 +323,28 @@ curves and layer contrast remain visible, and no overview name flood returns.
 Cold first-import raster setup still costs hundreds of milliseconds (731 ms in this
 probe); these headless measurements are not a universal desktop frame-rate guarantee.
 
-Pre-existing conversion limitations remain: crossing-insertion history ownership is
-not redesigned here, and Stop cancels the current routing pass rather than the whole
-outer multi-group batch. Group cancellation now preserves imported source routes
-instead of serializing null paths and silently dropping them.
+The release review identified crossing-insertion history ownership and whole-batch
+Stop as blockers. Conversion history now captures crossing topology as well as route
+geometry; Stop prevents later groups from starting, and temporary group cleanup must
+not close a different group opened by the user. Group cancellation preserves imported
+source routes instead of serializing null paths and silently dropping them.
+
+Source identity is recorded independently of display names before reviewed renaming
+or name deduplication. Reviewed legacy imports without saved source identity refuse
+hierarchy expansion with re-import guidance instead of guessing from a matching name
+and bounding box. Regression cases include colliding names and scope save/reload.
+
+Review-preview simplification has a linear point-visit budget and returns the exact
+original ring when the budget is exhausted. Deterministic sawtooth tests cover open
+and explicitly closed rings with 8,000 and 100,000 vertices.
 
 Final focused verification: 822 tests passed, including real canvas/text Ctrl+A input,
 hierarchy batching and both previous CI failures. The 200,000-segment conversion
 probe measured 28.8 ms total and a 14.9 ms maximum dispatcher heartbeat gap.
+
+Release review verification: 1,265 focused tests pass on the final 0.20.0 candidate,
+including architecture, import/review, rendering, selection and routing. The routing
+subset has 78 passing tests covering crossing insertion/removal, root/group replay,
+independent edits during conversion, cancellation while draining a worker and scope
+changes. Independent source re-review has no remaining findings. Windows Release
+publish succeeds; cross-platform CI and release artifacts are verified separately.

@@ -7,6 +7,8 @@ namespace CAP.Avalonia.Controls.GdsImport;
 /// <summary>Cell-local spatial tree. Detail is chosen in screen pixels; original polygons remain untouched.</summary>
 internal sealed class GdsReviewSpatialGeometry
 {
+    private const int MaxPointVisitsPerVertex = 32;
+
     internal sealed class Node
     {
         internal required Rect Bounds;
@@ -69,6 +71,9 @@ internal sealed class GdsReviewSpatialGeometry
         var stack = new Stack<(int Start, int End)>();
         stack.Push((0, opposite)); stack.Push((opposite, count));
         GdsPoint At(int i) => points[i == count ? 0 : i];
+        // Sawtooth rings can peel one vertex per split. Bound UI-thread work
+        // linearly and retain exact geometry when simplification is too costly.
+        long remainingPointVisits = (long)MaxPointVisitsPerVertex * count;
         while (stack.TryPop(out var segment))
         {
             var a = At(segment.Start); var b = At(segment.End);
@@ -77,6 +82,7 @@ internal sealed class GdsReviewSpatialGeometry
             int selected = -1;
             for (int i = segment.Start + 1; i < segment.End; i++)
             {
+                if (remainingPointVisits-- <= 0) return points;
                 var p = At(i);
                 double t = length == 0 ? 0 : Math.Clamp(((p.X - a.X) * dx + (p.Y - a.Y) * dy) / length, 0, 1);
                 double ex = p.X - a.X - t * dx, ey = p.Y - a.Y - t * dy;

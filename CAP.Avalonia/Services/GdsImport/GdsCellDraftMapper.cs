@@ -61,6 +61,7 @@ public static class GdsCellDraftMapper
         return new PdkComponentDraft
         {
             Name = SanitizeComponentName(draft.CellName),
+            ImportedSourceCellName = draft.CellName,
             Category = ImportCategory,
             WidthMicrometers = draft.WidthUm,
             HeightMicrometers = draft.HeightUm,
