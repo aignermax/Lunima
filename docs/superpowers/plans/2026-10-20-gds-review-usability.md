@@ -191,3 +191,50 @@ than 100 vector calls followed by missing geometry. This is a renderer fixture,
 not a full-frame measurement of the private imported design. Per-die GDS execution
 in workflow tests uses a fake service; actual generated Python syntax is checked
 independently, and no new foundry validation or independent metal-stack support is claimed.
+
+
+## Main-canvas zoom regression follow-up (2026-10-21)
+
+Profile the complete DesignCanvas against a locally supplied private GDS, rather
+than extrapolating isolated cache draw timings. The opt-in probe accepts
+GDS_MAIN_CANVAS_PROBE and retains the input outside the repository; optional
+GDS_MAIN_CANVAS_PORTS enables a specific review scenario, not inferred process
+semantics. Headless frame timings are CPU-render measurements, not desktop FPS.
+
+Rendering-only detail levels simplify subpixel curves without changing imported
+source polygons or exports. Reuse cached bitmap tiers before requesting geometry;
+small preview images also need bounded-resolution image levels. Suppress unreadable
+names and group pins before shaping/occupancy work, including selected/hovered large
+groups; retain the individual highlighted connection target. Viewport culling must
+include source mask bounds, not just recovered centerlines.
+
+Resolve mutable imported route validation once per frame and share that snapshot
+between bounds, styling and warning overlays. Preserve invalidation after in-place
+path edits. Explain explicit conversion to editable generated routing and support
+undo; group-only imports must expose their existing rerouting action. Pin-less
+geometry retains the existing lossless ungroup-and-drag workflow.
+
+Overlapping GDS layers are evidence for companion-layer suggestions, not proof of
+shared physical connectivity. Do not silently mark all matching masks OpticalCore
+or discard mask identity: process mapping is required for physical layer semantics.
+
+
+Final verification of this follow-up: 643 rendering, preview, import, routing,
+localization and ungroup/source-preservation tests passed. A subsequent adversarial
+simplification test reproduced 4.2 million point reads for a 2,052-vertex sawtooth;
+a linear 32N point-visit budget now falls back to exact source geometry. All 22
+focused geometry/raster/LOD tests pass after that final guard.
+
+The private main-canvas probe expanded 1,535 components and 8,909 preserved internal
+paths (65 with both pins, 8,844 without pins). The original warm whole-frame samples
+were approximately 25–56 ms. Final warm zoom samples were 18.55 / 17.84 / 14.54 /
+11.56 / 10.45 / 9.20 / 12.32 ms; hover 14.73 ms; ungrouped 14.45 ms. Initial frame
+setup remained 611 ms and creating a previously uncached finer image level peaked
+at 416 ms. These cold costs remain a limitation; no universal frame-rate or geometry-
+independent latency guarantee is claimed. Group image counters confirm cache reuse.
+
+Group/canvas overview images retain original paint order and opacity. Cache owners
+are weak references so bitmap residency does not retain unloaded source geometry.
+Source changes, translations and layer visibility invalidate images. The cache is
+bounded by pixels, entry count and image dimensions, and falls back to individually
+culled rendering where necessary. Original polygon masks remain exact for export.

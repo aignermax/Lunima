@@ -89,6 +89,9 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
 
     private WaveguideConnectionViewModel? _selectedConnection;
 
+    /// <summary>Shows the source-preservation explanation and explicit editing action.</summary>
+    public bool HasSelectedDrawnRoute => SelectedConnection?.Connection.AsDrawnGeometry is not null;
+
     /// <summary>The currently selected connection, fed by <c>MainViewModel</c>.</summary>
     public WaveguideConnectionViewModel? SelectedConnection
     {
@@ -96,7 +99,10 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         set
         {
             if (SetProperty(ref _selectedConnection, value))
+            {
+                OnPropertyChanged(nameof(HasSelectedDrawnRoute));
                 RerouteSelectedCommand.NotifyCanExecuteChanged();
+            }
         }
     }
 
@@ -140,6 +146,7 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         if (_canvas.Components.Count == 0 && _canvas.Connections.Count == 0)
             ResultText = "";
         RerouteSelectedCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(HasSelectedDrawnRoute));
     }
 
     /// <summary>Re-routes every eligible frozen imported route in the design.</summary>

@@ -11,6 +11,8 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// </summary>
 public sealed class CanvasFrozenPathRenderer : ICanvasRenderer
 {
+    private readonly GroupFrozenPathRasterCache _sourceRaster = new();
+    internal long IssuedSourceImageCount => _sourceRaster.IssuedImageCount;
 
     /// <inheritdoc/>
     public void Render(DrawingContext context, CanvasRenderContext rc)
@@ -21,15 +23,20 @@ public sealed class CanvasFrozenPathRenderer : ICanvasRenderer
         var viewport = RenderCulling.ComputeViewportWorld(rc.ViewModel.PanX, rc.ViewModel.PanY, rc.Bounds, rc.Zoom);
         var cullRect = RenderCulling.InflateForCulling(viewport, rc.Zoom);
 
-        foreach (var pathVm in rc.ViewModel.CanvasFrozenPaths)
+        var snapshot = _sourceRaster.Prepare(rc.ViewModel.CanvasFrozenPaths);
+        bool drewSources = _sourceRaster.TryDraw(context, snapshot, rc.Zoom, rc.LayerVisibility);
+        for (int i = 0; i < rc.ViewModel.CanvasFrozenPaths.Count; i++)
         {
-            if (RenderCulling.GetFrozenPathBounds(pathVm.Path) is { } bounds && !cullRect.Intersects(bounds))
+            var pathVm = rc.ViewModel.CanvasFrozenPaths[i];
+            if (drewSources && !pathVm.IsSelected) continue;
+            var asDrawn = snapshot.Sources[i];
+            if (RenderCulling.GetFrozenPathBounds(pathVm.Path, asDrawn) is { } bounds && !cullRect.Intersects(bounds))
                 continue;
 
-            if (pathVm.Path.AsDrawnGeometry is { } asDrawn)
+            if (!drewSources && asDrawn is not null)
             {
                 // Drawn polygons replace the traced line; selection still highlights the path.
-                AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility);
+                AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility, visibleWorld: cullRect);
                 if (!pathVm.IsSelected)
                     continue;
             }

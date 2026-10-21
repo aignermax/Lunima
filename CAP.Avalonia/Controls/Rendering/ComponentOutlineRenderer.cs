@@ -30,10 +30,10 @@ internal sealed class ComponentOutlineRenderer
     /// <summary>
     /// Geometry cache keyed by the outline list instance. All placed instances of
     /// one template share that list (see <c>ComponentTemplates.CreateFromTemplate</c>),
-    /// so geometry is built once per component type, never per frame; the weak
+    /// so geometry is built once per component type and retained detail level, never per frame; the weak
     /// table drops the entry when the template is unloaded.
     /// </summary>
-    private readonly ConditionalWeakTable<IReadOnlyList<OutlinePolygon>, OutlineBatch[]> _geometryCache = new();
+    private readonly ConditionalWeakTable<IReadOnlyList<OutlinePolygon>, Dictionary<double, OutlineBatch[]>> _geometryCache = new();
 
     private readonly OutlineRasterCache? _rasterCache;
 
@@ -101,8 +101,6 @@ internal sealed class ComponentOutlineRenderer
         double recordedUnrotatedWidth = 0, double recordedUnrotatedHeight = 0,
         GdsLayerVisibilityState? layerVisibility = null, bool mirrored = false, Rect? visibleWorld = null)
     {
-        var geometries = _geometryCache.GetValue(outlines, OutlineGeometryBatcher.Build);
-
         double centerX = x + width / 2.0;
         double centerY = y + height / 2.0;
         var destRect = GdsPolygonRenderer.GetUnrotatedDestRect(
@@ -116,6 +114,28 @@ internal sealed class ComponentOutlineRenderer
         // An opacity push renders into an offscreen layer: only pay for it when dimmed.
         using (isDimmed ? context.PushOpacity(128.0 / 255.0) : (IDisposable?)null)
         {
+            if (_rasterCache?.TryDrawCached(context, outlines, zoom, layerVisibility) == true)
+            {
+                IssuedGeometryCount++;
+                return;
+            }
+            // Power-of-two levels bound the error to a quarter screen pixel. Detail
+            // returns at close zoom; the original outlines remain untouched for export.
+            double density = zoom > 0 && zoom < OutlineRasterCache.VectorFromZoom
+                ? Math.Pow(2, Math.Ceiling(Math.Log2(zoom))) : 0;
+            var levels = _geometryCache.GetValue(outlines, _ => new());
+            if (!levels.TryGetValue(density, out var geometries))
+            {
+                double tolerance = density > 0 ? 0.25 / density : 0;
+                IReadOnlyList<OutlinePolygon> rendered = tolerance > 0
+                    ? outlines.Select(p => p with { Points = OutlineGeometryLod.Simplify(p.Points, tolerance) }).ToArray()
+                    : outlines;
+                geometries = OutlineGeometryBatcher.Build(rendered);
+                // Bound retained native geometry when the user traverses many zoom levels.
+                if (levels.Count >= 8) levels.Clear();
+                levels[density] = geometries;
+            }
+
             if (_rasterCache?.TryDraw(context, outlines, geometries, zoom, layerVisibility) == true)
             {
                 IssuedGeometryCount++;

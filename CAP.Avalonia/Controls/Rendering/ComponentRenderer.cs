@@ -23,6 +23,10 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
     private readonly PinRenderer _pinRenderer = new();
     private readonly ComponentOutlineRenderer _outlineRenderer = new();
     private readonly ComponentNameLabelComputer _nameLabels = new();
+    private readonly GroupFrozenPathRasterCache _groupFrozenPaths = new();
+
+    internal long IssuedGroupPathImageCount => _groupFrozenPaths.IssuedImageCount;
+    internal long GroupPathBitmapBuildCount => _groupFrozenPaths.BitmapBuildCount;
 
     /// <summary>A name is drawn only while its owner is at least this fraction of the label's
     /// width on screen — farther out the name would dwarf the block it labels (level of detail).
@@ -134,7 +138,8 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
             return;
         }
 
-        var previewData = rc.GdsPreviewRenderService?.TryGetPreview(comp.Component);
+        var previewData = RenderCulling.IsBelowLodThreshold(rect.Width, rect.Height, rc.Zoom)
+            ? null : rc.GdsPreviewRenderService?.TryGetPreview(comp.Component);
         ComponentBodyRenderer.Draw(context, comp.Component, rect, state, rc, previewData);
     }
 
@@ -159,7 +164,8 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
                 group.WidthMicrometers, group.HeightMicrometers,
                 group.RotationDegrees, backgroundPolygons, false, rc.Zoom,
                 group.UnrotatedWidthMicrometers, group.UnrotatedHeightMicrometers,
-                rc.LayerVisibility);
+                rc.LayerVisibility, group.IsMirroredHorizontally,
+                RenderCulling.ComputeViewportWorld(rc.ViewModel.PanX, rc.ViewModel.PanY, rc.Bounds, rc.Zoom));
         }
 
         foreach (var child in group.ChildComponents)
@@ -177,13 +183,20 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
 
         var powerFlowResult = vm.ShowPowerFlow ? vm.PowerFlowVisualizer.CurrentResult : null;
         var fadeThreshold = vm.PowerFlowVisualizer.FadeThresholdDb;
-        foreach (var frozenPath in group.InternalPaths)
+        var sourceSnapshot = _groupFrozenPaths.Prepare(group);
+        bool drewGroupPaths = powerFlowResult is null && _groupFrozenPaths.TryDraw(context, sourceSnapshot, rc.Zoom, rc.LayerVisibility);
+        for (int pathIndex = 0; !drewGroupPaths && pathIndex < group.InternalPaths.Count; pathIndex++)
         {
+            var frozenPath = group.InternalPaths[pathIndex];
             // Frozen paths may reach outside the group's child bounds, so each one
             // is culled individually by its cached bounding box.
-            if (RenderCulling.GetFrozenPathBounds(frozenPath) is { } pathBounds && !cullRect.Intersects(pathBounds))
+            var asDrawn = sourceSnapshot.Sources[pathIndex];
+            if (RenderCulling.GetFrozenPathBounds(frozenPath, asDrawn) is { } pathBounds && !cullRect.Intersects(pathBounds))
                 continue;
-            ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath, powerFlowResult, fadeThreshold, cullRect, rc.LayerVisibility, zoom: rc.Zoom);
+            if (asDrawn is not null && powerFlowResult is null)
+                AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility, visibleWorld: cullRect);
+            else
+                ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath, powerFlowResult, fadeThreshold, cullRect, rc.LayerVisibility, zoom: rc.Zoom);
         }
 
         if (!cullRect.Intersects(bounds))
@@ -205,11 +218,12 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
 
             ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, false,
                 rc.InteractionState.HoveredGroupLabel == group, rc.Zoom);
-            ComponentGroupRenderer.RenderGroupLockIcon(context, group,
+            if (rc.Zoom >= GroupOverviewZoom || isSelected || isHovered)
+                ComponentGroupRenderer.RenderGroupLockIcon(context, group,
                 rc.InteractionState.HoveredGroupLockIcon == group);
         }
 
-        RenderGroupPins(context, group, isCurrentEditGroup, isHovered, vm, rc.Labels);
+        RenderGroupPins(context, group, isCurrentEditGroup, isHovered, vm, rc.Labels, rc.Zoom);
     }
 
     private void DrawGroupChild(DrawingContext context, Component child, Rect childRect,
@@ -227,14 +241,16 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
                 child.WidthMicrometers, child.HeightMicrometers,
                 child.RotationDegrees, childOutlines, false, rc.Zoom,
                 child.UnrotatedWidthMicrometers, child.UnrotatedHeightMicrometers,
-                rc.LayerVisibility, child.IsMirroredHorizontally);
+                rc.LayerVisibility, child.IsMirroredHorizontally,
+                RenderCulling.ComputeViewportWorld(rc.ViewModel.PanX, rc.ViewModel.PanY, rc.Bounds, rc.Zoom));
             context.DrawRectangle(null, rc.Pens.ComponentBorder, childRect);
         }
         else
         {
             using (LightEmphasis.PushRecede(context, rc, child, isGroupHovered))
                 ComponentBodyRenderer.Draw(context, child, childRect, default, rc,
-                    rc.GdsPreviewRenderService?.TryGetPreview(child));
+                    RenderCulling.IsBelowLodThreshold(childRect.Width, childRect.Height, rc.Zoom)
+                        ? null : rc.GdsPreviewRenderService?.TryGetPreview(child));
         }
 
         if (isGroupHovered)
@@ -258,8 +274,21 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
         }
     }
 
-    private static void RenderGroupPins(DrawingContext context, ComponentGroup group, bool isCurrentEditGroup, bool isHovered, DesignCanvasViewModel vm, DeferredLabelLayer labels)
+    private static void RenderGroupPins(DrawingContext context, ComponentGroup group, bool isCurrentEditGroup, bool isHovered, DesignCanvasViewModel vm, DeferredLabelLayer labels, double zoom)
     {
+        if (zoom < GroupOverviewZoom)
+        {
+            // Selecting/hovering a whole imported chip must not restore thousands
+            // of pin glyphs. Keep only the actively highlighted connection target.
+            var highlighted = vm.HighlightedPin?.Pin;
+            if (highlighted != null)
+            {
+                var pin = group.ExternalPins.FirstOrDefault(p => p.InternalPin == highlighted);
+                if (pin != null)
+                    ComponentGroupRenderer.RenderUnoccupiedGroupPin(context, pin, group, true, labels);
+            }
+            return;
+        }
         if (!isCurrentEditGroup)
         {
             var allConnections = vm.Connections.Select(c => c.Connection);

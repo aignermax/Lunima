@@ -141,9 +141,14 @@ public sealed class ComponentNameLabelComputer
         {
             if (comp.Component is ComponentGroup group)
             {
-                AddGroupChildCandidates(group, fontSize, candidates, bounds, text);
+                if (quantizedZoom >= ComponentRenderer.GroupOverviewZoom)
+                    AddGroupChildCandidates(group, fontSize, candidates, bounds, text);
                 continue;
             }
+
+            if ((!comp.IsSelected && hoveredComponentId != comp.Component.Id && quantizedZoom < ComponentRenderer.GroupOverviewZoom)
+                || RenderCulling.IsBelowLodThreshold(comp.Width, comp.Height, quantizedZoom))
+                continue;
 
             var id = comp.Component.Id;
             var formatted = GetOrMeasureText(comp.Name, fontSize);
@@ -206,11 +211,13 @@ public sealed class ComponentNameLabelComputer
         return formatted;
     }
 
-    /// <summary>Rounds to a 5% zoom bucket (floored at one step) so smooth zooming doesn't
-    /// perturb the overlap-resolution signature every frame.</summary>
+    /// <summary>Uses 5% zoom buckets at normal scale and multiplicative buckets in
+    /// the overview, where a fixed .05 floor would make selected text unreadable.</summary>
     private static double QuantizeZoom(double zoom)
     {
         double safeZoom = zoom <= 0 ? 1.0 : zoom;
+        if (safeZoom < ComponentRenderer.GroupOverviewZoom)
+            return Math.Pow(2, Math.Floor(Math.Log2(safeZoom) * 16) / 16);
         double quantized = Math.Round(safeZoom / ZoomQuantizationStep) * ZoomQuantizationStep;
         return Math.Max(quantized, ZoomQuantizationStep);
     }
@@ -239,7 +246,7 @@ public sealed class ComponentNameLabelComputer
             hash.Add(comp.Height);
             hash.Add(comp.Component.RotationDegrees);
             hash.Add(comp.IsSelected);
-            if (comp.Component is ComponentGroup group)
+            if (quantizedZoom >= ComponentRenderer.GroupOverviewZoom && comp.Component is ComponentGroup group)
                 HashGroupChildren(group, ref hash);
         }
         return hash.ToHashCode();

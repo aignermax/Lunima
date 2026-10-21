@@ -38,12 +38,12 @@ internal sealed class OutlineRasterCache
     private long _pixels;
     private bool _disabled;
 
-    /// <summary>
-    /// Draws the cached bitmap of <paramref name="batches"/> in the current (component-local)
-    /// transform, creating it when needed. Returns false when the caller must draw vectors:
-    /// the zoom asks for them, the bitmap would be too large, the list is seen for the first
-    /// time, or rasterizing failed.
-    /// </summary>
+    /// <summary>Draws an existing image level without requesting source geometry.</summary>
+    public bool TryDrawCached(DrawingContext context, IReadOnlyList<OutlinePolygon> outlines,
+        double zoom, GdsLayerVisibilityState? layerVisibility) =>
+        TryDraw(context, outlines, Array.Empty<OutlineBatch>(), zoom, layerVisibility);
+
+    /// <summary>Draws or builds a raster level; false asks the caller to draw its vector batches.</summary>
     public bool TryDraw(
         DrawingContext context,
         IReadOnlyList<OutlinePolygon> outlines,
@@ -51,8 +51,12 @@ internal sealed class OutlineRasterCache
         double zoom,
         GdsLayerVisibilityState? layerVisibility)
     {
-        if (_disabled || batches.Length == 0 || zoom >= VectorFromZoom || zoom <= 0) return false;
-        var entry = _entries.GetValue(outlines, _ => new Entry(batches));
+        if (_disabled || zoom >= VectorFromZoom || zoom <= 0) return false;
+        if (!_entries.TryGetValue(outlines, out var entry))
+        {
+            if (batches.Length == 0) return false;
+            entry = _entries.GetValue(outlines, _ => new Entry(batches));
+        }
         var bounds = entry.Bounds;
         if (bounds.Width <= 0 || bounds.Height <= 0) return false;
 
@@ -62,13 +66,19 @@ internal sealed class OutlineRasterCache
         if (width > MaxBitmapEdgePx || height > MaxBitmapEdgePx) return false;
 
         var key = new SlotKey(density, VisibilityKey(entry.Layers, layerVisibility));
-        // A sharper bitmap already contains every source polygon. Reuse it while
-        // zooming out instead of falling back to vectors and rasterizing the same
-        // chip again at every power-of-two boundary. Visibility must still match.
-        var slot = entry.Slots.Find(s => s.Key == key)
-            ?? entry.Slots.Find(s => s.Key.Density >= density && s.Key.Visibility == key.Visibility);
+        // Keep a real image pyramid: derive coarse levels from a sharper image,
+        // avoiding both full-resolution sampling and source vertex resubmission.
+        var slot = entry.Slots.Find(s => s.Key == key);
         if (slot is null)
         {
+            var sharper = entry.Slots.Where(s => s.Key.Density > density && s.Key.Visibility == key.Visibility)
+                .OrderBy(s => s.Key.Density).FirstOrDefault();
+            if (sharper is not null)
+                slot = Downsample(entry, key, sharper, density, width, height) ?? sharper;
+        }
+        if (slot is null)
+        {
+            if (batches.Length == 0) return false;
             if (!entry.SeenKeys.Add(key)) slot = Create(entry, key, batches, bounds, density, width, height, layerVisibility);
             if (slot is null) return false;
         }
@@ -79,6 +89,27 @@ internal sealed class OutlineRasterCache
         return true;
     }
 
+    private Slot? Downsample(Entry entry, SlotKey key, Slot source, double density, int width, int height)
+    {
+        try
+        {
+            var bitmap = new RenderTargetBitmap(new PixelSize(Math.Max(1, width), Math.Max(1, height)));
+            using (var context = bitmap.CreateDrawingContext())
+                context.DrawImage(source.Bitmap, new Rect(0, 0,
+                    source.Bitmap.PixelSize.Width * density / source.Key.Density,
+                    source.Bitmap.PixelSize.Height * density / source.Key.Density));
+            var slot = new Slot(entry, key, bitmap, (long)Math.Max(1, width) * Math.Max(1, height));
+            entry.Slots.Add(slot);
+            slot.Node = _lru.AddLast(slot);
+            _pixels += slot.Pixels;
+            EvictOverBudget();
+            return slot;
+        }
+        catch (Exception)
+        {
+            return null; // Retain the sharper image if a smaller surface cannot be allocated.
+        }
+    }
     private Slot? Create(Entry entry, SlotKey key, OutlineBatch[] batches, Rect bounds, double density,
         int width, int height, GdsLayerVisibilityState? layerVisibility)
     {

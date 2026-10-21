@@ -3,6 +3,7 @@ using Avalonia.Media;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.Visualization;
 using CAP_Core.Components.ComponentHelpers;
+using CAP_Core.Components.Connections;
 using CAP_Core.Components.PinKinds;
 using CAP_Core.Routing;
 
@@ -58,7 +59,10 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
                 continue;
 
             var segments = conn.Connection.GetPathSegments();
-            if (!cullRect.Intersects(GetConnectionBounds(conn, segments)))
+            // Binding validation scans the mutable route's segment lengths. Resolve it
+            // once this frame for bounds, pens, geometry and all warning overlays.
+            var asDrawn = conn.Connection.AsDrawnGeometry;
+            if (!cullRect.Intersects(GetConnectionBounds(conn, segments, asDrawn)))
             {
                 CulledConnectionCount++;
                 continue;
@@ -67,7 +71,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             IssuedConnectionCount++;
             using (dimDieWires && ViewModels.Canvas.DieSurface.DieWireStyle.IsOnOneDie(conn.Connection)
                        ? context.PushOpacity(ComponentRenderer.LockedDieContentOpacity) : (IDisposable?)null)
-                DrawWaveguideConnection(context, conn, vm, ReferenceEquals(conn, hovered), rc, segments, _blockedMarkers);
+                DrawWaveguideConnection(context, conn, vm, ReferenceEquals(conn, hovered), rc, segments, asDrawn, cullRect, _blockedMarkers);
         }
 
         if (vm.ShowPowerFlow && rc.InteractionState.HoveredConnection != null)
@@ -80,7 +84,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
     /// endpoint-to-endpoint fallback line, which is what gets drawn when the path is
     /// missing or stale — culling must never drop a visible fallback.
     /// </summary>
-    private static Rect GetConnectionBounds(WaveguideConnectionViewModel conn, IReadOnlyList<CAP_Core.Routing.PathSegment> segments)
+    private static Rect GetConnectionBounds(WaveguideConnectionViewModel conn, IReadOnlyList<CAP_Core.Routing.PathSegment> segments, AsDrawnGeometry? asDrawn)
     {
         double minX = Math.Min(conn.StartX, conn.EndX);
         double minY = Math.Min(conn.StartY, conn.EndY);
@@ -88,7 +92,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             Math.Max(conn.StartX, conn.EndX) - minX, Math.Max(conn.StartY, conn.EndY) - minY);
         if (segments.Count > 0)
             bounds = bounds.Union(RenderCulling.ComputeSegmentBounds(segments));
-        if (conn.Connection.AsDrawnGeometry is { } asDrawn)
+        if (asDrawn is not null)
         {
             var (minX2, minY2, maxX2, maxY2) = asDrawn.Bounds;
             bounds = bounds.Union(new Rect(minX2, minY2, maxX2 - minX2, maxY2 - minY2));
@@ -98,13 +102,19 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
 
     private static void DrawWaveguideConnection(DrawingContext context, WaveguideConnectionViewModel conn,
         DesignCanvasViewModel vm, bool isHovered, CanvasRenderContext rc,
-        IReadOnlyList<CAP_Core.Routing.PathSegment> segments, BlockedConnectionMarkerRenderer blockedMarkers)
+        IReadOnlyList<CAP_Core.Routing.PathSegment> segments, AsDrawnGeometry? asDrawn, Rect cullRect,
+        BlockedConnectionMarkerRenderer blockedMarkers)
     {
-        var pen = SelectPen(conn, vm, isHovered, rc.Pens);
+        bool hasImportedEndpointMismatch = asDrawn is not null
+            && conn.Connection.StartPin is not null && conn.Connection.EndPin is not null
+            && !conn.Connection.FrozenPathStillMatchesPins();
+        bool isBlocked = conn.IsBlockedFallback || conn.Connection.RoutedPath?.IsInvalidGeometry == true
+            || hasImportedEndpointMismatch;
+        var pen = SelectPen(conn, vm, isHovered, rc.Pens, isBlocked);
         bool pathIsStale = segments.Count > 0 && UsesStaleFallback(conn) && IsPathStale(segments, conn);
         bool drawsFallbackLine = segments.Count == 0 || pathIsStale;
 
-        if (IsBlocked(conn))
+        if (isBlocked)
         {
             blockedMarkers.Collect(conn.Connection.Id, new Point(conn.StartX, conn.StartY), new Point(conn.EndX, conn.EndY),
                 drawsFallbackLine ? Array.Empty<CAP_Core.Routing.PathSegment>() : segments);
@@ -116,16 +126,16 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             return;
         }
 
-        if (conn.Connection.AsDrawnGeometry is { } asDrawn)
+        if (asDrawn is not null)
         {
             // An untouched import draws exactly as drawn; the centerline only appears as
             // the selection/hover/power-flow highlight on top of the drawn polygons.
             bool showsPowerFlow = vm.ShowPowerFlow && vm.PowerFlowVisualizer.CurrentResult != null;
             AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility, isDimmed: showsPowerFlow,
-                visibleWorld: RenderCulling.ComputeViewportWorld(vm.PanX, vm.PanY, rc.Bounds, rc.Zoom));
+                visibleWorld: cullRect);
             if (conn.IsSelected || isHovered || showsPowerFlow)
                 DrawPathSegments(context, pen, segments);
-            if (conn.Connection.HasImportedEndpointMismatch)
+            if (hasImportedEndpointMismatch)
             {
                 // Dashed gaps are warnings, never replacement geometry or exported routes.
                 var start = segments[0].StartPoint;
@@ -138,13 +148,8 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         {
             DrawPathSegments(context, pen, segments);
         }
-        DrawConnectionOverlays(context, conn, vm, isHovered, rc.Zoom, rc.Labels);
+        DrawConnectionOverlays(context, conn, vm, isHovered, rc.Zoom, rc.Labels, hasImportedEndpointMismatch);
     }
-
-    /// <summary>A route the router could not place (blocked fallback) or whose geometry is invalid.</summary>
-    private static bool IsBlocked(WaveguideConnectionViewModel conn) =>
-        conn.IsBlockedFallback || conn.Connection.RoutedPath?.IsInvalidGeometry == true
-        || conn.Connection.HasImportedEndpointMismatch;
 
     /// <summary>
     /// Draws whichever of the three independent text overlays apply, each with its own
@@ -162,7 +167,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
     /// a compact style tag anchored to the line itself, not a free-floating label.
     /// </summary>
     private static void DrawConnectionOverlays(DrawingContext context, WaveguideConnectionViewModel conn,
-        DesignCanvasViewModel vm, bool isHovered, double zoom, DeferredLabelLayer labels)
+        DesignCanvasViewModel vm, bool isHovered, double zoom, DeferredLabelLayer labels, bool hasImportedEndpointMismatch)
     {
         var midX = (conn.StartX + conn.EndX) / 2;
         var midY = (conn.StartY + conn.EndY) / 2;
@@ -172,7 +177,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         // readout — their own length-only label takes that slot instead (#682).
         bool showsPowerFlow = !isElectrical && vm.ShowPowerFlow && vm.PowerFlowVisualizer.CurrentResult != null;
 
-        if (conn.Connection.HasImportedEndpointMismatch)
+        if (hasImportedEndpointMismatch)
         {
             string warning = Services.Localization.LocalizationService.Instance.Translate("Routing.ImportedEndpointMismatch");
             labels.Enqueue(new FormattedText(warning, System.Globalization.CultureInfo.CurrentCulture,
@@ -211,7 +216,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
     /// never show optical power; with the power-flow view on, the simulated power decides; a
     /// blocked route is danger-dashed; everything else is a plain waveguide.
     /// </summary>
-    private static IPen SelectPen(WaveguideConnectionViewModel conn, DesignCanvasViewModel vm, bool isHovered, CanvasPens pens)
+    private static IPen SelectPen(WaveguideConnectionViewModel conn, DesignCanvasViewModel vm, bool isHovered, CanvasPens pens, bool isBlocked)
     {
         if (conn.IsSelected)
             return pens.WaveguideSelected;
@@ -227,7 +232,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
                 : pens.NoFlow;
         }
 
-        if (IsBlocked(conn))
+        if (isBlocked)
             return isHovered ? pens.BlockedHover : pens.Blocked;
 
         return isHovered ? pens.WaveguideHover : pens.Waveguide;

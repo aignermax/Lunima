@@ -16,6 +16,53 @@ namespace UnitTests.Rendering;
 /// </summary>
 public class OutlineRasterCacheTests
 {
+    [AvaloniaFact]
+    public void ZoomingOut_FromCachedImage_DoesNotReadSourceVerticesAgain()
+    {
+        var outlines = new GuardedOutlines(ManyPolygons);
+        var renderer = new ComponentOutlineRenderer();
+        using var target = new RenderTargetBitmap(new PixelSize(500, 100));
+        using var context = target.CreateDrawingContext();
+        renderer.Draw(context, 0, 0, 4000, 50, 0, outlines, false, 0.5);
+        renderer.Draw(context, 0, 0, 4000, 50, 0, outlines, false, 0.5);
+        outlines.AllowEnumeration = false;
+        renderer.Draw(context, 0, 0, 4000, 50, 0, outlines, false, 0.05);
+    }
+
+    private sealed class GuardedOutlines(OutlinePolygon[] source) : IReadOnlyList<OutlinePolygon>
+    {
+        public bool AllowEnumeration { get; set; } = true;
+        public int Count => source.Length;
+        public OutlinePolygon this[int index] => source[index];
+        public IEnumerator<OutlinePolygon> GetEnumerator()
+        {
+            if (!AllowEnumeration) throw new InvalidOperationException("A cached zoom-out image must not reread source geometry.");
+            return ((IEnumerable<OutlinePolygon>)source).GetEnumerator();
+        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    [AvaloniaFact]
+    public void ZoomingOut_BuildsSmallerImageLevelWithoutReturningToVectors()
+    {
+        var cache = new OutlineRasterCache();
+        var batches = OutlineGeometryBatcher.Build(ManyPolygons);
+        using var target = new RenderTargetBitmap(new PixelSize(500, 100));
+        using var ctx = target.CreateDrawingContext();
+        cache.TryDraw(ctx, ManyPolygons, batches, 0.5, null).ShouldBeFalse();
+        cache.TryDraw(ctx, ManyPolygons, batches, 0.5, null).ShouldBeTrue();
+        cache.TryDraw(ctx, ManyPolygons, batches, 0.05, null).ShouldBeTrue();
+
+        // Inspect retained bitmap sizes: a second draw alone would also pass for the
+        // old full-resolution reuse, which still samples the large texture each frame.
+        var lru = (System.Collections.IEnumerable)typeof(OutlineRasterCache)
+            .GetField("_lru", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(cache)!;
+        var widths = lru.Cast<object>().Select(slot =>
+            ((RenderTargetBitmap)slot.GetType().GetProperty("Bitmap")!.GetValue(slot)!).PixelSize.Width).ToArray();
+        widths.ShouldContain(w => w <= 250);
+        widths.ShouldContain(w => w > 1000);
+    }
     private static readonly OutlinePolygon[] ManyPolygons = Enumerable.Range(0, 400)
         .Select(i => new OutlinePolygon
         {

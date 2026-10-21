@@ -19,6 +19,47 @@ namespace UnitTests.Controls.Rendering.LabelDeclutter;
 /// </summary>
 public class ComponentNameLabelComputerTests
 {
+    [AvaloniaFact]
+    public void GroupOverview_DoesNotMeasureOrRebuildHiddenChildNames()
+    {
+        var group = MakeGroupWithTwoFlatStackedChildren(100, out var child, out _);
+        var computer = new ComponentNameLabelComputer();
+        computer.GetVisibleLabelIds(new[] { group }, null, WideViewport, 0.1).ShouldBeEmpty();
+        computer.MeasuredTextCount.ShouldBe(0);
+        child.Identifier = "renamed hidden child";
+        computer.GetVisibleLabelIds(new[] { group }, null, WideViewport, 0.1).ShouldBeEmpty();
+        computer.RebuildCount.ShouldBe(1);
+        computer.GetVisibleLabelIds(new[] { group }, null, WideViewport, 1).ShouldNotBeEmpty();
+    }
+
+    [AvaloniaFact]
+    public void SubpixelComponent_DoesNotMeasureNameThatRendererCannotDraw()
+    {
+        var comp = MakeComponent("tiny", 0, 0, 10, 10);
+        var computer = new ComponentNameLabelComputer();
+        computer.GetVisibleLabelIds(new[] { comp }, null, WideViewport, 0.1).ShouldBeEmpty();
+        computer.MeasuredTextCount.ShouldBe(0);
+    }
+    [AvaloniaFact]
+    public void Overview_OnlyEmphasizedNamesAreMeasured()
+    {
+        var plain = MakeComponent("plain", 0, 0, 1000, 1000);
+        var selected = MakeComponent("selected", 1500, 0, 1000, 1000);
+        selected.IsSelected = true;
+        var computer = new ComponentNameLabelComputer();
+        var visible = computer.GetVisibleLabelIds(new[] { plain, selected }, null, WideViewport, 0.1);
+        visible.ShouldBe(new[] { selected.Component.Id });
+        computer.MeasuredTextCount.ShouldBe(1);
+    }
+    [AvaloniaFact]
+    public void SelectedName_AtOnePercentZoom_RemainsReadable()
+    {
+        var comp = MakeComponent("selected", 0, 0, 10000, 10000);
+        comp.IsSelected = true;
+        var computer = new ComponentNameLabelComputer();
+        computer.GetVisibleLabelIds(new[] { comp }, null, new Rect(0, 0, 20000, 20000), 0.01);
+        (computer.TryGetLabelText(comp.Component.Id)!.Height * 0.01).ShouldBeGreaterThan(8);
+    }
     private static readonly Rect WideViewport = new(-1000, -1000, 4000, 4000);
 
     /// <summary>Typical measured world-space height of the name label at zoom 1.</summary>
@@ -325,12 +366,13 @@ public class ComponentNameLabelComputerTests
     }
 
     [AvaloniaFact]
-    public void AtExtremeZoomOut_LabelRemainsVisibleAtClampedMinimumSize()
+    public void AtExtremeZoomOut_SelectedLabelRemainsVisibleAtClampedMinimumSize()
     {
         // A hard "hide below readability" cutoff used to make even a hovered/selected label
         // disappear at low zoom, breaking hover feedback and name-based orientation. The font
         // size now only clamps to a legible minimum — the label itself always stays visible.
         var comp = MakeComponent("stillHere", x: 0, y: 0);
+        comp.IsSelected = true;
         var computer = new ComponentNameLabelComputer();
 
         var visible = computer.GetVisibleLabelIds(new[] { comp }, hoveredComponentId: null, WideViewport, zoom: 0.05);
