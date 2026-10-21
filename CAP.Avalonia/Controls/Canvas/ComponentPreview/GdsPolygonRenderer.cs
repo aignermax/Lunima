@@ -14,6 +14,7 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 /// </summary>
 public static class GdsPolygonRenderer
 {
+    private static readonly PreviewBitmapLodCache BitmapLevels = new();
     /// <summary>Lower bound on bitmap dimensions to avoid zero-size bitmaps.</summary>
     internal const int MinBitmapPixels = 16;
 
@@ -60,11 +61,11 @@ public static class GdsPolygonRenderer
     /// Draws the GDS preview of <paramref name="component"/> into its current footprint
     /// <paramref name="footprint"/> (world coordinates, rotation-swapped like the live bounds).
     /// </summary>
-    public static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component, Rect footprint) =>
-        DrawGdsPreview(context, previewData, component, footprint.X, footprint.Y, footprint.Width, footprint.Height);
+    public static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component, Rect footprint, double zoom = 1) =>
+        DrawGdsPreview(context, previewData, component, footprint.X, footprint.Y, footprint.Width, footprint.Height, zoom);
 
     private static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component,
-        double x, double y, double width, double height)
+        double x, double y, double width, double height, double zoom = 1)
     {
         var result = previewData.Result;
         if (result.Polygons.Count == 0)
@@ -85,7 +86,7 @@ public static class GdsPolygonRenderer
         {
             if (previewData.Bitmap != null)
             {
-                context.DrawImage(previewData.Bitmap, destRect);
+                context.DrawImage(BitmapLevels.Get(previewData.Bitmap, destRect.Width, destRect.Height, zoom), destRect);
                 return;
             }
 

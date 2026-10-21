@@ -69,7 +69,9 @@ public class PlaceComponentCommand : IUndoableCommand
         double x,
         double y)
     {
-        var validPosition = canvas.FindValidPlacement(x, y, template.WidthMicrometers, template.HeightMicrometers);
+        var candidate = template.OutlinePolygons is { Count: > 0 }
+            ? new ComponentViewModel(ComponentTemplates.CreateFromTemplate(template, x, y)) : null;
+        var validPosition = canvas.FindValidPlacement(x, y, template.WidthMicrometers, template.HeightMicrometers, candidate);
 
         if (validPosition == null)
         {

@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using CAP_Core;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.Connections;
 using CAP_Core.Components.Creation;
 using CAP_Core.Components.PinKinds;
 using CAP_Core.Components.Process;
@@ -88,8 +89,17 @@ public partial class CanvasInteractionViewModel : ObservableObject
     partial void OnSelectedCanvasFrozenPathChanged(
         CanvasFrozenPathViewModel? oldValue, CanvasFrozenPathViewModel? newValue)
     {
-        if (oldValue != null) oldValue.IsSelected = false;
-        if (newValue != null) newValue.IsSelected = true;
+        if (newValue != null)
+        {
+            newValue.IsSelected = true;
+            if (!_canvas.Selection.SelectedFrozenPaths.Contains(newValue))
+                _canvas.Selection.SelectedFrozenPaths.Add(newValue);
+        }
+        if (oldValue != null)
+        {
+            oldValue.IsSelected = false;
+            _canvas.Selection.SelectedFrozenPaths.Remove(oldValue);
+        }
     }
 
     /// <summary>
@@ -204,6 +214,13 @@ public partial class CanvasInteractionViewModel : ObservableObject
         // Rubber-band connection selection (issue #862) feeds the routing panel's visibility.
         _canvas.Selection.SelectedConnections.CollectionChanged +=
             (_, _) => OnPropertyChanged(nameof(IsConnectionSelected));
+
+        _canvas.Selection.SelectedFrozenPaths.CollectionChanged += (_, _) =>
+        {
+            if (SelectedCanvasFrozenPath is { } selected &&
+                !_canvas.Selection.SelectedFrozenPaths.Contains(selected))
+                SelectedCanvasFrozenPath = null;
+        };
 
         RefreshModeShortcutHints();
         InitializeDieRules();
@@ -451,7 +468,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
                 // loops, ring self-coupling, black-box GDS imports).
                 UpdateStatus?.Invoke("Cannot connect pin to itself");
             }
-            else if (!PinKindHelper.AreKindsCompatible(_connectionStartPin, pin))
+            else if (!PinKindHelper.ArePlanarRoutingCompatible(_connectionStartPin, pin))
             {
                 // Cross-domain connection (optical ↔ electrical) is physically meaningless — reject.
                 UpdateStatus?.Invoke(PinKindHelper.DescribeIncompatibility(_connectionStartPin, pin));
@@ -780,7 +797,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
             }
             else if (frozenHit is { } frozenPath)
             {
-                SelectedCanvasFrozenPath = frozenPath;
                 SelectedComponent = null;
                 _canvas.SelectedComponent = null;
                 SelectedWaveguideConnection = null;
@@ -798,6 +814,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         SyncSelectionSetToClickResult();
+        // Assign after click synchronization clears the previous batch selection.
+        if (frozenHit != null) SelectedCanvasFrozenPath = frozenHit;
         SelectionPointChanged?.Invoke(x, y);
     }
 
@@ -1066,22 +1084,20 @@ public partial class CanvasInteractionViewModel : ObservableObject
         // The selection set is authoritative (box selection populates only the set);
         // fall back to the primary SelectedComponent when the set is empty.
         var targets = selection.SelectedComponents.ToList();
-        if (targets.Count == 0 && SelectedComponent != null)
+        if (targets.Count == 0 && SelectedComponent is { IsSelected: true })
             targets.Add(SelectedComponent);
 
-        // With no components selected, DEL acts on a selected canvas-level frozen
-        // path (issue #856), mirroring how imported route geometry is deleted.
-        if (targets.Count == 0 && SelectedCanvasFrozenPath is { } frozenPath)
-        {
-            SelectedCanvasFrozenPath = null;
-            _commandManager.ExecuteCommand(new DeleteCanvasFrozenPathCommand(_canvas, frozenPath));
-            UpdateStatus?.Invoke(
-                Services.Localization.LocalizationService.Instance.Translate("Status.FrozenPathDeleted"));
-            return;
-        }
+        var frozenPaths = selection.SelectedFrozenPaths.Where(_canvas.CanvasFrozenPaths.Contains).ToList();
+        var connections = selection.SelectedConnections.ToList();
+        if (SelectedWaveguideConnection is { IsSelected: true } single && !connections.Contains(single))
+            connections.Add(single);
 
         var deletable = targets.Where(c => !c.Component.IsLocked && !IsUndeletableDie(c)).ToList();
-        if (deletable.Count == 0)
+        // Component deletion already owns its incident wires and their undo snapshots.
+        var scopes = deletable.Select(c => new ComponentWireScope(c.Component)).ToList();
+        connections = connections.Where(c => !c.Connection.IsLocked && _canvas.Connections.Contains(c) &&
+            !scopes.Any(scope => scope.Touches(c.Connection))).ToList();
+        if (deletable.Count == 0 && connections.Count == 0 && frozenPaths.Count == 0)
         {
             if (DieDeleteRefusal(targets) is { } refusal)
                 UpdateStatus?.Invoke(refusal);
@@ -1090,17 +1106,22 @@ public partial class CanvasInteractionViewModel : ObservableObject
             return;
         }
 
-        // One batch command for a multi-selection, so a single undo restores everything.
-        IUndoableCommand cmd = OnDieSurface(deletable, () => deletable.Count == 1
-            ? new DeleteComponentCommand(_canvas, deletable[0])
-            : new GroupDeleteCommand(_canvas, deletable), "Delete");
-        _commandManager.ExecuteCommand(cmd);
+        var steps = new List<IUndoableCommand>();
+        if (deletable.Count > 0)
+            steps.Add(OnDieSurface(deletable, () => deletable.Count == 1
+                ? new DeleteComponentCommand(_canvas, deletable[0])
+                : new GroupDeleteCommand(_canvas, deletable), "Delete"));
+        steps.AddRange(connections.Select(c => new DeleteConnectionCommand(_canvas, c)));
+        steps.AddRange(frozenPaths.Select(p => new DeleteCanvasFrozenPathCommand(_canvas, p)));
+        _commandManager.ExecuteCommand(steps.Count == 1 ? steps[0] : new CompositeCommand("Delete selection", steps));
 
         selection.ClearSelection();
         SelectedComponent = null;
-        UpdateStatus?.Invoke(deletable.Count == 1
-            ? $"Deleted: {deletable[0].Name}"
-            : $"Deleted {deletable.Count} components");
+        SelectedWaveguideConnection = null;
+        SelectedCanvasFrozenPath = null;
+        UpdateStatus?.Invoke(string.Format(
+            Services.Localization.LocalizationService.Instance.Translate("Status.SelectedElementsDeleted"),
+            deletable.Count + connections.Count + frozenPaths.Count));
     }
 
     /// <summary>

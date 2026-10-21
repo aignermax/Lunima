@@ -17,6 +17,12 @@ public sealed record GdsTopCellSummary(string CellName, int DirectInstanceCount)
 /// </summary>
 public sealed record GdsImportAnalysis
 {
+    /// <summary>Original bytes captured with the reviewed parsed snapshot.</summary>
+    public byte[]? SourceBytes { get; init; }
+
+    /// <summary>SHA-256 identity of the captured source.</summary>
+    public string SourceSha256 { get; init; } = string.Empty;
+
     /// <summary>Library name from the GDS LIBNAME record (may be empty).</summary>
     public string LibraryName { get; init; } = string.Empty;
 

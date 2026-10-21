@@ -42,7 +42,8 @@ namespace CAP_Core.Components.Connections
         /// <summary>
         /// When true, the current routed path is frozen: re-routing keeps the existing
         /// geometry as long as both endpoints still match. Moving an endpoint beyond the
-        /// tolerance automatically unfreezes the connection and clears bend overrides.
+        /// tolerance automatically unfreezes generated geometry and clears bend overrides.
+        /// Imported source polygons remain frozen and report an endpoint mismatch instead.
         /// Set automatically when a manual per-bend radius override is applied.
         /// </summary>
         public bool IsRouteFrozen { get; set; }
@@ -176,6 +177,17 @@ namespace CAP_Core.Components.Connections
             // floor (issue #854), optical pairs at their endpoints' process floor when the
             // router carries a provider (issue #937), else the canvas-wide floor.
             double effectiveBendRadius = Math.Max(BendRadiusMicrometers, router.ResolveProcessFloorFor(StartPin, EndPin));
+
+            // Source polygons are the imported layout, not a disposable routing preview.
+            // A joint move translates them; an individual move leaves a visible gap until
+            // the user explicitly converts the drawing to a generated route.
+            if (AsDrawnGeometry is not null)
+            {
+                if (!FrozenPathStillMatchesPins())
+                    JointMoveRouteTranslator.TryTranslateToPins(this);
+                UpdateLossFromPath(wavelengthNm);
+                return;
+            }
 
             if (Type != WaveguideType.Auto)
             {

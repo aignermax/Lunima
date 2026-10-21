@@ -28,6 +28,9 @@ public enum DetectedPinSource
 /// </summary>
 public sealed record DetectedPin
 {
+    /// <summary>Optional physical port type, including vertical fiber interfaces.</summary>
+    public string? PortType { get; init; }
+
     /// <summary>Pin name: the label text for label pins, or <c>heur_N</c> for heuristic pins.</summary>
     public string Name { get; init; } = string.Empty;
 

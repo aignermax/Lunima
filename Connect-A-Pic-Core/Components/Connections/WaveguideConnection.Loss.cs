@@ -27,11 +27,18 @@ namespace CAP_Core.Components.Connections
         /// <summary>Itemized loss (propagation, bends, junctions) of the current route.</summary>
         public ConnectionLossBreakdown LossBreakdown { get; private set; } = ConnectionLossBreakdown.Empty;
 
+        private Complex _transmissionCoefficient = Complex.One;
+
         /// <summary>
         /// Gets the transmission coefficient calculated from current geometry and loss parameters.
-        /// Call RecalculateTransmission() after component positions change.
+        /// A disconnected preserved import transmits no light. Call RecalculateTransmission()
+        /// after component positions change to refresh the geometry-dependent loss.
         /// </summary>
-        public Complex TransmissionCoefficient { get; private set; } = Complex.One;
+        public Complex TransmissionCoefficient
+        {
+            get => HasImportedEndpointMismatch ? Complex.Zero : _transmissionCoefficient;
+            private set => _transmissionCoefficient = value;
+        }
 
         /// <summary>Total loss in dB for this connection (sum of <see cref="LossBreakdown"/>).</summary>
         public double TotalLossDb { get; private set; }

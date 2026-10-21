@@ -12,6 +12,8 @@ public class CommandManager : INotifyPropertyChanged
 
     private readonly LinkedList<IUndoableCommand> _undoStack = new();
     private readonly Stack<IUndoableCommand> _redoStack = new();
+    private readonly Dictionary<IUndoableCommand, (LinkedListNode<IUndoableCommand>? Anchor, int Generation)> _pending = new();
+    private int _historyGeneration;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -36,12 +38,12 @@ public class CommandManager : INotifyPropertyChanged
     /// <summary>
     /// Gets whether there are commands that can be undone.
     /// </summary>
-    public bool CanUndo => _undoStack.Count > 0;
+    public bool CanUndo => _pending.Count == 0 && _undoStack.Count > 0;
 
     /// <summary>
     /// Gets whether there are commands that can be redone.
     /// </summary>
-    public bool CanRedo => _redoStack.Count > 0;
+    public bool CanRedo => _pending.Count == 0 && _redoStack.Count > 0;
 
     /// <summary>
     /// Gets the description of the next command to undo.
@@ -63,14 +65,38 @@ public class CommandManager : INotifyPropertyChanged
     /// </summary>
     public int RedoCount => _redoStack.Count;
 
+    /// <summary>Establishes ownership before an asynchronous command starts mutating the design.</summary>
+    public void BeginExecution(IUndoableCommand command)
+    {
+        _pending.Add(command, (_undoStack.Last, _historyGeneration));
+        Executing?.Invoke(command);
+        NotifyPropertyChanged(nameof(CanUndo));
+        NotifyPropertyChanged(nameof(CanRedo));
+    }
+
+    /// <summary>Releases an abandoned asynchronous reservation without changing history.</summary>
+    public void CancelExecution(IUndoableCommand command)
+    {
+        if (!_pending.Remove(command)) return;
+        NotifyPropertyChanged(nameof(CanUndo));
+        NotifyPropertyChanged(nameof(CanRedo));
+    }
+
     /// <summary>
     /// Executes a command and adds it to the history.
     /// </summary>
     public void ExecuteCommand(IUndoableCommand command)
     {
+        var completing = _pending.Remove(command, out var reservation);
+        if (completing && reservation.Generation != _historyGeneration)
+        {
+            NotifyPropertyChanged(nameof(CanUndo));
+            NotifyPropertyChanged(nameof(CanRedo));
+            return;
+        }
         // Decided up front so side effects of the execution are attributed to the history
         // entry that will own them.
-        var mergeTarget = _undoStack.Count > 0
+        var mergeTarget = !completing && _pending.Count == 0 && _undoStack.Count > 0
                           && _undoStack.Last!.Value is IMergeableCommand candidate
                           && candidate.CanMergeWith(command)
             ? candidate
@@ -85,7 +111,12 @@ public class CommandManager : INotifyPropertyChanged
         }
         else
         {
-            _undoStack.AddLast(command);
+            if (completing && reservation.Anchor?.List == _undoStack)
+                _undoStack.AddAfter(reservation.Anchor, command);
+            else if (completing)
+                _undoStack.AddFirst(command);
+            else
+                _undoStack.AddLast(command);
 
             // Trim history if too large
             while (_undoStack.Count > MaxHistorySize)
@@ -112,7 +143,7 @@ public class CommandManager : INotifyPropertyChanged
     /// <returns>True if a command was undone, false if there was nothing to undo.</returns>
     public bool Undo()
     {
-        if (_undoStack.Count == 0)
+        if (!CanUndo)
             return false;
 
         var command = _undoStack.Last!.Value;
@@ -139,7 +170,7 @@ public class CommandManager : INotifyPropertyChanged
     /// <returns>True if a command was redone, false if there was nothing to redo.</returns>
     public bool Redo()
     {
-        if (_redoStack.Count == 0)
+        if (!CanRedo)
             return false;
 
         var command = _redoStack.Pop();
@@ -163,6 +194,7 @@ public class CommandManager : INotifyPropertyChanged
     /// </summary>
     public void ClearHistory()
     {
+        _historyGeneration++;
         _undoStack.Clear();
         _redoStack.Clear();
         HistoryCleared?.Invoke();

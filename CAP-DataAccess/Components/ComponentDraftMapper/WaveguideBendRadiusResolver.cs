@@ -20,10 +20,9 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
     public static class WaveguideBendRadiusResolver
     {
         /// <summary>
-        /// Conservative universal minimum bend radius (µm) used when no process declares one
-        /// (playground, no selection, or PDKs without optical minima). Real optical waveguides
-        /// cannot bend arbitrarily tightly — 10 µm (the A* router default) keeps even
-        /// process-less editing physically plausible instead of allowing sharp corners.
+        /// Generic routing fallback (µm) when no process declares a minimum
+        /// (playground, no selection, or PDKs without optical minima). This default
+        /// does not establish fabrication suitability for an unknown waveguide process.
         /// </summary>
         public const double FallbackMinimumMicrometers = 10.0;
 

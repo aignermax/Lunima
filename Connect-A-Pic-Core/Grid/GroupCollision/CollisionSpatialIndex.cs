@@ -17,10 +17,12 @@ internal sealed class CollisionSpatialIndex
     private readonly Dictionary<(int X, int Y), List<CollisionPrimitive>> _cells = new();
     private readonly List<CollisionPrimitive> _oversized = new();
     private int _stamp;
+    private readonly double _cellSize;
 
     /// <summary>Builds the index over <paramref name="obstacles"/>.</summary>
-    public CollisionSpatialIndex(IReadOnlyList<CollisionPrimitive> obstacles)
+    public CollisionSpatialIndex(IReadOnlyList<CollisionPrimitive> obstacles, double cellSize = CellSizeMicrometers)
     {
+        _cellSize = cellSize;
         foreach (var obstacle in obstacles)
             Insert(obstacle);
     }
@@ -87,9 +89,9 @@ internal sealed class CollisionSpatialIndex
         o.MinX - o.HalfWidth <= maxX + reach && o.MaxX + o.HalfWidth >= minX - reach
         && o.MinY - o.HalfWidth <= maxY + reach && o.MaxY + o.HalfWidth >= minY - reach;
 
-    private static (int X0, int Y0, int X1, int Y1) CellRange(double minX, double minY, double maxX, double maxY) =>
+    private (int X0, int Y0, int X1, int Y1) CellRange(double minX, double minY, double maxX, double maxY) =>
         (Cell(minX), Cell(minY), Cell(maxX), Cell(maxY));
 
-    private static int Cell(double coordinate) =>
-        (int)Math.Floor(Math.Clamp(coordinate / CellSizeMicrometers, int.MinValue / 2.0, int.MaxValue / 2.0));
+    private int Cell(double coordinate) =>
+        (int)Math.Floor(Math.Clamp(coordinate / _cellSize, int.MinValue / 2.0, int.MaxValue / 2.0));
 }

@@ -526,6 +526,9 @@ public partial class MainWindow : Window
         // Global keyboard shortcuts that work regardless of focus
         switch (e.Key)
         {
+            case Key.A when ctrlPressed || e.KeyModifiers.HasFlag(KeyModifiers.Meta):
+                mainVm.SelectAllCommand.Execute(null);
+                break;
             case Key.N:
                 if (ctrlPressed)
                     mainVm.NewProjectCommand.Execute(null);

@@ -26,6 +26,7 @@ public partial class GdsImportDialog : Window
             return;
 
         vm.OnClose = Close;
+        vm.EnableReview = true;
         _ = vm.StartAnalysisAsync();
     }
 

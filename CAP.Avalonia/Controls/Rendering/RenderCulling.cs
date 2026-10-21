@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Avalonia;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.Connections;
 using CAP_Core.Routing;
 
 namespace CAP.Avalonia.Controls.Rendering;
@@ -100,6 +101,20 @@ internal static class RenderCulling
             cached.HasValue = true;
         }
         return cached.Bounds;
+    }
+
+    /// <summary>
+    /// Bounds of the traced path and its validated source polygons. Imported masks can
+    /// extend beyond the fitted centerline; callers share their geometry snapshot with
+    /// drawing so culling does not trigger another route-shape validation.
+    /// </summary>
+    internal static Rect? GetFrozenPathBounds(FrozenWaveguidePath frozenPath, AsDrawnGeometry? sourceGeometry)
+    {
+        var bounds = GetFrozenPathBounds(frozenPath);
+        if (sourceGeometry is null) return bounds;
+        var (minX, minY, maxX, maxY) = sourceGeometry.Bounds;
+        var sourceBounds = new Rect(minX, minY, maxX - minX, maxY - minY);
+        return bounds is { } pathBounds ? pathBounds.Union(sourceBounds) : sourceBounds;
     }
 
     /// <summary>

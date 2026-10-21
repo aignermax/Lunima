@@ -29,7 +29,20 @@ internal static class CollisionShapeBuilder
         if (component is not ComponentGroup group)
         {
             if (IsSolid(component) && Touches(window, component))
-                into.Add(CollisionPrimitive.Footprint(component, deltaX, deltaY));
+            {
+                if (component.OutlinePolygons is { Count: > 0 })
+                {
+                    foreach (var polygon in OutlineCollisionGeometry.GetPolygons(component))
+                    {
+                        if (window is not { } w || w.Intersects(
+                                polygon.MinX + component.PhysicalX, polygon.MinY + component.PhysicalY,
+                                polygon.MaxX + component.PhysicalX, polygon.MaxY + component.PhysicalY))
+                            into.Add(CollisionPrimitive.Outline(polygon, component,
+                                component.PhysicalX + deltaX, component.PhysicalY + deltaY));
+                    }
+                }
+                else into.Add(CollisionPrimitive.Footprint(component, deltaX, deltaY));
+            }
             return;
         }
 

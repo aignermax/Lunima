@@ -73,6 +73,7 @@ public sealed class ComponentNameLabelComputer
 
     private readonly Dictionary<(string Name, double FontSize), FormattedText> _textCache = new();
 
+    private static readonly IReadOnlySet<Guid> NoLabels = new HashSet<Guid>();
     private int? _lastOverlapSignature;
     private IReadOnlySet<Guid> _overlapVisibleIds = new HashSet<Guid>();
     private Dictionary<Guid, Rect> _labelBounds = new();
@@ -100,6 +101,10 @@ public sealed class ComponentNameLabelComputer
         Rect viewportWorld,
         double zoom)
     {
+        // Selection and pointer movement must not shape thousands of hidden names.
+        if (zoom < ComponentRenderer.GroupOverviewZoom)
+            return NoLabels;
+
         double quantizedZoom = QuantizeZoom(zoom);
         int signature = ComputeOverlapSignature(components, hoveredComponentId, quantizedZoom);
         if (signature != _lastOverlapSignature)
@@ -141,9 +146,13 @@ public sealed class ComponentNameLabelComputer
         {
             if (comp.Component is ComponentGroup group)
             {
-                AddGroupChildCandidates(group, fontSize, candidates, bounds, text);
+                if (quantizedZoom >= ComponentRenderer.GroupOverviewZoom)
+                    AddGroupChildCandidates(group, fontSize, candidates, bounds, text);
                 continue;
             }
+
+            if (RenderCulling.IsBelowLodThreshold(comp.Width, comp.Height, quantizedZoom))
+                continue;
 
             var id = comp.Component.Id;
             var formatted = GetOrMeasureText(comp.Name, fontSize);
@@ -206,14 +215,9 @@ public sealed class ComponentNameLabelComputer
         return formatted;
     }
 
-    /// <summary>Rounds to a 5% zoom bucket (floored at one step) so smooth zooming doesn't
-    /// perturb the overlap-resolution signature every frame.</summary>
-    private static double QuantizeZoom(double zoom)
-    {
-        double safeZoom = zoom <= 0 ? 1.0 : zoom;
-        double quantized = Math.Round(safeZoom / ZoomQuantizationStep) * ZoomQuantizationStep;
-        return Math.Max(quantized, ZoomQuantizationStep);
-    }
+    /// <summary>Uses 5% zoom buckets in the detail view; overview names are never measured.</summary>
+    private static double QuantizeZoom(double zoom) =>
+        Math.Max(Math.Round(zoom / ZoomQuantizationStep) * ZoomQuantizationStep, ZoomQuantizationStep);
 
     /// <summary>
     /// Everything that could change which labels overlap or who wins: identity, position, size,
@@ -239,7 +243,7 @@ public sealed class ComponentNameLabelComputer
             hash.Add(comp.Height);
             hash.Add(comp.Component.RotationDegrees);
             hash.Add(comp.IsSelected);
-            if (comp.Component is ComponentGroup group)
+            if (quantizedZoom >= ComponentRenderer.GroupOverviewZoom && comp.Component is ComponentGroup group)
                 HashGroupChildren(group, ref hash);
         }
         return hash.ToHashCode();

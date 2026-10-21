@@ -20,12 +20,22 @@
                    IsVisible="{Binding BottomPanel.RerouteImported.HasGroupedFrozenRoutes}"
                    Text="{Binding BottomPanel.RerouteImported.GroupedFrozenText}"/>
 
-        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,6"
-                    IsVisible="{Binding BottomPanel.RerouteImported.HasFrozenImportedRoutes}">
-            <Button Content="{loc:Localize Routing.Reroute.All}"
-                    Command="{Binding BottomPanel.RerouteImported.RerouteAllCommand}"/>
-            <Button Content="{loc:Localize Routing.Reroute.Selected}"
-                    Command="{Binding BottomPanel.RerouteImported.RerouteSelectedCommand}"/>
+        <StackPanel Spacing="6" Margin="0,0,0,6">
+            <StackPanel.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                    <Binding Path="BottomPanel.RerouteImported.HasFrozenImportedRoutes"/>
+                    <Binding Path="BottomPanel.RerouteImported.HasGroupedFrozenRoutes"/>
+                </MultiBinding>
+            </StackPanel.IsVisible>
+            <TextBlock Classes="caption secondary" TextWrapping="Wrap"
+                       Text="{loc:Localize Routing.Reroute.EditImportedHint}"/>
+            <WrapPanel Orientation="Horizontal">
+                <Button Content="{loc:Localize Routing.Reroute.All}" Margin="0,0,8,4"
+                        Command="{Binding BottomPanel.RerouteImported.RerouteAllCommand}"/>
+                <Button Content="{loc:Localize Routing.Reroute.Selected}" Margin="0,0,0,4"
+                        IsVisible="{Binding BottomPanel.RerouteImported.HasFrozenImportedRoutes}"
+                        Command="{Binding BottomPanel.RerouteImported.RerouteSelectedCommand}"/>
+            </WrapPanel>
         </StackPanel>
 
         <TextBlock Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,4" TextWrapping="Wrap"

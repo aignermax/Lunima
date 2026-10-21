@@ -1199,6 +1199,14 @@
                                    MainViewModel="{Binding}">
                 <controls:DesignCanvas.ContextMenu>
                 <ContextMenu>
+                    <MenuItem Header="{loc:Localize GdsSelection.Expand}"
+                              Command="{Binding ImportedHierarchy.ExpandCommand}"
+                              IsVisible="{Binding ImportedHierarchy.IsVisible}"
+                              ToolTip.Tip="{loc:Localize GdsSelection.ExpandHint}"/>
+                    <MenuItem Header="{loc:Localize Routing.Reroute.ConvertToEditable}"
+                              Command="{Binding BottomPanel.RerouteImported.RerouteSelectedCommand}"
+                              IsVisible="{Binding BottomPanel.RerouteImported.HasSelectedDrawnRoute}"
+                              ToolTip.Tip="{loc:Localize Routing.Reroute.EditImportedHint}"/>
                     <MenuItem Header="{loc:Localize Context.EditComponent}" Command="{Binding CanvasInteraction.OpenSelectedComponentSettingsCommand}"
                               IsVisible="{Binding CanvasContextMenu.ShowsEditComponent}">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Settings}"/></MenuItem.Icon>
@@ -1209,6 +1217,7 @@
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Shapes}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
+                    <MenuItem Header="{loc:Localize Context.SelectAll}" Command="{Binding SelectAllCommand}" InputGesture="Ctrl+A"/>
                     <MenuItem Header="{loc:Localize Context.Copy}" Command="{Binding CopySelectedCommand}" InputGesture="Ctrl+C">
                         <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Copy}"/></MenuItem.Icon>
                     </MenuItem>
@@ -1262,6 +1271,9 @@
 
             <!-- Workspace tint (~6 % alpha) and hairline edge over the canvas; hit-test invisible. -->
             <Border x:Name="WorkspaceCanvasTint" Classes="wsCanvasTint"/>
+
+            <panels:ImportedSelectionActions HorizontalAlignment="Center"
+                                             VerticalAlignment="Top" Margin="12"/>
 
             <!-- Mode-probe flyout: non-modal, anchored at the probe click point.
                  The overlay Canvas has no background, so canvas interaction stays live. -->

@@ -67,6 +67,7 @@ public partial class HomeViewModel : ObservableObject
     public ObservableCollection<HomeTourEntry> TourEntries { get; } = new();
 
     public Onboarding.LearningPath.LearningPathViewModel? LearningPath { get; set; }
+    [ObservableProperty] private bool _isLearningExampleMissing;
     public Func<Task>? ManufacturingTourRequested { get; set; }
     [RelayCommand] private Task ManufacturingTour() => ManufacturingTourRequested?.Invoke() ?? Task.CompletedTask;
 
@@ -230,6 +231,7 @@ public partial class HomeViewModel : ObservableObject
     /// </summary>
     public void Show()
     {
+        IsLearningExampleMissing = false;
         RefreshRecentProjects();
         RefreshExamples();
         RefreshTourEntries();

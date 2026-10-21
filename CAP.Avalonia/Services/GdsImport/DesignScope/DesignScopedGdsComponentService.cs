@@ -130,6 +130,7 @@ public sealed partial class DesignScopedGdsComponentService
             GdsFileName = s.GdsFileName,
             GdsBase64 = Convert.ToBase64String(s.GdsBytes),
             Components = s.Drafts,
+            Interpretation = s.Interpretation,
         }).ToList();
     }
 
@@ -176,6 +177,7 @@ public sealed partial class DesignScopedGdsComponentService
                 GdsFileName = data.GdsFileName,
                 GdsBytes = gdsBytes,
                 Drafts = data.Components,
+                Interpretation = data.Interpretation,
             });
         }
     }

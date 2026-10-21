@@ -23,6 +23,7 @@ internal sealed class PinRenderer
 
     /// <summary>Screen font size of a hovered pin's name.</summary>
     private const double PinNameFontPx = 11.0;
+    private const double FocusedPinMinRadiusPx = 4.0;
 
     /// <summary>Alpha of a pin that is not a valid target for the connection being dragged.</summary>
     private const byte IncompatibleAlpha = 0x50;
@@ -35,14 +36,18 @@ internal sealed class PinRenderer
     /// <summary>
     /// Renders all physical pins of a component.
     /// </summary>
-    public void DrawComponentPins(DrawingContext context, ComponentViewModel comp, CanvasRenderContext rc, bool isDimmed = false)
+    public void DrawComponentPins(DrawingContext context, ComponentViewModel comp, CanvasRenderContext rc, bool isDimmed = false, bool focusedOnly = false)
     {
         bool isConnectMode = rc.MainViewModel?.CanvasInteraction.CurrentMode == InteractionMode.Connect;
         var highlightedPin = rc.ViewModel.HighlightedPin?.Pin;
         var dragStartPin = rc.InteractionState.ConnectionDragStartPin;
-        double pitchScale = PinPitchSizer.ComputeScale(comp.Component.PhysicalPins, isConnectMode ? 8 : 5);
+        double pitchScale = focusedOnly ? 1 : PinPitchSizer.ComputeScale(comp.Component.PhysicalPins, isConnectMode ? 8 : 5);
+        IEnumerable<PhysicalPin> pins = focusedOnly
+            ? highlightedPin is not null && ReferenceEquals(highlightedPin.ParentComponent, comp.Component)
+                ? new[] { highlightedPin } : Array.Empty<PhysicalPin>()
+            : comp.Component.PhysicalPins;
 
-        foreach (var pin in comp.Component.PhysicalPins)
+        foreach (var pin in pins)
         {
             var (pinX, pinY) = pin.GetAbsolutePosition();
             bool isHighlighted = pin == highlightedPin;
@@ -58,6 +63,8 @@ internal sealed class PinRenderer
             if (isHighlighted)
             {
                 pinSize = PinScreenSize.CapWorldRadius(12 * pitchScale, rc.Zoom);
+                if (focusedOnly)
+                    pinSize = Math.Max(pinSize, FocusedPinMinRadiusPx / (rc.Zoom <= 0 ? 1 : rc.Zoom));
                 context.DrawEllipse(HighlightGlow, null, new Point(pinX, pinY), pinSize * 1.5, pinSize * 1.5);
             }
 

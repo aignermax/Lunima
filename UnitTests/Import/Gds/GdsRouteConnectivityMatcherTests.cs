@@ -62,6 +62,34 @@ public class GdsRouteConnectivityMatcherTests
             electrical);
 
     [Fact]
+    public void Match_OverlappingSelectedMasksProduceOneConnectionAndPreserveBothPolygons()
+    {
+        var first = Bridge();
+        var second = first with { Layer = 401 };
+        var result = Match([first, second],
+            [new[] { Pin("out", 10, 2) }, new[] { Pin("in", 15, 2) }]);
+
+        var pair = result.Pairs.ShouldHaveSingleItem();
+        pair.SourcePolygons.Select(p => p.Layer).ShouldBe([1, 401]);
+        result.ConsumedPolygonIndexes.Count.ShouldBe(2);
+        result.ConsumedInstancePins.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Match_SelectedDifferentLayersUsePlanarTouchWithoutStackOrViaKnowledge()
+    {
+        // Documents the limitation explained by the review's multi-layer warning.
+        var first = Rect(0, 0, 5, 1);
+        var second = Rect(5, 0, 10, 1) with { Layer = 52 };
+        var result = Match([first, second],
+            [new[] { Pin("a", 0, .5) }, new[] { Pin("b", 10, .5) }], electrical: true);
+
+        var pair = result.Pairs.ShouldHaveSingleItem();
+        pair.IsElectrical.ShouldBeTrue();
+        pair.SourcePolygons.Count.ShouldBe(2);
+    }
+
+    [Fact]
     public void Match_GuessedPinOnALabelledRoute_GivesWay()
     {
         // The route bridges wgA.out → wgB.in; a guessed edge pin of wgA also sits on the

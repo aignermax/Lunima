@@ -157,7 +157,8 @@ public static class GdsHierarchyImporter
             // gdsfactory nests a merged partial under nazca's default 'nazca'
             // wrapper, so the direct child is the wrapper, not the artifact cell
             // itself.
-            if (GdsExportArtifactExpander.TryUnwrapToArtifact(session.Library, cell, out var artifactLeaf))
+            if (session.Options.Interpretation is null
+                && GdsExportArtifactExpander.TryUnwrapToArtifact(session.Library, cell, out var artifactLeaf))
             {
                 if (!fromArtifact
                     && GdsExportArtifactExpander.TryExpandArtifactInstances(
@@ -189,7 +190,7 @@ public static class GdsHierarchyImporter
             // importing it as a "waveguide" draft would leave the circuit
             // graph disconnected. A deliberate known-component binding wins
             // over dissolution.
-            if (known is null
+            if (known is null && session.Options.Interpretation is null
                 && GdsRouteCellDissolver.IsRouteCell(cell, session.GetFlattened(cell), session.Options))
             {
                 GdsRouteCellDissolver.Dissolve(

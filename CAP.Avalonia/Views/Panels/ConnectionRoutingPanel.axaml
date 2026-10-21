@@ -73,6 +73,15 @@
             </controls:HelpFlyoutButton>
         </Grid>
 
+        <StackPanel IsVisible="{Binding BottomPanel.RerouteImported.HasSelectedDrawnRoute}"
+                    Spacing="6" Margin="0,0,0,8">
+            <TextBlock Classes="caption secondary" TextWrapping="Wrap"
+                       Text="{loc:Localize Routing.Reroute.EditImportedHint}"/>
+            <Button Content="{loc:Localize Routing.Reroute.ConvertToEditable}"
+                    Command="{Binding BottomPanel.RerouteImported.RerouteSelectedCommand}"
+                    ToolTip.Tip="{loc:Localize Routing.Reroute.EditImportedHint}"/>
+        </StackPanel>
+
         <!-- Multi-selection (issue #862): the dropdown restyles all selected connections at once. -->
         <TextBlock Text="{Binding BottomPanel.ConnectionRouting.BatchHint}"
                    IsVisible="{Binding BottomPanel.ConnectionRouting.IsBatchSelection}"

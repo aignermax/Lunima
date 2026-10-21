@@ -35,7 +35,7 @@ public static partial class GdsPinDetector
 
         foreach (var polygon in flattened.Polygons)
         {
-            if (!ContainsLayer(options.PortLayers, polygon.Layer, polygon.DataType))
+            if (!ContainsLayer(options.PortMarkerLayers ?? options.PortLayers, polygon.Layer, polygon.DataType))
                 continue;
 
             foreach (var (p1, p2) in Segments(polygon))

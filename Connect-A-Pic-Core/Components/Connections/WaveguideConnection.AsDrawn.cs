@@ -26,6 +26,8 @@ namespace CAP_Core.Components.Connections
         /// re-route, unfreeze or manual bend/shift edit therefore hides them
         /// automatically and the fitted centerline (<see cref="RoutedPath"/>) becomes
         /// the drawn and exported geometry — there is no second copy to keep in sync.
+        /// Moving a pin preserves the imported route and polygons; endpoint gaps are
+        /// reported separately by <see cref="HasImportedEndpointMismatch"/>.
         /// </summary>
         public AsDrawnGeometry? AsDrawnGeometry =>
             _asDrawn is { } binding
@@ -48,6 +50,21 @@ namespace CAP_Core.Components.Connections
             ArgumentNullException.ThrowIfNull(geometry);
             _asDrawn = new AsDrawnBinding(geometry, RouteShapeSignature.Of(RoutedPath), RoutedPath?.DeepCopy());
             _drawnRouteDisplacedByMove = false;
+        }
+
+        /// <summary>
+        /// Keeps the smallest observed optical source bend as routing intent before
+        /// converting an imported drawing to an editable route. This is not a fabrication
+        /// minimum, and never reduces an explicitly larger connection radius.
+        /// </summary>
+        public void PreserveImportedBendRadius()
+        {
+            if (IsElectrical || AsDrawnGeometry is null || RoutedPath is null) return;
+            var radius = RoutedPath.Segments.OfType<BendSegment>()
+                .Select(b => b.RadiusMicrometers)
+                .Where(r => double.IsFinite(r) && r > 0)
+                .DefaultIfEmpty(BendRadiusMicrometers).Min();
+            BendRadiusMicrometers = Math.Max(BendRadiusMicrometers, radius);
         }
 
         /// <summary>
@@ -87,5 +104,12 @@ namespace CAP_Core.Components.Connections
         /// for undo snapshots that must restore them together with an earlier route.
         /// </summary>
         public AsDrawnGeometry? AttachedAsDrawnGeometry => _asDrawn?.Geometry;
+
+        /// <summary>
+        /// The preserved imported geometry no longer reaches its connected pins.
+        /// This is an endpoint-continuity check, not a fabrication-rule validation.
+        /// </summary>
+        public bool HasImportedEndpointMismatch => AsDrawnGeometry is not null
+            && StartPin is not null && EndPin is not null && !FrozenPathStillMatchesPins();
     }
 }

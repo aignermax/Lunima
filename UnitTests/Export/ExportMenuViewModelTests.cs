@@ -214,7 +214,7 @@ public class ExportMenuViewModelTests
         vm.ExportMenu.Formats.Select(f => f.Name).ShouldBe(new[]
         {
             "Nazca → GDS (Python)",
-            "Nazca → one file per die",
+            "One GDS per die",
             "Whole layout → GDS",
             "SAX (Simphony)",
             "PhotonTorch",

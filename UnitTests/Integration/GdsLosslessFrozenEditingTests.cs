@@ -68,18 +68,69 @@ public sealed class GdsLosslessFrozenEditingTests : IDisposable
     {
         var canvas = await ImportAsync();
         var connection = canvas.Connections.Single().Connection;
+        var source = connection.AsDrawnGeometry.ShouldNotBeNull();
         var device = canvas.Components.First(c => c.Width < 300 && !c.Component.IsMirroredHorizontally);
         var move = new MoveComponentCommand(canvas, device, device.X, device.Y, device.X, device.Y - 40);
 
         move.Execute();
         await canvas.RecalculateRoutesAsync();
-        connection.AsDrawnGeometry.ShouldBeNull("the drawing no longer ends at the moved pin");
+        connection.AsDrawnGeometry.ShouldBeSameAs(source, "moving a device must not replace source geometry");
+        connection.IsRouteFrozen.ShouldBeTrue();
+        connection.HasImportedEndpointMismatch.ShouldBeTrue("the unchanged route no longer reaches the moved pin");
+        connection.TransmissionCoefficient.ShouldBe(System.Numerics.Complex.Zero,
+            "a disconnected imported route cannot carry simulated light");
 
         move.Undo();
         await canvas.RecalculateRoutesAsync();
         connection.IsRouteFrozen.ShouldBeTrue();
         connection.PathLengthMicrometers.ShouldBe(NazcaStyleChipFixture.RouteLengthUm, 0.01);
         connection.AsDrawnGeometry.ShouldNotBeNull("undo snaps the imported route and its polygons back");
+        connection.HasImportedEndpointMismatch.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task JointDeviceMove_TranslatesEveryImportedLayer_WithoutRerouting()
+    {
+        var canvas = await ImportAsync();
+        var connection = canvas.Connections.Single().Connection;
+        var source = connection.AsDrawnGeometry.ShouldNotBeNull();
+        var start = connection.StartPin.ParentComponent;
+        var end = connection.EndPin.ParentComponent;
+        start.PhysicalX += 20;
+        start.PhysicalY += 30;
+        end.PhysicalX += 20;
+        end.PhysicalY += 30;
+
+        await canvas.RecalculateRoutesAsync();
+
+        connection.HasImportedEndpointMismatch.ShouldBeFalse();
+        var moved = connection.AsDrawnGeometry.ShouldNotBeNull();
+        moved.Polygons.Count.ShouldBe(source.Polygons.Count);
+        for (int i = 0; i < source.Polygons.Count; i++)
+        {
+            moved.Polygons[i].Layer.ShouldBe(source.Polygons[i].Layer);
+            moved.Polygons[i].DataType.ShouldBe(source.Polygons[i].DataType);
+            for (int j = 0; j < source.Polygons[i].Points.Count; j++)
+            {
+                moved.Polygons[i].Points[j].X.ShouldBe(source.Polygons[i].Points[j].X + 20, 1e-8);
+                moved.Polygons[i].Points[j].Y.ShouldBe(source.Polygons[i].Points[j].Y + 30, 1e-8);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task JointMoveSnapshotRestore_RestoresExactSourcePolygons()
+    {
+        var canvas = await ImportAsync();
+        var connection = canvas.Connections.Single().Connection;
+        var source = connection.AsDrawnGeometry.ShouldNotBeNull();
+        var snapshot = CAP.Avalonia.ViewModels.Canvas.Services.RouteGeometrySnapshot.Capture(canvas);
+        connection.ReplaceRoutedPath(connection.RoutedPath!.TranslatedCopy(20, 30));
+        connection.AttachAsDrawnGeometry(source.Translated(20, 30));
+
+        snapshot.Restore(canvas);
+
+        connection.AsDrawnGeometry.ShouldBeSameAs(source);
     }
 
     [Fact]

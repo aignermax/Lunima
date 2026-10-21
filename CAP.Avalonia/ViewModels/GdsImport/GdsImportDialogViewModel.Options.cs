@@ -15,6 +15,18 @@ public partial class GdsImportDialogViewModel
     {
         options = new GdsHierarchyImportOptions();
         error = null;
+        if (EnableReview && Review != null)
+        {
+            var hasChildren = SelectedTopCell is { } selected
+                && _analyzedLibrary?.Cells.TryGetValue(selected.CellName, out var root) == true
+                && root.Elements.OfType<GdsReference>().Any();
+            options = GdsLayerRoleMapping.Apply(options, Review.BuildInterpretation().Layers) with
+            {
+                Mode = IsExplodeMode && hasChildren
+                    ? GdsHierarchyImportMode.ExplodeHierarchy : GdsHierarchyImportMode.BlackBox,
+            };
+            return true;
+        }
 
         var portLayers = ParseLayerPairs(PortLayersText);
         if (portLayers is null)

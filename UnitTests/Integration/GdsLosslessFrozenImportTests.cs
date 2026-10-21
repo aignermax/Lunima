@@ -50,6 +50,32 @@ public sealed class GdsLosslessFrozenImportTests : IDisposable
     }
 
     [Fact]
+    public async Task RerouteLegacyImport_PreservesSourceRadiusBeforeDiscardingGeometry()
+    {
+        var canvas = await ImportWithDialogDefaultsAsync();
+        var target = canvas.Connections.ShouldHaveSingleItem();
+        target.Connection.BendRadiusMicrometers = 10;
+        var command = new RerouteImportedRoutesCommand(canvas, new[] { target });
+        command.Execute();
+        await canvas.RecalculateRoutesAsync();
+        target.Connection.BendRadiusMicrometers.ShouldBe(NazcaStyleChipFixture.BendRadiusUm, 0.001);
+        command.Undo();
+        await canvas.RecalculateRoutesAsync();
+        target.Connection.BendRadiusMicrometers.ShouldBe(10);
+        command.Execute();
+        await canvas.RecalculateRoutesAsync();
+        target.Connection.BendRadiusMicrometers.ShouldBe(NazcaStyleChipFixture.BendRadiusUm, 0.001);
+    }
+
+    [Fact]
+    public async Task Import_PreservesObservedBendRadiusForLaterEditableRouting()
+    {
+        var canvas = await ImportWithDialogDefaultsAsync();
+        var connection = canvas.Connections.ShouldHaveSingleItem().Connection;
+        connection.BendRadiusMicrometers.ShouldBe(NazcaStyleChipFixture.BendRadiusUm, 0.001);
+    }
+
+    [Fact]
     public async Task Import_KeepsTheRouteFrozenWithAnExactCenterline()
     {
         var canvas = await ImportWithDialogDefaultsAsync();
@@ -121,6 +147,7 @@ public sealed class GdsLosslessFrozenImportTests : IDisposable
 
         var connection = reloaded.Connections.ShouldHaveSingleItem().Connection;
         connection.IsRouteFrozen.ShouldBeTrue();
+        connection.BendRadiusMicrometers.ShouldBe(NazcaStyleChipFixture.BendRadiusUm, 0.001);
         connection.AsDrawnGeometry.ShouldNotBeNull().Polygons.Count.ShouldBe(10);
         reloaded.Components.Count(c => c.Component.IsMirroredHorizontally).ShouldBe(1);
         reloaded.Components.Single(c => c.Width > 300).Component.IsRoutingObstacle

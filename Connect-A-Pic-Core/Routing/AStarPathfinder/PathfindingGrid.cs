@@ -1,4 +1,5 @@
 using CAP_Core.Components.Core;
+using CAP_Core.Grid.GroupCollision;
 using System.Linq;
 
 namespace CAP_Core.Routing.AStarPathfinder;
@@ -315,8 +316,23 @@ public partial class PathfindingGrid
         var (bx2, by2) = PhysicalToGrid(component.PhysicalX + component.WidthMicrometers,
                                         component.PhysicalY + component.HeightMicrometers);
 
+        OutlineRasterRows? outlineBody = null, outlinePadded = null;
+        if (component.OutlinePolygons is { Count: > 0 })
+        {
+            var polygons = OutlineCollisionGeometry.Transform(component).ToArray();
+            outlineBody = OutlineRasterRows.Build(polygons, this, 0);
+            outlinePadded = OutlineRasterRows.Build(polygons, this, padding);
+            foreach (var (pin, cells) in pinCorridors)
+            {
+                var (px, py) = pin.GetAbsolutePosition();
+                var endpoint = PhysicalToGrid(px, py);
+                cells.RemoveWhere(cell => cell != endpoint && outlineBody.Contains(cell.x, cell.y));
+            }
+            pinCorridorCells = pinCorridors.Values.SelectMany(cells => cells).ToHashSet();
+        }
         var footprint = new ComponentFootprint(
-            component, (gx1, gy1, gx2, gy2), (bx1, by1, bx2, by2), pinCorridorCells, Width, Height);
+            component, (gx1, gy1, gx2, gy2), (bx1, by1, bx2, by2), pinCorridorCells, Width, Height,
+            outlineBody, outlinePadded);
         foreach (var (gx, gy) in footprint)
             _cells[gx, gy] = 1; // Blocked by obstacle
         lock (_componentCellsLock)
@@ -521,6 +537,11 @@ public partial class PathfindingGrid
                 // Only clear component obstacles (1), NOT waveguide obstacles (2)
                 if (IsInBounds(gx, gy) && _cells[gx, gy] == 1)
                 {
+                    lock (_ownershipLock)
+                    {
+                        if (AnyClaim(gx, gy, (owner, body) => body && owner.OutlinePolygons is { Count: > 0 }, out _))
+                            continue;
+                    }
                     clearedCells[(gx, gy)] = _cells[gx, gy];
                     _cells[gx, gy] = 0;
                 }

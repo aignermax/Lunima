@@ -17,7 +17,7 @@ public sealed class RouteGeometrySnapshot
     {
         lock (canvas.ConnectionManager.SyncRoot)
             return new(canvas.ConnectionManager.Connections.Select(c => new Entry(
-                c, c.RoutedPath?.DeepCopy(), c.IsRouteFrozen, new(c.StraightShiftOffsets))).ToList());
+                c, c.RoutedPath?.DeepCopy(), c.IsRouteFrozen, new(c.StraightShiftOffsets), c.AsDrawnGeometry)).ToList());
     }
 
     /// <summary>Restore only identical connections present after topology undo.</summary>
@@ -33,6 +33,7 @@ public sealed class RouteGeometrySnapshot
                 entry.Connection.IsRouteFrozen = entry.Frozen;
                 entry.Connection.StraightShiftOffsets.Clear();
                 foreach (var pair in entry.Offsets) entry.Connection.StraightShiftOffsets.Add(pair.Key, pair.Value);
+                if (entry.AsDrawn is { } asDrawn) entry.Connection.AttachAsDrawnGeometry(asDrawn);
                 var grid = canvas.Router.PathfindingGrid;
                 grid?.RemoveWaveguideObstacle(entry.Connection.Id);
                 if (entry.Connection.RoutedPath is { } restored)
@@ -44,5 +45,5 @@ public sealed class RouteGeometrySnapshot
     }
 
     private sealed record Entry(WaveguideConnection Connection, RoutedPath? Path,
-        bool Frozen, Dictionary<int, double> Offsets);
+        bool Frozen, Dictionary<int, double> Offsets, AsDrawnGeometry? AsDrawn);
 }

@@ -130,6 +130,7 @@ public sealed partial class GdsPlacementExecutor
         bool groupImport = true)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        ValidateReviewedGroups(plan);
         var report = new GdsPlacementReport();
         var templates = _templateProvider();
         PlacedCountSoFar = 0;
@@ -160,8 +161,9 @@ public sealed partial class GdsPlacementExecutor
             createdConnections.AddRange(await AutoConnectAllPinsAsync(placedViewModels, report, progress, ct));
         ValidateCreatedConnections(createdConnections, report);
         var (leftovers, background) = AssignAsDrawnGeometry(plan, report, originOffset);
+        var groupedViewModels = ApplyReviewedGroups(plan, placedViewModels, report);
         if (groupImport)
-            CreateGroup(plan, placedViewModels, report, progress, ct, leftovers, background);
+            CreateGroup(plan, groupedViewModels, report, progress, ct, leftovers, background);
         else
             AddCanvasFrozenPaths(leftovers, background);
         return report;

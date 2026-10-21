@@ -50,7 +50,7 @@ internal sealed partial class GdsHierarchyImportSession
     /// </summary>
     public List<string> Infos { get; } = new();
 
-    public GdsBoundingBox TopBBox => GetCellBBox(_topCellName);
+    public GdsBoundingBox TopBBox => _options.SourceTopBoundingBox ?? GetCellBBox(_topCellName);
 
     public GdsBoundingBox GetCellBBox(string cellName)
     {
@@ -79,6 +79,8 @@ internal sealed partial class GdsHierarchyImportSession
     /// </summary>
     public IReadOnlyList<DetectedPin> GetCellPins(string cellName, GdsBoundingBox bbox)
     {
+        if (GetReviewedPins(cellName) is { } reviewed)
+            return reviewed;
         if (_pins.TryGetValue(cellName, out var cached))
             return cached;
 
@@ -127,6 +129,8 @@ internal sealed partial class GdsHierarchyImportSession
     /// </summary>
     public IReadOnlyList<DetectedPin> GetTopLevelPorts()
     {
+        if (GetReviewedPins(_topCellName) is { } reviewed)
+            return reviewed;
         var detectionCell = new FlattenedGdsCell { CellName = _topCellName };
         detectionCell.Texts.AddRange(Library.Cells[_topCellName].Elements.OfType<GdsText>()
             .Where(IsSingleLineLabel));

@@ -1,4 +1,5 @@
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Routing;
 
 namespace CAP.Avalonia.Selection;
 
@@ -29,6 +30,8 @@ public static class ConnectionBoxSelector
         double rectMaxX, double rectMaxY,
         bool removeFromSelection = false)
     {
+        using var update = selection.BeginUpdate();
+        var selected = selection.SelectedConnections.ToHashSet();
         foreach (var conn in connections)
         {
             if (conn.Connection.IsElectrical) continue;
@@ -39,7 +42,7 @@ public static class ConnectionBoxSelector
                 if (selection.SelectedConnections.Remove(conn))
                     conn.IsSelected = false;
             }
-            else if (!selection.SelectedConnections.Contains(conn))
+            else if (selected.Add(conn))
             {
                 selection.SelectedConnections.Add(conn);
                 conn.IsSelected = true;
@@ -48,8 +51,34 @@ public static class ConnectionBoxSelector
     }
 
     /// <summary>
-    /// True when any routed segment (arcs approximated by their chord, like the click
-    /// hit-test) crosses the rectangle; falls back to the straight endpoint line when the
+    /// Applies crossing-box selection to pin-less imported geometry. The component pass
+    /// owns clearing for an ordinary drag; Ctrl adds and Alt removes.
+    /// </summary>
+    public static void SelectFrozenPathsInRectangle(
+        SelectionManager selection, IEnumerable<CanvasFrozenPathViewModel> paths,
+        double minX, double minY, double maxX, double maxY, bool removeFromSelection = false)
+    {
+        using var update = selection.BeginUpdate();
+        var selected = selection.SelectedFrozenPaths.ToHashSet();
+        foreach (var path in paths)
+        {
+            if (!path.Path.Path.Segments.Any(segment =>
+                    PathSegmentIntersectsRectangle(segment, minX, minY, maxX, maxY))) continue;
+            if (removeFromSelection)
+            {
+                if (selection.SelectedFrozenPaths.Remove(path)) path.IsSelected = false;
+            }
+            else if (selected.Add(path))
+            {
+                selection.SelectedFrozenPaths.Add(path);
+                path.IsSelected = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// True when any routed segment (arcs sampled like the click hit-test) crosses the
+    /// rectangle; falls back to the straight endpoint line when the
     /// connection is not routed yet.
     /// </summary>
     public static bool PathIntersectsRectangle(
@@ -62,12 +91,29 @@ public static class ConnectionBoxSelector
 
         foreach (var seg in segments)
         {
-            if (SegmentIntersectsRectangle(
-                    seg.StartPoint.X, seg.StartPoint.Y, seg.EndPoint.X, seg.EndPoint.Y,
-                    minX, minY, maxX, maxY))
+            if (PathSegmentIntersectsRectangle(seg, minX, minY, maxX, maxY))
                 return true;
         }
         return false;
+    }
+
+    private static bool PathSegmentIntersectsRectangle(
+        PathSegment segment, double minX, double minY, double maxX, double maxY)
+    {
+        if (segment is BendSegment bend)
+        {
+            var previous = bend.StartPoint;
+            // Same 1 µm arc-length sampling as the canvas click hit-test.
+            foreach (var point in ArcSampling.SamplePoints(bend, 1.0))
+            {
+                if (SegmentIntersectsRectangle(previous.X, previous.Y, point.X, point.Y,
+                        minX, minY, maxX, maxY)) return true;
+                previous = point;
+            }
+            return false;
+        }
+        return SegmentIntersectsRectangle(segment.StartPoint.X, segment.StartPoint.Y,
+            segment.EndPoint.X, segment.EndPoint.Y, minX, minY, maxX, maxY);
     }
 
     /// <summary>

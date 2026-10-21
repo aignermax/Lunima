@@ -11,6 +11,10 @@ namespace CAP.Avalonia.Services.GdsImport.DesignScope;
 /// </summary>
 public sealed class ImportedGdsComponentSetData
 {
+    /// <summary>Reviewed source interpretation, absent for legacy imports.</summary>
+    [JsonPropertyName("interpretation")]
+    public CAP_DataAccess.Import.Gds.Interpretation.GdsImportInterpretation? Interpretation { get; set; }
+
     /// <summary>Import PDK name the design's placements reference as <c>PdkSource</c>.</summary>
     [JsonPropertyName("pdkName")]
     public string PdkName { get; set; } = string.Empty;

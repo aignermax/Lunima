@@ -72,6 +72,11 @@ public class GroupCollisionDetector
         ArgumentNullException.ThrowIfNull(obstacles);
 
         var moved = new List<CollisionPrimitive> { CollisionPrimitive.Footprint(x, y, width, height, movedComponent) };
+        if (movedComponent?.OutlinePolygons is { Count: > 0 })
+        {
+            moved.Clear();
+            CollisionShapeBuilder.Append(movedComponent, x - movedComponent.PhysicalX, y - movedComponent.PhysicalY, moved);
+        }
         var skip = movedComponent is null ? new HashSet<Component>() : new HashSet<Component> { movedComponent };
         return !new PlacementCollisionQuery(moved, preDragOverlapPartners).HasCollision(obstacles, skip);
     }

@@ -52,7 +52,7 @@ internal static class ComponentBodyRenderer
 
         context.DrawRectangle(preview != null ? brushes.BodyUnderPreview : brushes.Body, null, rect, radius, radius);
         if (preview != null)
-            GdsPolygonRenderer.DrawGdsPreview(context, preview, component, rect);
+            GdsPolygonRenderer.DrawGdsPreview(context, preview, component, rect, rc.Zoom);
         else if (state.IsSelected)
             context.DrawRectangle(CanvasPalette.AccentSubtleBrush, null, rect, radius, radius);
 

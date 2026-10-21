@@ -44,7 +44,7 @@ public static class PdkTemplateConverter
                 kind,
                 PolarizationRules.Resolve(p.Polarization, pdkComp.Name, pdkComp.NazcaFunction),
                 p.WaveguideWidthMicrometers ?? (isOptical ? opticalDefaults.WidthUm : null),
-                p.Layer ?? (isOptical ? opticalDefaults.Layer : null));
+                p.Layer ?? (isOptical ? opticalDefaults.Layer : null), p.PortType);
         }).ToArray();
 
         double nazcaOriginOffsetX = pdkComp.NazcaOriginOffsetX ?? 0;
@@ -110,7 +110,8 @@ public static class PdkTemplateConverter
         }
         else
         {
-            template.CreateSMatrix = pins => CreateSMatrixFromPdk(pins, pdkComp.SMatrix);
+            template.CreateSMatrix = pins => CreateSMatrixFromPdk(pins,
+                pdkComp.ImportedModelStatus == "geometry-only" ? new PdkSMatrixDraft() : pdkComp.SMatrix);
         }
 
         return template;

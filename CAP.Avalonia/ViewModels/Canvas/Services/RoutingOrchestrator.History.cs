@@ -14,7 +14,7 @@ public partial class RoutingOrchestrator
     public async Task<bool> ExecuteHistoryChangeAsync(Func<bool> change, Func<bool> canChange)
     {
         if (!canChange()) return false;
-        CancelRouting();
+        _routingCts?.Cancel();
         await _routingSemaphore.WaitAsync();
         try
         {
