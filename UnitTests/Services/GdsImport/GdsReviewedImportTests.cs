@@ -31,7 +31,38 @@ public class GdsReviewedImportTests
         var draft = host.Scope.Sets.Single().Drafts.Single();
         draft.WidthMicrometers.ShouldBe(10);
         draft.RawCode.ShouldContain("nd.load_gds");
-        draft.ImportedModelStatus.ShouldBe("geometry-only");
+        draft.ImportedModelStatus.ShouldBeNull(
+            "a reviewed 2-optical-pin cell without a mapped model stays pass-through eligible");
+        draft.SMatrix.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ReviewedMultiPinCellWithoutModelStaysGeometryOnly()
+    {
+        using var host = new GdsDesignScopeTestHost();
+        Directory.CreateDirectory(host.GdsCacheDirectory);
+        var path = Path.Combine(host.GdsCacheDirectory, "source.gds");
+        await File.WriteAllBytesAsync(path, Fixture());
+        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var review = Review(analysis) with
+        {
+            Cells = [new()
+            {
+                CellName = "device",
+                Pins =
+                [
+                    new() { Name = "in", XUm = 0, YUm = 2 },
+                    new() { Name = "out", XUm = 10, YUm = 2 },
+                    new() { Name = "monitor", XUm = 5, YUm = 2 },
+                ]
+            }]
+        };
+        await new GdsImportService(host.Scope).ImportAsync(path, "TOP",
+            preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes, interpretation: review);
+        var draft = host.Scope.Sets.Single().Drafts.Single();
+        draft.Pins.Count.ShouldBe(3);
+        draft.ImportedModelStatus.ShouldBe("geometry-only",
+            "a multi-pin unmodeled cell cannot default its internal routing");
         draft.SMatrix.ShouldBeNull();
     }
 

@@ -1,5 +1,7 @@
 using System.Text.Json;
 using CAP.Avalonia.ViewModels.Library;
+using CAP_Core.Components.Core;
+using CAP_Core.Components.PinKinds;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 using CAP_DataAccess.Import.Gds.Interpretation;
 
@@ -29,12 +31,18 @@ public sealed partial class GdsImportService
     private static void ApplyReviewedModel(PdkComponentDraft draft, string cellName,
         GdsImportInterpretation interpretation, IReadOnlyList<ComponentTemplate> templates)
     {
-        draft.ImportedModelStatus = "geometry-only";
         var decision = interpretation.Cells.FirstOrDefault(c => c.CellName == cellName);
         if (!string.IsNullOrWhiteSpace(decision?.DisplayName))
             draft.Name = GdsCellDraftMapper.SanitizeComponentName(decision.DisplayName);
         if (string.IsNullOrWhiteSpace(decision?.ModelComponentName))
+        {
+            // Unmapped: exactly two optical pins keep the S-matrix null so the
+            // lossless pass-through default applies — the same state the
+            // non-review import leaves. Any other optical pin count cannot
+            // default its internal routing and stays deliberately geometry-only.
+            draft.ImportedModelStatus = IsPassThroughEligible(draft) ? null : "geometry-only";
             return;
+        }
         var source = templates.FirstOrDefault(t => t.Name == decision.ModelComponentName
             && t.PdkSource == decision.ModelPdkName)?.SourceDraft;
         if (source?.SMatrix is null)
@@ -69,4 +77,13 @@ public sealed partial class GdsImportService
             JsonSerializer.Deserialize<List<SliderDraft>>(JsonSerializer.Serialize(source.Sliders));
         draft.ImportedModelStatus = "mapped";
     }
+
+    /// <summary>
+    /// True when an unmodeled reviewed draft qualifies for the lossless 2-pin
+    /// pass-through default (<see cref="PdkTemplateConverter"/>): exactly two
+    /// optical pins, mirroring the pin count the default itself requires.
+    /// </summary>
+    private static bool IsPassThroughEligible(PdkComponentDraft draft) =>
+        draft.Pins.Count(p => PinKindHelper.TryParse(p.PinKind, out var kind)
+            && kind == MatterType.Light) == 2;
 }
