@@ -189,10 +189,13 @@ public class GdsReviewJourneyTests : IClassFixture<GdsReviewJourneyFixture>
             $"both reviewed cells must be referenced; cells: {string.Join(", ", library.Cells.Keys)}");
 
         var flat = new GdsCellFlattener(library).Flatten("ConnectAPIC_Design");
-        var chain = flat.Polygons.Where(p => p.Layer == 1).Select(p =>
+        // Routed connections export through nazca's default interconnect, whose polygons
+        // land on layer (1111,0) — the reviewed cells' own layer 1 cores span only
+        // x[0..10] and x[20..30], so the gap-spanning polygon identifies the chain.
+        var chain = flat.Polygons.Where(p => p.Layer == 1111).Select(p =>
             (MinX: p.Points.Min(q => q.X), MaxX: p.Points.Max(q => q.X))).ToList();
         var dump = string.Join(" | ", flat.Polygons.Select(p =>
-            $"L{p.Layer}/{p.Datatype} x[{p.Points.Min(q => q.X):F2}..{p.Points.Max(q => q.X):F2}] y[{p.Points.Min(q => q.Y):F2}..{p.Points.Max(q => q.Y):F2}]"));
+            $"L{p.Layer}/{p.DataType} x[{p.Points.Min(q => q.X):F2}..{p.Points.Max(q => q.X):F2}] y[{p.Points.Min(q => q.Y):F2}..{p.Points.Max(q => q.Y):F2}]"));
         chain.ShouldContain(s => Math.Abs(s.MinX - 10) < Tolerance && Math.Abs(s.MaxX - 20) < Tolerance,
             "one waveguide chain must span the 10 µm gap between the cells. All polygons: " + dump);
     }
