@@ -24,16 +24,19 @@ internal static class ComponentRegistryFeatureExtensions
     public static IServiceCollection AddComponentRegistryFeature(this IServiceCollection services)
     {
         services.AddSingleton(sp => new RegistryClient(sp.GetRequiredService<HttpClient>()));
+        services.AddSingleton<IRegistryCatalog>(sp => sp.GetRequiredService<RegistryClient>());
         // The library registration callback resolves LeftPanelViewModel LAZILY:
         // LeftPanel's ctor itself takes the registry browser VM, so an eager
         // resolution here would be a circular dependency.
         services.AddSingleton(sp => new RegistryDownloadService(
-            sp.GetRequiredService<RegistryClient>(),
+            sp.GetRequiredService<IRegistryCatalog>(),
             sp.GetRequiredService<IUserPdkLibrary>(),
             path => sp.GetRequiredService<LeftPanelViewModel>().RegisterCreatedPdk(path)));
+        services.AddSingleton<IRegistryAdoption>(sp => sp.GetRequiredService<RegistryDownloadService>());
         services.AddSingleton(sp => new RegistryBrowserViewModel(
-            sp.GetRequiredService<RegistryClient>(),
-            sp.GetRequiredService<RegistryDownloadService>()));
+            sp.GetRequiredService<IRegistryCatalog>(),
+            sp.GetRequiredService<IRegistryAdoption>(),
+            sp.GetRequiredService<Services.Lifetime.ApplicationWorkCoordinator>()));
         return services;
     }
 }

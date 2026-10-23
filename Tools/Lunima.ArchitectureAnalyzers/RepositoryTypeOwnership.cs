@@ -88,6 +88,10 @@ internal static class RepositoryTypeOwnership
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.AgentToolCatalog", RepositoryModules.Application);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.IAgentBridgeTool", RepositoryModules.Application);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.ToolArguments", RepositoryModules.Application);
+        // Registry exchange records and capabilities have no transport or persistence behavior.
+        yield return new("CAP.Avalonia.Services.ComponentRegistry.IRegistryAdoption", RepositoryModules.Contracts);
+        yield return new("CAP.Avalonia.Services.ComponentRegistry.RegistryDownloadResult", RepositoryModules.Contracts);
+        yield return new("CAP.Avalonia.Services.ComponentRegistry.RegistryArtifactChoice", RepositoryModules.Contracts);
         yield return new("CAP.Avalonia.Services.ComponentRegistry.RegistryArtifactSelector", RepositoryModules.Application);
         yield return new("CAP.Avalonia.Services.ComponentRegistry.RegistryComponentDraftMapper", RepositoryModules.Application);
         yield return new("CAP.Avalonia.Services.Solvers.FdtdJsonContract", RepositoryModules.Application);

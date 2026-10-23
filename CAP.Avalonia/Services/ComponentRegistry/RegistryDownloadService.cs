@@ -5,27 +5,6 @@ using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 namespace CAP.Avalonia.Services.ComponentRegistry;
 
 /// <summary>
-/// Outcome of adopting a registry component into the local library
-/// (issue #773). On success <see cref="PdkName"/> is the "Registry &lt;process&gt;"
-/// user PDK the component was added to and <see cref="FilePath"/> its file;
-/// <see cref="ReplacedExisting"/> tells the UI whether a previous download of
-/// the same registry entry was replaced (its state backed up to <c>.trash</c>)
-/// or the component was newly added. On failure <see cref="ErrorMessage"/>
-/// explains why (never throws).
-/// </summary>
-public sealed record RegistryDownloadResult(
-    bool IsSuccess, string? PdkName, string? FilePath, string? ErrorMessage, bool ReplacedExisting)
-{
-    /// <summary>Successful adoption into <paramref name="pdkName"/>.</summary>
-    public static RegistryDownloadResult Success(string pdkName, string filePath, bool replacedExisting) =>
-        new(true, pdkName, filePath, null, replacedExisting);
-
-    /// <summary>Failed adoption; nothing was written.</summary>
-    public static RegistryDownloadResult Failure(string errorMessage) =>
-        new(false, null, null, errorMessage, false);
-}
-
-/// <summary>
 /// "Download" of the registry browser (issue #773): fetches the selected
 /// S-parameter artifact (cache-first via <see cref="RegistryClient"/>, so an
 /// already-cached artifact adopts offline), maps it to a
@@ -34,9 +13,9 @@ public sealed record RegistryDownloadResult(
 /// via <see cref="IUserPdkLibrary"/> — placement then follows the existing
 /// single-process lock on that process id.
 /// </summary>
-public sealed class RegistryDownloadService
+public sealed class RegistryDownloadService : IRegistryAdoption
 {
-    private readonly RegistryClient _client;
+    private readonly IRegistryCatalog _client;
     private readonly IUserPdkLibrary _userPdkStore;
     private readonly Action<string>? _onPdkSaved;
 
@@ -47,7 +26,7 @@ public sealed class RegistryDownloadService
     /// library ViewModel itself depends on the registry browser).
     /// </summary>
     public RegistryDownloadService(
-        RegistryClient client, IUserPdkLibrary userPdkStore, Action<string>? onPdkSaved = null)
+        IRegistryCatalog client, IUserPdkLibrary userPdkStore, Action<string>? onPdkSaved = null)
     {
         _client = client;
         _userPdkStore = userPdkStore;
@@ -66,7 +45,9 @@ public sealed class RegistryDownloadService
         string manifestPath, ComponentManifest manifest, RegistryArtifactChoice choice,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var spectrumResult = await _client.GetSpectrumAsync(manifestPath, choice.Artifact, cancellationToken: cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!spectrumResult.IsSuccess || spectrumResult.Value is null)
         {
             return RegistryDownloadResult.Failure(
@@ -97,6 +78,7 @@ public sealed class RegistryDownloadService
         // (carried in the provenance note), never the display name: a re-download
         // replaces its own earlier copy with a .trash backup, while a same-named
         // DIFFERENT registry entry is a clash that must not overwrite it.
+        cancellationToken.ThrowIfCancellationRequested();
         var save = _userPdkStore.SaveComponentKeyed(
             pdkName, process, draft, IsSameRegistryComponent(manifest.Id), backend: "nazca", routingCrossSection: null);
         if (save.Outcome == KeyedComponentSaveOutcome.NameClash)
