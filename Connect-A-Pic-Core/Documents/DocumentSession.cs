@@ -16,12 +16,39 @@ public sealed class DocumentSession
     /// <summary>Failure raised by a cancellation callback; never substitutes for draining work.</summary>
     public AggregateException? CancellationError { get; private set; }
 
-    /// <summary>Captures publication permission. Document-wide saves may ignore view navigation.</summary>
-    public DocumentOperation CaptureOperation(CancellationToken cancellationToken = default, bool scopeBound = true)
+    /// <summary>Remembers the configured document without owning work or delaying retirement.</summary>
+    public DocumentIdentity CaptureIdentity()
     {
         lock (_sync)
         {
             if (_retired) throw new OperationCanceledException("The document session is retired.");
+            if (_commitOwner != null) throw new InvalidOperationException("Cannot bind to a partially committed document.");
+            return new DocumentIdentity(_document);
+        }
+    }
+
+    /// <summary>Whether a configured document remains open, regardless of edits or navigation.</summary>
+    public bool IsCurrentIdentity(DocumentIdentity identity)
+    {
+        lock (_sync) return !_retired && _commitOwner == null && identity.Value == _document;
+    }
+
+    /// <summary>Admits new work only for the document to which its feature was configured.</summary>
+    public DocumentOperation CaptureOperation(DocumentIdentity identity, CancellationToken cancellationToken = default,
+        bool scopeBound = true) => CaptureOperationCore(identity, cancellationToken, scopeBound);
+
+    /// <summary>Captures publication permission. Document-wide saves may ignore view navigation.</summary>
+    public DocumentOperation CaptureOperation(CancellationToken cancellationToken = default, bool scopeBound = true) =>
+        CaptureOperationCore(null, cancellationToken, scopeBound);
+
+    private DocumentOperation CaptureOperationCore(DocumentIdentity? identity, CancellationToken cancellationToken,
+        bool scopeBound)
+    {
+        lock (_sync)
+        {
+            if (_retired) throw new OperationCanceledException("The document session is retired.");
+            if (identity is { } expected && expected.Value != _document)
+                throw new OperationCanceledException("The configured document has been replaced.");
             if (_commitOwner != null) throw new InvalidOperationException("Cannot capture a partially committed document.");
             cancellationToken.ThrowIfCancellationRequested();
             var operation = new DocumentOperation(this, _document, _revision,
