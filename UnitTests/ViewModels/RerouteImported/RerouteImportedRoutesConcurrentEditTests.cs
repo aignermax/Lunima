@@ -1,3 +1,4 @@
+using UnitTests.ViewModels.Canvas;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Canvas.RerouteImported;
@@ -12,7 +13,7 @@ public partial class RerouteImportedRoutesViewModelTests
     [Fact]
     public async Task SelectedGroupConversion_RedoDoesNotReplaySeparatelyUndoneOtherRouteSetting()
     {
-        var canvas = new DesignCanvasViewModel();
+        var canvas = ReportedRoutingWorker.CreateCanvas();
         var (start, end) = AddComponentPair(canvas, 0);
         ConnectFrozenImported(canvas, start, end);
         var (otherStart, otherEnd) = AddComponentPair(canvas, 2000);
@@ -26,20 +27,16 @@ public partial class RerouteImportedRoutesViewModelTests
         {
             SelectedConnection = canvas.Connections.Single(c => c.Connection.StartPin == start)
         };
-        using var parked = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        canvas.Routing.BuildConnectionProcessFloorProvider = () => (_, _) =>
-        {
-            parked.Set(); release.Wait(); return null;
-        };
+        var routing = (ReportedRoutingWorker)canvas.Routing;
+        routing.BlockWorker = true;
         var edit = new ConcurrentRouteSetting(canvas, otherStart, 25, 75);
         var conversion = vm.RerouteSelectedCommand.ExecuteAsync(null);
         try
         {
-            (await Task.Run(() => parked.Wait(TimeSpan.FromSeconds(10)))).ShouldBeTrue();
+            await routing.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             commands.ExecuteCommand(edit);
         }
-        finally { release.Set(); await conversion; }
+        finally { routing.Release.TrySetResult(); await conversion.WaitAsync(TimeSpan.FromSeconds(30)); }
 
         commands.UndoDescription.ShouldBe(edit.Description);
         commands.Undo().ShouldBeTrue();
@@ -60,7 +57,7 @@ public partial class RerouteImportedRoutesViewModelTests
     [Fact]
     public async Task OpenGroupConversion_RedoDoesNotResurrectSeparatelyUndonePlacement()
     {
-        var canvas = new DesignCanvasViewModel();
+        var canvas = ReportedRoutingWorker.CreateCanvas();
         var (start, end) = AddComponentPair(canvas, 0);
         ConnectFrozenImported(canvas, start, end);
         var commands = new CommandManager();
@@ -72,14 +69,8 @@ public partial class RerouteImportedRoutesViewModelTests
         {
             SelectedConnection = canvas.Connections.Single()
         };
-        using var parked = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        canvas.Routing.BuildConnectionProcessFloorProvider = () => (_, _) =>
-        {
-            parked.Set();
-            release.Wait();
-            return null;
-        };
+        var routing = (ReportedRoutingWorker)canvas.Routing;
+        routing.BlockWorker = true;
         var added = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         added.PhysicalX = 3000;
         added.PhysicalY = 3000;
@@ -87,10 +78,10 @@ public partial class RerouteImportedRoutesViewModelTests
         var conversion = vm.RerouteSelectedCommand.ExecuteAsync(null);
         try
         {
-            (await Task.Run(() => parked.Wait(TimeSpan.FromSeconds(10)))).ShouldBeTrue();
+            await routing.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             commands.ExecuteCommand(placement);
         }
-        finally { release.Set(); await conversion; }
+        finally { routing.Release.TrySetResult(); await conversion.WaitAsync(TimeSpan.FromSeconds(30)); }
 
         canvas.CurrentEditGroup.ShouldBeSameAs(group);
         commands.UndoDescription.ShouldBe(placement.Description,

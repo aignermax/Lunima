@@ -35,7 +35,7 @@ public sealed class RoutingInputSnapshot
     /// Crossing prototypes are resolved once here; factories, notifications and undo callbacks never cross the boundary.
     /// </summary>
     public static RoutingInputSnapshot Capture(IReadOnlyList<Component> components,
-        WaveguideRouter router, WaveguideConnectionManager manager)
+        WaveguideRouter router, WaveguideConnectionManager manager, bool preserveCachedGrid = true)
     {
         ArgumentNullException.ThrowIfNull(components);
         ArgumentNullException.ThrowIfNull(router);
@@ -87,10 +87,19 @@ public sealed class RoutingInputSnapshot
                 originals.Values.Select(RouteComponentValue.Capture).ToImmutableArray(),
                 wires.Select(connection => RouteConnectionValue.Capture(connection, router)).ToImmutableArray(),
                 manager.Connections.Select(connection => connection.Id).ToImmutableArray(),
-                RouteRouterValue.Capture(router), RouteManagerValue.Capture(manager),
+                RouteRouterValue.Capture(router, preserveCachedGrid), RouteManagerValue.Capture(manager),
                 RouteCrossingValue.Capture(manager, router, originals.Values));
         }
     }
+
+    /// <summary>Changes only immutable grid inputs; allocation and rasterization happen on the worker.</summary>
+    public RoutingInputSnapshot WithGrid(double minX, double minY, double maxX, double maxY,
+        IReadOnlyList<(double X, double Y, double Width, double Height)>? regions, double padding = 5) =>
+        new(_rootIds, _components, _connections, _connectionOrder, _router with
+        {
+            Regions = regions?.ToImmutableArray(), Padding = padding,
+            Grid = new RouteGridValue(minX, minY, maxX, maxY, _router.CellSize, padding, 0, 0, default)
+        }, _manager, _crossings);
 
     /// <summary>Creates fresh mutable routing objects; repeated calls share only immutable captured values.</summary>
     public RoutingWorkGraph CreatePrivateGraph()
@@ -106,7 +115,7 @@ public sealed class RoutingInputSnapshot
         var manager = _manager.Build(router);
         var wires = _connections.ToDictionary(value => value.Id, value => value.Build(pins));
         foreach (var id in _connectionOrder) manager.AddExistingConnection(wires[id]);
-        manager.RestoreFailureState(_manager.Failures, _manager.PendingWireSetChange);
+        _manager.RestoreFailures(manager);
         var graph = new RoutingWorkGraph(roots, router, manager);
         _crossings?.Attach(graph, components, wires, floors);
         return graph;
@@ -115,18 +124,26 @@ public sealed class RoutingInputSnapshot
 
 internal sealed record RouteManagerValue(bool Sequential, int Attempts, double WaveguideWidth, double MetalWidth,
     double DefaultPropagationLoss, double DefaultExcessLoss, BendLossModel DefaultBendLoss, bool Coherent,
-    bool PendingWireSetChange, ImmutableArray<UnroutableWireMemory.SnapshotEntry> Failures)
+    bool PendingWireSetChange, ImmutableArray<UnroutableWireMemory.SnapshotEntry> Failures,
+    ImmutableArray<WaveguideConnectionManager.ContentionFailure> ContentionFailures, TimeSpan ContentionBudget)
 {
     internal static RouteManagerValue Capture(WaveguideConnectionManager manager) => new(manager.UseSequentialRouting,
         manager.MaxRoutingAttempts, manager.WaveguideWidthMicrometers, manager.MetalTraceWidthMicrometers,
         manager.DefaultPropagationLossDbPerCm, manager.DefaultExcessBendLossDbPer90Deg, manager.DefaultBendLossModel,
-        manager.EnableCoherentPropagationPhase, manager.HasPendingWireSetChange, manager.UnroutableWires.CaptureState());
+        manager.EnableCoherentPropagationPhase, manager.HasPendingWireSetChange, manager.UnroutableWires.CaptureState(),
+        manager.CaptureContentionFailures(), manager.ContentionRepairTimeBudget);
+
+    internal void RestoreFailures(WaveguideConnectionManager manager)
+    {
+        manager.RestoreFailureState(Failures, PendingWireSetChange);
+        manager.RestoreContentionFailures(ContentionFailures);
+    }
 
     internal WaveguideConnectionManager Build(WaveguideRouter router) => new(router)
     {
         UseSequentialRouting = Sequential, MaxRoutingAttempts = Attempts, WaveguideWidthMicrometers = WaveguideWidth,
         MetalTraceWidthMicrometers = MetalWidth, DefaultPropagationLossDbPerCm = DefaultPropagationLoss,
         DefaultExcessBendLossDbPer90Deg = DefaultExcessLoss, DefaultBendLossModel = DefaultBendLoss,
-        EnableCoherentPropagationPhase = Coherent
+        EnableCoherentPropagationPhase = Coherent, ContentionRepairTimeBudget = ContentionBudget
     };
 }

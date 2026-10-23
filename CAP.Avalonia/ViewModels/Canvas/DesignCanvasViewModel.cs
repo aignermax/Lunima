@@ -169,12 +169,15 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// <summary>
     /// Initializes a new instance with an injected router.
     /// </summary>
-    public DesignCanvasViewModel(WaveguideRouter router)
+    public DesignCanvasViewModel(WaveguideRouter router) : this(router, null) { }
+
+    internal DesignCanvasViewModel(WaveguideRouter router, CanvasRoutingFactory? routingFactory)
     {
         Router = router;
         ConnectionManager = new WaveguideConnectionManager(router);
 
-        Routing = new RoutingOrchestrator(router, ConnectionManager, Components, Connections);
+        Routing = routingFactory?.Invoke(router, ConnectionManager, Components, Connections, Document)
+            ?? new RoutingOrchestrator(router, ConnectionManager, Components, Connections, Document);
         Placement = new ComponentPlacementService(Components, Connections);
         Simulation = new SimulationCoordinator(PowerFlowVisualizer);
         PinHighlight = new PinHighlightService(AllPins, GetConnectionForPin);

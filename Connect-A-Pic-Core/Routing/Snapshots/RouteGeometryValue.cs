@@ -23,6 +23,18 @@ internal sealed record RouteGeometryValue(ImmutableArray<RouteSegmentValue> Segm
         path.Segments.AddRange(Segments.Select(segment => segment.Build()));
         return path;
     }
+
+    internal bool Matches(RoutedPath? path)
+    {
+        if (path == null || Blocked != path.IsBlockedFallback || Invalid != path.IsInvalidGeometry
+            || Placeholder != path.IsPlaceholderGeometry || Failure != path.FailureReason
+            || ViolatesFloor != path.ViolatesProcessMinBendRadius || ThroughComponent != path.PassesThroughComponent
+            || Direct != path.IsDirectStyledRoute || Style != path.DirectStyle || Segments.Length != path.Segments.Count)
+            return false;
+        for (var index = 0; index < Segments.Length; index++)
+            if (Segments[index] != RouteSegmentValue.Capture(path.Segments[index])) return false;
+        return true;
+    }
 }
 
 internal readonly record struct RouteSegmentValue(bool Bend, double StartX, double StartY, double EndX,

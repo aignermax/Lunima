@@ -10,13 +10,13 @@ internal sealed record RouteRouterValue(double Radius, double ProcessFloor, doub
     ImmutableArray<(double X, double Y, double Width, double Height)>? Regions, RouteGridValue? Grid,
     RouteCostValue Cost, ImmutableArray<RouteObstacleValue> Obstacles, CrossingRouteSettings? Crossings)
 {
-    internal static RouteRouterValue Capture(WaveguideRouter router) => new(router.MinBendRadiusMicrometers,
+    internal static RouteRouterValue Capture(WaveguideRouter router, bool preserveCachedGrid = true) => new(router.MinBendRadiusMicrometers,
         router.ProcessMinBendRadiusMicrometers, router.MetalProcessMinBendRadiusMicrometers,
         router.AllowedBendRadii.ToImmutableArray(), router.MinWaveguideSpacingMicrometers,
         router.AStarCellSize, router.ObstaclePaddingMicrometers, router.UseHierarchicalPathfinding,
         router.PreferDirectStyledRoutes, router.UseDiagonalRouting, router.UsePinBreakouts,
         router.Phase1MaxNodes, router.Phase2MaxNodes, router.CoarseRetryCellSizeFactor, router.CoarseRetryBudgetMultiplier,
-        router.AllowedRoutingRegions?.ToImmutableArray(), RouteGridValue.Capture(router.PathfindingGrid),
+        router.AllowedRoutingRegions?.ToImmutableArray(), RouteGridValue.Capture(router.PathfindingGrid, preserveCachedGrid),
         RouteCostValue.Capture(router.CostCalculator), router.Obstacles.Select(obstacle => new RouteObstacleValue(
             obstacle.X, obstacle.Y, obstacle.Width, obstacle.Height, obstacle.SourceComponent?.Id)).ToImmutableArray(),
         router.CrossingRouting);
@@ -53,17 +53,20 @@ internal readonly record struct RouteObstacleValue(double X, double Y, double Wi
 internal sealed record RouteGridValue(double MinX, double MinY, double MaxX, double MaxY,
     double CellSize, double Padding, int Width, int Height, ImmutableArray<byte> Cells)
 {
-    internal static RouteGridValue? Capture(PathfindingGrid? grid) => grid == null ? null : new(
+    internal static RouteGridValue? Capture(PathfindingGrid? grid, bool preserveCells) => grid == null ? null : new(
         grid.MinX, grid.MinY, grid.MaxX, grid.MaxY, grid.CellSizeMicrometers, grid.ObstaclePaddingMicrometers,
-        grid.Width, grid.Height, grid.CaptureCellStates().ToImmutableArray());
+        grid.Width, grid.Height, preserveCells ? grid.CaptureCellStates().ToImmutableArray() : default);
 
     internal void Initialize(WaveguideRouter router, IReadOnlyList<Component> components)
     {
         router.InitializePathfindingGrid(MinX, MinY, MaxX, MaxY, components, CellSize);
         var grid = router.PathfindingGrid!;
-        grid.ObstaclePaddingMicrometers = Padding;
-        // Rebuild at the grid's authoritative padding, which callers may change after initialization.
-        grid.RebuildFromComponents(components);
+        if (grid.ObstaclePaddingMicrometers != Padding)
+        {
+            grid.ObstaclePaddingMicrometers = Padding;
+            grid.RebuildFromComponents(components);
+        }
+        if (Cells.IsDefault) return;
         if (grid.Width != Width || grid.Height != Height) throw new InvalidDataException("Captured routing grid dimensions changed.");
         for (var x = 0; x < Width; x++)
         for (var y = 0; y < Height; y++)

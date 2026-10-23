@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Collections.Immutable;
 using CAP_Core.Routing;
 using CAP_Core.Routing.AStarPathfinder;
 
@@ -40,6 +41,17 @@ public partial class WaveguideConnectionManager
     /// fingerprint's pin positions, which re-enables the attempt.
     /// </summary>
     private readonly HashSet<ContentionRepairAttemptKey> _knownFailedAttempts = new();
+
+    internal readonly record struct ContentionFailure(Guid BlockedId, ImmutableArray<Guid> SiblingIds, int PinPositionHash);
+
+    internal ImmutableArray<ContentionFailure> CaptureContentionFailures() =>
+        _knownFailedAttempts.Select(key => key.Capture()).ToImmutableArray();
+
+    internal void RestoreContentionFailures(IEnumerable<ContentionFailure> failures)
+    {
+        _knownFailedAttempts.Clear();
+        foreach (var failure in failures) _knownFailedAttempts.Add(ContentionRepairAttemptKey.Restore(failure));
+    }
 
     /// <summary>
     /// Wall-clock budget for one repair pass. Checked before every attempt, and enforced
@@ -404,6 +416,10 @@ public partial class WaveguideConnectionManager
             _siblingIds = siblingIds;
             _pinPositionHash = pinPositionHash;
         }
+
+        internal ContentionFailure Capture() => new(_blockedId, _siblingIds.ToImmutableArray(), _pinPositionHash);
+        internal static ContentionRepairAttemptKey Restore(ContentionFailure value) =>
+            new(value.BlockedId, value.SiblingIds.ToArray(), value.PinPositionHash);
 
         /// <summary>Builds the fingerprint of an attempt over <paramref name="blocked"/> and its siblings.</summary>
         public static ContentionRepairAttemptKey For(

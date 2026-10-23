@@ -31,20 +31,21 @@ internal sealed record CrossingPrototypeValue(RouteComponentValue Geometry, Comp
             component.WaveguideDispersion);
     }
 
-    internal Component Build(RouteProcessFloorTable floors)
+    internal Component Build(RouteProcessFloorTable floors, bool preserveIdentity = false)
     {
         var ids = Physics.Pins.SelectMany(pin => new[] { pin.In, pin.Out })
             .Concat(Physics.Matrices.Values.SelectMany(matrix => matrix.FlowIds)).Distinct()
-            .ToDictionary(id => id, _ => Guid.NewGuid());
-        var sliderIds = Physics.Sliders.Select(slider => slider.Id).Distinct().ToDictionary(id => id, _ => Guid.NewGuid());
+            .ToDictionary(id => id, id => preserveIdentity ? id : Guid.NewGuid());
+        var sliderIds = Physics.Sliders.Select(slider => slider.Id).Distinct()
+            .ToDictionary(id => id, id => preserveIdentity ? id : Guid.NewGuid());
         var pinValues = Physics.Pins.Select(pin => pin with { In = ids[pin.In], Out = ids[pin.Out] }).ToImmutableArray();
         var sliderValues = Physics.Sliders.Select(slider => slider with { Id = sliderIds[slider.Id] }).ToImmutableArray();
         var geometry = Geometry with
         {
-            Id = Guid.NewGuid(),
+            Id = preserveIdentity ? Geometry.Id : Guid.NewGuid(),
             Pins = Geometry.Pins.Select(pin => pin with
             {
-                Id = Guid.NewGuid(),
+                Id = preserveIdentity ? pin.Id : Guid.NewGuid(),
                 Logical = pin.Logical is { } logical ? logical with { In = ids[logical.In], Out = ids[logical.Out] } : null
             }).ToImmutableArray()
         };

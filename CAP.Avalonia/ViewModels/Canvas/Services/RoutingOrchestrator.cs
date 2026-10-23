@@ -3,7 +3,10 @@ using CAP.Avalonia.Services.Localization;
 using CAP_Core.Components;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
+using CAP_Core.Documents;
 using CAP_Core.Routing;
+using CAP_Core.Routing.Snapshots;
+using CAP_Contracts;
 
 namespace CAP.Avalonia.ViewModels.Canvas.Services;
 
@@ -16,6 +19,7 @@ public partial class RoutingOrchestrator
     private readonly WaveguideConnectionManager _connectionManager;
     private readonly ObservableCollection<ComponentViewModel> _components;
     private readonly ObservableCollection<WaveguideConnectionViewModel> _connections;
+    private readonly DocumentSession _document;
 
     private CancellationTokenSource? _routingCts;
     private readonly SemaphoreSlim _routingSemaphore = new(1, 1);
@@ -23,6 +27,7 @@ public partial class RoutingOrchestrator
     private int _routedCount;
     private int _totalCount;
     private int _passId;
+    private int _activePassId;
     private DateTime _passStartUtc;
 
     /// <summary>
@@ -102,14 +107,15 @@ public partial class RoutingOrchestrator
     internal Action<IEnumerable<WaveguideConnectionViewModel>>? RouteChangesPublisher { private get; set; }
 
     /// <summary>Publishes one accepted routing frame to the connection views.</summary>
-    internal void NotifyRouteChanges()
+    internal void NotifyRouteChanges(IEnumerable<WaveguideConnectionViewModel>? changed = null)
     {
+        var connections = changed ?? _connections;
         if (RouteChangesPublisher is { } publish)
         {
-            publish(_connections);
+            publish(connections);
             return;
         }
-        foreach (var connection in _connections) connection.NotifyPathChanged();
+        foreach (var connection in connections) connection.NotifyPathChanged();
     }
 
     /// <summary>
@@ -119,13 +125,27 @@ public partial class RoutingOrchestrator
         WaveguideRouter router,
         WaveguideConnectionManager connectionManager,
         ObservableCollection<ComponentViewModel> components,
-        ObservableCollection<WaveguideConnectionViewModel> connections)
+        ObservableCollection<WaveguideConnectionViewModel> connections,
+        DocumentSession? document = null)
     {
         _router = router;
         _connectionManager = connectionManager;
         _components = components;
         _connections = connections;
+        _document = document ?? new DocumentSession();
     }
+
+    /// <summary>Executes a routing calculation away from the owning UI thread.</summary>
+    protected virtual Task<T> RunOnWorkerAsync<T>(Func<T> work) => Task.Run(work);
+
+    /// <summary>Provides the worker only its captured input, scalar progress mailbox and cancellation.</summary>
+    protected virtual Task<RoutingPassResult?> RunSnapshotAsync(RoutingInputSnapshot input,
+        RoutingProgressMailbox progress, CancellationToken token, bool calculateRoutes = true) =>
+        RunOnWorkerAsync(() => RoutingSnapshotWorker.Run(input, progress, token, calculateRoutes));
+
+    /// <summary>Queues one routing status or result notification on the owning UI thread.</summary>
+    protected virtual void PostUiUpdate(Action update) => global::Avalonia.Threading.Dispatcher.UIThread.Post(update,
+        global::Avalonia.Threading.DispatcherPriority.Normal);
 
     /// <summary>
     /// Initializes the A* pathfinding grid with default bounds.
@@ -169,23 +189,23 @@ public partial class RoutingOrchestrator
     public async Task ReinitializeAStarRoutingInBackgroundAsync(double minX, double minY, double maxX, double maxY,
         IReadOnlyList<(double X, double Y, double Width, double Height)>? regions)
     {
-        var components = _components.Select(c => c.Component).ToList();
+        await using var operation = _document.CaptureOperation();
+        var token = operation.CancellationToken;
         int request = Interlocked.Increment(ref _gridRequest);
-        await _routingSemaphore.WaitAsync();
+        try { await _routingSemaphore.WaitAsync(token); }
+        catch (OperationCanceledException) { return; }
         try
         {
-            await Task.Run(() =>
-            {
-                if (request != Volatile.Read(ref _gridRequest))
-                    return;
-                // Lift the regions first so the outgoing grid is not re-blocked for nothing.
-                _router.AllowedRoutingRegions = null;
-                _router.InitializePathfindingGrid(minX, minY, maxX, maxY, components);
-                _router.AllowedRoutingRegions = regions;
-                if (_router.PathfindingGrid != null)
-                    _router.PathfindingGrid.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
-            });
+            if (!operation.IsCurrent || request != _gridRequest) return;
+            var input = CaptureInput().WithGrid(minX, minY, maxX, maxY, regions, ComponentClearanceMicrometers);
+            var progress = new RoutingProgressMailbox();
+            var result = await RunSnapshotAsync(input, progress, token, calculateRoutes: false);
+            if (result == null || !operation.IsCurrent || request != _gridRequest) return;
+            var prepared = result.Prepare(_components.Select(view => view.Component).ToArray(), _connectionManager, _router);
+            // Derived grid state does not advance the document revision or revoke a queued routing lease.
+            operation.TryPublish(() => { if (request == _gridRequest) prepared.Apply(); });
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         finally { _routingSemaphore.Release(); }
     }
 
@@ -208,7 +228,7 @@ public partial class RoutingOrchestrator
     public void CancelRouting()
     {
         StopRequested?.Invoke();
-        _routingCts?.Cancel();
+        if (_routingCts != null) _ = _routingCts.CancelAsync();
     }
 
     /// <summary>Raised for an explicit Stop, including a batch spanning several passes.</summary>
@@ -218,137 +238,146 @@ public partial class RoutingOrchestrator
     /// Asynchronously recalculates all waveguide routes on a background thread.
     /// Cancels any previous in-progress routing. Provides progressive updates throttled to 10 Hz.
     /// </summary>
-    public async Task RecalculateRoutesAsync()
+    public Task RecalculateRoutesAsync() => RecalculateRoutesAsync(null);
+
+    /// <summary>Routes within an existing operation when supplied; the caller retains its lifetime.</summary>
+    public async Task RecalculateRoutesAsync(DocumentOperation? operation, ICommitPermission? permission = null,
+        CancellationToken cancellationToken = default)
     {
         if (_suspendRouting > 0) return;
+        await using var ownedOperation = operation == null ? _document.CaptureOperation(cancellationToken) : null;
+        operation ??= ownedOperation!;
+        if (_routingCts != null) _ = _routingCts.CancelAsync();
+        using var stop = new CancellationTokenSource();
+        _routingCts = stop;
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(stop.Token, operation.CancellationToken,
+            cancellationToken, permission?.CancellationToken ?? default);
+        var token = linked.Token;
         var generation = MutationGeneration;
-        // Refresh the process bend-radius floor before every pass (still on the caller's
-        // UI thread — the provider reads ViewModel state).
-        if (GetProcessMinBendRadiusMicrometers != null)
-            _router.ProcessMinBendRadiusMicrometers = GetProcessMinBendRadiusMicrometers();
-        if (GetMetalRoutingSpec != null)
-        {
-            var metalSpec = GetMetalRoutingSpec();
-            _router.MetalProcessMinBendRadiusMicrometers = metalSpec.MinBendRadiusMicrometers;
-            _connectionManager.MetalTraceWidthMicrometers = metalSpec.TraceWidthMicrometers;
-        }
-        // Per-connection floor (issue #937): the factory runs here on the UI thread, so the
-        // provider it builds can close over pass-start snapshots; the router then consults
-        // it per connection on the routing thread.
-        _router.ConnectionProcessFloorProvider = BuildConnectionProcessFloorProvider?.Invoke();
-
-        _routingCts?.Cancel();
-        _routingCts?.Dispose();
-        _routingCts = new CancellationTokenSource();
-        var token = _routingCts.Token;
-
+        var passId = ++_passId;
+        try { await _routingSemaphore.WaitAsync(token); }
+        catch (OperationCanceledException) { if (ReferenceEquals(_routingCts, stop)) _routingCts = null; return; }
         try
         {
-            await _routingSemaphore.WaitAsync(token);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        try
-        {
-            if (token.IsCancellationRequested || generation != MutationGeneration) return;
-
-            var passId = ++_passId;
+            if (token.IsCancellationRequested || !operation.IsCurrent || generation != MutationGeneration) return;
+            RefreshProcessSettings();
+            var input = CaptureInput();
+            var originalPaths = RoutingPassResult.CaptureOriginalPaths(_connectionManager);
+            var progress = new RoutingProgressMailbox();
+            var views = _connections.ToDictionary(view => view.Connection.Id);
+            _activePassId = passId;
             _totalCount = _connectionManager.Connections.Count;
             _routedCount = 0;
             _passStartUtc = DateTime.UtcNow;
-
             IsRouting = true;
             RoutingStatusText = BuildProgressText();
             StateChanged?.Invoke();
+            bool Current() => passId == _passId && generation == MutationGeneration && operation.IsCurrent
+                && !token.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
+            using var heartbeat = new RoutingProgressHeartbeat(Current, BuildProgressText,
+                text => { RoutingStatusText = text; StateChanged?.Invoke(); });
 
-            using var heartbeat = new RoutingProgressHeartbeat(
-                () => passId == _passId && !token.IsCancellationRequested && IsRouting,
-                BuildProgressText,
-                text =>
-                {
-                    RoutingStatusText = text;
-                    StateChanged?.Invoke();
-                });
-
-            // Wire Phase 2 callback: update status text when a complex route is being computed.
-            _connectionManager.OnRoutingPhaseChanged = phase =>
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => heartbeat.PhaseChanged(phase),
-                    global::Avalonia.Threading.DispatcherPriority.Normal);
-            // Called on the background routing thread — must post to UI thread.
-            _connectionManager.OnComplexRouteStarted = () =>
+            // Worker input contains values, a value mailbox and cancellation; no editor objects or UI callbacks.
+            var worker = RunSnapshotAsync(input, progress, token);
+            while (!worker.IsCompleted)
             {
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                await Task.WhenAny(worker, Task.Delay(100));
+                if (!Current()) continue;
+                var frame = progress.TakeFrame();
+                var count = progress.RoutedCount;
+                var phase = progress.Phase;
+                var complex = progress.Complex;
+                PostUiUpdate(() =>
                 {
-                    heartbeat.ComplexRouteStarted();
-                }, global::Avalonia.Threading.DispatcherPriority.Normal);
-            };
-
-            var components = _components.Select(c => c.Component).ToList();
-            var lastUpdateTime = DateTime.MinValue;
-            var updateLock = new object();
-
-            Action progressCallback = () =>
-            {
-                var routed = Interlocked.Increment(ref _routedCount);
-                lock (updateLock)
-                {
-                    var now = DateTime.UtcNow;
-                    // The last connection always forces an update so the counter visibly
-                    // reaches total/total; intermediate updates stay throttled to 10 Hz.
-                    var isFinal = routed >= _totalCount;
-                    if (!isFinal && (now - lastUpdateTime).TotalMilliseconds < 100)
-                        return;
-
-                    lastUpdateTime = now;
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                    if (!Current() || !IsRouting) return;
+                    _routedCount = count;
+                    heartbeat.PhaseChanged(phase);
+                    if (complex) heartbeat.ComplexRouteStarted(); else heartbeat.ConnectionCompleted();
+                    if (frame.Count == 0) return;
+                    var prepared = frame.Prepare(_connectionManager);
+                    Commit(operation, permission, token, cancellationToken, () =>
                     {
-                        if (passId != _passId || token.IsCancellationRequested || !IsRouting)
-                            return;
-
-                        heartbeat.ConnectionCompleted();
-                        NotifyRouteChanges();
+                        prepared.Apply();
+                        NotifyRouteChanges(prepared.ConnectionIds.Where(views.ContainsKey).Select(id => views[id]));
                         RepaintRequested?.Invoke();
-                    }, global::Avalonia.Threading.DispatcherPriority.Normal);
-                }
-            };
-
-            var completed = await Task.Run(() =>
-            {
-                if (token.IsCancellationRequested) return false;
-                _router.PathfindingGrid?.RebuildFromComponents(components);
-                if (token.IsCancellationRequested) return false;
-                _connectionManager.RecalculateAllTransmissions(progressCallback, token);
-                return !token.IsCancellationRequested;
-            });
-
-            if (completed && !token.IsCancellationRequested)
-            {
-                NotifyRouteChanges();
-                RoutingStatusText = "";
-                StateChanged?.Invoke();
+                    });
+                });
             }
-            else
+            var result = await worker; // Drain even after cancellation/revocation.
+            if (passId == _passId) _routedCount = progress.RoutedCount;
+            if (result != null && Current())
             {
-                // Stopped (Stop button, or superseded by a newer pass which immediately
-                // overwrites this): already-routed wires keep their routes, the rest stay
-                // as they were — report how far the pass got.
-                RoutingStatusText = string.Format(
-                    LocalizationService.Instance.Translate("Routing.Status.Stopped"),
+                heartbeat.ConnectionCompleted();
+                var prepared = result.Prepare(_components.Select(view => view.Component).ToArray(), _connectionManager, _router, originalPaths);
+                if (Commit(operation, permission, token, cancellationToken, () =>
+                {
+                    prepared.Apply();
+                    PublishCrossings(prepared);
+                    NotifyRouteChanges();
+                    RepaintRequested?.Invoke();
+                }))
+                {
+                    RoutingStatusText = "";
+                    StateChanged?.Invoke();
+                }
+            }
+            else if (passId == _passId && operation.IsCurrent)
+            {
+                RoutingStatusText = string.Format(LocalizationService.Instance.Translate("Routing.Status.Stopped"),
                     Math.Min(_routedCount, _totalCount), _totalCount);
                 StateChanged?.Invoke();
             }
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested || !operation.IsCurrent) { }
         finally
         {
-            _connectionManager.OnComplexRouteStarted = null;
-            _connectionManager.OnRoutingPhaseChanged = null;
             _routingSemaphore.Release();
-            IsRouting = false;
-            StateChanged?.Invoke();
+            if (ReferenceEquals(_routingCts, stop)) _routingCts = null;
+            if (_activePassId == passId) { IsRouting = false; StateChanged?.Invoke(); }
         }
+    }
+
+    private RoutingInputSnapshot CaptureInput() => RoutingInputSnapshot.Capture(
+        _components.Select(view => view.Component).ToArray(), _router, _connectionManager, preserveCachedGrid: false);
+
+    private void RefreshProcessSettings()
+    {
+        if (GetProcessMinBendRadiusMicrometers != null)
+            _router.ProcessMinBendRadiusMicrometers = GetProcessMinBendRadiusMicrometers();
+        if (GetMetalRoutingSpec != null)
+        {
+            var metal = GetMetalRoutingSpec();
+            _router.MetalProcessMinBendRadiusMicrometers = metal.MinBendRadiusMicrometers;
+            _connectionManager.MetalTraceWidthMicrometers = metal.TraceWidthMicrometers;
+        }
+        _router.ConnectionProcessFloorProvider = BuildConnectionProcessFloorProvider?.Invoke();
+    }
+
+    private static bool Commit(DocumentOperation operation, ICommitPermission? permission,
+        CancellationToken token, CancellationToken caller, Action change)
+    {
+        if (token.IsCancellationRequested || caller.IsCancellationRequested) return false;
+        var applied = false;
+        try
+        {
+            void Publish()
+            {
+                token.ThrowIfCancellationRequested();
+                caller.ThrowIfCancellationRequested();
+                applied = operation.TryCommitAndAdvance(change);
+            }
+            if (permission == null) Publish(); else permission.Commit(Publish);
+        }
+        catch (OperationCanceledException) { return false; } // Revoked queued dispatch is an ordinary stale result.
+        return applied;
+    }
+
+    private void PublishCrossings(PreparedRoutingCommit prepared)
+    {
+        if (_connectionManager.CrossingService is not { } service) return;
+        if (prepared.CrossingChange != null) service.ChangeRecorded?.Invoke(prepared.CrossingChange);
+        foreach (var crossing in prepared.RemovedCrossings) service.ComponentRemoved?.Invoke(crossing);
+        foreach (var crossing in prepared.AddedCrossings) service.ComponentAdded?.Invoke(crossing);
     }
 
     /// <summary>

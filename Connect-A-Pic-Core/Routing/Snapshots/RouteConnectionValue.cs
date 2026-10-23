@@ -66,13 +66,16 @@ internal sealed record RouteConnectionValue(Guid Id, Guid Start, Guid End, Route
             router.ResolveProcessFloorFor(wire.StartPin, wire.EndPin));
     }
 
-    internal WaveguideConnection Build(IReadOnlyDictionary<Guid, PhysicalPin> pins)
+    internal WaveguideConnection Build(IReadOnlyDictionary<Guid, PhysicalPin> pins, bool restoreRoute = true)
     {
         var wire = new WaveguideConnection { Id = Id, StartPin = pins[Start], EndPin = pins[End], IsLocked = Locked,
             TargetLengthMicrometers = TargetLength, LengthToleranceMicrometers = LengthTolerance, FacetGapMediumIndex = FacetGapIndex };
         Settings.Apply(wire);
-        if (Geometry != null) wire.RestoreCachedPath(Geometry.Build());
-        Imported.Restore(wire);
+        if (restoreRoute)
+        {
+            if (Geometry != null) wire.RestoreCachedPath(Geometry.Build());
+            Imported.Restore(wire);
+        }
         return wire;
     }
 }
