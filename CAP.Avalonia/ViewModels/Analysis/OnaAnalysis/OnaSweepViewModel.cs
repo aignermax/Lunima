@@ -77,7 +77,7 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
     private readonly IWavelengthSweepRunner _runner;
     private DesignCanvasViewModel? _canvas;
     private WavelengthSweepResult? _lastResult;
-    private CancellationTokenSource? _sweepCts;
+    private AnalysisSweepOperation? _activeSweep;
     private Dictionary<Guid, string> _pinNameMap = new();
 
     /// <summary>File dialog service for CSV export. Set by MainViewModel.</summary>
@@ -104,7 +104,7 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
     {
         if (_work.IsStopping) return;
         _configurationVersion++;
-        _sweepCts?.Cancel();
+        _activeSweep?.Cancel();
         _canvas = canvas;
         _configuredAnalyzer = Analyzer;
         _configuredDocument = Analyzer != null ? canvas.Document.CaptureIdentity() : null;
@@ -131,7 +131,6 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
         var canvas = _canvas;
         var configuration = _configurationVersion;
         var analyzer = Analyzer;
-        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stop);
         AnalysisSweepOperation? operation = null;
 
         IsSweeping = true;
@@ -145,7 +144,7 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
             operation = new AnalysisSweepOperation(_work, canvas.Document,
                 () => configuration == _configurationVersion && ReferenceEquals(analyzer, Analyzer)
                     && IsConfiguredAnalyzerCurrent(),
-                stop, cancellation.Token, _configuredDocument);
+                stop, stop, _configuredDocument);
             var config = new WavelengthSweepConfiguration(StartNm, EndNm, StepCount);
             var (gridManager, portManager) = BuildSimulationGrid();
             if (gridManager == null)
@@ -168,7 +167,7 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
                 return;
             }
 
-            _sweepCts = cancellation;
+            _activeSweep = operation;
 
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Ona.Running"), StepCount);
@@ -206,8 +205,8 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
         finally
         {
             IsSweeping = false;
-            if (ReferenceEquals(_sweepCts, cancellation)) _sweepCts = null;
-            operation?.Dispose();
+            if (ReferenceEquals(_activeSweep, operation)) _activeSweep = null;
+            if (operation != null) await operation.DisposeAsync();
         }
     }
 
@@ -215,7 +214,7 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
     [RelayCommand]
     private void CancelSweep()
     {
-        _sweepCts?.Cancel();
+        _activeSweep?.Cancel();
     }
 
     /// <summary>

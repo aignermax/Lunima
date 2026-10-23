@@ -87,7 +87,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject, IAsyncDispo
     private readonly SemaphoreSlim _sweepGate = new(1, 1);
     private DesignCanvasViewModel? _canvas;
     private bool _suppressToggleRefresh;
-    private CancellationTokenSource? _sweepCts;
+    private AnalysisSweepOperation? _activeSweep;
     private CancellationTokenSource? _debounceCts;
 
     // Last rendered sweep, kept so the measured-spectrum overlay can be drawn
@@ -120,7 +120,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject, IAsyncDispo
     {
         if (_work.IsStopping) return;
         _configurationVersion++;
-        _sweepCts?.Cancel();
+        _activeSweep?.Cancel();
         _canvas = canvas;
         StatusText = "";
         HasResult = false;
@@ -141,7 +141,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject, IAsyncDispo
 
     /// <summary>Cancels a running sweep.</summary>
     [RelayCommand]
-    private void CancelSweep() => _sweepCts?.Cancel();
+    private void CancelSweep() => _activeSweep?.Cancel();
 
     partial void OnStartNmChanged(int value) => ScheduleAutoRefresh();
     partial void OnEndNmChanged(int value) => ScheduleAutoRefresh();
@@ -213,21 +213,20 @@ public partial class WavelengthSpectrumViewModel : ObservableObject, IAsyncDispo
         if (canvas == null || _work.IsStopping) return;
         var configuration = _configurationVersion;
         var request = ++_requestVersion;
-        _sweepCts?.Cancel();
-        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        _activeSweep?.Cancel();
         AnalysisSweepOperation? operation = null;
         var entered = false;
         try
         {
             operation = new AnalysisSweepOperation(_work, canvas.Document,
                 () => configuration == _configurationVersion && request == _requestVersion,
-                stop, cancellation.Token);
+                stop, stop);
             if (!TryCreateConfiguration(out var config)) return;
             await _sweepGate.WaitAsync(operation.Token);
             entered = true;
             operation.ThrowIfObsolete();
             IsSweeping = true;
-            _sweepCts = cancellation;
+            _activeSweep = operation;
             await ExecuteSweepAsync(canvas, config!, operation);
         }
         catch (OperationCanceledException)
@@ -244,13 +243,13 @@ public partial class WavelengthSpectrumViewModel : ObservableObject, IAsyncDispo
         }
         finally
         {
-            if (ReferenceEquals(_sweepCts, cancellation))
+            if (ReferenceEquals(_activeSweep, operation))
             {
                 IsSweeping = false;
-                _sweepCts = null;
+                _activeSweep = null;
             }
-            operation?.Dispose();
-            if (entered) _sweepGate.Release();
+            try { if (operation != null) await operation.DisposeAsync(); }
+            finally { if (entered) _sweepGate.Release(); }
         }
     }
 
