@@ -48,7 +48,7 @@ public partial class LeftPanelViewModel
             return;
 
         var pdkInfo = PdkManager.LoadedPdks.FirstOrDefault(p => p.Name == template.PdkSource);
-        var userPdkStore = _addCustomComponentDeps?.UserPdkStore;
+        var userPdkStore = _userPdkLibrary;
         if (pdkInfo?.FilePath is null || userPdkStore is null)
             return;
 

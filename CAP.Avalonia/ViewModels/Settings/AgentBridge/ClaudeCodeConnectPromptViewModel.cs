@@ -42,6 +42,7 @@ public partial class ClaudeCodeConnectPromptViewModel : ObservableObject
         if (_preferences.GetClaudeCodePromptDismissedVersion() == _appVersion)
             return;
         var registered = await Task.Run(() => _connector.Registrar.IsRegisteredAsync(cancellationToken), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         IsVisible = registered == false;
     }
 

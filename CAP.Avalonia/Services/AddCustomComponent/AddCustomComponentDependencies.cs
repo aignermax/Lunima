@@ -10,6 +10,7 @@ namespace CAP.Avalonia.Services.AddCustomComponent;
 /// <c>LeftPanelViewModel</c> takes one constructor parameter instead of several.
 /// </summary>
 public sealed record AddCustomComponentDependencies(
-    ComponentGeometryExtractor Extractor, IFdtdSMatrixService? Fdtd, UserPdkStore UserPdkStore,
+    ComponentGeometryExtractor Extractor, IFdtdSMatrixService? Fdtd, IUserPdkLibrary UserPdkStore,
     ErrorConsoleService? ErrorConsole = null,
-    FdtdBackendRegistry? BackendRegistry = null, IUrlLauncher? UrlLauncher = null);
+    FdtdBackendRegistry? BackendRegistry = null, IUrlLauncher? UrlLauncher = null,
+    Lifetime.ApplicationWorkCoordinator? ApplicationWork = null);

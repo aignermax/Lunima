@@ -9,6 +9,7 @@ using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Shell;
 using CAP.Avalonia.ViewModels.Workspaces;
 using CAP_Core.Components.Process;
+using CAP_Core.Preferences;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CAP.Avalonia.ViewModels.Onboarding.LearningJourneys;
@@ -22,7 +23,7 @@ internal sealed class LearningGuidanceController : ObservableObject, IDisposable
     private readonly TutorialViewModel _tutorial;
     private readonly HomeViewModel _home;
     private readonly WorkspaceViewModel _workspace;
-    private readonly UserPreferencesService _preferences;
+    private readonly ILearningPreferences _preferences;
     private readonly Action _stopChapters;
     private IDisposable? _timeout;
     private bool _resetting;
@@ -30,7 +31,7 @@ internal sealed class LearningGuidanceController : ObservableObject, IDisposable
 
     public LearningGuidanceController(DesignCanvasViewModel canvas, FileOperationsViewModel files,
         ProcessRoutingContext process, TutorialViewModel tutorial, HomeViewModel home,
-        WorkspaceViewModel workspace, UserPreferencesService preferences, Action stopChapters)
+        WorkspaceViewModel workspace, ILearningPreferences preferences, Action stopChapters)
     {
         (_canvas, _files, _process, _tutorial, _home, _workspace, _preferences, _stopChapters) =
             (canvas, files, process, tutorial, home, workspace, preferences, stopChapters);

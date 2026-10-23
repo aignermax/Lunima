@@ -141,7 +141,7 @@ public class ConnectionLengthPersistenceTests
     {
         var canvas = new DesignCanvasViewModel();
         var errorConsole = new ErrorConsoleService();
-        var vm = new FileOperationsViewModel(
+        var vm = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

@@ -20,10 +20,23 @@ public partial class MainViewModel
         makeGate.ExecuteCommand = CommandManager.ExecuteCommand;
         makeGate.SaveToLibraryRequested = SaveGateToLibrary;
         makeGate.OpenLogicRequested = OpenLogicTab;
-        makeGate.GateSaved += (_, _) => RightPanel.Logic.RefreshGateCandidates();
-        makeGate.GateDefinitionChanged += (_, _) => GateView.RequestRebuild();
+        makeGate.GateSaved += SavedGateChanged;
+        makeGate.GateDefinitionChanged += GateDefinitionChanged;
         RightPanel.TruthTable.OpenLogicRequested = OpenLogicTab;
         RightPanel.Logic.MakeGateRequested = SelectGroupAndOpenMakeGate;
+    }
+
+    private void SavedGateChanged(object? sender, EventArgs args) => RightPanel.Logic.RefreshGateCandidates();
+    private void GateDefinitionChanged(object? sender, EventArgs args) => GateView.RequestRebuild();
+
+    private void UnwireMakeGate()
+    {
+        RightPanel.MakeGate.GateSaved -= SavedGateChanged;
+        RightPanel.MakeGate.GateDefinitionChanged -= GateDefinitionChanged;
+        RightPanel.MakeGate.SaveToLibraryRequested = null;
+        RightPanel.MakeGate.OpenLogicRequested = null;
+        RightPanel.TruthTable.OpenLogicRequested = null;
+        RightPanel.Logic.MakeGateRequested = null;
     }
 
     /// <summary>

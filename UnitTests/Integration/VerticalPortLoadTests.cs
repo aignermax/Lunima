@@ -75,7 +75,7 @@ public class VerticalPortLoadTests
     {
         var canvas = new DesignCanvasViewModel();
         var errors = new ErrorConsoleService();
-        var files = new FileOperationsViewModel(canvas, new CommandManager(), new SimpleNazcaExporter(),
+        var files = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),canvas, new CommandManager(), new SimpleNazcaExporter(),
             new SaxExporter(), library, new GdsExportViewModel(new GdsExportService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas), null!, errorConsole: errors);
         return (files, canvas, errors);

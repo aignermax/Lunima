@@ -17,11 +17,15 @@ public partial class ModeProbeViewModel
 
     /// <summary>Solves the fundamental mode for the current target and inputs.</summary>
     [RelayCommand]
-    private async Task Solve()
+    private Task Solve() => _work.RunAsync(SolveCoreAsync);
+
+    private async Task SolveCoreAsync(CancellationToken stopping)
     {
         if (_target == null || IsInterferenceRegion) return;
         _cts?.Cancel();
-        _cts = new CancellationTokenSource();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stopping);
+        _cts = cancellation;
+        var token = cancellation.Token;
 
         var crossSection = ResolveCrossSection();
         IsSolving = true;
@@ -30,10 +34,14 @@ public partial class ModeProbeViewModel
 
         try
         {
-            var result = await _service.SolveAsync(BuildRequest(crossSection), _cts.Token);
+            var result = await _service.SolveAsync(BuildRequest(crossSection), token);
+            _work.ThrowIfStopping();
+            token.ThrowIfCancellationRequested();
             if (!result.Success && CanAutoInstall(result))
             {
-                var retried = await InstallBackendAndRetry(result, crossSection, _cts.Token);
+                var retried = await InstallBackendAndRetry(result, crossSection, token);
+                _work.ThrowIfStopping();
+                token.ThrowIfCancellationRequested();
                 if (retried == null) return; // install handled the status itself; do not retry/overwrite
                 result = retried;
             }
@@ -49,6 +57,7 @@ public partial class ModeProbeViewModel
         }
         finally
         {
+            if (ReferenceEquals(_cts, cancellation)) _cts = null;
             IsSolving = false;
         }
     }
@@ -137,10 +146,12 @@ public partial class ModeProbeViewModel
     private async Task<ModeSolverResult?> InstallBackendAndRetry(
         ModeSolverResult failure, ProbeCrossSection crossSection, CancellationToken ct)
     {
-        var progress = new Progress<string>(m => StatusText = m);
+        var progress = new Progress<string>(m => { if (!ct.IsCancellationRequested && !_work.IsStopping) StatusText = m; });
         StatusText = string.Format(
             LocalizationService.Instance.Translate("ModeProbe.Installing"), failure.MissingBackend);
         var installed = await EnsureBackendAsync!(failure.MissingBackend!, progress, ct);
+        _work.ThrowIfStopping();
+        ct.ThrowIfCancellationRequested();
         if (!installed)
         {
             StatusText = string.Format(
@@ -150,6 +161,8 @@ public partial class ModeProbeViewModel
 
         StatusText = LocalizationService.Instance.Translate("ModeProbe.BackendInstalledRetrying");
         var retry = await _service.SolveAsync(BuildRequest(crossSection), ct);
+        _work.ThrowIfStopping();
+        ct.ThrowIfCancellationRequested();
         if (!retry.Success && retry.MissingBackend == failure.MissingBackend)
         {
             // uv reported success but the backend still can't be imported (partial install,

@@ -47,24 +47,27 @@ public partial class NewComponentViewModel
         LocalizationService.Instance.Translate("NewComponent.ComputeWithBackend"), SolverLabel);
 
     private bool CanRunCompute =>
-        !IsBusy && !IsAwaitingCloudConfirmation && BackendSelection?.IsCurrentBackendUnavailable != true;
+        !_work.IsStopping && !IsBusy && !IsAwaitingCloudConfirmation && BackendSelection?.IsCurrentBackendUnavailable != true;
 
-    private void InitFdtdBackendSelection(FdtdBackendRegistry? registry, IUrlLauncher? urlLauncher)
+    private void InitFdtdBackendSelection(FdtdBackendRegistry? registry, IUrlLauncher? urlLauncher,
+        Services.Lifetime.ApplicationWorkCoordinator? applicationWork)
     {
         if (registry == null)
             return;
-        BackendSelection = new FdtdBackendSelectionViewModel(registry, urlLauncher);
-        BackendSelection.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(FdtdBackendSelectionViewModel.IsCurrentBackendUnavailable))
-                ComputeSMatrixCommand.NotifyCanExecuteChanged();
-            if (e.PropertyName is nameof(FdtdBackendSelectionViewModel.CurrentSolverLabel))
-                OnPropertyChanged(nameof(ComputeButtonLabel));
-        };
+        BackendSelection = new FdtdBackendSelectionViewModel(registry, urlLauncher, applicationWork);
+        BackendSelection.PropertyChanged += OnBackendSelectionChanged;
+    }
+
+    private void OnBackendSelectionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(FdtdBackendSelectionViewModel.IsCurrentBackendUnavailable))
+            ComputeSMatrixCommand.NotifyCanExecuteChanged();
+        if (e.PropertyName is nameof(FdtdBackendSelectionViewModel.CurrentSolverLabel))
+            OnPropertyChanged(nameof(ComputeButtonLabel));
     }
 
     /// <summary>Releases the backend picker's registry subscription (host calls this on window close).</summary>
-    public void Dispose() => BackendSelection?.Dispose();
+    public void Dispose() => _ = StopAsync();
 
     /// <summary>
     /// Probes the selected backend so a known-bad state (Docker down, no API key)
@@ -72,8 +75,11 @@ public partial class NewComponentViewModel
     /// </summary>
     public async Task RefreshBackendAvailabilityAsync(CancellationToken ct = default)
     {
-        if (BackendSelection != null)
-            await BackendSelection.CheckAvailabilityAsync(ct);
+        try
+        {
+            if (BackendSelection != null) await BackendSelection.CheckAvailabilityAsync(ct);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
     }
 
     partial void OnIsAwaitingCloudConfirmationChanged(bool value)
@@ -92,6 +98,8 @@ public partial class NewComponentViewModel
         StatusText = string.Format(
             LocalizationService.Instance.Translate("CompSettings.EstimatingCloudCost"), SolverLabel);
         var estimate = await estimator.EstimateCostAsync(request, ct);
+        _work.ThrowIfStopping();
+        ct.ThrowIfCancellationRequested();
 
         CloudCostText = estimate.Success
             ? string.Format(
@@ -109,7 +117,9 @@ public partial class NewComponentViewModel
     }
 
     [RelayCommand]
-    private async Task ConfirmCloudSubmit()
+    private Task ConfirmCloudSubmit() => _work.RunAsync(ConfirmCloudSubmitCoreAsync);
+
+    private async Task ConfirmCloudSubmitCoreAsync(CancellationToken stop)
     {
         var service = _pendingCloudService;
         var request = _pendingCloudRequest;
@@ -119,13 +129,15 @@ public partial class NewComponentViewModel
             return;
 
         IsBusy = true;
-        _computeCts = new CancellationTokenSource();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        _computeCts = cancellation;
         try
         {
-            await ExecuteSolveAsync(service, request, _computeCts.Token, cloudLabel);
+            await ExecuteSolveAsync(service, request, cancellation.Token, cloudLabel);
         }
         catch (OperationCanceledException)
         {
+            if (_work.IsStopping) return;
             _computedModel = null;
             // A cancelled CLOUD wait can leave a submitted job running and billing —
             // say so instead of claiming nothing happened.
@@ -136,6 +148,7 @@ public partial class NewComponentViewModel
         }
         catch (Exception ex)
         {
+            if (_work.IsStopping || cancellation.IsCancellationRequested) return;
             // Mirror the settings dialog's twin: without this the AsyncRelayCommand
             // swallows the fault and the submit looks like it did nothing.
             _computedModel = null;
@@ -145,15 +158,15 @@ public partial class NewComponentViewModel
         finally
         {
             IsBusy = false;
-            _computeCts?.Dispose();
-            _computeCts = null;
-            RefreshSMatrixEntries();
+            if (ReferenceEquals(_computeCts, cancellation)) _computeCts = null;
+            if (!_work.IsStopping) RefreshSMatrixEntries();
         }
     }
 
     [RelayCommand]
     private void CancelCloudSubmit()
     {
+        if (_work.IsStopping) return;
         ClearPendingCloudJob();
         StatusText = LocalizationService.Instance.Translate("CompSettings.CloudSubmitCancelled");
     }

@@ -232,7 +232,7 @@ public sealed class LogicAcrossChipletLinkJourneyDesign
 
     /// <summary>File operations over the full test template library, for example loads.</summary>
     private static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas) =>
-        new(
+        new(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

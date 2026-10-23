@@ -23,7 +23,7 @@ public partial class PdkResolutionCheckViewModel : ObservableObject
     /// <summary>Backend name of raw code that targets Nazca (absent means Nazca, the GDS-import default).</summary>
     private const string NazcaRawCodeBackend = "nazca";
 
-    private readonly PdkLoader _pdkLoader;
+    private readonly IPdkReader _pdkLoader;
     private readonly PdkFunctionResolutionService _resolutionService;
     private readonly Func<string?> _pdkDirectoryResolver;
 
@@ -55,7 +55,7 @@ public partial class PdkResolutionCheckViewModel : ObservableObject
     /// bundled-PDK directory resolution used by the component library.
     /// </param>
     public PdkResolutionCheckViewModel(
-        PdkLoader pdkLoader,
+        IPdkReader pdkLoader,
         PdkFunctionResolutionService resolutionService,
         Func<string?>? pdkDirectoryResolver = null)
     {

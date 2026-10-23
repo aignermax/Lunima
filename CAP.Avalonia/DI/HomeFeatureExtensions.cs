@@ -18,6 +18,8 @@ internal static class HomeFeatureExtensions
     public static IServiceCollection AddHomeFeature(this IServiceCollection services)
     {
         services.AddSingleton<IRecentProjectPreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<IHomePreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<ILearningPreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
         services.AddSingleton<RecentProjectsService>();
         services.AddSingleton<ExampleDesignsService>();
         services.AddSingleton<HomeViewModel>();

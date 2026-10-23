@@ -57,7 +57,7 @@ public class NazcaExportMissingGdsSourceTests
             canvas.Components.Add(new ComponentViewModel(RawCodeComponent()));
             var library = new ObservableCollection<ComponentTemplate> { RawCodeTemplate(missingGds) };
             var errorConsole = new ErrorConsoleService();
-            var fileOps = new FileOperationsViewModel(
+            var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
                 canvas,
                 new CommandManager(),
                 new SimpleNazcaExporter(),

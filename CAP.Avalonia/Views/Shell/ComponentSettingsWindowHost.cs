@@ -2,19 +2,21 @@ using Avalonia.Controls;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.Views.Dialogs;
+using CAP_DataAccess.Persistence.PIR;
 
 namespace CAP.Avalonia.Views.Shell;
 
 /// <summary>Owns per-entity settings windows and their template/instance override lifetime.</summary>
 internal sealed class ComponentSettingsWindowHost(
     Window owner, CAP.Avalonia.ViewModels.Panels.LeftPanelViewModel library,
-    CAP.Avalonia.ViewModels.Panels.FileOperationsViewModel files, UserSMatrixOverrideStore? userStore,
-    Func<ComponentSettingsDialogFactory> createDialogFactory, Action openSolverSettings)
+    CAP.Avalonia.ViewModels.Panels.FileOperationsViewModel files, ITemplateSMatrixStore? userStore,
+    Func<ComponentSettingsDialogFactory> createDialogFactory, Action openSolverSettings,
+    CAP_Core.Documents.DocumentSession? document = null)
 {
     private readonly Window _owner = owner;
     private readonly CAP.Avalonia.ViewModels.Panels.LeftPanelViewModel _library = library;
     private readonly CAP.Avalonia.ViewModels.Panels.FileOperationsViewModel _files = files;
-    private readonly UserSMatrixOverrideStore? _userStore = userStore;
+    private readonly ITemplateSMatrixStore? _userStore = userStore;
     private readonly Func<ComponentSettingsDialogFactory> _createDialogFactory = createDialogFactory;
     private readonly Action _openSolverSettings = openSolverSettings;
     private readonly Dictionary<string, ComponentSettingsDialog> _openComponentSettingsDialogs = new();
@@ -40,7 +42,7 @@ internal sealed class ComponentSettingsWindowHost(
     /// scoped to this canvas instance and persisted in the .lun file.
     ///
     /// Per-Template mode (<paramref name="liveComponent"/> null): the dialog
-    /// reads/writes the user-global <see cref="UserSMatrixOverrideStore"/>, so
+    /// reads/writes the user-global <see cref="ITemplateSMatrixStore"/>, so
     /// the override applies to every instance of that template across every
     /// project the user opens. After a successful import/delete the store is
     /// flushed to disk and live components matching the template are
@@ -175,7 +177,7 @@ internal sealed class ComponentSettingsWindowHost(
             availablePinNames: availablePinNames,
             smatrixKeyResolver: smatrixKeyResolver,
             propagateToTemplate: propagateToTemplate,
-            template: templateForDefaults);
+            template: templateForDefaults, document: document);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         _openComponentSettingsDialogs[entityKey] = dialog;

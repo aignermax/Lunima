@@ -15,7 +15,8 @@ internal sealed class ComponentSettingsDialogFactory(
     CAP_Core.Export.GdsFactoryComponentPreviewService? gdsFactoryGeometryService,
     CAP.Avalonia.Services.Solvers.IDockerSetupDialogService? dockerSetupDialog,
     INotificationService? notificationService,
-    CAP.Avalonia.Services.Solvers.FdtdBackendRegistry? fdtdBackendRegistry, IUrlLauncher? urlLauncher)
+    CAP.Avalonia.Services.Solvers.FdtdBackendRegistry? fdtdBackendRegistry, IUrlLauncher? urlLauncher,
+    Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
 {
     public (ComponentSettingsDialogViewModel Dialog, FdtdBackendSelectionViewModel? Backend) Create(
         Func<Task<ComponentTemplate?>>? resetToPdkOriginal, Action openSolverSettings)
@@ -41,7 +42,7 @@ internal sealed class ComponentSettingsDialogFactory(
         {
             backendSelection = new CAP.Avalonia.ViewModels.Solvers.FdtdBackendSelectionViewModel(
                 fdtdBackendRegistry,
-                urlLauncher);
+                urlLauncher, applicationWork);
             // Deep-link for the missing-key hint: opens Settings on the Tidy3D Cloud page.
             backendSelection.OpenTidy3dSettingsPage = openSolverSettings;
         }
@@ -56,7 +57,8 @@ internal sealed class ComponentSettingsDialogFactory(
             notificationService: notificationService,
             dockerSetupDialog: dockerSetupDialog,
             backendSelection: backendSelection,
-            resetToPdkOriginal: resetToPdkOriginal);
+            resetToPdkOriginal: resetToPdkOriginal,
+            applicationWork: applicationWork);
 
         return (dialogVm, backendSelection);
     }

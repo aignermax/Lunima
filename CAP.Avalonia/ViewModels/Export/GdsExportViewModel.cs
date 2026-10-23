@@ -123,15 +123,19 @@ public partial class GdsExportViewModel : ObservableObject
     /// where an unobserved task exception would crash silently.
     /// </summary>
     [RelayCommand]
-    public async Task CheckEnvironmentAsync()
+    public Task CheckEnvironmentAsync() => CheckEnvironmentAsync(CancellationToken.None);
+
+    public async Task CheckEnvironmentAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IsChecking = true;
         PythonStatus = LocalizationService.Instance.Translate("Export.Checking");
         NazcaStatus = LocalizationService.Instance.Translate("Export.Checking");
 
         try
         {
-            var envInfo = await _exportService.CheckPythonEnvironmentAsync();
+            var envInfo = await _exportService.CheckPythonEnvironmentAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
 
             PythonAvailable = envInfo.PythonAvailable;
             NazcaAvailable = envInfo.NazcaAvailable;
@@ -161,6 +165,7 @@ public partial class GdsExportViewModel : ObservableObject
             OnPropertyChanged(nameof(IsEnvironmentReady));
             RefreshManagedCandidates();
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             PythonAvailable = false;
@@ -343,8 +348,8 @@ public partial class GdsExportViewModel : ObservableObject
     /// Runs the actual interpreter discovery. Virtual so tests can substitute a
     /// controllable discovery to exercise overlapping-search behavior.
     /// </summary>
-    protected virtual Task<List<PythonDiscoveryService.PythonInstallation>> DiscoverPythonsAsync() =>
-        _discoveryService.DiscoverPythonWithNazcaAsync();
+    protected virtual Task<List<PythonDiscoveryService.PythonInstallation>> DiscoverPythonsAsync(CancellationToken cancellationToken = default) =>
+        _discoveryService.DiscoverPythonWithNazcaAsync(cancellationToken);
 
     /// <summary>
     /// Searches for Python installations with Nazca and updates the available list.
@@ -352,14 +357,18 @@ public partial class GdsExportViewModel : ObservableObject
     /// its results, so rapid page switches can never duplicate the list.
     /// </summary>
     [RelayCommand]
-    public async Task SearchForPythonAsync()
+    public Task SearchForPythonAsync() => SearchForPythonAsync(CancellationToken.None);
+
+    public async Task SearchForPythonAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var generation = ++_searchGeneration;
         IsSearching = true;
 
         try
         {
-            var found = await DiscoverPythonsAsync();
+            var found = await DiscoverPythonsAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             if (generation != _searchGeneration)
                 return;   // a newer search owns the list now
 
@@ -374,7 +383,7 @@ public partial class GdsExportViewModel : ObservableObject
                 // Auto-select first one if no path is set
                 if (string.IsNullOrEmpty(CustomPythonPath))
                 {
-                    await SelectPython(found[0]);
+                    await SelectPython(found[0], cancellationToken);
                 }
             }
             else
@@ -383,6 +392,7 @@ public partial class GdsExportViewModel : ObservableObject
                 NazcaStatus = "Install Nazca from nazca-design.org";
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             if (generation == _searchGeneration)
@@ -416,13 +426,16 @@ public partial class GdsExportViewModel : ObservableObject
     /// </summary>
     /// <param name="installation">The Python installation to use.</param>
     [RelayCommand]
-    public async Task SelectPython(PythonDiscoveryService.PythonInstallation installation)
+    public Task SelectPython(PythonDiscoveryService.PythonInstallation installation) => SelectPython(installation, CancellationToken.None);
+
+    public async Task SelectPython(PythonDiscoveryService.PythonInstallation installation, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         CustomPythonPath = installation.Path;
         PythonPathSource = installation.Source;
         _exportService.SetCustomPythonPath(installation.Path);
         OnPythonPathChanged?.Invoke(installation.Path);
-        await CheckEnvironmentAsync();
+        await CheckEnvironmentAsync(cancellationToken);
     }
 
 }

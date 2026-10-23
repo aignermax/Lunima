@@ -1,5 +1,4 @@
 using System.Numerics;
-using CAP_Core.Components;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.ComponentHelpers;
@@ -7,7 +6,7 @@ using CAP_Core.ExternalPorts;
 using CAP_Core.ExternalPorts.LaserSpectrum;
 using CAP_Core.Grid;
 using CAP_Core.LightCalculation;
-using CAP_Core.LightCalculation.LaserSpectrum;
+using CAP_Core.LightCalculation.Snapshots;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Simulation;
 
@@ -16,16 +15,15 @@ namespace CAP.Avalonia.Services;
 /// <summary>
 /// Orchestrates S-Matrix light simulation from the Avalonia UI state.
 /// Bridges the UI (DesignCanvasViewModel) with the core simulation engine
-/// (GridLightCalculator) using physical coordinates.
+/// through detached physics snapshots using physical coordinates.
 /// Supports per-source wavelength and power configuration.
 /// </summary>
 public class SimulationService
 {
-    /// <summary>
-    /// Template names that are treated as light input sources.
-    /// </summary>
-    private static readonly HashSet<string> LightSourceTemplates =
-        new(StringComparer.OrdinalIgnoreCase) { "Grating Coupler", "Edge Coupler" };
+    /// <summary>Runs detached physics only; overridable for bounded scheduling/lifetime tests.</summary>
+    protected virtual Task<SimulationSnapshotResult> SolveSnapshotAsync(
+        SimulationInputSnapshot snapshot, CancellationToken cancellationToken) =>
+        SimulationSnapshotSolver.RunAsync(snapshot, cancellationToken);
 
     /// <summary>
     /// Runs the full S-Matrix simulation and updates the PowerFlowVisualizer.
@@ -35,127 +33,87 @@ public class SimulationService
         DesignCanvasViewModel canvas,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var operation = canvas.Document.CaptureOperation(cancellationToken);
         if (canvas.Components.Count == 0)
             return SimulationResult.Empty("No components placed");
 
-        var unresolved = ImportedModelReadiness.FindUnresolved(canvas.Components.Select(c => c.Component));
+        var componentViewModels = canvas.Components.ToList();
+        var components = componentViewModels.Select(vm => vm.Component).ToList();
+        var unresolved = ImportedModelReadiness.FindUnresolved(components);
         if (unresolved.Count > 0)
             return SimulationResult.Empty("Simulation unavailable: geometry-only imported components need models: "
                 + string.Join(", ", unresolved));
-
-        // Check for connections: either external canvas connections OR internal paths in groups
-        var hasConnections = canvas.Connections.Count > 0 || HasInternalPathsInGroups(canvas);
-        if (!hasConnections)
+        if (canvas.Connections.Count == 0 && !HasInternalPathsInGroups(canvas))
             return SimulationResult.Empty("No connections");
 
-        // Snapshot the observable collections on the caller's (UI) thread so the worker
-        // below never reads an ObservableCollection off-thread (issue #1150).
-        var componentViewModels = canvas.Components.ToList();
-        // Parts on dies carry their own laser settings (they are edited in place on the assembly).
-        var partViewModels = canvas.Surface.IsActive ? canvas.Surface.Items : Array.Empty<ComponentViewModel>();
-        var connectionManager = canvas.ConnectionManager;
-        var connections = connectionManager.Connections.ToList();
-        var componentCount = canvas.Components.Count;
+        // All editor objects are read synchronously under the caller's document ownership.
+        // These lists remain on this orchestration path for guarded UI publication only.
+        var connections = canvas.ConnectionManager.Connections.ToList();
+        var componentCount = componentViewModels.Count;
         var connectionCount = canvas.Connections.Count;
-
-        // S-matrix computation, light-source setup, grid construction and the per-wavelength
-        // propagation all run off the UI thread — on a loaded logic-gate design the
-        // synchronous prefix of this block alone exceeds the 100 ms budget.
-        var (sourceConfigs, systemMatrix, allFieldResults, wavelengths) = await Task.Run(
-            () => ComputeSimulationAsync(componentViewModels, connectionManager, cancellationToken, partViewModels),
-            cancellationToken);
-        // A run superseded while computing must not overwrite the newer run's overlay.
-        cancellationToken.ThrowIfCancellationRequested();
-
+        var partViewModels = canvas.Surface.IsActive ? canvas.Surface.Items : Array.Empty<ComponentViewModel>();
+        var ports = new PhysicalExternalPortManager();
+        var sourceConfigs = ConfigureLightSources(componentViewModels, ports,
+            CollectWiredPins(componentViewModels, connections), partViewModels);
         if (sourceConfigs.Count == 0)
-            return SimulationResult.Empty(
-                "No light sources found (place a Grating Coupler or Edge Coupler)");
+            return SimulationResult.Empty("No light sources found (place a Grating Coupler or Edge Coupler)");
 
-        // UI-touching updates back on the caller's thread (the await above resumes on the
-        // captured synchronization context, so this is the UI thread when invoked from one).
-        var components = componentViewModels.Select(c => c.Component).ToList();
-        canvas.PowerFlowVisualizer.UpdateFromSimulation(connections, components, allFieldResults);
-        canvas.RefreshPowerFlowDisplay();
+        // ExternalInput stores power; the engine requires the corresponding complex FIELD.
+        // Capture numeric connection physics and formula descriptions, never live factories.
+        // Preserve the legacy first-wavelength diagnostic and spectral accumulation order;
+        // ConcurrentBag enumeration of external inputs alone would reverse that order.
+        var inputsByWavelength = ports.GetUsedExternalInputs().ToLookup(input => input.Input.LaserType.WaveLengthInNm);
+        var sources = sourceConfigs.SelectMany(source => source.SampleWavelengthsNm).Distinct()
+            .SelectMany(wavelength => inputsByWavelength[wavelength])
+            .Select(input => new SimulationSourceInput(input.AttachedComponentPinId,
+                input.Input.LaserType.WaveLengthInNm, input.Input.InFlowField)).ToArray();
+        var snapshot = SimulationSnapshotCapture.Capture(components, connections, sources,
+            canvas.ConnectionManager.EnableCoherentPropagationPhase, sourceConfigs.Any(source => source.HasSpectralLinewidth));
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!operation.IsCurrent) return SimulationResult.Superseded();
+
+        SimulationSnapshotResult computed;
+        var workerCancellation = operation.CancellationToken;
+        try
+        {
+            // Only detached input and the token cross this boundary. In particular no canvas,
+            // component, source ViewModel, connection manager, or document lease enters it.
+            computed = await RunDetachedAsync(snapshot, workerCancellation);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested && !operation.IsCurrent)
+        {
+            return SimulationResult.Superseded();
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!operation.IsCurrent) return SimulationResult.Superseded();
+        var fields = computed.Fields.ToDictionary(pair => pair.Key, pair => pair.Value);
+        // Linear-time endpoint analysis stays outside the lease lock. Complete flattened
+        // fields must never trigger the legacy live group-matrix reconstruction here.
+        var preparedOverlay = canvas.PowerFlowVisualizer.PrepareFromFlattenedSimulation(connections, components, fields);
+        if (!operation.TryPublish(() =>
+            {
+                canvas.PowerFlowVisualizer.PublishPreparedResult(preparedOverlay);
+                canvas.RefreshPowerFlowDisplay();
+            }))
+            return SimulationResult.Superseded();
 
         return new SimulationResult
         {
             Success = true,
-            FieldResults = allFieldResults,
-            WavelengthsUsed = wavelengths,
+            FieldResults = fields,
+            WavelengthsUsed = sourceConfigs.Select(source => source.WavelengthNm).Distinct().ToList(),
             LightSourceCount = sourceConfigs.Count,
             ComponentCount = componentCount,
             ConnectionCount = connectionCount,
             SourceConfigs = sourceConfigs,
-            SystemMatrix = systemMatrix
+            SystemMatrix = computed.SystemMatrix
         };
     }
 
-    /// <summary>
-    /// The heavy half of <see cref="RunAsync"/>: computes group S-matrices, configures light
-    /// sources, builds the simulation grid, and propagates each wavelength. Runs on a worker
-    /// thread; the only canvas state it reads is the snapshot taken by the caller, so it is
-    /// safe to invoke inside <see cref="Task.Run"/>.
-    /// </summary>
-    private static async Task<(List<SourceConfigInfo> SourceConfigs, SMatrix? SystemMatrix,
-            Dictionary<Guid, Complex> AllFieldResults, List<int> Wavelengths)> ComputeSimulationAsync(
-        IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
-        WaveguideConnectionManager connectionManager,
-        CancellationToken cancellationToken,
-        IReadOnlyList<ViewModels.Canvas.ComponentViewModel>? partViewModels = null)
-    {
-        var tileManager = new ComponentListTileManager();
-        foreach (var compVm in componentViewModels)
-        {
-            // Ensure ComponentGroups have computed S-Matrices before simulation
-            if (compVm.Component is ComponentGroup group)
-            {
-                group.EnsureSMatrixComputed(connectionManager.EnableCoherentPropagationPhase);
-            }
-            tileManager.AddComponent(compVm.Component);
-        }
-
-        var portManager = new PhysicalExternalPortManager();
-        var wiredPins = CollectWiredPins(componentViewModels, connectionManager.Connections);
-        var sourceConfigs = ConfigureLightSources(componentViewModels, portManager, wiredPins, partViewModels);
-
-        if (sourceConfigs.Count == 0)
-            return (sourceConfigs, null, new Dictionary<Guid, Complex>(), new List<int>());
-
-        var gridManager = GridManager.CreateForSimulation(tileManager, connectionManager, portManager);
-
-        // Run simulation for each distinct wavelength sample. Sources with a finite
-        // linewidth (#819) contribute several weighted samples around their center.
-        var wavelengths = sourceConfigs.Select(s => s.WavelengthNm).Distinct().ToList();
-        var runWavelengths = sourceConfigs
-            .SelectMany(s => s.SampleWavelengthsNm).Distinct().ToList();
-        bool anySpectral = sourceConfigs.Any(s => s.HasSpectralLinewidth);
-        var perWavelengthFields = new List<Dictionary<Guid, Complex>>();
-        SMatrix? systemMatrix = null;
-
-        foreach (var wl in runWavelengths)
-        {
-            var builder = new SystemMatrixBuilder(gridManager);
-            var calculator = new GridLightCalculator(builder, gridManager);
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            var fields = await calculator.CalculateFieldPropagationAsync(cts, wl);
-            perWavelengthFields.Add(fields);
-
-            // Capture the system S-Matrix from the first wavelength for diagnostics
-            if (systemMatrix == null)
-            {
-                systemMatrix = builder.GetSystemSMatrix(wl);
-            }
-        }
-
-        // Spectral samples of one source add incoherently (power sum). Distinct
-        // ideal sources keep the legacy complex merge so existing results are
-        // reproduced exactly.
-        var allFieldResults = anySpectral
-            ? IncoherentFieldCombiner.Combine(perWavelengthFields)
-            : MergeAllFieldResults(perWavelengthFields);
-
-        return (sourceConfigs, systemMatrix, allFieldResults, wavelengths);
-    }
+    // Keep worker closure creation in a method whose parameters contain no editor objects.
+    private Task<SimulationSnapshotResult> RunDetachedAsync(SimulationInputSnapshot snapshot, CancellationToken token) =>
+        Task.Run(() => SolveSnapshotAsync(snapshot, token), token);
 
     /// <summary>
     /// Finds I/O components and configures them as light sources.
@@ -228,8 +186,8 @@ public class SimulationService
     }
 
     /// <summary>
-    /// Snapshot-based overload used by the off-thread simulation path (issue #1150):
-    /// never touches an <see cref="System.Collections.ObjectModel.ObservableCollection{T}"/>.
+    /// Captures source configuration on the owning UI thread before detached simulation.
+    /// The supplied ViewModels and physical pins must never be passed to the worker.
     /// </summary>
     internal static List<SourceConfigInfo> ConfigureLightSources(
         IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
@@ -435,28 +393,13 @@ public class SimulationService
         return greenDist <= blueDist ? LightColor.Green : LightColor.Blue;
     }
 
-    /// <summary>Legacy multi-wavelength merge: complex sum per pin (pre-#819 behaviour).</summary>
-    private static Dictionary<Guid, Complex> MergeAllFieldResults(
-        IReadOnlyList<Dictionary<Guid, Complex>> perWavelengthFields)
-    {
-        var target = new Dictionary<Guid, Complex>();
-        foreach (var fields in perWavelengthFields)
-        {
-            foreach (var kvp in fields)
-            {
-                if (target.ContainsKey(kvp.Key))
-                    target[kvp.Key] += kvp.Value;
-                else
-                    target[kvp.Key] = kvp.Value;
-            }
-        }
-        return target;
-    }
+
 }
 
 public class SimulationResult
 {
     public bool Success { get; set; }
+    public bool IsSuperseded { get; set; }
     public string? ErrorMessage { get; set; }
     public Dictionary<Guid, Complex>? FieldResults { get; set; }
     public List<int> WavelengthsUsed { get; set; } = new();
@@ -470,6 +413,12 @@ public class SimulationResult
     {
         Success = false,
         ErrorMessage = message
+    };
+
+    public static SimulationResult Superseded() => new()
+    {
+        IsSuperseded = true,
+        ErrorMessage = "Simulation superseded by a document change"
     };
 
     public string WavelengthSummary =>

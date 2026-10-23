@@ -6,8 +6,11 @@ namespace CAP.Avalonia.ViewModels.Panels.DesignModels;
 
 /// <summary>Resolves persisted template identity against placed instances and the current library.</summary>
 public sealed class ComponentTemplateResolver(
-    IEnumerable<ComponentViewModel> components, IEnumerable<ComponentTemplate> library)
+    Func<IEnumerable<ComponentViewModel>> components, IEnumerable<ComponentTemplate> library)
 {
+    public ComponentTemplateResolver(IEnumerable<ComponentViewModel> components, IEnumerable<ComponentTemplate> library)
+        : this(() => components, library) { }
+
     /// <summary>Finds a saved template, preferring its PDK before the legacy name-only fallback.</summary>
     public ComponentTemplate? Find(string templateName, string? pdkSource)
     {
@@ -24,7 +27,7 @@ public sealed class ComponentTemplateResolver(
     /// <summary>Gets the instance's template name, preserving explicit stamps on grouped children.</summary>
     public string Name(Component component)
     {
-        var vm = components.FirstOrDefault(c => c.Component == component);
+        var vm = components().FirstOrDefault(c => c.Component == component);
         if (vm?.TemplateName != null) return vm.TemplateName;
         if (!string.IsNullOrEmpty(component.TemplateName) && library.Any(t => t.Name == component.TemplateName))
             return component.TemplateName;

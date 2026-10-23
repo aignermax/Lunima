@@ -9,17 +9,17 @@ namespace CAP.Avalonia.Views.Shell;
 /// <summary>Owns component-editor identity, dirty-editor reuse and cancellation on close.</summary>
 internal sealed class ComponentEditorWindowHost(
     Window owner, CAP.Avalonia.ViewModels.Panels.LeftPanelViewModel library,
-    ComponentSettingsWindowHost settings, PdkWindowHost pdks, UserPdkStore? store, Action openSolverSettings)
+    ComponentSettingsWindowHost settings, PdkWindowHost pdks, IUserPdkLibrary? store, Action openSolverSettings)
 {
     private readonly Window _owner = owner;
     private readonly CAP.Avalonia.ViewModels.Panels.LeftPanelViewModel _library = library;
     private readonly ComponentSettingsWindowHost _settings = settings;
     private readonly PdkWindowHost _pdks = pdks;
-    private readonly UserPdkStore? _store = store;
+    private readonly IUserPdkLibrary? _store = store;
     private readonly Action _openSolverSettings = openSolverSettings;
     private readonly Dictionary<string, NewComponentWindow> _openComponentEditWindows = new();
 
-    public Task ShowAsync(NewComponentViewModel newComponentVm)
+    public async Task ShowAsync(NewComponentViewModel newComponentVm)
     {
         // By the time this hook runs, LoadForEdit was already applied — IsEditMode
         // and the edit-identity fields are set, so the dedup key can be built here.
@@ -43,40 +43,34 @@ internal sealed class ComponentEditorWindowHost(
                 // The replaced view model is dropped here — cancel any Meep compute
                 // it is still burning CPU on and release its registry subscription,
                 // or it keeps solving/probing availability for a dead editor.
-                existingVm.CancelCompute();
-                existingVm.Dispose();
+                existingComponentWindow.IsEnabled = false;
+                await existingVm.DisposeAsync();
+                if (!existingComponentWindow.IsVisible || existingComponentWindow.IsRetiring)
+                {
+                    await newComponentVm.DisposeAsync();
+                    return;
+                }
                 existingComponentWindow.DataContext = newComponentVm;
+                existingComponentWindow.IsEnabled = true;
             }
             else
             {
                 // The dirty editor keeps its view model — the freshly built one is
                 // dropped, so release its registry subscription or it keeps firing
                 // phantom availability probes forever.
-                newComponentVm.Dispose();
+                await newComponentVm.DisposeAsync();
             }
             // Un-minimize first: Activate() alone leaves a minimized window
             // minimized, which looks like the ✏ button silently did nothing.
             existingComponentWindow.WindowState = WindowState.Normal;
             existingComponentWindow.Activate();
-            return System.Threading.Tasks.Task.CompletedTask;
+            return;
         }
 
         var window = new NewComponentWindow();
         WireNewComponentEditorHooks(newComponentVm, window);
         window.DataContext = newComponentVm;
-        // Closing the window (via Save, the titlebar X, or Alt+F4) always cancels
-        // any Meep compute still running so it doesn't keep burning CPU/Docker
-        // resources after the user has moved on, and releases the backend picker's
-        // registry subscription. Wired against the CURRENT DataContext because the
-        // dedup above may swap in a fresh view model.
-        window.Closing += (_, _) =>
-        {
-            if (window.DataContext is NewComponentViewModel editorVm)
-            {
-                editorVm.CancelCompute();
-                editorVm.Dispose();
-            }
-        };
+        // The window retires its current model only after the close was approved.
         if (editKey is not null)
         {
             _openComponentEditWindows[editKey] = window;
@@ -90,7 +84,6 @@ internal sealed class ComponentEditorWindowHost(
             };
         }
         window.Show(_owner);
-        return System.Threading.Tasks.Task.CompletedTask;
     }
 
     /// <summary>

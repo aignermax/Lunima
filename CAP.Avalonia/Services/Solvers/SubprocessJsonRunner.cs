@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using CAP_Core.Export.Processes;
-using System.Text.Json;
+using CAP_Core.Solvers.Protocol;
 
 namespace CAP.Avalonia.Services.Solvers;
 
@@ -148,21 +148,6 @@ public static class SubprocessJsonRunner
     /// Walks stdout from the bottom up and returns the first line that parses as
     /// a JSON object — robust against library log chatter printed before the result.
     /// </summary>
-    public static string? ExtractTrailingJsonLine(string stdout)
-    {
-        var lines = stdout.Split('\n');
-        for (int i = lines.Length - 1; i >= 0; i--)
-        {
-            var trimmed = lines[i].Trim();
-            if (trimmed.Length == 0 || !trimmed.StartsWith('{')) continue;
-            try
-            {
-                using var _ = JsonDocument.Parse(trimmed);
-                return trimmed;
-            }
-            catch (JsonException) { /* keep looking */ }
-        }
-        return null;
-    }
+    public static string? ExtractTrailingJsonLine(string stdout) => TrailingJsonObject.Extract(stdout);
 
 }

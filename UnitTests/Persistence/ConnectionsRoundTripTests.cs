@@ -128,7 +128,7 @@ public class ConnectionsRoundTripTests : IDisposable
     private static FileOperationsViewModel CreateFileOperations(
         DesignCanvasViewModel canvas, GdsDesignScopeTestHost host)
     {
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

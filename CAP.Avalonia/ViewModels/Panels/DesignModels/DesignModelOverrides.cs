@@ -13,17 +13,20 @@ public sealed class DesignModelOverrides : IDisposable
 {
     private readonly ObservableCollection<ComponentViewModel> _components;
     private readonly ComponentTemplateResolver _templates;
-    private readonly UserSMatrixOverrideStore? _global;
+    private readonly ITemplateSMatrixStore? _global;
     private readonly ErrorConsoleService? _errors;
+    private readonly Func<IEnumerable<Component>> _documentRoots;
 
     /// <summary>Attaches model application to the existing placement collection.</summary>
     public DesignModelOverrides(ObservableCollection<ComponentViewModel> components,
-        ComponentTemplateResolver templates, UserSMatrixOverrideStore? global, ErrorConsoleService? errors)
+        ComponentTemplateResolver templates, ITemplateSMatrixStore? global, ErrorConsoleService? errors,
+        Func<IEnumerable<Component>>? documentRoots = null)
     {
         _components = components;
         _templates = templates;
         _global = global;
         _errors = errors;
+        _documentRoots = documentRoots ?? (() => components.Select(view => view.Component));
         _components.CollectionChanged += OnComponentsChanged;
     }
 
@@ -78,7 +81,8 @@ public sealed class DesignModelOverrides : IDisposable
     /// <summary>Captures reachable models using the existing geometry/identifier collection policy.</summary>
     public Dictionary<string, ComponentSMatrixData> Capture()
     {
-        var live = _components.Select(vm => vm.Component).ToList();
+        var hierarchy = CAP_Core.Analysis.Hierarchy.DesignHierarchy.From(_documentRoots());
+        var live = hierarchy.Leaves.Concat<Component>(hierarchy.Groups).ToArray();
         return SMatrixOverrideGc.Sweep(Stored, live.Select(ComponentGeometryKey.For).ToHashSet(),
             live.Select(component => component.Identifier).ToHashSet());
     }

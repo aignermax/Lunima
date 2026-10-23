@@ -32,6 +32,18 @@ public partial class MainWindow : Window
 
     /// <summary>Suppresses a second save prompt while the first close confirmation is still open.</summary>
     private bool _confirmingClose;
+    private bool _retiring;
+
+    /// <summary>Application composition owns bridge, shell and container retirement.</summary>
+    public Func<Task>? RetireApplicationAsync { get; init; }
+
+    private readonly Shell.ComponentEditorHostFactory _editorHosts;
+    private readonly Shell.ShellToolWindowFactory _toolWindows;
+    private readonly Shell.ShellPanelDialogBindings _panelDialogs;
+    private readonly Services.Lifetime.CallbackBindings _windowBindings = new();
+    private readonly Services.Lifetime.CallbackBindings _shutdownBindings = new();
+    private Shell.WindowFileDialogBindings? _fileDialogs;
+    private IDisposable? _exportDialogs;
 
     private Shell.PdkWindowHost? _pdkWindows;
     private Shell.ComponentSettingsWindowHost? _componentSettingsWindows;
@@ -67,130 +79,97 @@ public partial class MainWindow : Window
         if (_pdkWindows != null) await _pdkWindows.CreateAsync(this);
     }
 
-    public MainWindow()
+    public MainWindow() : this(new(), new(), new()) { }
+
+    internal MainWindow(Shell.ComponentEditorHostFactory editorHosts, Shell.ShellToolWindowFactory toolWindows,
+        Shell.ShellPanelDialogBindings panelDialogs)
     {
+        (_editorHosts, _toolWindows, _panelDialogs) = (editorHosts, toolWindows, panelDialogs);
         InitializeComponent();
 
         // Guard against losing unsaved changes when the window is closed
         Closing += OnWindowClosing;
+        Closed += (_, _) => { ReleaseWindowBindings(); _shutdownBindings.Dispose(); };
 
         // Set up the FileDialogService when the window is loaded
         Loaded += async (_, _) =>
         {
             if (DataContext is MainViewModel vm)
             {
-                var settingsWindows = new Shell.SettingsWindowHost(this,
-                    () => Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
-                        .GetRequiredService<ViewModels.Settings.SettingsWindowViewModel>(App.Services),
-                    status => vm.StatusText = status);
-                vm.ShowSettingsWindowAsync = settingsWindows.ShowAsync;
+                var settingsWindows = _toolWindows.CreateSettings(this, status => vm.StatusText = status);
+                _windowBindings.Bind(() => vm.ShowSettingsWindowAsync, value => vm.ShowSettingsWindowAsync = value, settingsWindows.ShowAsync);
                 Action openSolverSettings = () => LogSettingsNavigationFaults(
                     vm.ShowSettingsWindowAsync?.Invoke(typeof(ViewModels.Settings.Tidy3dSettingsPage)), vm);
-                var userPdkStore = App.Services.GetService(typeof(UserPdkStore)) as UserPdkStore;
-                _pdkWindows = new Shell.PdkWindowHost(this, vm.LeftPanel, vm.Canvas,
+                var editors = _editorHosts.Create(this, vm.LeftPanel, vm.Canvas, vm.FileOperations,
                     component => vm.CanvasInteraction.PlacementContext.ResolveComponentPdkSource(component),
-                    userPdkStore, vm.ErrorConsole);
-                Func<Shell.ComponentSettingsDialogFactory> settingsFactory = () => new(this,
-                    App.Services.GetService(typeof(CAP_Core.ErrorConsoleService)) as CAP_Core.ErrorConsoleService,
-                    App.Services.GetService(typeof(IPortMappingDialogService)) as IPortMappingDialogService,
-                    App.Services.GetService(typeof(CAP_Core.Solvers.Fdtd.IFdtdSMatrixService)) as CAP_Core.Solvers.Fdtd.IFdtdSMatrixService,
-                    App.Services.GetService(typeof(CAP_Core.Export.NazcaComponentPreviewService)) as CAP_Core.Export.NazcaComponentPreviewService,
-                    App.Services.GetService(typeof(CAP_Core.Export.GdsFactoryComponentPreviewService)) as CAP_Core.Export.GdsFactoryComponentPreviewService,
-                    App.Services.GetService(typeof(Services.Solvers.IDockerSetupDialogService)) as Services.Solvers.IDockerSetupDialogService,
-                    App.Services.GetService(typeof(INotificationService)) as INotificationService,
-                    App.Services.GetService(typeof(Services.Solvers.FdtdBackendRegistry)) as Services.Solvers.FdtdBackendRegistry,
-                    App.Services.GetService(typeof(IUrlLauncher)) as IUrlLauncher);
-                _componentSettingsWindows = new Shell.ComponentSettingsWindowHost(this, vm.LeftPanel, vm.FileOperations,
-                    App.Services.GetService(typeof(UserSMatrixOverrideStore)) as UserSMatrixOverrideStore,
-                    settingsFactory, openSolverSettings);
-                var componentEditors = new Shell.ComponentEditorWindowHost(this, vm.LeftPanel,
-                    _componentSettingsWindows, _pdkWindows, userPdkStore, openSolverSettings);
-                vm.Update.ConfirmShutdownAsync = vm.FileOperations.ConfirmCloseAsync;
-                vm.Update.ShutdownAfterConfirmation = () =>
+                    vm.ErrorConsole, openSolverSettings);
+                _pdkWindows = editors.Pdks;
+                _componentSettingsWindows = editors.Settings;
+                var componentEditors = editors.Editors;
+                _shutdownBindings.Bind(() => vm.Update.ConfirmShutdownAsync, value => vm.Update.ConfirmShutdownAsync = value, vm.FileOperations.ConfirmCloseAsync);
+                _shutdownBindings.Bind(() => vm.Update.RetireBeforeShutdownAsync, value => vm.Update.RetireBeforeShutdownAsync = value, () => RetireAsync(vm));
+                _shutdownBindings.Bind(() => vm.Update.ShutdownAfterConfirmation, value => vm.Update.ShutdownAfterConfirmation = value, () =>
                 {
                     _forceClose = true;
                     if (global::Avalonia.Application.Current?.ApplicationLifetime is
                         global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime lifetime)
                         lifetime.Shutdown();
                     else Close();
-                };
-                AttachNotificationHost();
+                });
+                _panelDialogs.Attach(this, vm.LeftPanel, analyzer => OpenOnaAnalyzerWindow(analyzer, vm));
 
-                vm.FileDialogService = new FileDialogService(this);
+                _fileDialogs = new Shell.WindowFileDialogBindings(this, vm.FileOperations, vm.GdsFactoryExport,
+                    vm.LeftPanel, vm.GdsImport, vm.RightPanel, vm.BottomPanel);
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
-                vm.RightPanel.Sweep.FileDialogService = vm.FileDialogService;
-                vm.RightPanel.OnaAnalysis.FileDialogService = vm.FileDialogService;
-                vm.RightPanel.OnaAnalysis.OpenWindowAsync = analyzer => OpenOnaAnalyzerWindow(analyzer, vm);
-                // Wire the per-component editor for analyzers so the right-panel
-                // properties section can also open the ONA tool window.
-                var onaEditorProvider = App.Services.GetService(
-                    typeof(CAP.Avalonia.ViewModels.Properties.Editors.OnaAnalyzerEditorProvider))
-                    as CAP.Avalonia.ViewModels.Properties.Editors.OnaAnalyzerEditorProvider;
-                if (onaEditorProvider != null)
-                    onaEditorProvider.OpenSweepAsync = analyzer => OpenOnaAnalyzerWindow(analyzer, vm);
-                vm.RightPanel.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
-                vm.RightPanel.Netlist.FileDialogService = vm.FileDialogService;
-                vm.BottomPanel.Analysis.Transient.FileDialogService = vm.FileDialogService;
-                vm.BottomPanel.Analysis.Eye.FileDialogService = vm.FileDialogService;
-                vm.BottomPanel.Analysis.Spectrum.Overlay.FileDialogService = vm.FileDialogService;
-                ExportDialogWiring.Wire(vm, this, vm.ErrorConsole);
-                vm.ViewportControl.GetViewportSize = GetActualViewportSize;
-        vm.ViewportControl.GetCursorCanvasPosition = () => DesignCanvasControl.IsPointerOver
-            ? (DesignCanvasControl.LastCanvasPosition.X, DesignCanvasControl.LastCanvasPosition.Y) : null;
+                _windowBindings.Bind(() => vm.RightPanel.OnaAnalysis.OpenWindowAsync, value => vm.RightPanel.OnaAnalysis.OpenWindowAsync = value,
+                    analyzer => OpenOnaAnalyzerWindow(analyzer, vm));
+                _exportDialogs = ExportDialogWiring.Wire(vm, this, vm.ErrorConsole);
+                _windowBindings.Bind(() => vm.ViewportControl.GetViewportSize, value => vm.ViewportControl.GetViewportSize = value, GetActualViewportSize);
+                _windowBindings.Bind(() => vm.ViewportControl.GetCursorCanvasPosition, value => vm.ViewportControl.GetCursorCanvasPosition = value,
+                    () => DesignCanvasControl.IsPointerOver ? (DesignCanvasControl.LastCanvasPosition.X, DesignCanvasControl.LastCanvasPosition.Y) : null);
 
                 // Wire up rename dialog for group templates
-                vm.LeftPanel.ComponentLibrary.ShowRenameDialogAsync = async (currentName) =>
+                _windowBindings.Bind(() => vm.LeftPanel.ComponentLibrary.ShowRenameDialogAsync, value => vm.LeftPanel.ComponentLibrary.ShowRenameDialogAsync = value, async currentName =>
                 {
                     var dialog = new RenameDialog(currentName);
                     return await dialog.ShowDialog<string?>(this);
-                };
-
-                // Wire up PDK Import Wizard for Nazca .py files
-                var importService = App.Services.GetService(typeof(PdkImportService)) as PdkImportService;
-                if (importService != null)
-                {
-                    vm.LeftPanel.ShowImportWizardAsync = async (pyFilePath) =>
-                    {
-                        var wizardVm = new PdkImportWizardViewModel(pyFilePath, importService);
-                        var wizard = new PdkImportWizardWindow { DataContext = wizardVm };
-                        return await wizard.ShowDialog<string?>(this);
-                    };
-                }
+                });
 
                 // Wire up the GDS import dialog (#808): the button ViewModel builds the
                 // dialog ViewModel (service + placement executor included), the view layer
                 // only wraps it in a window — same pattern as the PDK wizard above.
-                vm.GdsImport.ShowImportDialogAsync = async dialogVm =>
+                _windowBindings.Bind(() => vm.GdsImport.ShowImportDialogAsync, value => vm.GdsImport.ShowImportDialogAsync = value, async dialogVm =>
                 {
                     var dialog = new Views.Dialogs.GdsImportDialog { DataContext = dialogVm };
                     await dialog.ShowDialog(this);
-                };
+                });
 
                 // Wire up the "New Component" window (issue #656) — non-modal, like the
                 // Fabrication Process and ONA Analyzer tool windows, so the user can keep
                 // iterating on the design while it stays open.
-                vm.LeftPanel.ShowNewComponentWindowAsync = componentEditors.ShowAsync;
+                _windowBindings.Bind(() => vm.LeftPanel.ShowNewComponentWindowAsync, value => vm.LeftPanel.ShowNewComponentWindowAsync = value, componentEditors.ShowAsync);
 
                 // Wire up PDK Offset Editor window
-                vm.ShowPdkOffsetEditorRequested = () =>
+                _windowBindings.BindReference(() => vm.PdkOffsetEditor.FileDialogService,
+                    value => vm.PdkOffsetEditor.FileDialogService = value, new FileDialogService(this));
+                _windowBindings.Bind(() => vm.ShowPdkOffsetEditorRequested, value => vm.ShowPdkOffsetEditorRequested = value, () =>
                 {
                     var editorVm = vm.PdkOffsetEditor;
-                    editorVm.FileDialogService = new FileDialogService(this);
                     var editorWindow = new PdkOffsetEditorWindow
                     {
                         DataContext = editorVm
                     };
                     editorWindow.Show(this);
-                };
+                });
 
                 // Wire up the New-Design process-selection dialog (issue #570)
-                vm.ShowProcessSelectionAsync = async groups =>
+                _windowBindings.Bind(() => vm.ShowProcessSelectionAsync, value => vm.ShowProcessSelectionAsync = value, async groups =>
                 {
                     var pvm = new ProcessSelectionViewModel(groups);
                     var dlg = new ProcessSelectionDialog { DataContext = pvm };
                     await dlg.ShowDialog(this);
                     return pvm.Result;
-                };
+                });
 
                 // Prompt for the fabrication process (issue #570) once the Home screen
                 // is dismissed. A design opened from Home/startup restores its own
@@ -199,59 +178,59 @@ public partial class MainWindow : Window
                 var processPromptShown = false;
                 void MaybePromptForInitialProcess()
                 {
-                    if (processPromptShown || vm.Home.IsHomeVisible || vm.FileOperations.ActiveProcess != null)
+                    if (_windowBindings.IsDisposed || processPromptShown || vm.Home.IsHomeVisible || vm.FileOperations.ActiveProcess != null)
                         return;
                     processPromptShown = true;
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(
-                        async () => await vm.PromptForInitialProcessAsync(),
+                        async () => { if (!_windowBindings.IsDisposed) await vm.PromptForInitialProcessAsync(); },
                         global::Avalonia.Threading.DispatcherPriority.Background);
                 }
-                vm.Home.PropertyChanged += (_, args) =>
+                _windowBindings.Observe(vm.Home, (_, args) =>
                 {
                     if (args.PropertyName == nameof(vm.Home.IsHomeVisible))
                         MaybePromptForInitialProcess();
-                };
+                });
 
                 // Wire up clipboard for RoutingDiagnostics
-                vm.RightPanel.RoutingDiagnostics.CopyToClipboard = async (text) =>
+                _windowBindings.Bind(() => vm.RightPanel.RoutingDiagnostics.CopyToClipboard, value => vm.RightPanel.RoutingDiagnostics.CopyToClipboard = value, async text =>
                 {
                     var clipboard = Clipboard;
                     if (clipboard != null)
                     {
                         await clipboard.SetTextAsync(text);
                     }
-                };
+                });
 
                 // Wire up clipboard for the Netlist panel (#687)
-                vm.RightPanel.Netlist.CopyToClipboard = async (text) =>
+                _windowBindings.Bind(() => vm.RightPanel.Netlist.CopyToClipboard, value => vm.RightPanel.Netlist.CopyToClipboard = value, async text =>
                 {
                     var clipboard = Clipboard ?? throw new InvalidOperationException(
                         Services.Localization.LocalizationService.Instance.Translate("Netlist.ClipboardNotAvailable"));
                     await clipboard.SetTextAsync(text);
-                };
+                });
 
                 // Wire up clipboard for DimensionValidator
-                vm.RightPanel.DimensionValidator.CopyToClipboard = async (text) =>
+                _windowBindings.Bind(() => vm.RightPanel.DimensionValidator.CopyToClipboard, value => vm.RightPanel.DimensionValidator.CopyToClipboard = value, async text =>
                 {
                     var clipboard = Clipboard;
                     if (clipboard != null)
                     {
                         await clipboard.SetTextAsync(text);
                     }
-                };
+                });
 
                 // Wire up clipboard for ErrorConsole
-                vm.BottomPanel.ErrorConsole.CopyToClipboard = async (text) =>
+                _windowBindings.Bind(() => vm.BottomPanel.ErrorConsole.CopyToClipboard, value => vm.BottomPanel.ErrorConsole.CopyToClipboard = value, async text =>
                 {
                     var clipboard = Clipboard;
                     if (clipboard != null)
                     {
                         await clipboard.SetTextAsync(text);
                     }
-                };
+                });
 
                 // Wire up auto-scroll: scroll to the newest entry when entries are added
-                vm.BottomPanel.ErrorConsole.PropertyChanged += (s, e) =>
+                _windowBindings.Observe(vm.BottomPanel.ErrorConsole, (s, e) =>
                 {
                     if (e.PropertyName == nameof(vm.BottomPanel.ErrorConsole.EntryCount) && ErrorConsoleListBox != null)
                     {
@@ -261,18 +240,18 @@ public partial class MainWindow : Window
                             ErrorConsoleListBox.ScrollIntoView(list[list.Count - 1]);
                         }
                     }
-                };
+                });
 
                 // Both component context-menu entry points share one routing — see
                 // OpenComponentEditorOrSettings.
-                vm.LeftPanel.HierarchyPanel.OpenComponentSettings = node =>
-                    OpenComponentEditorOrSettings(node.ComponentViewModel, node.Component, vm);
-                vm.CanvasInteraction.OpenComponentSettings = compVm =>
-                    OpenComponentEditorOrSettings(compVm, compVm.Component, vm);
+                _windowBindings.Bind(() => vm.LeftPanel.HierarchyPanel.OpenComponentSettings, value => vm.LeftPanel.HierarchyPanel.OpenComponentSettings = value,
+                    node => OpenComponentEditorOrSettings(node.ComponentViewModel, node.Component, vm));
+                _windowBindings.Bind(() => vm.CanvasInteraction.OpenComponentSettings, value => vm.CanvasInteraction.OpenComponentSettings = value,
+                    compVm => OpenComponentEditorOrSettings(compVm, compVm.Component, vm));
 
                 // Wire up per-instance S-matrix override marker in hierarchy
-                vm.LeftPanel.HierarchyPanel.CheckHasSMatrixOverride =
-                    id => vm.FileOperations.StoredSMatrices.ContainsKey(id);
+                _windowBindings.Bind(() => vm.LeftPanel.HierarchyPanel.CheckHasSMatrixOverride, value => vm.LeftPanel.HierarchyPanel.CheckHasSMatrixOverride = value,
+                    id => vm.FileOperations.StoredSMatrices.ContainsKey(id));
 
                 // Initial badge population for PDK templates (covers user-global
                 // overrides loaded from disk on app start). Updated again every
@@ -317,18 +296,19 @@ public partial class MainWindow : Window
     /// </summary>
     private async void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
-        if (_forceClose || DataContext is not MainViewModel vm || !vm.FileOperations.HasUnsavedChanges)
+        if (_forceClose || DataContext is not MainViewModel vm)
             return;
 
         e.Cancel = true;
-        if (_confirmingClose)
+        if (_confirmingClose || _retiring)
             return;
 
         _confirmingClose = true;
         try
         {
-            if (await vm.FileOperations.ConfirmCloseAsync())
+            if (!vm.FileOperations.HasUnsavedChanges || await vm.FileOperations.ConfirmCloseAsync())
             {
+                await RetireAsync(vm);
                 _forceClose = true;
                 Close();
             }
@@ -339,23 +319,20 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// Creates the toast host for transient, non-error feedback (issue #586)
-    /// and connects it to the app-wide <see cref="NotificationService"/> so
-    /// ViewModels can raise auto-dismissing popups on the right side of the
-    /// window instead of opening the error console.
-    /// </summary>
-    private void AttachNotificationHost()
+    private Task RetireAsync(MainViewModel shell)
     {
-        const int maxVisibleToasts = 3;
-        var manager = new WindowNotificationManager(this)
-        {
-            Position = NotificationPosition.BottomRight,
-            MaxItems = maxVisibleToasts
-        };
+        _retiring = true;
+        IsEnabled = false;
+        ReleaseWindowBindings();
+        return RetireApplicationAsync?.Invoke() ?? shell.DisposeAsync().AsTask();
+    }
 
-        var service = App.Services.GetService(typeof(NotificationService)) as NotificationService;
-        service?.Attach(manager);
+    private void ReleaseWindowBindings()
+    {
+        _windowBindings.Dispose();
+        _panelDialogs.Dispose();
+        _fileDialogs?.Dispose();
+        _exportDialogs?.Dispose();
     }
 
     /// <summary>
@@ -579,12 +556,10 @@ public partial class MainWindow : Window
     /// <summary>
     /// Opens the "Compute Modes for Waveguide" dialog from the Tools menu.
     /// </summary>
-    private void OpenModeSolverDialog_Click(object? sender, RoutedEventArgs e)
+    private async void OpenModeSolverDialog_Click(object? sender, RoutedEventArgs e)
     {
-        var vm = App.Services.GetService(typeof(ModeSolverViewModel)) as ModeSolverViewModel;
-        if (vm == null) return;
-        var dialog = new ModeSolverDialog { DataContext = vm };
-        dialog.Show(this);
+        if (_retiring) return;
+        await _toolWindows.ShowModeSolverAsync(this);
     }
 
     /// <summary>
@@ -676,18 +651,12 @@ public partial class MainWindow : Window
             return;
         }
 
-        var vm = App.Services.GetService(typeof(ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel))
-            as ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel;
-        if (vm == null) return;
-
-        var window = new IsaPlaygroundWindow { DataContext = vm };
+        var window = _toolWindows.CreatePlayground();
+        if (window?.DataContext is not ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel vm) return;
         if (DataContext is ViewModels.MainViewModel main)
             Services.IsaPlaygroundNavigation.Attach(vm, main);
         // The "Run a program on your chip" tour (#1267) hosts its card here for
         // the playground steps and tracks the window's open state.
-        window.Tour = App.Services.GetService(
-            typeof(ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel))
-            as ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel;
         _isaPlaygroundWindow = window;
         // Only clear the field if it still points at THIS window.
         window.Closed += (_, _) =>
@@ -703,11 +672,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void OpenPdkResolutionCheckDialog_Click(object? sender, RoutedEventArgs e)
     {
-        var vm = App.Services.GetService(typeof(ViewModels.PdkResolution.PdkResolutionCheckViewModel))
-            as ViewModels.PdkResolution.PdkResolutionCheckViewModel;
-        if (vm == null) return;
-        var dialog = new PdkResolutionCheckDialog { DataContext = vm };
-        dialog.Show(this);
+        _toolWindows.ShowPdkCheck(this);
     }
 
     private void ZoomToFitButton_Click(object? sender, RoutedEventArgs e)
@@ -757,16 +722,10 @@ public partial class MainWindow : Window
     /// </summary>
     private async void CheckOpenEblMenuItem_Click(object? sender, RoutedEventArgs e)
     {
-        var checkVm = App.Services.GetService(typeof(ViewModels.Export.OpenEbl.OpenEblCheckViewModel))
-            as ViewModels.Export.OpenEbl.OpenEblCheckViewModel;
-        if (checkVm == null) return;
-
         var designName = DataContext is MainViewModel vm && vm.FileOperations.CurrentFilePath != null
             ? System.IO.Path.GetFileNameWithoutExtension(vm.FileOperations.CurrentFilePath)
             : null;
-        checkVm.PrepareForOpen(designName);
-        var dialog = new Views.Dialogs.OpenEblCheckDialog { DataContext = checkVm };
-        await dialog.ShowDialog(this);
+        await _toolWindows.ShowOpenEblAsync(this, designName);
     }
 
     /// <summary>

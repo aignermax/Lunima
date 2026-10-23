@@ -18,6 +18,7 @@ public partial class ComponentSettingsDialogViewModel
     // Solver label captured at ESTIMATE time next to the pending service: a backend
     // switch in another window between estimate and confirm must not relabel the run.
     private string? _pendingCloudLabel;
+    private ComponentSettingsOperation? _pendingCloudOperation;
 
     /// <summary>
     /// True while the dialog shows the "this run costs credits — submit?" panel.
@@ -44,11 +45,12 @@ public partial class ComponentSettingsDialogViewModel
     /// dialog into the awaiting-confirmation state. Nothing is solved yet.
     /// </summary>
     private async Task PrepareCloudConfirmationAsync(
-        IFdtdCostEstimator estimator, FdtdSMatrixRequest request, CancellationToken ct)
+        IFdtdCostEstimator estimator, FdtdSMatrixRequest request, ComponentSettingsOperation operation, CancellationToken caller)
     {
         SolverStatus = string.Format(
             LocalizationService.Instance.Translate("CompSettings.EstimatingCloudCost"), SolverLabel);
-        var estimate = await estimator.EstimateCostAsync(request, ct);
+        var estimate = await estimator.EstimateCostAsync(request, operation.Token);
+        operation.ThrowIfObsolete(caller);
 
         CloudCostText = estimate.Success
             ? string.Format(
@@ -60,6 +62,7 @@ public partial class ComponentSettingsDialogViewModel
         _pendingCloudRequest = request;
         _pendingCloudService = (IFdtdSMatrixService)estimator;
         _pendingCloudLabel = SolverLabel;
+        _pendingCloudOperation = operation;
         SolverStatus = string.Format(
             LocalizationService.Instance.Translate("CompSettings.CloudConfirmPrompt"), SolverLabel);
         IsAwaitingCloudConfirmation = true;
@@ -69,23 +72,30 @@ public partial class ComponentSettingsDialogViewModel
     /// Submits the pending cloud job after the user confirmed the estimated cost.
     /// </summary>
     [RelayCommand]
-    private async Task ConfirmCloudSubmit()
+    private Task ConfirmCloudSubmit() => _work.RunAsync(ConfirmCloudSubmitCoreAsync);
+
+    private async Task ConfirmCloudSubmitCoreAsync(CancellationToken stop)
     {
         var service = _pendingCloudService;
         var request = _pendingCloudRequest;
         var cloudLabel = _pendingCloudLabel;
+        using var operation = _pendingCloudOperation;
+        _pendingCloudOperation = null;
         ClearPendingCloudJob();
-        if (service == null || request == null || _storedSMatrices == null || _liveComponent == null)
+        if (service == null || request == null || operation == null || _storedSMatrices == null || _liveComponent == null)
             return;
 
         IsComputing = true;
-        _recalcCts = new CancellationTokenSource();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        _recalcCts = cancellation;
         try
         {
-            await ExecuteSolveAsync(service, request, _recalcCts.Token, cloudLabel);
+            operation.ThrowIfObsolete(cancellation.Token);
+            await ExecuteSolveAsync(service, request, operation, cancellation.Token, cloudLabel);
         }
         catch (OperationCanceledException)
         {
+            if (!operation.IsContextCurrent) return;
             // A cancelled CLOUD wait can leave a submitted job running and billing —
             // say so instead of claiming nothing happened.
             SolverStatus = LocalizationService.Instance.Translate(
@@ -96,15 +106,14 @@ public partial class ComponentSettingsDialogViewModel
         }
         catch (Exception ex)
         {
+            if (!operation.CanPublish(cancellation.Token)) return;
             SolverStatus = string.Format(LocalizationService.Instance.Translate("CompSettings.FdtdError"), ex.Message);
             _errorConsole?.LogError($"FDTD recompute crashed for '{_displayName}'", ex);
         }
         finally
         {
             IsComputing = false;
-            _recalcCts?.Dispose();
-            _recalcCts = null;
-            RefreshEntries(notifyChanged: true);
+            if (ReferenceEquals(_recalcCts, cancellation)) _recalcCts = null;
         }
     }
 
@@ -114,12 +123,15 @@ public partial class ComponentSettingsDialogViewModel
     [RelayCommand]
     private void CancelCloudSubmit()
     {
+        if (_work.IsStopping) return;
         ClearPendingCloudJob();
         SolverStatus = LocalizationService.Instance.Translate("CompSettings.CloudSubmitCancelled");
     }
 
     private void ClearPendingCloudJob()
     {
+        _pendingCloudOperation?.Dispose();
+        _pendingCloudOperation = null;
         _pendingCloudRequest = null;
         _pendingCloudService = null;
         _pendingCloudLabel = null;

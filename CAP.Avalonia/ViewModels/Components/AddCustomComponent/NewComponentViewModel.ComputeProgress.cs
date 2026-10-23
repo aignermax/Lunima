@@ -18,28 +18,36 @@ public partial class NewComponentViewModel
         IFdtdSMatrixService service, FdtdSMatrixRequest request, CancellationToken ct)
     {
         var stopwatch = Stopwatch.StartNew();
+        var active = true;
         var baseMessage = service is IFdtdCostEstimator
             ? string.Format(
                 LocalizationService.Instance.Translate("CompSettings.FdtdRunBaseMessageCloud"), SolverLabel)
             : LocalizationService.Instance.Translate("NewComp.FdtdBaseMessage");
 
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        timer.Tick += (_, _) => StatusText = string.Format(
-            LocalizationService.Instance.Translate("NewComp.FdtdElapsed"),
-            baseMessage, stopwatch.Elapsed.ToString(@"m\:ss"));
+        timer.Tick += (_, _) =>
+        {
+            if (!active || _work.IsStopping || ct.IsCancellationRequested) return;
+            StatusText = string.Format(LocalizationService.Instance.Translate("NewComp.FdtdElapsed"),
+                baseMessage, stopwatch.Elapsed.ToString(@"m\:ss"));
+        };
         StatusText = $"{baseMessage}…";
         timer.Start();
 
-        var progress = new Progress<string>(
-            line => StatusText = string.Format(
+        var progress = new Progress<string>(line =>
+        {
+            if (!active || _work.IsStopping || ct.IsCancellationRequested) return;
+            StatusText = string.Format(
                 LocalizationService.Instance.Translate("NewComp.FdtdRunning"),
-                stopwatch.Elapsed.ToString(@"m\:ss"), Shorten(line)));
+                stopwatch.Elapsed.ToString(@"m\:ss"), Shorten(line));
+        });
         try
         {
             return await service.SolveAsync(request, progress, ct);
         }
         finally
         {
+            active = false;
             timer.Stop();
         }
     }

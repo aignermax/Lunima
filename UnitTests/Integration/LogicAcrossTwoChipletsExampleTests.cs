@@ -173,7 +173,7 @@ public class LogicAcrossTwoChipletsExampleTests : IClassFixture<LogicAcrossTwoCh
             .ChildComponents.OfType<ComponentGroup>().Single(g => g.GroupName == gateName);
 
     private static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas) =>
-        new(
+        new(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

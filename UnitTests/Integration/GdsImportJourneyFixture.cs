@@ -101,7 +101,7 @@ public sealed class GdsImportJourneyFixture : IDisposable
                 host.Templates.Add(t);
         }
 
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

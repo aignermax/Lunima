@@ -1,3 +1,4 @@
+using CAP_Contracts.Logger;
 using CAP_Core.Preferences;
 using System.Text.Json;
 using CAP_Core;
@@ -12,13 +13,13 @@ namespace CAP.Avalonia.Services;
 /// Recent-projects preference access lives in the
 /// <c>UserPreferencesService.RecentProjects.cs</c> partial (file-size split).
 /// </summary>
-public partial class UserPreferencesService : IUpdatePreferences, IRecentProjectPreferences
+public partial class UserPreferencesService : IUpdatePreferences, IRecentProjectPreferences, IHomePreferences, ILearningPreferences
 {
     private readonly string _preferencesFilePath;
-    private readonly ErrorConsoleService? _errorConsole;
+    private readonly IDiagnosticSink? _errorConsole;
     private UserPreferences _preferences;
 
-    public UserPreferencesService(ErrorConsoleService? errorConsole = null)
+    public UserPreferencesService(IDiagnosticSink? errorConsole = null)
     {
         var appDataDir = GetAppDataDirectory();
         Directory.CreateDirectory(appDataDir);
@@ -31,7 +32,7 @@ public partial class UserPreferencesService : IUpdatePreferences, IRecentProject
     /// Test constructor that uses a custom file path.
     /// Used by unit tests to avoid polluting user preferences.
     /// </summary>
-    internal UserPreferencesService(string testFilePath, ErrorConsoleService? errorConsole = null)
+    internal UserPreferencesService(string testFilePath, IDiagnosticSink? errorConsole = null)
     {
         _preferencesFilePath = testFilePath;
         _errorConsole = errorConsole;

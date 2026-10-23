@@ -98,6 +98,20 @@ public partial class RoutingOrchestrator
     /// </summary>
     public event Action? StateChanged;
 
+    /// <summary>Canvas-owned publication boundary for canonical group geometry.</summary>
+    internal Action<IEnumerable<WaveguideConnectionViewModel>>? RouteChangesPublisher { private get; set; }
+
+    /// <summary>Publishes one accepted routing frame to the connection views.</summary>
+    internal void NotifyRouteChanges()
+    {
+        if (RouteChangesPublisher is { } publish)
+        {
+            publish(_connections);
+            return;
+        }
+        foreach (var connection in _connections) connection.NotifyPathChanged();
+    }
+
     /// <summary>
     /// Initializes the routing orchestrator.
     /// </summary>
@@ -295,8 +309,7 @@ public partial class RoutingOrchestrator
                             return;
 
                         heartbeat.ConnectionCompleted();
-                        foreach (var conn in _connections)
-                            conn.NotifyPathChanged();
+                        NotifyRouteChanges();
                         RepaintRequested?.Invoke();
                     }, global::Avalonia.Threading.DispatcherPriority.Normal);
                 }
@@ -313,8 +326,7 @@ public partial class RoutingOrchestrator
 
             if (completed && !token.IsCancellationRequested)
             {
-                foreach (var conn in _connections)
-                    conn.NotifyPathChanged();
+                NotifyRouteChanges();
                 RoutingStatusText = "";
                 StateChanged?.Invoke();
             }

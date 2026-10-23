@@ -55,7 +55,7 @@ public partial class ComponentSettingsDialogViewModel
     public bool HasBackendSelection => BackendSelection != null;
 
     private bool CanRunRecalculate =>
-        CanRecalculate && !IsComputing && !IsImporting && !IsAwaitingCloudConfirmation
+        !_work.IsStopping && CanRecalculate && !IsComputing && !IsImporting && !IsAwaitingCloudConfirmation
         && BackendSelection?.IsCurrentBackendUnavailable != true;
 
     /// <summary>The solver behind the current backend selection (or the fixed fallback service).</summary>
@@ -74,26 +74,36 @@ public partial class ComponentSettingsDialogViewModel
         BackendSelection = selection;
         if (selection == null)
             return;
-        selection.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(FdtdBackendSelectionViewModel.IsCurrentBackendUnavailable))
-                RecalculateSMatrixCommand.NotifyCanExecuteChanged();
-            if (e.PropertyName is nameof(FdtdBackendSelectionViewModel.CurrentSolverLabel))
-                OnPropertyChanged(nameof(RecalculateButtonLabel));
-        };
+        selection.PropertyChanged += OnBackendSelectionChanged;
+    }
+
+    private void OnBackendSelectionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(FdtdBackendSelectionViewModel.IsCurrentBackendUnavailable))
+            RecalculateSMatrixCommand.NotifyCanExecuteChanged();
+        if (e.PropertyName is nameof(FdtdBackendSelectionViewModel.CurrentSolverLabel))
+            OnPropertyChanged(nameof(RecalculateButtonLabel));
     }
 
     /// <summary>
     /// Probes the selected backend so a known-bad state (Docker down, no API key)
     /// disables the run button and shows the hint before the user clicks.
     /// </summary>
-    public async Task RefreshBackendAvailabilityAsync(CancellationToken ct = default)
+    public Task RefreshBackendAvailabilityAsync(CancellationToken ct = default) => _work.RunAsync(async stop =>
     {
-        if (BackendSelection != null)
-            await BackendSelection.CheckAvailabilityAsync(ct);
-    }
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, stop);
+        try
+        {
+            if (BackendSelection != null) await BackendSelection.CheckAvailabilityAsync(cancellation.Token);
+        }
+        catch (OperationCanceledException) when (_work.IsStopping && !ct.IsCancellationRequested) { }
+    });
 
-    partial void OnIsComputingChanged(bool value) => RecalculateSMatrixCommand.NotifyCanExecuteChanged();
+    partial void OnIsComputingChanged(bool value)
+    {
+        RecalculateSMatrixCommand.NotifyCanExecuteChanged();
+        LoadFromFileCommand.NotifyCanExecuteChanged();
+    }
 
     /// <summary>
     /// Cancels a running FDTD recompute. Called when the dialog is closed so the
@@ -108,7 +118,9 @@ public partial class ComponentSettingsDialogViewModel
     /// error on failure — no silent fallback.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanRunRecalculate))]
-    private async Task RecalculateSMatrix()
+    private Task RecalculateSMatrix() => _work.RunAsync(RecalculateSMatrixCoreAsync);
+
+    private async Task RecalculateSMatrixCoreAsync(CancellationToken stop)
     {
         var service = ActiveFdtdService;
         if (service == null || _fdtdRequestFactory == null || _liveComponent == null || _storedSMatrices == null)
@@ -119,17 +131,21 @@ public partial class ComponentSettingsDialogViewModel
         }
 
         IsComputing = true;
-        _recalcCts = new CancellationTokenSource();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        _recalcCts = cancellation;
+        ComponentSettingsOperation? operation = null;
 
         try
         {
+            operation = new ComponentSettingsOperation(_work, _document, stop, cancellation.Token);
             // Fail fast with an actionable message if the backend isn't ready, before
             // exporting geometry / building images / contacting the cloud.
             SolverStatus = string.Format(
                 LocalizationService.Instance.Translate("CompSettings.CheckingFdtd"), SolverLabel);
             var availability = BackendSelection != null
-                ? await BackendSelection.CheckAvailabilityAsync(_recalcCts.Token)
-                : await service.CheckAvailabilityAsync(_recalcCts.Token);
+                ? await BackendSelection.CheckAvailabilityAsync(operation.Token)
+                : await service.CheckAvailabilityAsync(operation.Token);
+            operation.ThrowIfObsolete(cancellation.Token);
             if (!availability.IsAvailable)
             {
                 SolverStatus = availability.Message;
@@ -143,6 +159,7 @@ public partial class ComponentSettingsDialogViewModel
                 // plain error-string behaviour above.
                 var ready = await _dockerSetupDialog.ShowAsync(
                     availability, ct => service.CheckAvailabilityAsync(ct));
+                operation.ThrowIfObsolete(cancellation.Token);
                 if (!ready)
                     return;
                 // The guided dialog's re-check proved readiness — clear the failed
@@ -155,10 +172,12 @@ public partial class ComponentSettingsDialogViewModel
             FdtdSMatrixRequest? request;
             try
             {
-                request = await _fdtdRequestFactory(_liveComponent, _recalcCts.Token);
+                request = await _fdtdRequestFactory(_liveComponent, operation.Token);
+                operation.ThrowIfObsolete(cancellation.Token);
             }
             catch (InvalidOperationException ex)
             {
+                operation.ThrowIfObsolete(cancellation.Token);
                 // The factory already built an actionable message — show it, not a generic status.
                 SolverStatus = ex.Message;
                 _errorConsole?.LogError(
@@ -175,28 +194,29 @@ public partial class ComponentSettingsDialogViewModel
             // confirmation. The solve continues via ConfirmCloudSubmitCommand.
             if (service is IFdtdCostEstimator estimator)
             {
-                await PrepareCloudConfirmationAsync(estimator, request, _recalcCts.Token);
+                await PrepareCloudConfirmationAsync(estimator, request, operation, cancellation.Token);
                 return;
             }
 
-            await ExecuteSolveAsync(service, request, _recalcCts.Token);
+            await ExecuteSolveAsync(service, request, operation, cancellation.Token);
         }
         catch (OperationCanceledException)
         {
+            if (operation?.IsContextCurrent != true) return;
             SolverStatus = LocalizationService.Instance.Translate("CompSettings.RecomputeCancelled");
             NotifyCancelled();
         }
         catch (Exception ex)
         {
+            if (operation?.CanPublish(cancellation.Token) != true) return;
             SolverStatus = string.Format(LocalizationService.Instance.Translate("CompSettings.FdtdError"), ex.Message);
             _errorConsole?.LogError($"FDTD recompute crashed for '{_displayName}'", ex);
         }
         finally
         {
             IsComputing = false;
-            _recalcCts?.Dispose();
-            _recalcCts = null;
-            RefreshEntries(notifyChanged: true);
+            if (!ReferenceEquals(_pendingCloudOperation, operation)) operation?.Dispose();
+            if (ReferenceEquals(_recalcCts, cancellation)) _recalcCts = null;
         }
     }
 
@@ -210,10 +230,12 @@ public partial class ComponentSettingsDialogViewModel
     /// not whatever is selected by the time it finishes. Null = use the live label.
     /// </param>
     private async Task ExecuteSolveAsync(
-        IFdtdSMatrixService service, FdtdSMatrixRequest request, CancellationToken ct,
+        IFdtdSMatrixService service, FdtdSMatrixRequest request, ComponentSettingsOperation operation, CancellationToken caller,
         string? provenanceLabel = null)
     {
-        var result = await RunWithLiveStatusAsync(service, request, ct);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(operation.Token, caller);
+        var result = await RunWithLiveStatusAsync(service, request, operation, caller, cancellation.Token);
+        operation.ThrowIfObsolete(caller);
 
         if (!result.Success)
         {
@@ -236,6 +258,8 @@ public partial class ComponentSettingsDialogViewModel
             return;
         }
 
+        operation.TryCommit(caller, () =>
+        {
         var note = string.Format(
             LocalizationService.Instance.Translate("CompSettings.FdtdProvenance"),
             provenanceLabel ?? SolverLabel, result.Is3D ? "3D" : "2D");
@@ -264,6 +288,8 @@ public partial class ComponentSettingsDialogViewModel
                 LocalizationService.Instance.Translate("CompSettings.NotifyRecomputedPropagated"), _displayName, note)
             : string.Format(
                 LocalizationService.Instance.Translate("CompSettings.NotifyRecomputed"), _displayName, note));
+        RefreshEntries(notifyChanged: true);
+        });
     }
 
     /// <summary>
@@ -272,9 +298,11 @@ public partial class ComponentSettingsDialogViewModel
     /// plus the latest progress line streamed from the solver.
     /// </summary>
     private async Task<FdtdSMatrixResult> RunWithLiveStatusAsync(
-        IFdtdSMatrixService service, FdtdSMatrixRequest request, CancellationToken ct)
+        IFdtdSMatrixService service, FdtdSMatrixRequest request, ComponentSettingsOperation operation,
+        CancellationToken caller, CancellationToken ct)
     {
         var stopwatch = Stopwatch.StartNew();
+        var active = true;
         string? lastLine = null;
         var baseMsg = service is IFdtdCostEstimator
             ? string.Format(
@@ -283,6 +311,8 @@ public partial class ComponentSettingsDialogViewModel
 
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         timer.Tick += (_, _) =>
+        {
+            if (!active || !operation.CanPublish(caller) || ct.IsCancellationRequested) return;
             SolverStatus = lastLine == null
                 ? string.Format(
                     LocalizationService.Instance.Translate("CompSettings.FdtdElapsed"),
@@ -290,16 +320,21 @@ public partial class ComponentSettingsDialogViewModel
                 : string.Format(
                     LocalizationService.Instance.Translate("CompSettings.FdtdRunning"),
                     stopwatch.Elapsed.ToString(@"m\:ss"), lastLine);
+        };
         SolverStatus = $"{baseMsg}…";
         timer.Start();
 
-        var progress = new Progress<string>(line => lastLine = Shorten(line));
+        var progress = new Progress<string>(line =>
+        {
+            if (active && operation.CanPublish(caller) && !ct.IsCancellationRequested) lastLine = Shorten(line);
+        });
         try
         {
             return await service.SolveAsync(request, progress, ct);
         }
         finally
         {
+            active = false;
             timer.Stop();
         }
     }

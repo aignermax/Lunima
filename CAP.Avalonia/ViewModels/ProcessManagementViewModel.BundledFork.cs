@@ -20,7 +20,7 @@ namespace CAP.Avalonia.ViewModels;
 public partial class ProcessManagementViewModel
 {
     /// <summary>The store forks of bundled PDKs are written to (managed user root).</summary>
-    private readonly UserPdkStore _userPdkStore;
+    private readonly IUserPdkLibrary? _userPdkStore;
 
     /// <summary>The fork created by an implicit bundled-source save; later saves write to it directly.</summary>
     private PdkDraft? _forkedDraft;
@@ -71,7 +71,8 @@ public partial class ProcessManagementViewModel
                 Components = new List<PdkComponentDraft>(bundledDraft.Components),
                 Process = edited,
             };
-            var forkPath = _userPdkStore.SaveDraftAsFork(forkDraft, bundledDraft.Name);
+            var library = _userPdkStore ?? throw new InvalidOperationException("A user-PDK library is required to save a bundled fork.");
+            var forkPath = library.SaveDraftAsFork(forkDraft, bundledDraft.Name);
             forkDraft.FilePath = forkPath;
             _forkedDraft = forkDraft;
             _forkPath = forkPath;

@@ -9,7 +9,7 @@ public partial class GroupEditService
     /// <summary>Preserves current independent edits before applying a stored group history delta.</summary>
     public void SaveEditedGroup(CAP_Core.Components.Core.ComponentGroup group)
     {
-        if (ReferenceEquals(CurrentEditGroup, group)) SaveSubCanvasToGroup(group);
+        if (ReferenceEquals(CurrentEditGroup, group)) _content.Synchronize();
     }
 
     /// <summary>Refreshes an open group after its stored topology was restored by history.</summary>

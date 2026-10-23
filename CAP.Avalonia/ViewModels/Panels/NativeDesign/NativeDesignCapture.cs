@@ -31,16 +31,13 @@ public sealed class NativeDesignCapture
         Func<ComponentGroup, ActiveProcessData?> resolveBinding)
     {
         // Identify which components are groups vs standalone
-        var groupComponents = _canvas.Components
+        var componentsList = _canvas.Groups.RootComponents.ToList();
+        var groupComponents = componentsList
             .Where(c => c.Component is ComponentGroup)
             .ToList();
-        var childComponentIds = new HashSet<string>();
-        foreach (var gc in groupComponents)
-        {
-            NativeGroupCapture.CollectChildIds((ComponentGroup)gc.Component, childComponentIds);
-        }
+        var childComponentIds = CAP_Core.Analysis.Hierarchy.DesignHierarchy
+            .From(groupComponents.Select(view => view.Component)).Leaves.Select(child => child.Id).ToHashSet();
 
-        var componentsList = _canvas.Components.ToList();
         var components = componentsList.Select(vm => vm.Component).ToList();
         var unresolvedConnectionPins = new List<string>();
         var designData = new DesignFileData
@@ -48,10 +45,10 @@ public sealed class NativeDesignCapture
             // Only save non-group, non-child components in the main list
             Components = componentsList
                 .Where(c => c.Component is not ComponentGroup
-                            && !childComponentIds.Contains(c.Component.Identifier))
+                            && !childComponentIds.Contains(c.Component.Id))
                 .Select(c => _componentMapper.CreateComponentData(c))
                 .ToList(),
-            Connections = _canvas.Connections.Select(c =>
+            Connections = _canvas.Groups.RootConnections.Select(c =>
             {
                 var (startIdx, startPinName, startId, startAncestor) =
                     NativeEndpointMapper.ResolveConnectionEndpointWithOwner(components, c.Connection.StartPin);

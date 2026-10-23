@@ -39,7 +39,7 @@ internal static class TwoChipletsExampleLoader
         {
             new PdkProcessEntry(demoPdk.Name, ProcessFingerprintFactory.From(demoPdk)),
         });
-        var fileOps = new FileOperationsViewModel(
+        var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas, new CommandManager(), new SimpleNazcaExporter(), new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(templates),
             new GdsExportViewModel(new GdsExportService()),

@@ -1,4 +1,5 @@
 using System.IO;
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using System.Linq;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
@@ -59,7 +60,8 @@ public class ProcessManagementViewModelTests
             dialog.Setup(d => d.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
                   .ReturnsAsync(Path.Combine(dir, "table_layers.csv"));
 
-            var vm = new ProcessManagementViewModel(dialog.Object);
+            var vm = new ProcessManagementViewModel(dialog.Object,
+                new IProcessImporter[] { new UpdkYamlProcessImporter(), new NazcaCsvProcessImporter() });
             await vm.ImportFromPdkCommand.ExecuteAsync(null);
 
             vm.HasProcess.ShouldBeTrue();
@@ -103,7 +105,8 @@ public class ProcessManagementViewModelTests
         dialog.Setup(d => d.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
               .ReturnsAsync((string?)null);
 
-        var vm = new ProcessManagementViewModel(dialog.Object);
+        var vm = new ProcessManagementViewModel(dialog.Object,
+                new IProcessImporter[] { new UpdkYamlProcessImporter(), new NazcaCsvProcessImporter() });
         await vm.ImportFromPdkCommand.ExecuteAsync(null);
 
         vm.HasProcess.ShouldBeFalse();

@@ -18,6 +18,7 @@ public partial class GateViewViewModel
     private readonly GateViewGraphExtractor _extractor = new();
     private readonly GateFunctionClassifier _classifier = new();
     private CancellationTokenSource? _rebuildCts;
+    private readonly Services.Lifetime.ShellWorkScope _work = new();
     private bool _isStale = true;
 
     /// <summary>The gate graph currently drawn; empty until the first rebuild completes.</summary>
@@ -37,21 +38,31 @@ public partial class GateViewViewModel
     /// </summary>
     public void RequestRebuild()
     {
+        if (_work.IsStopping) return;
         _isStale = true;
         if (!IsShown)
             return;
-        _rebuildCts?.Cancel();
-        _rebuildCts = new CancellationTokenSource();
-        PendingRebuild = RebuildAsync(_rebuildCts.Token, debounce: !ReferenceEquals(Graph, GateViewGraph.Empty));
+        ScheduleRebuild(debounce: !ReferenceEquals(Graph, GateViewGraph.Empty));
     }
 
     /// <summary>Rebuilds immediately (no debounce) and completes when the new graph is published.</summary>
     public Task RebuildNowAsync()
     {
-        _rebuildCts?.Cancel();
-        _rebuildCts = new CancellationTokenSource();
-        PendingRebuild = RebuildAsync(_rebuildCts.Token, debounce: false);
+        if (_work.IsStopping) return Task.CompletedTask;
+        ScheduleRebuild(debounce: false);
         return PendingRebuild;
+    }
+
+    private void ScheduleRebuild(bool debounce)
+    {
+        _rebuildCts?.Cancel();
+        PendingRebuild = _work.RunAsync(async stop =>
+        {
+            using var source = CancellationTokenSource.CreateLinkedTokenSource(stop);
+            _rebuildCts = source;
+            try { await RebuildAsync(source.Token, debounce); }
+            finally { if (ReferenceEquals(_rebuildCts, source)) _rebuildCts = null; }
+        });
     }
 
     private void OnDesignChanged()
@@ -67,6 +78,8 @@ public partial class GateViewViewModel
         {
             if (debounce)
                 await _delay(RebuildDebounce, token);
+            _work.ThrowIfStopping();
+            token.ThrowIfCancellationRequested();
             IsRebuilding = true;
             var components = _canvas.Components.Select(c => c.Component).ToList();
             var connections = _canvas.Connections.Select(c => c.Connection).ToList();
@@ -77,7 +90,7 @@ public partial class GateViewViewModel
                 await _classifier.ClassifyAsync(extracted, wavelength, token);
                 return extracted;
             }, token);
-            if (token.IsCancellationRequested)
+            if (_work.IsStopping || token.IsCancellationRequested)
                 return;
             Graph = graph;
             _isStale = false;
@@ -94,7 +107,7 @@ public partial class GateViewViewModel
         }
         finally
         {
-            if (!token.IsCancellationRequested)
+            if (_work.IsStopping || !token.IsCancellationRequested)
                 IsRebuilding = false;
         }
     }

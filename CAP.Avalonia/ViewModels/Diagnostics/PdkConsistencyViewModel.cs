@@ -17,7 +17,7 @@ namespace CAP.Avalonia.ViewModels.Diagnostics;
 public partial class PdkConsistencyViewModel : ObservableObject
 {
     private readonly PdkConsistencyChecker _checker;
-    private readonly PdkLoader _loader;
+    private readonly IPdkReader _loader;
 
     /// <summary>Status text shown below the Run button.</summary>
     [ObservableProperty]
@@ -35,10 +35,10 @@ public partial class PdkConsistencyViewModel : ObservableObject
     public ObservableCollection<PdkFindingDisplayItem> Findings { get; } = new();
 
     /// <summary>Initializes a new <see cref="PdkConsistencyViewModel"/>.</summary>
-    public PdkConsistencyViewModel()
+    public PdkConsistencyViewModel(IPdkReader loader)
     {
         _checker = new PdkConsistencyChecker();
-        _loader = new PdkLoader();
+        _loader = loader;
     }
 
     /// <summary>

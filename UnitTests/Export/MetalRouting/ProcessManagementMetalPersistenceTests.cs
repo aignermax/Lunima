@@ -26,7 +26,7 @@ public class ProcessManagementMetalPersistenceTests
 
     private static ProcessManagementViewModel VmSavingTo(string path, string pdkName)
     {
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>())
+        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver())
         {
             PdkFilePathResolver = name => name == pdkName ? path : null,
         };
@@ -77,7 +77,7 @@ public class ProcessManagementMetalPersistenceTests
     {
         // A legacy/imported row can have a null Name despite the DTO's non-nullable declaration
         // (e.g. deserialized from JSON that omitted "name") — must not NRE (issue #686, Finding 3).
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver());
         vm.Layers.Add(new ProcessLayer { Name = null! });
 
         Should.NotThrow(() => vm.AddMetalXsectionCommand.Execute(null));
@@ -95,7 +95,7 @@ public class ProcessManagementMetalPersistenceTests
             new PdkDraft { Name = "PdkA", Process = new ProcessDefinition { Name = "A" } },
             new PdkDraft { Name = "PdkB", Process = new ProcessDefinition { Name = "B" } },
         };
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver());
         vm.ShowActiveProcess(active, drafts);
 
         vm.SaveProcessCommand.Execute(null);

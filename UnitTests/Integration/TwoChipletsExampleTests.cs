@@ -173,7 +173,7 @@ public class TwoChipletsExampleTests
 
     private static FileOperationsViewModel CreateFileOperations(
         DesignCanvasViewModel canvas, List<ComponentTemplate> templates) =>
-        new(
+        new(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

@@ -116,16 +116,31 @@ public partial class MainViewModel
             Canvas.Surface.LastWorkedDie = die;
             UpdateDieScope();
         };
-        CanvasInteraction.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(CanvasInteraction.SelectedWaveguideConnection))
-                DieLinkProperties.Show(CanvasInteraction.SelectedWaveguideConnection?.Connection);
-        };
-        CommandManager.StateChanged += (_, _) =>
-        {
-            DieProperties.Reload();
-            DieLinkProperties.Reload();
-        };
+        CanvasInteraction.PropertyChanged += DieConnectionChanged;
+        CommandManager.StateChanged += DieHistoryChanged;
+    }
+
+    private void DieConnectionChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(CanvasInteraction.SelectedWaveguideConnection))
+            DieLinkProperties.Show(CanvasInteraction.SelectedWaveguideConnection?.Connection);
+    }
+
+    private void DieHistoryChanged(object? sender, EventArgs args)
+    {
+        DieProperties.Reload();
+        DieLinkProperties.Reload();
+    }
+
+    private void UnwireDies()
+    {
+        Canvas.DiesChanged -= OnDiesChanged;
+        Canvas.PropertyChanged -= OnCanvasPropertyChangedForDies;
+        CanvasInteraction.PropertyChanged -= DieConnectionChanged;
+        CommandManager.StateChanged -= DieHistoryChanged;
+        Canvas.ChipDie.ProcessSource = null;
+        ViewportControl.FitsWholeAssembly = null;
+        CanvasInteraction.SelectionPointChanged = null;
     }
 
     /// <summary>

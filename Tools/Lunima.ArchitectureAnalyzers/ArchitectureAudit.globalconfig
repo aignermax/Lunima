@@ -1,0 +1,6 @@
+is_global = true
+
+# Opt-in inventory only. The analyzer's default descriptors remain errors.
+dotnet_diagnostic.LUN001.severity = warning
+dotnet_diagnostic.LUN002.severity = warning
+dotnet_diagnostic.LUN003.severity = warning

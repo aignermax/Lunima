@@ -31,13 +31,13 @@ public sealed record RegistryDownloadResult(
 /// already-cached artifact adopts offline), maps it to a
 /// <see cref="PdkComponentDraft"/> carrying the artifact's provenance, and
 /// persists it into the process-bound user PDK <c>Registry &lt;process&gt;</c>
-/// via <see cref="UserPdkStore"/> — placement then follows the existing
+/// via <see cref="IUserPdkLibrary"/> — placement then follows the existing
 /// single-process lock on that process id.
 /// </summary>
 public sealed class RegistryDownloadService
 {
     private readonly RegistryClient _client;
-    private readonly UserPdkStore _userPdkStore;
+    private readonly IUserPdkLibrary _userPdkStore;
     private readonly Action<string>? _onPdkSaved;
 
     /// <summary>
@@ -47,7 +47,7 @@ public sealed class RegistryDownloadService
     /// library ViewModel itself depends on the registry browser).
     /// </summary>
     public RegistryDownloadService(
-        RegistryClient client, UserPdkStore userPdkStore, Action<string>? onPdkSaved = null)
+        RegistryClient client, IUserPdkLibrary userPdkStore, Action<string>? onPdkSaved = null)
     {
         _client = client;
         _userPdkStore = userPdkStore;

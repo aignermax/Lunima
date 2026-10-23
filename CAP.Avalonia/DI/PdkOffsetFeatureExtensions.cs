@@ -21,6 +21,7 @@ internal static class PdkOffsetFeatureExtensions
     public static IServiceCollection AddPdkOffsetFeature(this IServiceCollection services)
     {
         services.AddSingleton<PdkJsonSaver>();
+        services.AddSingleton<IPdkWriter>(sp => sp.GetRequiredService<PdkJsonSaver>());
         services.AddSingleton<PreviewGeometryCache>();
         services.AddSingleton(sp =>
         {
@@ -69,13 +70,13 @@ internal static class PdkOffsetFeatureExtensions
             return backend;
         });
         services.AddSingleton(sp => new PdkOffsetEditorViewModel(
-            sp.GetRequiredService<PdkLoader>(),
-            sp.GetRequiredService<PdkJsonSaver>(),
+            sp.GetRequiredService<IPdkReader>(),
+            sp.GetRequiredService<IPdkWriter>(),
             sp.GetRequiredService<PdkManagerViewModel>(),
             sp.GetRequiredService<NazcaComponentPreviewService>(),
             sp.GetRequiredService<GdsFactoryComponentPreviewService>(),
             // Fork-on-save for bundled PDKs — same store the component editor forks with.
-            sp.GetRequiredService<CAP_DataAccess.Components.AddCustomComponent.UserPdkStore>()));
+            sp.GetRequiredService<CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary>()));
 
         return services;
     }

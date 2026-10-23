@@ -197,7 +197,7 @@ public class GdsExportEnvironmentSelectionTests
 
         public ControllableDiscoveryViewModel() : base(new GdsExportService()) { }
 
-        protected override Task<List<PythonDiscoveryService.PythonInstallation>> DiscoverPythonsAsync()
+        protected override Task<List<PythonDiscoveryService.PythonInstallation>> DiscoverPythonsAsync(CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<List<PythonDiscoveryService.PythonInstallation>>();
             PendingDiscoveries.Enqueue(tcs);

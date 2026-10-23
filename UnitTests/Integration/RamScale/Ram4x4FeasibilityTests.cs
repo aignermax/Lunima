@@ -263,7 +263,7 @@ public class Ram4x4FeasibilityTests
 
     internal static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas)
     {
-        var fileOps = new FileOperationsViewModel(
+        var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

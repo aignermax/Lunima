@@ -17,7 +17,7 @@ public static class CustomComponentLibraryRegistrar
         ObservableCollection<string> categories,
         PdkManagerViewModel pdkManager,
         UserPreferencesService preferencesService,
-        PdkLoader pdkLoader,
+        IPdkReader pdkLoader,
         List<PdkDraft> loadedPdkDrafts,
         Action reapplyActiveProcess,
         Action filterComponents)

@@ -8,6 +8,7 @@ using CAP.Avalonia.ViewModels.Panels;
 using CAP_Core.Export;
 using Moq;
 using Shouldly;
+using CAP_DataAccess.Persistence.NativeDesign;
 
 namespace UnitTests.ViewModels;
 
@@ -26,6 +27,7 @@ public class FileOperationsOpenAsCopyTests : IDisposable
     private readonly Mock<IFileDialogService> _fileDialog;
     private readonly string _testPreferencesPath;
     private readonly string _sourceDesignPath;
+    private readonly Mock<INativeDesignFileStore> _designFiles = new();
 
     public FileOperationsOpenAsCopyTests()
     {
@@ -34,7 +36,13 @@ public class FileOperationsOpenAsCopyTests : IDisposable
         _sourceDesignPath = Path.Combine(Path.GetTempPath(), $"test-ascopy-source-{Guid.NewGuid():N}.lun");
         _recentProjects = new RecentProjectsService(new UserPreferencesService(_testPreferencesPath));
 
-        _fileOps = new FileOperationsViewModel(
+        var disk = new NativeDesignFileStore();
+        _designFiles.Setup(store => store.Exists(It.IsAny<string>())).Returns((string path) => disk.Exists(path));
+        _designFiles.Setup(store => store.ReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string path, CancellationToken token) => disk.ReadAsync(path, token));
+        _designFiles.Setup(store => store.WriteAsync(It.IsAny<string>(), It.IsAny<DesignFileData>(), It.IsAny<CancellationToken>()))
+            .Returns((string path, DesignFileData data, CancellationToken token) => disk.WriteAsync(path, data, token));
+        _fileOps = new FileOperationsViewModel(_designFiles.Object,
             _canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
@@ -161,7 +169,8 @@ public class FileOperationsOpenAsCopyTests : IDisposable
         var json = await File.ReadAllTextAsync(_sourceDesignPath);
         var pendingRead = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var readStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _fileOps.ReadDesignFileAsync = _ => { readStarted.SetResult(); return pendingRead.Task; };
+        _designFiles.Setup(store => store.ReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(() => { readStarted.SetResult(); return pendingRead.Task; });
         _fileOps.CurrentFilePath = "current-design.lun";
         _fileOps.HasUnsavedChanges = true;
         var canvasChanges = 0;
@@ -195,7 +204,8 @@ public class FileOperationsOpenAsCopyTests : IDisposable
         _fileOps.HasUnsavedChanges = true;
         _fileOps.CurrentFilePath = "current-design.lun";
         var reads = 0;
-        _fileOps.ReadDesignFileAsync = path => { reads++; return File.ReadAllTextAsync(path); };
+        _designFiles.Setup(store => store.ReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string path, CancellationToken token) => { reads++; return File.ReadAllTextAsync(path, token); });
         var currentNavigation = true;
 
         var opening = _fileOps.OpenDesignAsCopyAsync(_sourceDesignPath, () => currentNavigation);

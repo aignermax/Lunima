@@ -30,9 +30,33 @@ public class AppDiContainerTests
         Path.Combine(Path.GetTempPath(), $"lunima-di-test-{Guid.NewGuid():N}.json");
 
     [Fact]
-    public void Container_ResolvesRedistributedSolverAndPreviewServices()
+    public async Task Container_HomeAndLearningPreferencesShareThePersistedUserStore()
     {
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        var preferences = sp.GetRequiredService<CAP.Avalonia.Services.UserPreferencesService>();
+
+        sp.GetRequiredService<CAP_Core.Preferences.IHomePreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.ILearningPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IRecentProjectPreferences>().ShouldBeSameAs(preferences);
+    }
+
+    [Fact]
+    public async Task Container_LibraryAndTemplateModelsShareTheExistingStoreInstances()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+
+        sp.GetRequiredService<CAP_Core.Components.Creation.IGroupLibrary>()
+            .ShouldBeSameAs(sp.GetRequiredService<CAP_Core.Components.Creation.GroupLibraryManager>());
+        var models = sp.GetRequiredService<CAP_DataAccess.Persistence.PIR.ITemplateSMatrixStore>();
+        var store = sp.GetRequiredService<CAP.Avalonia.Services.UserSMatrixOverrideStore>();
+        models.ShouldBeSameAs(store);
+        models.Overrides.ShouldBeSameAs(store.Overrides);
+    }
+
+    [Fact]
+    public async Task Container_ResolvesRedistributedSolverAndPreviewServices()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
 
         sp.GetRequiredService<IFdtdSMatrixService>().ShouldNotBeNull();
         sp.GetRequiredService<IModeSolverService>().ShouldNotBeNull();
@@ -42,9 +66,9 @@ public class AppDiContainerTests
     }
 
     [AvaloniaFact]
-    public void Container_GdsImportWidthProvider_ResolvesThroughTheMainViewModel()
+    public async Task Container_GdsImportWidthProvider_ResolvesThroughTheMainViewModel()
     {
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
         var import = sp.GetRequiredService<CAP.Avalonia.Services.GdsImport.GdsImportService>();
 
         // Evaluated lazily at import time: a lookup of a type the container does not hold
@@ -53,9 +77,9 @@ public class AppDiContainerTests
     }
 
     [Fact]
-    public void Container_ResolvesFdtdBackendsAndRegistry()
+    public async Task Container_ResolvesFdtdBackendsAndRegistry()
     {
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
 
         // The NewComponent editor path keeps the local/free backend.
         sp.GetRequiredService<IFdtdSMatrixService>()

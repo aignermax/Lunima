@@ -47,6 +47,7 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     private readonly SaxExportWorkflow _saxWorkflow;
     private readonly DieExportWorkflow _dieWorkflow;
     private readonly RecentProjectsService? _recentProjects;
+    private readonly NativeDesignIoCoordinator _nativeIo;
 
     /// <summary>
     /// Current .lun format version. Older files load with a warning and upgrade on save.
@@ -62,8 +63,6 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
 
     /// <summary>Prompt shown before discarding unsaved changes to load another design.</summary>
     private const string LoadPromptMessage = "Do you want to save your changes before loading another design?";
-
-    internal Func<string, Task<string>> ReadDesignFileAsync { get; set; } = path => File.ReadAllTextAsync(path);
 
     /// <summary>
     /// Persists metadata loaded from the last opened file so that Created date
@@ -236,6 +235,7 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
 
     /// <summary>Initializes a new instance of <see cref="FileOperationsViewModel"/>.</summary>
     public FileOperationsViewModel(
+        INativeDesignFileStore designFiles,
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
         SimpleNazcaExporter nazcaExporter,
@@ -245,10 +245,11 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         PhotonTorchExportViewModel photonTorchExport,
         VerilogAExportViewModel verilogAExport,
         ErrorConsoleService? errorConsole = null,
-        UserSMatrixOverrideStore? userSMatrixOverrideStore = null,
+        ITemplateSMatrixStore? userSMatrixOverrideStore = null,
         IUrlLauncher? urlLauncher = null,
         RecentProjectsService? recentProjects = null)
     {
+        _nativeIo = new NativeDesignIoCoordinator(canvas.Document, designFiles);
         _canvas = canvas;
         _commandManager = commandManager;
         GdsExport = gdsExport;
@@ -267,7 +268,8 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         // The analysis-output designation (#754) is part of the design file too.
         _canvas.AnalysisOutput.PropertyChanged += OnAnalysisOutputChanged;
 
-        _templates = new ComponentTemplateResolver(_canvas.Components, componentLibrary);
+        _templates = new ComponentTemplateResolver(
+            () => _canvas.Groups.RootComponents.Concat(_canvas.Components), componentLibrary);
         _componentMapper = new NativeComponentMapper(_canvas, _templates);
         _groupLoader = new NativeGroupLoader(_canvas, _templates);
         _loadDiagnostics = new NativeLoadDiagnostics(errorConsole);
@@ -278,7 +280,8 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
             () => ProcessAgnosticPdkNamesProvider?.Invoke() ?? Array.Empty<string>(),
             warning => OnProcessMigrationWarning?.Invoke(warning));
         _designCapture = new NativeDesignCapture(_canvas, _componentMapper, new NativeGroupCapture(_canvas, _templates));
-        _models = new DesignModelOverrides(_canvas.Components, _templates, userSMatrixOverrideStore, errorConsole);
+        _models = new DesignModelOverrides(_canvas.Components, _templates, userSMatrixOverrideStore, errorConsole,
+            () => _canvas.Groups.RootComponents.Select(view => view.Component));
         _templateRefresher = new TemplateInstanceRefresher(_templates, _models, errorConsole);
     }
 
@@ -357,69 +360,69 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// <returns>True when the file was written.</returns>
     public Task<bool> SaveDesignToPathAsync(string filePath) => SaveToFile(filePath);
 
-    private async Task<bool> SaveToFile(string filePath)
+    private Task<bool> SaveToFile(string filePath) => _nativeIo.SaveAsync(filePath,
+        CaptureDesignForSave, saved => PublishSavedDesign(filePath, saved.UnresolvedPins), error =>
+        {
+            _errorConsole?.LogError($"Failed to save design: {error.Message}", error);
+            UpdateStatus?.Invoke($"Save failed: {error.Message}");
+        });
+
+    private NativeDesignSaveData CaptureDesignForSave()
     {
-        try
+        var (designData, unresolvedConnectionPins) = _designCapture.Capture(_processBindings.CaptureGroup);
+        var componentsList = _canvas.Groups.RootComponents.ToList();
+
+        designData.FormatVersion = CurrentFormatVersion;
+        // GDS-imported components travel inside the .lun (issue #830) so the
+        // design stays self-contained; null when the design imported nothing.
+        // Only sets still referenced by a placed component are embedded — an
+        // import whose components were all deleted drops out of the file here.
+        var referencedPdkSources = designData.Components.Select(c => c.PdkSource)
+            .Concat(designData.Groups?.SelectMany(g => g.ChildComponents.Select(ch => ch.PdkSource))
+                    ?? Enumerable.Empty<string?>());
+        designData.ImportedGdsComponents = DesignScopedGdsComponents?.CaptureForSave(referencedPdkSources);
+        designData.LayerVisibility = LayerVisibility?.CaptureForSave();
+        designData.Metadata = NativeDesignCodec.BuildMetadataForSave(_loadedMetadata);
+        if (StoredSMatrices.Count > 0)
         {
-            var (designData, unresolvedConnectionPins) = _designCapture.Capture(_processBindings.CaptureGroup);
-            var componentsList = _canvas.Components.ToList();
-
-            designData.FormatVersion = CurrentFormatVersion;
-            // GDS-imported components travel inside the .lun (issue #830) so the
-            // design stays self-contained; null when the design imported nothing.
-            // Only sets still referenced by a placed component are embedded — an
-            // import whose components were all deleted drops out of the file here.
-            var referencedPdkSources = designData.Components.Select(c => c.PdkSource)
-                .Concat(designData.Groups?.SelectMany(g => g.ChildComponents.Select(ch => ch.PdkSource))
-                        ?? Enumerable.Empty<string?>());
-            designData.ImportedGdsComponents = DesignScopedGdsComponents?.CaptureForSave(referencedPdkSources);
-            designData.LayerVisibility = LayerVisibility?.CaptureForSave();
-            designData.Metadata = NativeDesignFileStore.BuildMetadataForSave(_loadedMetadata);
-            if (StoredSMatrices.Count > 0)
-            {
-                var swept = _models.Capture();
-                if (swept.Count > 0)
-                    designData.SMatrices = swept;
-            }
-            designData.ChipWidthMicrometers  = _canvas.Dies.RootChipWidthMicrometers;
-            designData.ChipHeightMicrometers = _canvas.Dies.RootChipHeightMicrometers;
-            designData.ActiveProcess = ActiveProcessResolver.ToData(ActiveProcess);
-            // Persist the designated analysis-output coupler (#754) by its Identifier —
-            // the runtime Component.Id is regenerated on every load.
-            designData.AnalysisOutputCoupler = _canvas.AnalysisOutput.CouplerId is Guid outputId
-                ? componentsList.FirstOrDefault(c => c.Component.Id == outputId)?.Component.Identifier
-                : null;
-            // Coherent interference mode (#1333): only stored when on — off is the
-            // default, so old files without the field round-trip identically.
-            designData.CoherentPropagationPhase = _canvas.ConnectionManager.EnableCoherentPropagationPhase
-                ? true
-                : null;
-            designData.Workspace = CaptureWorkspaceForSave?.Invoke();
-
-            await NativeDesignFileStore.WriteAsync(filePath, designData);
-            CurrentFilePath = filePath;
-            HasUnsavedChanges = false;
-            _recentProjects?.RecordProject(filePath);
-            if (unresolvedConnectionPins.Count > 0)
-            {
-                // Never drop a wire silently: an endpoint that resolved to neither a
-                // canvas component nor any group member would vanish on reload.
-                var warning = $"{unresolvedConnectionPins.Count} connection endpoint(s) could not be resolved " +
-                              $"({string.Join(", ", unresolvedConnectionPins)}) and were not saved.";
-                _errorConsole?.LogWarning(warning);
-                UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)} — {warning}");
-            }
-            else
-            {
-                UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)}");
-            }
-            return true;
+            var swept = _models.Capture();
+            if (swept.Count > 0)
+                designData.SMatrices = swept;
         }
-        catch (Exception ex)
+        designData.ChipWidthMicrometers  = _canvas.Dies.RootChipWidthMicrometers;
+        designData.ChipHeightMicrometers = _canvas.Dies.RootChipHeightMicrometers;
+        designData.ActiveProcess = ActiveProcessResolver.ToData(ActiveProcess);
+        // Persist the designated analysis-output coupler (#754) by its Identifier —
+        // the runtime Component.Id is regenerated on every load.
+        designData.AnalysisOutputCoupler = _canvas.AnalysisOutput.CouplerId is Guid outputId
+            ? componentsList.FirstOrDefault(c => c.Component.Id == outputId)?.Component.Identifier
+            : null;
+        // Coherent interference mode (#1333): only stored when on — off is the
+        // default, so old files without the field round-trip identically.
+        designData.CoherentPropagationPhase = _canvas.ConnectionManager.EnableCoherentPropagationPhase
+            ? true
+            : null;
+        designData.Workspace = CaptureWorkspaceForSave?.Invoke();
+        return new NativeDesignSaveData(designData, unresolvedConnectionPins);
+    }
+
+    private void PublishSavedDesign(string filePath, IReadOnlyList<string> unresolvedConnectionPins)
+    {
+        CurrentFilePath = filePath;
+        HasUnsavedChanges = false;
+        _recentProjects?.RecordProject(filePath);
+        if (unresolvedConnectionPins.Count > 0)
         {
-            _errorConsole?.LogError($"Failed to save design: {ex.Message}", ex);
-            UpdateStatus?.Invoke($"Save failed: {ex.Message}");
-            return false;
+            // Never drop a wire silently: an endpoint that resolved to neither a
+            // canvas component nor any group member would vanish on reload.
+            var warning = $"{unresolvedConnectionPins.Count} connection endpoint(s) could not be resolved " +
+                          $"({string.Join(", ", unresolvedConnectionPins)}) and were not saved.";
+            _errorConsole?.LogWarning(warning);
+            UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)} — {warning}");
+        }
+        else
+        {
+            UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)}");
         }
     }
 
@@ -576,198 +579,176 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// reads a .lun file and replaces the current canvas contents with it.
     /// Does NOT prompt about unsaved changes — callers do that first.
     /// </summary>
-    private async Task<bool> LoadDesignFromFileAsync(string filePath, bool recordRecent = true, Func<bool>? canProceed = null)
+    private Task<bool> LoadDesignFromFileAsync(string filePath, bool recordRecent = true, Func<bool>? canProceed = null) =>
+        _nativeIo.LoadAsync(filePath, canProceed, data => ApplyLoadedDesign(filePath, recordRecent, data),
+            message => UpdateStatus?.Invoke(message), error =>
+            {
+                _errorConsole?.LogError($"Failed to load design: {error.Message}", error);
+                UpdateStatus?.Invoke($"Load failed: {error.Message}");
+            });
+
+    private void ApplyLoadedDesign(string filePath, bool recordRecent, DesignFileData designData)
     {
-        if (File.Exists(filePath))
+        if (designData.FormatVersion != CurrentFormatVersion)
         {
-            try
+            var actual = string.IsNullOrEmpty(designData.FormatVersion) ? "<missing>" : designData.FormatVersion;
+            _errorConsole?.LogWarning(
+                $"Legacy .lun file detected (FormatVersion: {actual}). Loading with missing PIR sections (S-matrices, metadata, simulation results) left empty. File will be upgraded to {CurrentFormatVersion} on next save.");
+        }
+
+        // Clear current design
+        _canvas.Document.ReplaceDocument();
+        _canvas.Groups.ResetDocument();
+        _canvas.CanvasFrozenPaths.Clear();
+        _commandManager.ClearHistory();
+        _loadDiagnostics.PinCalibrationMigrations.Clear();
+        _loadDiagnostics.DisplacedConnections.Clear();
+        _loadDiagnostics.VerticalPortConnections.Clear();
+        _loadDiagnostics.FailedGroups.Clear();
+
+        // Design-scoped imported components (#830): restore the sets embedded
+        // in this .lun (replacing the previous design's) and migrate any legacy
+        // global "GDS Import - *" PDKs the file still references — BOTH must
+        // happen before the placements below resolve their templates.
+        var migratedGdsSets = 0;
+        if (DesignScopedGdsComponents != null)
+        {
+            DesignScopedGdsComponents.RestoreDesignScope(
+                designData.ImportedGdsComponents, w => _errorConsole?.LogWarning(w));
+            var referencedPdkSources = designData.Components.Select(c => c.PdkSource)
+                .Concat(designData.Groups?.SelectMany(g => g.ChildComponents.Select(ch => ch.PdkSource))
+                        ?? Enumerable.Empty<string?>())
+                .OfType<string>();
+            migratedGdsSets = DesignScopedGdsComponents.MigrateLegacyImportPdks(
+                referencedPdkSources, w => _errorConsole?.LogWarning(w));
+        }
+
+        // Per-layer visibility overrides for imported geometry (#858).
+        LayerVisibility?.Restore(designData.LayerVisibility);
+
+        // Load standalone components
+        foreach (var compData in designData.Components)
+        {
+            _componentMapper.LoadComponentFromData(compData);
+        }
+
+        // Load ComponentGroups
+        var groupCount = 0;
+        if (designData.Groups != null)
+        {
+            groupCount = _groupLoader.LoadGroups(designData.Groups, _processBindings.RestoreGroup, _loadDiagnostics.FailedGroups);
+        }
+
+        // Restore chip size BEFORE the connections: each restored blocked wire is
+        // classified against the pathfinding grid (the .lun format persists the
+        // blocked flag but not the reason), and the small startup grid would clamp
+        // out-of-range pins into its blocked border column and misreport ordinary
+        // contention as a footprint-sealed endpoint.
+        bool hasWidth = designData.ChipWidthMicrometers.HasValue;
+        bool hasHeight = designData.ChipHeightMicrometers.HasValue;
+        if (hasWidth && hasHeight)
+        {
+            if (ApplyChipSizeAfterLoad != null)
             {
-                var json = await ReadDesignFileAsync(filePath);
-                // A chapter can be paused while the prompt or disk read is pending.
-                // Past this boundary the canvas replacement is synchronous on the UI thread.
-                if (canProceed?.Invoke() == false) return false;
-                var designData = NativeDesignFileStore.Parse(json);
-
-                if (designData == null)
-                {
-                    UpdateStatus?.Invoke("Invalid design file");
-                    return false;
-                }
-
-                if (designData.FormatVersion != CurrentFormatVersion)
-                {
-                    var actual = string.IsNullOrEmpty(designData.FormatVersion) ? "<missing>" : designData.FormatVersion;
-                    _errorConsole?.LogWarning(
-                        $"Legacy .lun file detected (FormatVersion: {actual}). Loading with missing PIR sections (S-matrices, metadata, simulation results) left empty. File will be upgraded to {CurrentFormatVersion} on next save.");
-                }
-
-                // Clear current design
-                _canvas.Components.Clear();
-                _canvas.Connections.Clear();
-                _canvas.AllPins.Clear();
-                _canvas.CanvasFrozenPaths.Clear();
-                _canvas.ConnectionManager.Clear();
-                _commandManager.ClearHistory();
-                _loadDiagnostics.PinCalibrationMigrations.Clear();
-                _loadDiagnostics.DisplacedConnections.Clear();
-                _loadDiagnostics.VerticalPortConnections.Clear();
-                _loadDiagnostics.FailedGroups.Clear();
-
-                // Design-scoped imported components (#830): restore the sets embedded
-                // in this .lun (replacing the previous design's) and migrate any legacy
-                // global "GDS Import - *" PDKs the file still references — BOTH must
-                // happen before the placements below resolve their templates.
-                var migratedGdsSets = 0;
-                if (DesignScopedGdsComponents != null)
-                {
-                    DesignScopedGdsComponents.RestoreDesignScope(
-                        designData.ImportedGdsComponents, w => _errorConsole?.LogWarning(w));
-                    var referencedPdkSources = designData.Components.Select(c => c.PdkSource)
-                        .Concat(designData.Groups?.SelectMany(g => g.ChildComponents.Select(ch => ch.PdkSource))
-                                ?? Enumerable.Empty<string?>())
-                        .OfType<string>();
-                    migratedGdsSets = DesignScopedGdsComponents.MigrateLegacyImportPdks(
-                        referencedPdkSources, w => _errorConsole?.LogWarning(w));
-                }
-
-                // Per-layer visibility overrides for imported geometry (#858).
-                LayerVisibility?.Restore(designData.LayerVisibility);
-
-                // Load standalone components
-                foreach (var compData in designData.Components)
-                {
-                    _componentMapper.LoadComponentFromData(compData);
-                }
-
-                // Load ComponentGroups
-                var groupCount = 0;
-                if (designData.Groups != null)
-                {
-                    groupCount = _groupLoader.LoadGroups(designData.Groups, _processBindings.RestoreGroup, _loadDiagnostics.FailedGroups);
-                }
-
-                // Restore chip size BEFORE the connections: each restored blocked wire is
-                // classified against the pathfinding grid (the .lun format persists the
-                // blocked flag but not the reason), and the small startup grid would clamp
-                // out-of-range pins into its blocked border column and misreport ordinary
-                // contention as a footprint-sealed endpoint.
-                bool hasWidth = designData.ChipWidthMicrometers.HasValue;
-                bool hasHeight = designData.ChipHeightMicrometers.HasValue;
-                if (hasWidth && hasHeight)
-                {
-                    if (ApplyChipSizeAfterLoad != null)
-                    {
-                        ApplyChipSizeAfterLoad.Invoke(
-                            designData.ChipWidthMicrometers!.Value,
-                            designData.ChipHeightMicrometers!.Value);
-                    }
-                    else
-                    {
-                        _canvas.SetRootChipSize(
-                            designData.ChipWidthMicrometers!.Value,
-                            designData.ChipHeightMicrometers!.Value);
-                    }
-                }
-                else if (hasWidth || hasHeight)
-                {
-                    _errorConsole?.LogWarning(
-                        $"File '{Path.GetFileName(filePath)}' has only one chip-size field set " +
-                        $"(width: {hasWidth}, height: {hasHeight}). Falling back to current canvas size.");
-                }
-
-                // Load connections (index-based references to _canvas.Components)
-                foreach (var connData in designData.Connections)
-                {
-                    _connectionLoader.LoadConnectionFromData(connData);
-                }
-
-                // Restore canvas-level pin-less frozen paths (issue #856); files
-                // saved before the field simply have none.
-                if (designData.CanvasFrozenPaths != null)
-                {
-                    foreach (var pathDto in designData.CanvasFrozenPaths)
-                    {
-                        var frozenPath = CAP_DataAccess.Persistence.ComponentGroupSerializer
-                            .FromCanvasFrozenPathDto(pathDto);
-                        _canvas.CanvasFrozenPaths.Add(new CanvasFrozenPathViewModel(frozenPath));
-                    }
-                }
-
-                _postLoad.RestoreDieScopeAfterLoad();
-
-                // Restore the coherent interference mode (#1333) before post-load
-                // routing recalculates transmissions; missing field (old files) = off.
-                _canvas.ConnectionManager.EnableCoherentPropagationPhase =
-                    designData.CoherentPropagationPhase == true;
-                CoherentModeRestoredAfterLoad?.Invoke();
-
-                _loadDiagnostics.ReportPinCalibrationMigrations();
-                PostLoadRouting = _postLoad.StartPostLoadRouting(MaxConnectionsRoutedOnLoad);
-
-                // Rebuild dissolution records for loaded auto-inserted crossings (#705)
-                // so they dissolve/re-evaluate exactly like ones inserted this session.
-                _postLoad.RebuildCrossingRecords();
-
-                // Notify all connections about their paths for UI rendering
-                foreach (var conn in _canvas.Connections)
-                {
-                    conn.NotifyPathChanged();
-                }
-
-                // Restore the designated analysis-output coupler (#754); files without
-                // the field (older versions) simply load with no designation.
-                _postLoad.RestoreAnalysisOutput(designData);
-
-                // Preserve PIR metadata so Created date survives subsequent saves
-                _loadedMetadata = designData.Metadata;
-
-                _processBindings.RestoreDesign(designData,
-                    _canvas.Components.Select(vm => vm.Component), selection => ActiveProcess = selection);
-
-                if (_models.Restore(designData.SMatrices) > 0)
-                    HasUnsavedChanges = true;
-
-                CurrentFilePath = filePath;
-                HasUnsavedChanges = false;
-                if (migratedGdsSets > 0)
-                {
-                    // The design must be re-saved to embed the migrated components —
-                    // until then it still depends on the legacy user-PDK files.
-                    _errorConsole?.LogWarning(
-                        $"Migrated {migratedGdsSets} legacy imported GDS component set(s) into this design. " +
-                        "Save the design to embed them in the .lun file.");
-                    HasUnsavedChanges = true;
-                }
-                if (recordRecent)
-                {
-                    _recentProjects?.RecordProject(filePath);
-                }
-                UpdateStatus?.Invoke($"Loaded {Path.GetFileName(filePath)} ({_canvas.Components.Count} components, {_canvas.Connections.Count} connections, {groupCount} groups)");
-                _loadDiagnostics.ReportDisplacedConnections(UpdateStatus);
-                _loadDiagnostics.ReportFailedGroups(UpdateStatus);
-                _loadDiagnostics.ReportVerticalPortConnections(UpdateStatus);
-                _commandManager.NotifyStateChanged();
-
-                // Rebuild hierarchy tree after loading
-                RebuildHierarchy?.Invoke();
-
-                // Auto zoom-to-fit after loading
-                ZoomToFitAfterLoad?.Invoke(900, 800);
-
-                RestoreWorkspace?.Invoke(designData.Workspace);
-                ProjectOpened?.Invoke();
-                return true;
+                ApplyChipSizeAfterLoad.Invoke(
+                    designData.ChipWidthMicrometers!.Value,
+                    designData.ChipHeightMicrometers!.Value);
             }
-            catch (Exception ex)
+            else
             {
-                _errorConsole?.LogError($"Failed to load design: {ex.Message}", ex);
-                UpdateStatus?.Invoke($"Load failed: {ex.Message}");
-                return false;
+                _canvas.SetRootChipSize(
+                    designData.ChipWidthMicrometers!.Value,
+                    designData.ChipHeightMicrometers!.Value);
+            }
+        }
+        else if (hasWidth || hasHeight)
+        {
+            _errorConsole?.LogWarning(
+                $"File '{Path.GetFileName(filePath)}' has only one chip-size field set " +
+                $"(width: {hasWidth}, height: {hasHeight}). Falling back to current canvas size.");
+        }
+
+        // Load connections (index-based references to _canvas.Components)
+        foreach (var connData in designData.Connections)
+        {
+            _connectionLoader.LoadConnectionFromData(connData);
+        }
+
+        // Restore canvas-level pin-less frozen paths (issue #856); files
+        // saved before the field simply have none.
+        if (designData.CanvasFrozenPaths != null)
+        {
+            foreach (var pathDto in designData.CanvasFrozenPaths)
+            {
+                var frozenPath = CAP_DataAccess.Persistence.ComponentGroupSerializer
+                    .FromCanvasFrozenPathDto(pathDto);
+                _canvas.CanvasFrozenPaths.Add(new CanvasFrozenPathViewModel(frozenPath));
             }
         }
 
-        UpdateStatus?.Invoke($"File not found: {filePath}");
-        return false;
+        _postLoad.RestoreDieScopeAfterLoad();
+
+        // Restore the coherent interference mode (#1333) before post-load
+        // routing recalculates transmissions; missing field (old files) = off.
+        _canvas.ConnectionManager.EnableCoherentPropagationPhase =
+            designData.CoherentPropagationPhase == true;
+        CoherentModeRestoredAfterLoad?.Invoke();
+
+        _loadDiagnostics.ReportPinCalibrationMigrations();
+        PostLoadRouting = _postLoad.StartPostLoadRouting(MaxConnectionsRoutedOnLoad);
+
+        // Rebuild dissolution records for loaded auto-inserted crossings (#705)
+        // so they dissolve/re-evaluate exactly like ones inserted this session.
+        _postLoad.RebuildCrossingRecords();
+
+        // Notify all connections about their paths for UI rendering
+        foreach (var conn in _canvas.Connections)
+        {
+            conn.NotifyPathChanged();
+        }
+
+        // Restore the designated analysis-output coupler (#754); files without
+        // the field (older versions) simply load with no designation.
+        _postLoad.RestoreAnalysisOutput(designData);
+
+        // Preserve PIR metadata so Created date survives subsequent saves
+        _loadedMetadata = designData.Metadata;
+
+        _processBindings.RestoreDesign(designData,
+            _canvas.Components.Select(vm => vm.Component), selection => ActiveProcess = selection);
+
+        if (_models.Restore(designData.SMatrices) > 0)
+            HasUnsavedChanges = true;
+
+        CurrentFilePath = filePath;
+        HasUnsavedChanges = false;
+        if (migratedGdsSets > 0)
+        {
+            // The design must be re-saved to embed the migrated components —
+            // until then it still depends on the legacy user-PDK files.
+            _errorConsole?.LogWarning(
+                $"Migrated {migratedGdsSets} legacy imported GDS component set(s) into this design. " +
+                "Save the design to embed them in the .lun file.");
+            HasUnsavedChanges = true;
+        }
+        if (recordRecent)
+        {
+            _recentProjects?.RecordProject(filePath);
+        }
+        UpdateStatus?.Invoke($"Loaded {Path.GetFileName(filePath)} ({_canvas.Components.Count} components, {_canvas.Connections.Count} connections, {groupCount} groups)");
+        _loadDiagnostics.ReportDisplacedConnections(UpdateStatus);
+        _loadDiagnostics.ReportFailedGroups(UpdateStatus);
+        _loadDiagnostics.ReportVerticalPortConnections(UpdateStatus);
+        _commandManager.NotifyStateChanged();
+
+        // Rebuild hierarchy tree after loading
+        RebuildHierarchy?.Invoke();
+
+        // Auto zoom-to-fit after loading
+        ZoomToFitAfterLoad?.Invoke(900, 800);
+
+        RestoreWorkspace?.Invoke(designData.Workspace);
+        ProjectOpened?.Invoke();
     }
 
     /// <summary>
@@ -828,12 +809,6 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
             return false;
         if (canProceed?.Invoke() == false) return false;
 
-        // Exit group edit mode if active
-        if (_canvas.IsInGroupEditMode)
-        {
-            _canvas.ExitToRoot();
-        }
-
         // Clear the canvas
         ClearCanvas();
 
@@ -866,11 +841,9 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// </summary>
     private void ClearCanvas()
     {
-        _canvas.Components.Clear();
-        _canvas.Connections.Clear();
-        _canvas.AllPins.Clear();
+        _canvas.Document.ReplaceDocument();
+        _canvas.Groups.ResetDocument();
         _canvas.CanvasFrozenPaths.Clear();
-        _canvas.ConnectionManager.Clear();
         _canvas.AnalysisOutput.Clear();
         _commandManager.ClearHistory();
         StoredSMatrices.Clear();
@@ -968,7 +941,10 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     }
 
     private void OnDesignCollectionChanged(object? sender,
-        System.Collections.Specialized.NotifyCollectionChangedEventArgs args) => HasUnsavedChanges = true;
+        System.Collections.Specialized.NotifyCollectionChangedEventArgs args)
+    {
+        if (!_canvas.Groups.IsProjecting) HasUnsavedChanges = true;
+    }
 
     private void OnAnalysisOutputChanged(object? sender,
         System.ComponentModel.PropertyChangedEventArgs args) => HasUnsavedChanges = true;

@@ -71,7 +71,7 @@ public class PanelWidthPersistenceTests : IDisposable
             new CompressLayoutViewModel(),
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
-            new PdkConsistencyViewModel(),
+            new PdkConsistencyViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader()),
             new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService),
             new OnaSweepViewModel(),
             new CAP.Avalonia.ViewModels.Export.Netlist.NetlistViewModel(),

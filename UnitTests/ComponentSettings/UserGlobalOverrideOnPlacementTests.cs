@@ -48,7 +48,7 @@ public class UserGlobalOverrideOnPlacementTests : IDisposable
         ObservableCollection<ComponentTemplate> library,
         UserSMatrixOverrideStore? userStore)
     {
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

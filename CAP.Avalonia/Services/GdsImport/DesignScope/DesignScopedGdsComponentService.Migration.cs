@@ -45,6 +45,11 @@ public sealed partial class DesignScopedGdsComponentService
 
     private bool TryMigrateLegacyImportPdk(string pdkName, Action<string>? warn)
     {
+        if (_userPdkStore is null || _pdkLoader is null)
+        {
+            warn?.Invoke($"Legacy imported PDK '{pdkName}' cannot be migrated without a configured user-PDK library and reader.");
+            return false;
+        }
         var pdkPath = _userPdkStore.ResolveNamedPath(pdkName);
         if (!File.Exists(pdkPath))
         {

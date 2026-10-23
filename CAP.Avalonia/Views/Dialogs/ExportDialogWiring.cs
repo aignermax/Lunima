@@ -18,23 +18,25 @@ public static class ExportDialogWiring
     /// <param name="owner">Owner window used as parent for the modal dialogs.</param>
     /// <param name="errorConsole">Optional error-console service used to persist dialog failures
     /// for after-the-fact debugging (StatusText is ephemeral).</param>
-    public static void Wire(MainViewModel vm, Window owner, ErrorConsoleService? errorConsole = null)
+    public static IDisposable Wire(MainViewModel vm, Window owner, ErrorConsoleService? errorConsole = null)
     {
-        vm.PhotonTorchExportFormat.ShowOptionsDialogAsync = () =>
+        var bindings = new Services.Lifetime.CallbackBindings();
+        bindings.Bind(() => vm.PhotonTorchExportFormat.ShowOptionsDialogAsync, value => vm.PhotonTorchExportFormat.ShowOptionsDialogAsync = value, () =>
             ShowSafelyAsync(vm, owner, errorConsole, "PhotonTorch",
-                () => new PhotonTorchExportDialog { DataContext = vm.FileOperations.PhotonTorchExport });
+                () => new PhotonTorchExportDialog { DataContext = vm.FileOperations.PhotonTorchExport }));
 
-        vm.VerilogAExportFormat.ShowOptionsDialogAsync = () =>
+        bindings.Bind(() => vm.VerilogAExportFormat.ShowOptionsDialogAsync, value => vm.VerilogAExportFormat.ShowOptionsDialogAsync = value, () =>
             ShowSafelyAsync(vm, owner, errorConsole, "Verilog-A",
-                () => new VerilogAExportDialog { DataContext = vm.VerilogAExportFormat.OptionsViewModel });
+                () => new VerilogAExportDialog { DataContext = vm.VerilogAExportFormat.OptionsViewModel }));
 
-        vm.GdsFactoryExportFormat.ShowOptionsDialogAsync = () =>
+        bindings.Bind(() => vm.GdsFactoryExportFormat.ShowOptionsDialogAsync, value => vm.GdsFactoryExportFormat.ShowOptionsDialogAsync = value, () =>
         {
             // Recompute the stub-fallback list against the current canvas on every open.
             vm.GdsFactoryExport.RefreshUnmappedComponents();
             return ShowSafelyAsync(vm, owner, errorConsole, "gdsfactory",
                 () => new GdsFactoryExportDialog { DataContext = vm.GdsFactoryExport });
-        };
+        });
+        return bindings;
     }
 
     private static async Task ShowSafelyAsync(MainViewModel vm, Window owner, ErrorConsoleService? errorConsole, string formatName, Func<Window> dialogFactory)

@@ -288,7 +288,7 @@ public class LogicAcrossChipletLinkJourneyTests
     }
 
     private static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas) =>
-        new(
+        new(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

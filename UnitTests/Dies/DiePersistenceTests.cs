@@ -118,7 +118,7 @@ public class DiePersistenceTests
     private static string TempLun() => Path.Combine(Path.GetTempPath(), $"die-test-{Guid.NewGuid():N}.lun");
 
     private static FileOperationsViewModel NewFileOps(DesignCanvasViewModel canvas) =>
-        new(canvas, new CommandManager(), new SimpleNazcaExporter(), new SaxExporter(),
+        new(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),canvas, new CommandManager(), new SimpleNazcaExporter(), new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(DemoTemplates),
             new GdsExportViewModel(new GdsExportService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),

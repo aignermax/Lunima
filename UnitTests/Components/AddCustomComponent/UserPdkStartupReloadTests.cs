@@ -42,7 +42,8 @@ public class UserPdkStartupReloadTests : IDisposable
 
         _leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
-            new ComponentLibraryViewModel(groupLibrary), _errorConsole);
+            new ComponentLibraryViewModel(groupLibrary), _errorConsole,
+            userPdkLibrary: new UserPdkStore(_userPdkRoot, new PdkJsonSaver(), pdkLoader));
     }
 
     public void Dispose()

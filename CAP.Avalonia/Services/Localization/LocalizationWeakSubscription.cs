@@ -6,7 +6,7 @@ namespace CAP.Avalonia.Services.Localization;
 internal static class LocalizationWeakSubscription
 {
     /// <summary>Subscribes a weak target; the callback must not capture that target strongly.</summary>
-    public static void Subscribe<T>(T target, Action<T, PropertyChangedEventArgs> onChanged,
+    public static IDisposable Subscribe<T>(T target, Action<T, PropertyChangedEventArgs> onChanged,
         LocalizationService? source = null) where T : class
     {
         source ??= LocalizationService.Instance;
@@ -20,5 +20,12 @@ internal static class LocalizationWeakSubscription
                 source.PropertyChanged -= handler;
         };
         source.PropertyChanged += handler;
+        return new Subscription(() => source.PropertyChanged -= handler);
+    }
+
+    private sealed class Subscription(Action unsubscribe) : IDisposable
+    {
+        private Action? _unsubscribe = unsubscribe;
+        public void Dispose() => Interlocked.Exchange(ref _unsubscribe, null)?.Invoke();
     }
 }

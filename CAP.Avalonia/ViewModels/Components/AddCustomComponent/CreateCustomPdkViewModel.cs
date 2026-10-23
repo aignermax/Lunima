@@ -13,7 +13,7 @@ namespace CAP.Avalonia.ViewModels.Components.AddCustomComponent;
 
 public partial class CreateCustomPdkViewModel : ObservableObject
 {
-    private readonly UserPdkStore _store;
+    private readonly IUserPdkLibrary _store;
 
     [ObservableProperty]
     private string _pdkName = string.Empty;
@@ -44,7 +44,7 @@ public partial class CreateCustomPdkViewModel : ObservableObject
     private readonly IReadOnlyCollection<string> _reservedBundledPdkNames;
 
     public CreateCustomPdkViewModel(
-        UserPdkStore store, IReadOnlyList<ProcessDefinition> availableProcesses,
+        IUserPdkLibrary store, IReadOnlyList<ProcessDefinition> availableProcesses,
         ProcessManagementViewModel processDefinitionEditor,
         IReadOnlyCollection<string>? reservedBundledPdkNames = null)
     {

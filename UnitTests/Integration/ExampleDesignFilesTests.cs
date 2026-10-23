@@ -75,7 +75,7 @@ public class ExampleDesignFilesTests
             }
 
             var canvas = new DesignCanvasViewModel();
-            var fileOps = new FileOperationsViewModel(
+            var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
                 canvas,
                 new CommandManager(),
                 new SimpleNazcaExporter(),

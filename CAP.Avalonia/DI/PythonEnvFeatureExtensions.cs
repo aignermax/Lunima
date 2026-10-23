@@ -53,7 +53,8 @@ internal static class PythonEnvFeatureExtensions
                 // keeps in sync — reuse it to mark the active system interpreter (issue #645).
                 () => sp.GetRequiredService<UserPreferencesService>().GetCustomPythonPath(),
                 sp.GetRequiredService<IManagedPythonProvisioner>(),
-                sp.GetRequiredService<PythonStartupViewModel>()));
+                sp.GetRequiredService<PythonStartupViewModel>(),
+                sp.GetRequiredService<Services.Lifetime.ApplicationWorkCoordinator>()));
 
         return services;
     }

@@ -38,7 +38,7 @@ public class RegisterCreatedPdkTests : IDisposable
 
         _leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
-            new ComponentLibraryViewModel(groupLibrary));
+            new ComponentLibraryViewModel(groupLibrary), userPdkLibrary: _store);
     }
 
     public void Dispose()

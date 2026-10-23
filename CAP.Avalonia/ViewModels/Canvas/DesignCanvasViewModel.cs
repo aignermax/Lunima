@@ -40,6 +40,8 @@ public partial class DesignCanvasViewModel : ObservableObject
     public ComponentPlacementService Placement { get; }
     public SimulationCoordinator Simulation { get; }
     public PinHighlightService PinHighlight { get; }
+    public CAP_Core.Documents.DocumentSession Document { get; } = new();
+    private readonly DocumentStateCoordinator _documentState;
 
     /// <summary>Placement/routing bounds per scope: single chip, one die, or the die assembly.</summary>
     public DieScopeService Dies { get; }
@@ -182,8 +184,10 @@ public partial class DesignCanvasViewModel : ObservableObject
             BeginCommandExecution, EndCommandExecution,
             InitializeRoutingForEditScope,
             () => Routing.RecalculateRoutesAsync());
+        Routing.RouteChangesPublisher = Groups.PublishRouteChanges;
         Dies = new DieScopeService(Components, Groups, Placement, Routing);
         InitializeDieSurface();
+        _documentState = new DocumentStateCoordinator(this);
 
         // Wire service events to observable property updates
         Routing.StateChanged += () =>
@@ -195,6 +199,7 @@ public partial class DesignCanvasViewModel : ObservableObject
         // (HierarchyPanelViewModel.RebuildTree reads _canvas.CurrentEditGroup on CollectionChanged)
         Groups.CurrentEditGroupChanging += group =>
         {
+            Document.ChangeScope(group?.Id);
             CurrentEditGroup = group;
             OnPropertyChanged(nameof(IsInGroupEditMode));
         };
@@ -252,8 +257,24 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     // ── Simulation delegation ─────────────────────────────────────────────
 
-    public void InvalidateSimulation() => Simulation.InvalidateSimulation(ShowPowerFlow);
-    public void RequestResimulation() => Simulation.RequestResimulation(ShowPowerFlow);
+    public void InvalidateSimulation()
+    {
+        Groups.MarkCurrentScopeChanged();
+        Document.Invalidate();
+        Simulation.InvalidateSimulation(ShowPowerFlow);
+    }
+    public void RequestResimulation()
+    {
+        Groups.MarkCurrentScopeChanged();
+        Document.Invalidate();
+        Simulation.RequestResimulation(ShowPowerFlow);
+    }
+    public void DisposeDocumentBindings()
+    {
+        Routing.RouteChangesPublisher = null;
+        _documentState.Dispose();
+        Groups.DisposeDocumentBindings();
+    }
     public void RefreshPowerFlowDisplay() => Simulation.RefreshPowerFlowDisplay(ShowPowerFlow);
 
     // ── Routing delegation ────────────────────────────────────────────────
@@ -272,8 +293,20 @@ public partial class DesignCanvasViewModel : ObservableObject
         _dragStart = (component.X, component.Y);
         Placement.BeginDrag(component.Component);
     }
-    public void BeginCommandExecution() => Placement.IsExecutingCommand = true;
-    public void EndCommandExecution() => Placement.IsExecutingCommand = false;
+    private int _commandDepth;
+    public void BeginCommandExecution()
+    {
+        _commandDepth++;
+        Placement.IsExecutingCommand = true;
+        Groups.BeginContentEdit();
+    }
+    public void EndCommandExecution()
+    {
+        if (_commandDepth == 0) throw new InvalidOperationException("No canvas command batch is active.");
+        Groups.EndContentEdit();
+        _commandDepth--;
+        Placement.IsExecutingCommand = _commandDepth > 0;
+    }
 
     /// <summary>Retires an unfinished gesture without scheduling work or recording undo.</summary>
     internal void AbandonDrag()

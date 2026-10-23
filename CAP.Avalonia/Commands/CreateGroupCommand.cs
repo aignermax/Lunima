@@ -96,6 +96,7 @@ public class CreateGroupCommand : IUndoableCommand
         // If group already exists (Redo scenario), just re-add it to canvas
         if (_createdGroup != null && _groupViewModel != null)
         {
+            _createdGroup.ReplaceChildren(_components);
             try
             {
                 _canvas.BeginCommandExecution();

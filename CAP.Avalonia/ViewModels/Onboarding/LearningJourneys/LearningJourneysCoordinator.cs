@@ -9,6 +9,7 @@ using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Shell;
 using CAP.Avalonia.ViewModels.Workspaces;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CAP_Core.Preferences;
 
 namespace CAP.Avalonia.ViewModels.Onboarding.LearningJourneys;
 
@@ -28,7 +29,7 @@ internal sealed class LearningJourneysCoordinator : ObservableObject, IDisposabl
     public LearningJourneysCoordinator(LearningJourneyChapters chapters, DesignCanvasViewModel canvas,
         FileOperationsViewModel files, HomeViewModel home, ProcessRoutingContext process,
         WorkspaceViewModel workspace, ViewportControlViewModel viewport, LeftRailViewModel rail,
-        UserPreferencesService preferences)
+        ILearningPreferences preferences)
     {
         (Chapters, _canvas, _files, _home, _workspace, _viewport, _rail) = (chapters, canvas, files, home, workspace, viewport, rail);
         Path = new LearningPathViewModel(preferences);

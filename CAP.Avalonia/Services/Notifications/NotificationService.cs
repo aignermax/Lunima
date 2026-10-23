@@ -32,6 +32,15 @@ public class NotificationService : INotificationService
     /// <param name="manager">The window-attached manager that renders toasts.</param>
     public void Attach(INotificationManager manager) => Attach(manager.Show);
 
+    /// <summary>Attaches one window and releases its notification sink when that window retires.</summary>
+    public IDisposable AttachOwned(INotificationManager manager)
+    {
+        var binding = new Lifetime.CallbackBindings();
+        binding.Bind(() => _show, value => _show = value, manager.Show);
+        Attach(manager.Show);
+        return binding;
+    }
+
     /// <summary>
     /// Delegate-based overload of <see cref="Attach(INotificationManager)"/>.
     /// Avalonia's <see cref="INotificationManager"/> cannot be implemented by

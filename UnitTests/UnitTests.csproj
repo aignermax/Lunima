@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="Update\Fixtures\python-signed-release.json" LogicalName="Lunima.Tests.PythonSignedRelease.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +27,7 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
     <PackageReference Include="Avalonia.Headless.XUnit" Version="$(AvaloniaVersion)" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" PrivateAssets="all" />
     <PackageReference Include="Moq" Version="4.20.70" />
     <PackageReference Include="xunit" Version="2.4.2" />
     <PackageReference Include="xunit.abstractions" Version="2.0.3" />
@@ -44,6 +46,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Tools\Lunima.ArchitectureAnalyzers\Lunima.ArchitectureAnalyzers.csproj" />
     <ProjectReference Include="..\Connect-A-Pic-Core\CAP-Core.csproj" />
     <ProjectReference Include="..\CAP-DataAccess\CAP-DataAccess.csproj" />
     <ProjectReference Include="..\CAP_Contracts\CAP_Contracts.csproj" />

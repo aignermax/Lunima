@@ -200,7 +200,7 @@ public class MultiProcessManufacturingJourneyFixture : IAsyncLifetime
         DesignCanvasViewModel canvas, List<ComponentTemplate> templates)
     {
         var library = new ObservableCollection<ComponentTemplate>(templates);
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

@@ -116,7 +116,7 @@ public class GdsUserPdkStartupRoundTripTests : IDisposable
         var leftPanel = new LeftPanelViewModel(
             canvas, groupLibrary, new PdkLoader(), new UserPreferencesService(_prefsPath),
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
-            new ComponentLibraryViewModel(groupLibrary), errorConsole);
+            new ComponentLibraryViewModel(groupLibrary), errorConsole, userPdkLibrary: store);
 
         await leftPanel.ReloadUserPdksAtStartupAsync(userPdkRoot);
 

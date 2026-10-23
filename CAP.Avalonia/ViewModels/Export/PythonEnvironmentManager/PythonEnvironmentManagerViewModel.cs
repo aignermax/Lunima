@@ -1,4 +1,6 @@
 using CAP_Core.Export;
+using System.ComponentModel;
+using CAP.Avalonia.Services.Lifetime;
 using CAP_Core.Export.PythonEnvironmentManager;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,8 +14,16 @@ namespace CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 /// the single place to pick the active interpreter for export and preview (issue #645).
 /// All long-running ops are async, report progress, and are cancellable.
 /// </summary>
-public partial class PythonEnvironmentManagerViewModel : ObservableObject
+public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyncDisposable
 {
+    /// <summary>Retires panel operations and awaits all process/download cleanup.</summary>
+    public Task StopAsync()
+    {
+        if (_startup != null) _startup.PropertyChanged -= OnStartupChanged;
+        return _work.StopAsync();
+    }
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private readonly ShellWorkScope _work = new();
     private readonly PythonEnvironmentRegistry _registry;
     private readonly UvBootstrapper _bootstrapper;
     private readonly NazcaPackageInstaller _installer;
@@ -62,7 +72,8 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
         PythonDiscoveryService? discovery = null,
         Func<string?>? getActiveInterpreterPath = null,
         IManagedPythonProvisioner? provisioner = null,
-        PythonStartupViewModel? startup = null)
+        PythonStartupViewModel? startup = null,
+        ApplicationWorkCoordinator? applicationWork = null)
     {
         _registry = registry;
         _bootstrapper = bootstrapper;
@@ -72,14 +83,16 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
         _getActiveInterpreterPath = getActiveInterpreterPath ?? (() => null);
         _provisioner = provisioner ?? new ManagedPythonProvisioner(bootstrapper, installer, ProcessLaunchFactory.CreateDefault());
         _startup = startup;
-        if (startup != null)
-            startup.PropertyChanged += (_, args) =>
-            {
-                if (args.PropertyName == nameof(PythonStartupViewModel.IsRunning) && !startup.IsRunning)
-                    RebuildInterpreters();
-            };
-
         RebuildInterpreters();
+        _work.RegisterWith(applicationWork, StopAsync);
+        if (startup != null)
+            startup.PropertyChanged += OnStartupChanged;
+    }
+
+    private void OnStartupChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(PythonStartupViewModel.IsRunning) && _startup?.IsRunning == false)
+            RebuildInterpreters();
     }
 
     /// <summary>Name of the environment created by the one-click "install Nazca" offers.</summary>
@@ -141,9 +154,11 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
 
         await RunLongOperationAsync(async ct =>
         {
-            var progress = CreateProgress(env);
+            var progress = CreateProgress(env, ct);
 
             await _provisioner.ProvisionAsync(env, pythonVersion, progress, ct);
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
             _registry.AddOrUpdate(env);
         }, env, $"Environment '{name}' is ready (Nazca + gdsfactory).");
     }
@@ -155,8 +170,11 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
     /// none exists, then activates it. Reports progress; returns true when gdsfactory is
     /// available afterwards. No-ops to false while another operation runs.
     /// </summary>
-    public async Task<bool> EnsureGdsFactoryInstalledAsync(
-        IProgress<string> progress, CancellationToken ct)
+    public Task<bool> EnsureGdsFactoryInstalledAsync(IProgress<string> progress, CancellationToken ct) =>
+        _work.RunAsync(stopping => EnsureGdsFactoryInstalledCoreAsync(progress, ct, stopping));
+
+    private async Task<bool> EnsureGdsFactoryInstalledCoreAsync(
+        IProgress<string> progress, CancellationToken ct, CancellationToken stopping)
     {
         if (OperationInProgress()) return false;
 
@@ -165,11 +183,18 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
 
         IsBusy = true;
         CanCancel = true;
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, stopping);
+        _cts = cancellation;
         try
         {
-            var token = _cts.Token;
+            var token = cancellation.Token;
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
             var uvPath = await _bootstrapper.EnsureUvAsync(progress, token);
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
 
             if (target == null)
             {
@@ -177,16 +202,29 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
                 target = new PythonEnvironment { Name = DefaultEnvironmentName, VenvPath = venvPath };
                 progress.Report($"Creating managed environment '{DefaultEnvironmentName}'...");
                 await _bootstrapper.CreateVenvAsync(uvPath, venvPath, UvBootstrapper.DefaultPythonVersion, progress, token);
+                _work.ThrowIfStopping();
+                ct.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
                 await _installer.InstallAsync(uvPath, venvPath, progress, token);
+                _work.ThrowIfStopping();
+                ct.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
             }
 
             await _installer.InstallGdsFactoryAsync(uvPath, target.VenvPath, progress, token);
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
             await _healthChecker.CheckAsync(target, token);
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
             _registry.AddOrUpdate(target);
             _registry.SetActive(target.Name);
             RebuildInterpreters();
             return target.GdsFactoryVersion != null;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             ProgressText = $"gdsfactory install failed: {ex.Message}";
@@ -196,8 +234,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
         {
             IsBusy = false;
             CanCancel = false;
-            _cts?.Dispose();
-            _cts = null;
+            if (ReferenceEquals(_cts, cancellation)) _cts = null;
         }
     }
 
@@ -210,8 +247,11 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
     /// none exists, then activates it. Reports progress; returns true when the install
     /// completed. No-ops to false while another operation runs or the spec is blank.
     /// </summary>
-    public async Task<bool> EnsureBackendInstalledAsync(
-        string packageSpec, IProgress<string> progress, CancellationToken ct)
+    public Task<bool> EnsureBackendInstalledAsync(string packageSpec, IProgress<string> progress, CancellationToken ct) =>
+        _work.RunAsync(stopping => EnsureBackendInstalledCoreAsync(packageSpec, progress, ct, stopping));
+
+    private async Task<bool> EnsureBackendInstalledCoreAsync(
+        string packageSpec, IProgress<string> progress, CancellationToken ct, CancellationToken stopping)
     {
         if (string.IsNullOrWhiteSpace(packageSpec)) return false;
         if (OperationInProgress())
@@ -225,11 +265,18 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
 
         IsBusy = true;
         CanCancel = true;
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, stopping);
+        _cts = cancellation;
         try
         {
-            var token = _cts.Token;
+            var token = cancellation.Token;
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
             var uvPath = await _bootstrapper.EnsureUvAsync(progress, token);
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
 
             if (target == null)
             {
@@ -237,11 +284,23 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
                 target = new PythonEnvironment { Name = DefaultEnvironmentName, VenvPath = venvPath };
                 progress.Report($"Creating managed environment '{DefaultEnvironmentName}'...");
                 await _bootstrapper.CreateVenvAsync(uvPath, venvPath, UvBootstrapper.DefaultPythonVersion, progress, token);
+                _work.ThrowIfStopping();
+                ct.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
                 await _installer.InstallAsync(uvPath, venvPath, progress, token);
+                _work.ThrowIfStopping();
+                ct.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
             }
 
             await _installer.InstallPackageAsync(uvPath, target.VenvPath, packageSpec, progress, token);
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
             await _healthChecker.CheckAsync(target, token);
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
             _registry.AddOrUpdate(target);
             // Activating pushes the env's interpreter into the shared preference the mode
             // solver resolves lazily, so the retry runs against the freshly-installed env.
@@ -267,8 +326,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
         {
             IsBusy = false;
             CanCancel = false;
-            _cts?.Dispose();
-            _cts = null;
+            if (ReferenceEquals(_cts, cancellation)) _cts = null;
         }
     }
 
@@ -280,32 +338,39 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
         ProgressText = "Cancelling…";
     }
 
-    private IProgress<string> CreateProgress(PythonEnvironment env) =>
+    private IProgress<string> CreateProgress(PythonEnvironment env, CancellationToken ct) =>
         new Progress<string>(msg =>
         {
+            if (ct.IsCancellationRequested || _work.IsStopping) return;
             ProgressText = msg;
             Interpreters.FirstOrDefault(i => i.ManagedName == env.Name)?.RefreshAll();
         });
 
     private bool OperationInProgress()
     {
-        if (IsBusy) return true;
+        if (IsBusy || _work.IsStopping) return true;
         if (_startup?.IsRunning != true) return false;
         ProgressText = CAP.Avalonia.Services.Localization.LocalizationService.Instance.Translate("PythonStartup.Working");
         return true;
     }
 
-    private async Task RunLongOperationAsync(
+    private Task RunLongOperationAsync(
         Func<CancellationToken, Task> operation,
         PythonEnvironment env,
-        string successMessage)
+        string successMessage) => _work.RunAsync(stopping => RunLongOperationCoreAsync(operation, env, successMessage, stopping));
+
+    private async Task RunLongOperationCoreAsync(Func<CancellationToken, Task> operation,
+        PythonEnvironment env, string successMessage, CancellationToken stopping)
     {
         IsBusy = true;
         CanCancel = true;
-        _cts = new CancellationTokenSource();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stopping);
+        _cts = cancellation;
         try
         {
-            await operation(_cts.Token);
+            await operation(cancellation.Token);
+            _work.ThrowIfStopping();
+            cancellation.Token.ThrowIfCancellationRequested();
             _registry.AddOrUpdate(env);
             RebuildInterpreters();
             ProgressText = successMessage;
@@ -330,8 +395,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject
         {
             IsBusy = false;
             CanCancel = false;
-            _cts?.Dispose();
-            _cts = null;
+            if (ReferenceEquals(_cts, cancellation)) _cts = null;
         }
     }
 }

@@ -57,7 +57,7 @@ public class FileOperationsActiveProcessTests
         };
         try
         {
-            await NativeDesignFileStore.WriteAsync(path, document);
+            await new NativeDesignFileStore().WriteAsync(path, document);
             (await vm.LoadDesignFromPathAsync(path)).ShouldBeTrue();
             warning.ShouldNotBeNullOrEmpty();
             observedSelection.ShouldNotBeNull();
@@ -245,7 +245,7 @@ public class FileOperationsActiveProcessTests
         var photonTorchExport = new PhotonTorchExportViewModel(
             new CAP_Core.Export.PhotonTorchExporter(), canvas);
 
-        var vm = new FileOperationsViewModel(
+        var vm = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas, commandManager, nazcaExporter, new CAP_Core.Export.SaxExporter(), _library,
             gdsExport, photonTorchExport, null!, errorConsole);
 

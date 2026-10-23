@@ -36,19 +36,24 @@ public partial class PythonEnvironmentManagerViewModel
     /// navigation.
     /// </summary>
     [RelayCommand]
-    public async Task RefreshInterpretersAsync()
+    public Task RefreshInterpretersAsync() => _work.RunAsync(RefreshInterpretersCoreAsync);
+
+    private async Task RefreshInterpretersCoreAsync(CancellationToken ct)
     {
         var generation = ++_discoveryGeneration;
         IsDiscoveringInterpreters = true;
         try
         {
-            var found = await _discovery.DiscoverPythonWithNazcaAsync();
+            var found = await _discovery.DiscoverPythonWithNazcaAsync(ct);
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
             if (generation != _discoveryGeneration)
                 return;   // a newer discovery owns the list now
 
             _discoveredSystem = found;
             RebuildInterpreters();
         }
+        catch (OperationCanceledException) when (_work.IsStopping || ct.IsCancellationRequested) { }
         finally
         {
             if (generation == _discoveryGeneration)
@@ -64,6 +69,7 @@ public partial class PythonEnvironmentManagerViewModel
     /// </summary>
     internal void RebuildInterpreters()
     {
+        if (_work.IsStopping) return;
         var activePath = _getActiveInterpreterPath();
         var activeName = _registry.GetActive()?.Name;
 
@@ -96,7 +102,7 @@ public partial class PythonEnvironmentManagerViewModel
     [RelayCommand]
     private void SetActiveInterpreter(InterpreterEntryViewModel entry)
     {
-        if (entry == null) return;
+        if (entry == null || _work.IsStopping) return;
 
         if (entry.IsManaged)
             _registry.SetActive(entry.ManagedName);
@@ -110,7 +116,10 @@ public partial class PythonEnvironmentManagerViewModel
     /// <summary>Re-probes a managed environment's health (managed rows only).</summary>
     /// <param name="entry">The managed row to check.</param>
     [RelayCommand]
-    private async Task CheckHealthInterpreter(InterpreterEntryViewModel entry)
+    private Task CheckHealthInterpreter(InterpreterEntryViewModel entry) =>
+        _work.RunAsync(ct => CheckHealthInterpreterCoreAsync(entry, ct));
+
+    private async Task CheckHealthInterpreterCoreAsync(InterpreterEntryViewModel entry, CancellationToken ct)
     {
         if (entry?.ManagedName == null || OperationInProgress()) return;
         var env = _registry.GetAll().FirstOrDefault(e => e.Name == entry.ManagedName);
@@ -120,11 +129,14 @@ public partial class PythonEnvironmentManagerViewModel
         ProgressText = $"Checking '{env.Name}'...";
         try
         {
-            await _healthChecker.CheckAsync(env);
+            await _healthChecker.CheckAsync(env, ct);
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
             _registry.AddOrUpdate(env);
             entry.RefreshAll();
             ProgressText = $"Health check done: {entry.StatusBadge}";
         }
+        catch (OperationCanceledException) when (_work.IsStopping || ct.IsCancellationRequested) { }
         catch (Exception ex)
         {
             ProgressText = $"Health check failed: {ex.Message}";
@@ -141,7 +153,10 @@ public partial class PythonEnvironmentManagerViewModel
     /// </summary>
     /// <param name="entry">The managed row to remove.</param>
     [RelayCommand]
-    private async Task RemoveInterpreter(InterpreterEntryViewModel entry)
+    private Task RemoveInterpreter(InterpreterEntryViewModel entry) =>
+        _work.RunAsync(ct => RemoveInterpreterCoreAsync(entry, ct));
+
+    private async Task RemoveInterpreterCoreAsync(InterpreterEntryViewModel entry, CancellationToken ct)
     {
         if (entry?.ManagedName == null || OperationInProgress()) return;
         var env = _registry.GetAll().FirstOrDefault(e => e.Name == entry.ManagedName);
@@ -151,18 +166,24 @@ public partial class PythonEnvironmentManagerViewModel
         ProgressText = $"Removing '{env.Name}'...";
         try
         {
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
             var deletable = EnvironmentNaming.IsInsideDirectory(
                 UvBootstrapper.EnvironmentsBaseDir, env.VenvPath);
             if (deletable && Directory.Exists(env.VenvPath))
                 await Task.Run(() => Directory.Delete(env.VenvPath, recursive: true));
 
             _registry.Remove(env.Name);
+            // Finish durable removal after deletion, but never publish into a retired panel.
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
             RebuildInterpreters();
             ProgressText = deletable
                 ? $"'{env.Name}' removed."
                 : $"'{env.Name}' removed from the list; its path ({env.VenvPath}) lies outside "
                   + "the managed environments directory and was left untouched.";
         }
+        catch (OperationCanceledException) when (_work.IsStopping || ct.IsCancellationRequested) { }
         catch (Exception ex)
         {
             ProgressText = $"Remove failed: {ex.Message}";

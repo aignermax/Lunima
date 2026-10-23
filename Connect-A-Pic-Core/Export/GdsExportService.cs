@@ -1,3 +1,4 @@
+using CAP_Core.Export.Processes;
 using System.Diagnostics;
 
 namespace CAP_Core.Export;
@@ -134,9 +135,10 @@ public class GdsExportService
     /// Uses custom Python path if configured, otherwise uses system default.
     /// </summary>
     /// <returns>Environment information including versions.</returns>
-    public async Task<PythonEnvironmentInfo> CheckPythonEnvironmentAsync()
+    public async Task<PythonEnvironmentInfo> CheckPythonEnvironmentAsync(CancellationToken cancellationToken = default)
     {
-        var result = await ProbeEnvironmentAsync();
+        var result = await ProbeEnvironmentAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         _readyEnvironment = result.IsReady ? (_customPythonPath, result) : null;
         return result;
     }
@@ -145,17 +147,17 @@ public class GdsExportService
     /// Probes the configured interpreter: its version, then whether it imports Nazca.
     /// </summary>
     /// <returns>Environment information including versions.</returns>
-    protected virtual async Task<PythonEnvironmentInfo> ProbeEnvironmentAsync()
+    protected virtual async Task<PythonEnvironmentInfo> ProbeEnvironmentAsync(CancellationToken cancellationToken = default)
     {
         var result = new PythonEnvironmentInfo();
 
-        var pythonVersion = await GetPythonVersionAsync();
+        var pythonVersion = await GetPythonVersionAsync(cancellationToken);
         if (!string.IsNullOrEmpty(pythonVersion))
         {
             result.PythonAvailable = true;
             result.PythonVersion = pythonVersion;
 
-            var nazcaVersion = await GetNazcaVersionAsync();
+            var nazcaVersion = await GetNazcaVersionAsync(cancellationToken);
             if (!string.IsNullOrEmpty(nazcaVersion))
             {
                 result.NazcaAvailable = true;
@@ -248,12 +250,12 @@ public class GdsExportService
     /// <summary>
     /// Resolves the Python command to use: custom path, then discovery service, then fallback.
     /// </summary>
-    private async Task<string> ResolvePythonCommandAsync()
+    private async Task<string> ResolvePythonCommandAsync(CancellationToken cancellationToken = default)
     {
         if (!string.IsNullOrEmpty(_customPythonPath))
             return _customPythonPath;
 
-        var discovered = await _pythonDiscovery.FindFirstNazcaPythonPathAsync();
+        var discovered = await _pythonDiscovery.FindFirstNazcaPythonPathAsync(cancellationToken);
         if (!string.IsNullOrEmpty(discovered))
             return discovered;
 
@@ -263,76 +265,29 @@ public class GdsExportService
     /// <summary>
     /// Gets the Python version string.
     /// </summary>
-    private async Task<string?> GetPythonVersionAsync()
+    private async Task<string?> GetPythonVersionAsync(CancellationToken cancellationToken)
+    {
+        var output = await ProbeVersionAsync(new[] { "--version" }, TimeSpan.FromSeconds(5), cancellationToken);
+        if (string.IsNullOrWhiteSpace(output)) return null;
+        var parts = output.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? parts[1] : output.Trim();
+    }
+
+    private Task<string?> GetNazcaVersionAsync(CancellationToken cancellationToken) =>
+        ProbeVersionAsync(new[] { "-c", "import nazca; print(nazca.__version__)" }, TimeSpan.FromSeconds(20), cancellationToken);
+
+    private async Task<string?> ProbeVersionAsync(string[] arguments, TimeSpan timeout, CancellationToken cancellationToken)
     {
         try
         {
-            var pythonCmd = await ResolvePythonCommandAsync();
-            var args = new[] { "--version" };
-            if (!_launchFactory.TryBuild(pythonCmd, args, null, null, out var psi, out var launchError))
-                return null;
-
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError  = true;
-            using var process = Process.Start(psi);
-            if (process == null) return null;
-
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask  = process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-            var output = await outputTask;
-            await errorTask;
-
-            if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-            {
-                // Python version output: "Python 3.10.5"
-                var parts = output.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                return parts.Length >= 2 ? parts[1] : output.Trim();
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+            var command = await ResolvePythonCommandAsync(cancellationToken);
+            if (!_launchFactory.TryBuild(command, arguments, null, null, out var startInfo, out _)) return null;
+            var result = await PythonProbeRunner.RunAsync(startInfo, timeout, cancellationToken);
+            return result.ExitCode == 0 && !string.IsNullOrWhiteSpace(result.Output) ? result.Output.Trim() : null;
         }
-        catch
-        {
-            // Python not found
-        }
-
-        return null;
+        catch (Exception) when (!cancellationToken.IsCancellationRequested) { return null; }
     }
-
-    /// <summary>
-    /// Gets the Nazca version string.
-    /// </summary>
-    private async Task<string?> GetNazcaVersionAsync()
-    {
-        try
-        {
-            var pythonCmd  = await ResolvePythonCommandAsync();
-            var checkScript = "import nazca; print(nazca.__version__)";
-            var args = new[] { "-c", checkScript };
-            if (!_launchFactory.TryBuild(pythonCmd, args, null, null, out var psi, out var launchError))
-                return null;
-
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError  = true;
-            using var process = Process.Start(psi);
-            if (process == null) return null;
-
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask  = process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-            var output = await outputTask;
-            await errorTask;
-
-            if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-                return output.Trim();
-        }
-        catch
-        {
-            // Nazca not installed
-        }
-
-        return null;
-    }
-
     /// <summary>
     /// Executes a Python script file.
     /// </summary>

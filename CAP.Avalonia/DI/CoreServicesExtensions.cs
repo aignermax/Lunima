@@ -17,8 +17,13 @@ internal static class CoreServicesExtensions
     /// </summary>
     public static IServiceCollection AddCoreServices(this IServiceCollection services)
     {
+        services.AddSingleton<Services.Lifetime.ApplicationWorkCoordinator>();
         services.AddSingleton<IDataAccessor, FileDataAccessor>();
+        services.AddSingleton<CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore,
+            CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore>();
         services.AddSingleton<CAP_Core.Components.Creation.GroupLibraryManager>();
+        services.AddSingleton<CAP_Core.Components.Creation.IGroupLibrary>(sp =>
+            sp.GetRequiredService<CAP_Core.Components.Creation.GroupLibraryManager>());
 
         // Platform-aware external-process launching (Python, Docker). The prober supplies
         // well-known interpreter/Docker locations and an augmented PATH so subprocesses
@@ -28,6 +33,7 @@ internal static class CoreServicesExtensions
         services.AddSingleton<CAP_Core.Export.ExecutablePathProber>();
         services.AddSingleton<CAP_Core.Export.ProcessLaunchFactory>();
         services.AddSingleton<CAP_Core.ErrorConsoleService>();
+        services.AddSingleton<CAP_Contracts.Logger.IDiagnosticSink>(sp => sp.GetRequiredService<CAP_Core.ErrorConsoleService>());
         // Exporter reads the global interconnect settings (width/radius/layer, issue #574)
         // lazily at export time so Settings-window changes apply without restart.
         services.AddSingleton(sp => new SimpleNazcaExporter
@@ -37,11 +43,19 @@ internal static class CoreServicesExtensions
 
         services.AddSingleton<SimulationService>();
         services.AddSingleton<PdkLoader>();
+        services.AddSingleton<IPdkReader>(sp => sp.GetRequiredService<PdkLoader>());
         services.AddSingleton<PdkImportService>();
+        services.AddSingleton<IProcessImporter, UpdkYamlProcessImporter>();
+        services.AddSingleton<IProcessImporter, NazcaCsvProcessImporter>();
+        services.AddSingleton(sp => new Views.Shell.ProcessEditorFactory(
+            sp.GetServices<IProcessImporter>().ToArray(), sp.GetRequiredService<IPdkWriter>(),
+            sp.GetRequiredService<CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary>()));
         services.AddSingleton<Commands.CommandManager>();
         services.AddSingleton<UserPreferencesService>();
         services.AddSingleton<UserSMatrixOverrideStore>(sp =>
-            new UserSMatrixOverrideStore(sp.GetService<CAP_Core.ErrorConsoleService>()));
+            new UserSMatrixOverrideStore(sp.GetService<CAP_Contracts.Logger.IDiagnosticSink>()));
+        services.AddSingleton<CAP_DataAccess.Persistence.PIR.ITemplateSMatrixStore>(sp =>
+            sp.GetRequiredService<UserSMatrixOverrideStore>());
         services.AddSingleton<Services.GroupPreviewGenerator>();
         services.AddSingleton<IInputDialogService, InputDialogService>();
         services.AddSingleton<IPortMappingDialogService, PortMappingDialogService>();

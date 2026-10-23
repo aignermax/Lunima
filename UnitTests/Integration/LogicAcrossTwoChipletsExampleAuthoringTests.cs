@@ -92,7 +92,7 @@ public class LogicAcrossTwoChipletsExampleAuthoringTests
         }
 
         var examplePath = Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), ExampleFileName);
-        var fileOps = new FileOperationsViewModel(
+        var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             design.Canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

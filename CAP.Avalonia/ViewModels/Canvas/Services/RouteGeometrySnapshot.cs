@@ -40,7 +40,7 @@ public sealed class RouteGeometrySnapshot
                 (entry.Connection.Id, (IReadOnlyList<PathSegment>?)entry.Connection.RoutedPath?.Segments,
                     canvas.ConnectionManager.ObstacleWidthFor(entry.Connection))));
         }
-        foreach (var connection in canvas.Connections) connection.NotifyPathChanged();
+        canvas.Groups.PublishRouteChanges(canvas.Connections);
     }
 
     private sealed record Entry(WaveguideConnection Connection, RoutedPath? Path,

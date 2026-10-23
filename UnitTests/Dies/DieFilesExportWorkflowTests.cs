@@ -30,7 +30,7 @@ public class DieFilesExportWorkflowTests
             var service = new BatchService(ready);
             var export = new GdsExportViewModel(service) { GenerateGdsEnabled = true };
             var dialogs = new Dialogs(Path.Combine(directory, "chip.py"));
-            var operations = new FileOperationsViewModel(canvas, new CommandManager(),
+            var operations = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),canvas, new CommandManager(),
                 new SimpleNazcaExporter(), new SaxExporter(), new ObservableCollection<ComponentTemplate>(),
                 export, new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas), null!);
             operations.FileDialogService = dialogs;
@@ -59,7 +59,7 @@ public class DieFilesExportWorkflowTests
     private sealed class BatchService(bool ready) : GdsExportService
     {
         private int _exports;
-        protected override Task<PythonEnvironmentInfo> ProbeEnvironmentAsync() => Task.FromResult(
+        protected override Task<PythonEnvironmentInfo> ProbeEnvironmentAsync(CancellationToken cancellationToken = default) => Task.FromResult(
             new PythonEnvironmentInfo { PythonAvailable = ready, NazcaAvailable = ready });
         public override async Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
         {

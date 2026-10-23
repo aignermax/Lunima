@@ -111,7 +111,7 @@ internal static class GdsE2EJourneyHarness
     /// </summary>
     public static FileOperationsViewModel CreateFileOperations(
         DesignCanvasViewModel canvas, GdsDesignScopeTestHost host) =>
-        new(
+        new(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

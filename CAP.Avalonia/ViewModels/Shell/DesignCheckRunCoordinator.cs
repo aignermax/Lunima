@@ -19,6 +19,7 @@ internal sealed class DesignCheckRunCoordinator : ObservableObject
     private readonly ChipSizeViewModel _chipSize;
     private readonly Action<string> _status;
     private bool _isRunning;
+    private readonly Services.Lifetime.ShellWorkScope _work = new();
 
     public DesignCheckRunCoordinator(DesignCanvasViewModel canvas, LeftPanelViewModel library,
         ProcessRoutingContext process, DesignValidationViewModel validation, ChipSizeViewModel chipSize,
@@ -26,7 +27,10 @@ internal sealed class DesignCheckRunCoordinator : ObservableObject
         (_canvas, _library, _process, _validation, _chipSize, _status) = (canvas, library, process, validation, chipSize, status);
 
     public bool IsRunning { get => _isRunning; set => SetProperty(ref _isRunning, value); }
-    public async Task RunAsync()
+    public Task StopAsync() => _work.StopAsync();
+    public Task RunAsync() => _work.RunAsync(RunCoreAsync);
+
+    private async Task RunCoreAsync(CancellationToken cancellationToken)
     {
         if (IsRunning) return;
         IsRunning = true;
@@ -125,11 +129,15 @@ internal sealed class DesignCheckRunCoordinator : ObservableObject
                 minWaveguideSpacingMicrometers: minWaveguideSpacingMicrometers,
                 minWaveguideWidthRules: minWaveguideWidthRules,
                 connectionDrcRuleProvider: connectionDrcRuleProvider,
-                wavelengthNm: _canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm);
+                wavelengthNm: _canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm,
+                cancellationToken: cancellationToken);
 
+            _work.ThrowIfStopping();
+            cancellationToken.ThrowIfCancellationRequested();
             _status(_validation.StatusText);
             _canvas.ViewSettings.SetDesignCheckFindings(_validation.AllFindings);
         }
+        catch (OperationCanceledException) when (_work.IsStopping || cancellationToken.IsCancellationRequested) { }
         finally
         {
             IsRunning = false;

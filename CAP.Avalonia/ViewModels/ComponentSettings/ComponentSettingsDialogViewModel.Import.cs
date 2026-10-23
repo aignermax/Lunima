@@ -6,7 +6,8 @@ namespace CAP.Avalonia.ViewModels.ComponentSettings;
 
 public partial class ComponentSettingsDialogViewModel
 {
-    private async Task<ImportedSParameters?> ReconcilePortNamesAsync(ImportedSParameters imported)
+    private async Task<ImportedSParameters?> ReconcilePortNamesAsync(ImportedSParameters imported,
+        ComponentSettingsOperation operation, CancellationToken caller)
     {
         if (_availablePinNames == null || _availablePinNames.Count == 0)
             return imported;
@@ -30,6 +31,7 @@ public partial class ComponentSettingsDialogViewModel
         }
 
         var mapping = await _portMappingDialog.ShowAsync(_displayName, imported.PortNames, _availablePinNames);
+        operation.ThrowIfObsolete(caller);
         if (mapping == null)
         {
             StatusText = LocalizationService.Instance.Translate("CompSettings.ImportCancelledNoMapping");

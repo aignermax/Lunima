@@ -11,8 +11,9 @@ public partial class LeftPanelViewModel
 
     private PdkTrashViewModel CreatePdkTrash()
     {
-        var trashService = _addCustomComponentDeps?.UserPdkStore?.CreateTrashService()
-                           ?? PdkTrashService.CreateDefault();
+        var library = _userPdkLibrary ?? throw new InvalidOperationException(
+            "A user-PDK library is required to open the PDK trash.");
+        var trashService = library.CreateTrashService();
         var vm = new PdkTrashViewModel(trashService, _errorConsole)
         {
             OnRestored = ApplyRestore,

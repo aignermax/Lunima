@@ -438,7 +438,7 @@ public class MultiChipletCompositionJourneyTests : IDisposable
     private FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas)
     {
         var library = new ObservableCollection<ComponentTemplate> { _couplerTemplate, _waveguideTemplate };
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

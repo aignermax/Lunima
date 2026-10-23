@@ -36,7 +36,8 @@ public class PdkLifecycleFlowTests : IDisposable
 
         _leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
-            new ComponentLibraryViewModel(groupLibrary));
+            new ComponentLibraryViewModel(groupLibrary),
+            userPdkLibrary: new UserPdkStore(_userPdkRoot, new PdkJsonSaver(), pdkLoader));
         _leftPanel.Initialize();
     }
 

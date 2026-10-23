@@ -228,7 +228,7 @@ public class ComprehensiveGroupRoundtripTests
     private (FileOperationsViewModel vm, DesignCanvasViewModel canvas) CreateSetup()
     {
         var canvas = new DesignCanvasViewModel();
-        var vm = new FileOperationsViewModel(
+        var vm = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

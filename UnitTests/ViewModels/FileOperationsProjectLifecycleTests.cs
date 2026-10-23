@@ -35,7 +35,7 @@ public class FileOperationsProjectLifecycleTests : IDisposable
         _recentProjects = new RecentProjectsService(new UserPreferencesService(_testPreferencesPath));
 
         var photonTorchVm = new PhotonTorchExportViewModel(new PhotonTorchExporter(), _canvas);
-        _fileOps = new FileOperationsViewModel(
+        _fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             _canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

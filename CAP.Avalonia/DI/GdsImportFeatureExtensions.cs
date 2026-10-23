@@ -5,6 +5,7 @@ using CAP.Avalonia.ViewModels.GdsImport;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP_DataAccess.Components.AddCustomComponent;
 using Microsoft.Extensions.DependencyInjection;
+using CAP_DataAccess.Components.ComponentDraftMapper;
 
 namespace CAP.Avalonia.DI;
 
@@ -26,7 +27,8 @@ internal static class GdsImportFeatureExtensions
             return new DesignScopedGdsComponentService(
                 leftPanel.RegisterDesignScopedPdk,
                 leftPanel.RemoveDesignScopedPdk,
-                userPdkStore: sp.GetRequiredService<UserPdkStore>());
+                userPdkStore: sp.GetRequiredService<IUserPdkLibrary>(),
+                pdkLoader: sp.GetRequiredService<IPdkReader>());
         });
         services.AddSingleton(sp =>
         {

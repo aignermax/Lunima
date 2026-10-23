@@ -6,7 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 
 /// <summary>One background setup attempt per desktop start, with an explicit retry after failure.</summary>
-public partial class PythonStartupViewModel : ObservableObject
+public partial class PythonStartupViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly PythonEnvironmentRegistry _registry;
     private readonly UserPreferencesService _preferences;
@@ -14,6 +14,9 @@ public partial class PythonStartupViewModel : ObservableObject
     private readonly string _root;
     private readonly CancellationTokenSource _shutdown = new();
     private Task? _attempt;
+    private Task? _cancellation;
+    private Task? _retirement;
+    private bool _retired;
     private int _generation;
 
     public PythonStartupViewModel(PythonEnvironmentRegistry registry, UserPreferencesService preferences,
@@ -30,21 +33,33 @@ public partial class PythonStartupViewModel : ObservableObject
     [ObservableProperty] private string _errorText = "";
 
     /// <summary>Automatic startup is bounded to one attempt; failures remain explicitly retryable.</summary>
-    public Task StartOnceAsync() => _attempt ??= RunAsync();
-    private bool CanRetry() => HasError && !IsRunning && !_shutdown.IsCancellationRequested;
+    public Task StartOnceAsync() => _retired ? Task.CompletedTask : _attempt ??= RunAsync();
+    private bool CanRetry() => HasError && !IsRunning && !_retired;
     [RelayCommand(CanExecute = nameof(CanRetry))]
     private Task Retry() => _attempt = RunAsync();
 
     /// <summary>Cancels downloads and child processes when the desktop exits.</summary>
     public void Cancel()
     {
-        _shutdown.Cancel();
+        _retired = true;
+        _cancellation ??= _shutdown.CancelAsync();
         RetryCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Stops automatic setup or a user retry and awaits its actual process/download cleanup.</summary>
+    public Task StopAsync() => _retirement ??= StopCoreAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+
+    private async Task StopCoreAsync()
+    {
+        Cancel();
+        try { await Task.WhenAll(_cancellation!, _attempt ?? Task.CompletedTask); }
+        finally { _shutdown.Dispose(); }
     }
 
     private async Task RunAsync()
     {
-        if (_shutdown.IsCancellationRequested || IsRunning) return;
+        if (_retired || _shutdown.IsCancellationRequested || IsRunning) return;
         var preferred = _preferences.GetCustomPythonPath();
         var selected = _registry.GetAll().FirstOrDefault(e => SamePath(e.PythonExecutable, preferred));
         // An external interpreter is a deliberate user choice, even when currently broken.
@@ -75,7 +90,7 @@ public partial class PythonStartupViewModel : ObservableObject
                 if (!EnvironmentNaming.IsInsideDirectory(_root, target.VenvPath))
                     throw new InvalidOperationException("Automatic setup can only repair environments inside Lunima's managed directory.");
                 _registry.AddOrUpdate(target);
-                var progress = new Progress<string>(message => { if (IsRunning && generation == _generation) ProgressText = message; });
+                var progress = new Progress<string>(message => { if (!_retired && IsRunning && generation == _generation) ProgressText = message; });
                 await _provisioner.ProvisionAsync(target, UvBootstrapper.DefaultPythonVersion, progress, token);
                 if (!await _provisioner.IsReadyAsync(target, token))
                     throw new InvalidOperationException(target.LastError ?? "The Python environment is missing required preview packages.");

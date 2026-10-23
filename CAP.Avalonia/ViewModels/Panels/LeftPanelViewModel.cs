@@ -21,7 +21,7 @@ namespace CAP.Avalonia.ViewModels.Panels;
 public partial class LeftPanelViewModel : ObservableObject
 {
     private readonly DesignCanvasViewModel _canvas;
-    private readonly PdkLoader _pdkLoader;
+    private readonly IPdkReader _pdkLoader;
     private readonly UserPreferencesService _preferencesService;
     private readonly ErrorConsoleService? _errorConsole;
     private readonly AddCustomComponentDependencies? _addCustomComponentDeps;
@@ -93,21 +93,23 @@ public partial class LeftPanelViewModel : ObservableObject
     public Func<CAP.Avalonia.ViewModels.Components.AddCustomComponent.NewComponentViewModel, Task>? ShowNewComponentWindowAsync { get; set; }
     public LeftPanelViewModel(
         DesignCanvasViewModel canvas,
-        GroupLibraryManager libraryManager,
-        PdkLoader pdkLoader,
+        IGroupLibrary libraryManager,
+        IPdkReader pdkLoader,
         UserPreferencesService preferencesService,
         HierarchyPanelViewModel hierarchyPanel,
         PdkManagerViewModel pdkManager,
         ComponentLibraryViewModel componentLibrary,
         ErrorConsoleService? errorConsole = null,
         AddCustomComponentDependencies? addCustomComponentDeps = null,
-        RegistryBrowserViewModel? registryBrowser = null)
+        RegistryBrowserViewModel? registryBrowser = null,
+        CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary? userPdkLibrary = null)
     {
         _canvas = canvas;
         _pdkLoader = pdkLoader;
         _preferencesService = preferencesService;
         _errorConsole = errorConsole;
         _addCustomComponentDeps = addCustomComponentDeps;
+        _userPdkLibrary = userPdkLibrary ?? addCustomComponentDeps?.UserPdkStore;
         _registryBrowser = registryBrowser;
 
         HierarchyPanel = hierarchyPanel;

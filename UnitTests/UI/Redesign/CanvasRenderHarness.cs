@@ -27,7 +27,7 @@ internal static class CanvasRenderHarness
     {
         var path = Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), exampleFileName);
         var canvas = new DesignCanvasViewModel();
-        var fileOps = new FileOperationsViewModel(
+        var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

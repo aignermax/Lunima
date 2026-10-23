@@ -71,7 +71,7 @@ public class NazcaPreviewResult
 /// cell and returns bounding-box, polygon and pin data for the PDK Offset Editor overlay.
 /// Results are cached by (module, function, parameters) key.
 /// </summary>
-public class NazcaComponentPreviewService
+public class NazcaComponentPreviewService : IPdkGeometryRenderer
 {
     /// <summary>Default subprocess timeout.</summary>
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(90);

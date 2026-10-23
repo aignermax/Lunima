@@ -213,7 +213,7 @@ public class LogicGateNotNandExampleTests
     {
         var library = new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates());
         var canvas = new DesignCanvasViewModel();
-        var fileOps = new FileOperationsViewModel(
+        var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

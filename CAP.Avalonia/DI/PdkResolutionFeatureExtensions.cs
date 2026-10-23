@@ -32,7 +32,7 @@ internal static class PdkResolutionFeatureExtensions
                 python, script, launchFactory: sp.GetRequiredService<ProcessLaunchFactory>());
         });
         services.AddTransient(sp => new PdkResolutionCheckViewModel(
-            sp.GetRequiredService<PdkLoader>(),
+            sp.GetRequiredService<IPdkReader>(),
             sp.GetRequiredService<PdkFunctionResolutionService>()));
         return services;
     }

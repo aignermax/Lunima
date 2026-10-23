@@ -26,37 +26,46 @@ public class PreviewRecoveryHintTests
         backend.Setup(s => s.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(NazcaPreviewResult.Fail("Selected Python cannot import gdsfactory"));
         var previews = new GdsPreviewRenderService(backend.Object, new GdsPreviewDiskCache(folder), backend.Object);
-        using var host = new UiFlowTestHost(previews);
-        LocalizationService.Instance.SetLanguage(language);
-        Type? openedPage = null;
-        host.Vm.ShowSettingsWindowAsync = page => { openedPage = page; return Task.CompletedTask; };
-        var key = new GdsPreviewKey("test", "unique_" + Guid.NewGuid().ToString("N"), null);
-        previews.TryGetGeometry(key);
-        await previews.WaitForPendingAsync();
-        UiInput.RunJobs();
-        var button = UiInput.Named<Button>(host.Window, "PreviewPythonSettingsButton");
-        button.ShouldNotBeNull();
-        button.IsEffectivelyVisible.ShouldBeTrue();
-        if (Environment.GetEnvironmentVariable("UI_SHOT_DIR") is { Length: > 0 } shots)
+        try
         {
-            Directory.CreateDirectory(shots);
-            ScreenshotArtifacts.SettleAnimations();
-            using var frame = host.Window.CaptureRenderedFrame();
-            ScreenshotArtifacts.SavePng(frame!, Path.Combine(shots, "preview-recovery-" + language + ".png"));
+            using var host = new UiFlowTestHost(previews);
+            LocalizationService.Instance.SetLanguage(language);
+            Type? openedPage = null;
+            host.Vm.ShowSettingsWindowAsync = page => { openedPage = page; return Task.CompletedTask; };
+            var key = new GdsPreviewKey("test", "unique_" + Guid.NewGuid().ToString("N"), null);
+            previews.TryGetGeometry(key);
+            await previews.WaitForPendingAsync();
+            UiInput.RunJobs();
+            var button = UiInput.Named<Button>(host.Window, "PreviewPythonSettingsButton");
+            button.ShouldNotBeNull();
+            button.IsEffectivelyVisible.ShouldBeTrue();
+            if (Environment.GetEnvironmentVariable("UI_SHOT_DIR") is { Length: > 0 } shots)
+            {
+                Directory.CreateDirectory(shots);
+                ScreenshotArtifacts.SettleAnimations();
+                using var frame = host.Window.CaptureRenderedFrame();
+                ScreenshotArtifacts.SavePng(frame!, Path.Combine(shots, "preview-recovery-" + language + ".png"));
+            }
+            button.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
+            UiInput.RunJobs();
+            openedPage.ShouldBe(typeof(PythonEnvironmentsSettingsPage));
+            backend.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new NazcaPreviewResult { Success = true, Polygons = [new() { Vertices = [(0, 0), (4, 0), (4, 2)] }] });
+            backend.Setup(s => s.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new NazcaPreviewResult { Success = true, Polygons = [new() { Vertices = [(0, 0), (4, 0), (4, 2)] }] });
+            previews.RetryFailedPreviews();
+            previews.TryGetGeometry(key);
+            await previews.WaitForPendingAsync();
+            UiInput.RunJobs();
+            previews.TryGetGeometry(key).ShouldNotBeNull();
+            button.IsEffectivelyVisible.ShouldBeFalse();
         }
-        button.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
-        UiInput.RunJobs();
-        openedPage.ShouldBe(typeof(PythonEnvironmentsSettingsPage));
-        backend.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new NazcaPreviewResult { Success = true, Polygons = [new() { Vertices = [(0, 0), (4, 0), (4, 2)] }] });
-        backend.Setup(s => s.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new NazcaPreviewResult { Success = true, Polygons = [new() { Vertices = [(0, 0), (4, 0), (4, 2)] }] });
-        previews.RetryFailedPreviews();
-        previews.TryGetGeometry(key);
-        await previews.WaitForPendingAsync();
-        UiInput.RunJobs();
-        previews.TryGetGeometry(key).ShouldNotBeNull();
-        button.IsEffectivelyVisible.ShouldBeFalse();
-        if (Directory.Exists(folder)) Directory.Delete(folder, true);
+        finally
+        {
+            // Closing the host stops thumbnail/repaint producers before draining the writes
+            // they already scheduled. A pending-work snapshot while it is open is insufficient.
+            await previews.StopAsync();
+            if (Directory.Exists(folder)) Directory.Delete(folder, true);
+        }
     }
 }

@@ -16,6 +16,7 @@ public sealed class AgentBridgeHost
     private readonly object _settingsSync = new();
     private readonly SemaphoreSlim _settingsApplication = new(1, 1);
     private long _settingsVersion;
+    private bool _retired;
 
     /// <summary>Creates the host (does not start the server — see <see cref="ApplySettings"/>).</summary>
     public AgentBridgeHost(UserPreferencesService preferences, McpHttpServer server)
@@ -74,6 +75,7 @@ public sealed class AgentBridgeHost
     {
         lock (_settingsSync)
         {
+            if (_retired) return Task.CompletedTask;
             var version = ++_settingsVersion;
             var enabled = _preferences.GetAgentBridgeEnabled();
             var port = _preferences.GetAgentBridgePort();
@@ -91,7 +93,7 @@ public sealed class AgentBridgeHost
             await stopping;
             lock (_settingsSync)
             {
-                if (version != _settingsVersion) return;
+                if (_retired || version != _settingsVersion) return;
                 if (enabled && !_server.IsRunning) TryStart(port);
                 else if (!enabled) LastError = null;
             }
@@ -108,6 +110,17 @@ public sealed class AgentBridgeHost
     {
         lock (_settingsSync)
         {
+            _settingsVersion++;
+            return _server.StopAsync();
+        }
+    }
+
+    /// <summary>Permanently retires application admission and drains accepted requests.</summary>
+    public Task RetireAsync()
+    {
+        lock (_settingsSync)
+        {
+            _retired = true;
             _settingsVersion++;
             return _server.StopAsync();
         }

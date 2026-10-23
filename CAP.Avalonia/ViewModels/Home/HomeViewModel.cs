@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Services;
+using CAP_Core.Preferences;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -14,7 +15,7 @@ namespace CAP.Avalonia.ViewModels.Home;
 public partial class HomeViewModel : ObservableObject
 {
     private readonly RecentProjectsService _recentProjectsService;
-    private readonly UserPreferencesService _preferences;
+    private readonly IHomePreferences _preferences;
     private readonly ExampleDesignsService _exampleDesigns;
 
     /// <summary>
@@ -141,7 +142,7 @@ public partial class HomeViewModel : ObservableObject
     /// <summary>Initializes the Home screen and builds the recent-projects and examples lists.</summary>
     public HomeViewModel(
         RecentProjectsService recentProjectsService,
-        UserPreferencesService preferences,
+        IHomePreferences preferences,
         ExampleDesignsService? exampleDesigns = null)
     {
         _recentProjectsService = recentProjectsService;

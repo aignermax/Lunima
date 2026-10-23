@@ -29,7 +29,7 @@ internal static class ComponentRegistryFeatureExtensions
         // resolution here would be a circular dependency.
         services.AddSingleton(sp => new RegistryDownloadService(
             sp.GetRequiredService<RegistryClient>(),
-            sp.GetRequiredService<UserPdkStore>(),
+            sp.GetRequiredService<IUserPdkLibrary>(),
             path => sp.GetRequiredService<LeftPanelViewModel>().RegisterCreatedPdk(path)));
         services.AddSingleton(sp => new RegistryBrowserViewModel(
             sp.GetRequiredService<RegistryClient>(),

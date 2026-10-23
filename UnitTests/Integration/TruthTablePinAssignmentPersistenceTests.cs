@@ -547,7 +547,7 @@ public class TruthTablePinAssignmentPersistenceTests : IDisposable
     private static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas)
     {
         var library = new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates());
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

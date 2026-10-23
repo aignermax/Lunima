@@ -16,14 +16,19 @@ namespace CAP.Avalonia.Views.Shell;
 internal sealed class PdkWindowHost(
     Window owner, CAP.Avalonia.ViewModels.Panels.LeftPanelViewModel library,
     CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel canvas,
-    Func<Component, string?> resolvePdkSource, UserPdkStore? store, CAP_Core.ErrorConsoleService errors)
+    Func<Component, string?> resolvePdkSource, IUserPdkLibrary? store, CAP_Core.ErrorConsoleService errors,
+    ProcessEditorFactory? processEditors = null)
 {
     private readonly Window _owner = owner;
     private readonly CAP.Avalonia.ViewModels.Panels.LeftPanelViewModel _library = library;
     private readonly CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel _canvas = canvas;
     private readonly Func<Component, string?> _resolvePdkSource = resolvePdkSource;
-    private readonly UserPdkStore? _store = store;
+    private readonly IUserPdkLibrary? _store = store;
     private readonly CAP_Core.ErrorConsoleService _errors = errors;
+    private ProcessManagementViewModel CreateProcessEditor() =>
+        processEditors?.Create(new FileDialogService(_owner))
+        ?? new ProcessManagementViewModel(new FileDialogService(_owner), _store);
+
     private readonly Dictionary<string, ProcessManagementWindow> _openPdkEditWindows = new();
 
     /// <summary>
@@ -62,21 +67,20 @@ internal sealed class PdkWindowHost(
             return;
         }
 
-        var processVm = new ProcessManagementViewModel(new FileDialogService(_owner))
+        var processVm = CreateProcessEditor();
+
+        // Resolve straight to this row's own file path — no name-based lookup needed since
+        // the button is already scoped to this exact PDK.
+        processVm.PdkFilePathResolver = _ => pdk.FilePath;
+        // Confirm before overwriting the PDK's JSON on disk (same prompt as the former
+        // toolbar dialog): naming the exact file so it can't be edited by accident.
+        processVm.ConfirmSaveToPdk = async path =>
         {
-            // Resolve straight to this row's own file path — no name-based lookup needed since
-            // the button is already scoped to this exact PDK.
-            PdkFilePathResolver = _ => pdk.FilePath,
-            // Confirm before overwriting the PDK's JSON on disk (same prompt as the former
-            // toolbar dialog): naming the exact file so it can't be edited by accident.
-            ConfirmSaveToPdk = async path =>
-            {
-                var choice = await new MessageBoxService().ShowChoicePromptAsync(
-                    $"This overwrites the PDK file on disk:\n{path}\n\nOnly this process's own "
-                    + "layers and cross-sections are written. Continue?",
-                    "Save to PDK file?", new[] { "Cancel", "Save" });
-                return choice == 1;
-            },
+            var choice = await new MessageBoxService().ShowChoicePromptAsync(
+                $"This overwrites the PDK file on disk:\n{path}\n\nOnly this process's own "
+                + "layers and cross-sections are written. Continue?",
+                "Save to PDK file?", new[] { "Cancel", "Save" });
+            return choice == 1;
         };
         processVm.LoadForSinglePdkEdit(draft);
         // Re-apply the active process lock by value after a save, so an edit that changes this
@@ -141,7 +145,7 @@ internal sealed class PdkWindowHost(
 
     /// <summary>
     /// Handles "Delete…" click on a custom PDK's row in PDK Management (LC-T5): after a confirm
-    /// prompt, moves the whole PDK file to <c>user-pdks/.trash</c> via <see cref="UserPdkStore"/>
+    /// prompt, moves the whole PDK file to <c>user-pdks/.trash</c> via <see cref="IUserPdkLibrary"/>
     /// and then deregisters it from the library (templates, PDK-manager entry, in-memory draft,
     /// remembered import path) via <see cref="CAP.Avalonia.ViewModels.Panels.LeftPanelViewModel.UnregisterPdk"/> — mirrors
     /// <see cref="CreateAsync"/>'s store-then-register order, just in reverse. Bundled PDKs
@@ -243,12 +247,7 @@ internal sealed class PdkWindowHost(
             .Where(d => d.Process != null && !d.ProcessAgnostic)
             .Select(d => d.Process!)
             .ToList();
-        var processDefinitionEditor = new ProcessManagementViewModel(new FileDialogService(_owner),
-            new IProcessImporter[]
-            {
-                new UpdkYamlProcessImporter(),
-                new NazcaCsvProcessImporter(),
-            }, new PdkJsonSaver());
+        var processDefinitionEditor = CreateProcessEditor();
 
         // Loaded bundled PDK names are reserved: a user PDK under such a name would be taken
         // for a fork of the built-in PDK and shadow it.
