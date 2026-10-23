@@ -70,12 +70,13 @@ public sealed partial class LogicNetworkBuilder
         var contexts = gates.Select(GateContext.Create).ToList();
         ThrowOnDuplicateGateIds(contexts);
 
+        var endpoints = new EndpointIndex(contexts);
         var adjacency = LogicPinTracer.BuildPinAdjacency(connections);
         var drivers = new Dictionary<LogicPinRef, LogicPinRef>();
         var edgeConnections = new Dictionary<LogicPinRef, IReadOnlyList<WaveguideConnection>>();
         foreach (var connection in connections)
         {
-            AddConnectionDrivers(contexts, adjacency, connection, drivers, edgeConnections);
+            AddConnectionDrivers(endpoints, adjacency, connection, drivers, edgeConnections);
         }
 
         return AssembleNetwork(contexts, drivers, edgeConnections, wavelengthNm ?? StandardWaveLengths.RedNM);
@@ -93,14 +94,14 @@ public sealed partial class LogicNetworkBuilder
     /// input; a gate output whose path dead-ends stays an output tap, as before.
     /// </summary>
     private static void AddConnectionDrivers(
-        IReadOnlyList<GateContext> contexts,
+        EndpointIndex endpoints,
         IReadOnlyDictionary<PhysicalPin, List<WaveguideConnection>> adjacency,
         WaveguideConnection connection,
         IDictionary<LogicPinRef, LogicPinRef> drivers,
         IDictionary<LogicPinRef, IReadOnlyList<WaveguideConnection>> edgeConnections)
     {
-        var start = ResolveEndpoint(contexts, connection.StartPin);
-        var end = ResolveEndpoint(contexts, connection.EndPin);
+        var start = endpoints.Resolve(connection.StartPin);
+        var end = endpoints.Resolve(connection.EndPin);
         if (start == null && end == null)
             return;
 
@@ -118,7 +119,7 @@ public sealed partial class LogicNetworkBuilder
             var unresolvedPin = start == null ? connection.StartPin : connection.EndPin;
             if (unresolvedPin == null)
                 return;
-            var traced = TracePassThrough(contexts, adjacency, unresolvedPin, connection, resolved, path, out var failure);
+            var traced = TracePassThrough(endpoints, adjacency, unresolvedPin, connection, resolved, path, out var failure);
             if (traced == null)
             {
                 if (failure != null && resolved.Role == PinRole.Input)
@@ -145,7 +146,7 @@ public sealed partial class LogicNetworkBuilder
     /// or ends without reaching a gate pin.
     /// </summary>
     private static Endpoint? TracePassThrough(
-        IReadOnlyList<GateContext> contexts,
+        EndpointIndex endpoints,
         IReadOnlyDictionary<PhysicalPin, List<WaveguideConnection>> adjacency,
         PhysicalPin startPin,
         WaveguideConnection arrivalConnection,
@@ -154,7 +155,7 @@ public sealed partial class LogicNetworkBuilder
         out string? failure)
     {
         var traced = LogicPinTracer.Trace(
-            pin => ResolveEndpoint(contexts, pin), adjacency, startPin, arrivalConnection, path, out var reason);
+            endpoints.Resolve, adjacency, startPin, arrivalConnection, path, out var reason);
         failure = reason == null ? null : UnresolvableMessage(gateEnd, startPin, reason);
         return traced;
     }
@@ -195,21 +196,31 @@ public sealed partial class LogicNetworkBuilder
     /// through the external pin's name, so a loaded design assembles straight from
     /// its own connections.
     /// </summary>
-    private static Endpoint? ResolveEndpoint(IReadOnlyList<GateContext> contexts, PhysicalPin? pin)
+    private sealed class EndpointIndex
     {
-        if (pin?.ParentComponent == null)
-            return null;
-        var context = contexts.FirstOrDefault(c => ReferenceEquals(c.Group, pin.ParentComponent));
-        if (context != null)
-            return ToEndpoint(context, pin.Name);
+        private readonly Dictionary<Component, GateContext> _groups = new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<PhysicalPin, (GateContext Context, string Name)> _pins = new(ReferenceEqualityComparer.Instance);
 
-        foreach (var candidate in contexts)
+        public EndpointIndex(IEnumerable<GateContext> contexts)
         {
-            var external = candidate.Group.ExternalPins.FirstOrDefault(p => ReferenceEquals(p.InternalPin, pin));
-            if (external != null)
-                return ToEndpoint(candidate, external.Name);
+            foreach (var context in contexts)
+            {
+                _groups.TryAdd(context.Group, context);
+                foreach (var external in context.Group.ExternalPins)
+                    if (external.InternalPin is { } pin) _pins.TryAdd(pin, (context, external.Name));
+            }
         }
-        return null;
+
+        public Endpoint? Resolve(PhysicalPin? pin)
+        {
+            if (pin?.ParentComponent == null) return null;
+            // Direct group ownership takes precedence; otherwise the first matching
+            // external pin wins, including pins without a role. Preserve validation semantics.
+            if (_groups.TryGetValue(pin.ParentComponent, out var context))
+                return ToEndpoint(context, pin.Name);
+            return _pins.TryGetValue(pin, out var external)
+                ? ToEndpoint(external.Context, external.Name) : null;
+        }
     }
 
     /// <summary>Wraps one gate pin name as an endpoint, or null when the pin carries no role.</summary>

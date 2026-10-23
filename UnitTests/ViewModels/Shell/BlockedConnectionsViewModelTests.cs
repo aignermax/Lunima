@@ -52,6 +52,38 @@ public class BlockedConnectionsViewModelTests
     }
 
     [Fact]
+    public async Task Count_RepeatedNotificationsAndRouteRecovery_DoNotDrift()
+    {
+        await using var vm = MainViewModelTestHelper.CreateMainViewModel();
+        var connection = AddConnections(vm.Canvas, blocked: true, count: 1)[0];
+        connection.NotifyPathChanged();
+        connection.NotifyPathChanged();
+        vm.BlockedConnections.BlockedCount.ShouldBe(1);
+        connection.Connection.RoutedPath!.IsBlockedFallback = false;
+        connection.NotifyPathChanged();
+        vm.BlockedConnections.BlockedCount.ShouldBe(0);
+        vm.BlockedConnections.HasBlocked.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Count_ResetDetachesOldRoutesAndTracksReaddedRoutes()
+    {
+        await using var vm = MainViewModelTestHelper.CreateMainViewModel();
+        var connection = AddConnections(vm.Canvas, blocked: true, count: 1)[0];
+        vm.Canvas.Connections.Clear();
+        vm.BlockedConnections.BlockedCount.ShouldBe(0);
+        connection.Connection.RoutedPath!.IsBlockedFallback = false;
+        connection.NotifyPathChanged();
+        vm.BlockedConnections.BlockedCount.ShouldBe(0);
+        vm.Canvas.Connections.Add(connection);
+        connection.Connection.RoutedPath.IsBlockedFallback = true;
+        connection.NotifyPathChanged();
+        vm.BlockedConnections.BlockedCount.ShouldBe(1);
+        vm.Canvas.Connections.Remove(connection);
+        vm.BlockedConnections.BlockedCount.ShouldBe(0);
+    }
+
+    [Fact]
     public void SelectNextBlocked_SelectsEachBlockedConnectionInTurn_AndWraps()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();

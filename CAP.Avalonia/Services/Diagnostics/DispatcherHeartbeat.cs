@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Avalonia.Threading;
 
 namespace CAP.Avalonia.Services.Diagnostics;
@@ -10,11 +9,16 @@ internal sealed class DispatcherHeartbeat
     private readonly CancellationTokenSource _stop = new();
     private readonly Task _sampling;
     private readonly Action<Action> _post;
+    private readonly TimeProvider _clock;
+    private readonly object _gate = new();
+    private DispatcherLatencySample? _pending;
+    private bool _completed;
     private TimeSpan _maximum;
 
-    internal DispatcherHeartbeat(Action<Action> post)
+    internal DispatcherHeartbeat(Action<Action> post, TimeProvider? clock = null)
     {
         _post = post;
+        _clock = clock ?? TimeProvider.System;
         _sampling = SampleAsync();
     }
 
@@ -24,9 +28,14 @@ internal sealed class DispatcherHeartbeat
 
     public async Task<TimeSpan> CompleteAsync()
     {
+        lock (_gate)
+        {
+            _completed = true;
+            _pending?.Complete();
+        }
         _stop.Cancel();
         // Cancel a pending probe even when shutdown has stopped the dispatcher pump.
-        // The sampler records its elapsed latency, including the final continuation.
+        // Its interval ends here, before a delayed sampler continuation can inflate it.
         try { await _sampling.ConfigureAwait(false); }
         finally { _stop.Dispose(); }
         return _maximum;
@@ -37,8 +46,20 @@ internal sealed class DispatcherHeartbeat
         while (!_stop.IsCancellationRequested)
         {
             var completion = new TaskCompletionSource<TimeSpan>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var sent = Stopwatch.GetTimestamp();
-            try { _post(() => completion.TrySetResult(Stopwatch.GetElapsedTime(sent))); }
+            DispatcherLatencySample sample;
+            lock (_gate)
+            {
+                if (_completed) return;
+                _pending = sample = new DispatcherLatencySample(_clock);
+            }
+            try
+            {
+                _post(() =>
+                {
+                    sample.Complete();
+                    completion.TrySetResult(sample.Elapsed);
+                });
+            }
             catch (Exception)
             {
                 // Dispatcher shutdown must not turn optional diagnostics into a
@@ -49,11 +70,12 @@ internal sealed class DispatcherHeartbeat
             try { elapsed = await completion.Task.WaitAsync(_stop.Token).ConfigureAwait(false); }
             catch (OperationCanceledException) when (_stop.IsCancellationRequested)
             {
-                elapsed = Stopwatch.GetElapsedTime(sent);
+                elapsed = sample.Elapsed;
                 if (elapsed > _maximum) _maximum = elapsed;
                 return;
             }
             if (elapsed > _maximum) _maximum = elapsed;
+            lock (_gate) _pending = null;
             try { await Task.Delay(Interval, _stop.Token).ConfigureAwait(false); }
             catch (OperationCanceledException) when (_stop.IsCancellationRequested) { return; }
         }

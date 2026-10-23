@@ -631,6 +631,7 @@ public partial class PathfindingGrid
             _waveguideCells.Clear();
             _waveguideEndpoints.Clear();
             _waveguideGeometry.Clear();
+            _waveguideShapes.Clear();
             _waveguideHalfWidths.Clear();
             _waveguideCellBounds.Clear();
         }
@@ -720,6 +721,7 @@ public partial class PathfindingGrid
         {
             _waveguideCells[connectionId] = cells;
             _waveguideGeometry[connectionId] = segmentList;
+            _waveguideShapes[connectionId] = new WaveguideObstacleShape(segmentList, waveguideWidth);
             _waveguideHalfWidths[connectionId] = halfWidth;
             RecordWaveguideCellBounds(connectionId, cells);
             _waveguideEndpoints[connectionId] = (
@@ -744,6 +746,7 @@ public partial class PathfindingGrid
             _waveguideCells.Remove(connectionId);
             _waveguideEndpoints.Remove(connectionId);
             _waveguideGeometry.Remove(connectionId);
+            _waveguideShapes.Remove(connectionId);
             _waveguideHalfWidths.Remove(connectionId);
             _waveguideCellBounds.Remove(connectionId);
             stillCovered = CellsStillCoveredByOtherWaveguides(cells);
@@ -771,6 +774,7 @@ public partial class PathfindingGrid
             _waveguideCells.Clear();
             _waveguideEndpoints.Clear();
             _waveguideGeometry.Clear();
+            _waveguideShapes.Clear();
             _waveguideHalfWidths.Clear();
             _waveguideCellBounds.Clear();
         }

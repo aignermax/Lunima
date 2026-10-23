@@ -10,6 +10,28 @@ namespace UnitTests.Services.Diagnostics;
 public class UiThreadWatchdogContinuationTests
 {
     [Fact]
+    public async Task OperationEndsBeforeQueuedProbeRuns_ReportsOnlyOperationInterval()
+    {
+        Action? queued = null;
+        var clock = new ManualClock();
+        var heartbeat = new DispatcherHeartbeat(action => queued = action, clock);
+        clock.Timestamp = 20;
+
+        var completion = heartbeat.CompleteAsync();
+        clock.Timestamp = 5000;
+        queued.ShouldNotBeNull().Invoke();
+
+        (await completion).ShouldBe(TimeSpan.FromMilliseconds(20));
+    }
+
+    private sealed class ManualClock : TimeProvider
+    {
+        internal long Timestamp { get; set; }
+        public override long TimestampFrequency => 1000;
+        public override long GetTimestamp() => Timestamp;
+    }
+
+    [Fact]
     public async Task DispatcherRejectsProbe_DiagnosticsDoNotFailTheCommand()
     {
         var heartbeat = new DispatcherHeartbeat(_ => throw new InvalidOperationException("dispatcher closed"));
