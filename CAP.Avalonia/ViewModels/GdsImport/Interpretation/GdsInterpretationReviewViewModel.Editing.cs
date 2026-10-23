@@ -20,6 +20,7 @@ public sealed partial class GdsInterpretationReviewViewModel
             Pins = x.Ports.Select(p => p.ToPin()).ToList(),
             ModelPdkName = x.SelectedModel?.PdkName,
             ModelComponentName = x.SelectedModel?.ComponentName,
+            GeometryOnly = x.IsShapeOnly,
             ModelPinMap = x.Ports.Where(p => !string.IsNullOrWhiteSpace(p.ModelPortName))
                 .GroupBy(p => p.Name.Trim()).ToDictionary(g => g.Key, g => g.First().ModelPortName.Trim())
         }).ToList(),
@@ -99,7 +100,16 @@ public sealed partial class GdsInterpretationReviewViewModel
         try { _profiles.DismissGuide(); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* Optional preference; import stays usable. */ }
     }
-    [RelayCommand] private void GeometryOnly() { if (SelectedCell != null) SelectedCell.SelectedModel = null; }
+    [RelayCommand]
+    private void GeometryOnly()
+    {
+        if (SelectedCell is not { } cell) return;
+        RecordEdit();
+        _restoring = true;
+        try { cell.SelectedModel = null; cell.GeometryOnly = true; }
+        finally { _restoring = false; }
+        FinishEdit();
+    }
     [RelayCommand]
     private void AddPort()
     {
@@ -150,6 +160,7 @@ public sealed partial class GdsInterpretationReviewViewModel
                 var saved = snapshot.Cells.FirstOrDefault(x => x.CellName == cell.CellName);
                 if (saved == null) continue;
                 cell.DisplayName = saved.DisplayName ?? cell.CellName; cell.ExpandChildren = saved.ExpandChildren;
+                cell.GeometryOnly = saved.GeometryOnly;
                 cell.SelectedModel = Models.FirstOrDefault(x => x.PdkName == saved.ModelPdkName && x.ComponentName == saved.ModelComponentName);
                 ReplacePorts(cell, saved.Pins ?? []); cell.PortsEdited = editedCells?.Contains(cell.CellName) ?? true;
                 foreach (var port in cell.Ports) port.ModelPortName = saved.ModelPinMap.GetValueOrDefault(port.Name) ?? "";

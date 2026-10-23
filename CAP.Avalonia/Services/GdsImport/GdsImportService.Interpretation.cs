@@ -36,11 +36,14 @@ public sealed partial class GdsImportService
             draft.Name = GdsCellDraftMapper.SanitizeComponentName(decision.DisplayName);
         if (string.IsNullOrWhiteSpace(decision?.ModelComponentName))
         {
-            // Unmapped: exactly two optical pins keep the S-matrix null so the
-            // lossless pass-through default applies — the same state the
-            // non-review import leaves. Any other pin set cannot default its
-            // internal routing and stays deliberately geometry-only.
-            draft.ImportedModelStatus = IsPassThroughEligible(draft) ? null : "geometry-only";
+            // Unmapped: an explicit shape-only decision opts out of every assumed
+            // model regardless of pin count. Without it, exactly two optical pins
+            // keep the S-matrix null so the lossless pass-through default applies
+            // — the same state the non-review import leaves. Any other pin set
+            // cannot default its internal routing and stays deliberately
+            // geometry-only.
+            draft.ImportedModelStatus = decision?.GeometryOnly == true || !IsPassThroughEligible(draft)
+                ? "geometry-only" : null;
             return;
         }
         var source = templates.FirstOrDefault(t => t.Name == decision.ModelComponentName

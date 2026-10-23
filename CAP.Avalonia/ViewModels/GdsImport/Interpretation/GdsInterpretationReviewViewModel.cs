@@ -82,6 +82,10 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
         ActiveCells.Count(x => x.Ports.Count == 0), ActiveCells.Count(x => x.SelectedModel != null), ActiveCells.Count);
     /// <summary>True when any active cell will import with the assumed lossless pass-through model.</summary>
     public bool HasPassThroughCells => ActiveCells.Any(x => x.IsPassThroughAssumed);
+    /// <summary>True when any active cell carries the explicit shape-only decision.</summary>
+    public bool HasGeometryOnlyCells => ActiveCells.Any(x => x.IsShapeOnly);
+    /// <summary>True when the Summary stage must list per-cell model decisions (assumed pass-through or shape-only).</summary>
+    public bool HasModelDecisionRows => HasPassThroughCells || HasGeometryOnlyCells;
     public string RouteReadiness => Text(Layers.Any(x => (x.Role & (GdsLayerRole.OpticalCore | GdsLayerRole.Electrical | GdsLayerRole.Heater)) != 0)
         ? "RouteLayersChosen" : "NoRouteLayers");
     public string GroupSummary => string.Join(", ", _groups.Select(x => x.Name));
@@ -222,6 +226,7 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
             nameof(NextText),nameof(Summary),nameof(Scene),nameof(HighlightLayer),nameof(PreviewPorts),nameof(GuideTargetName),
             nameof(SelectedPortIndex),nameof(LayersConfirmed),nameof(CanApply),nameof(GroupSummary),nameof(HasSelectedModel),
             nameof(HighlightCellName),nameof(ConnectionReadiness),nameof(RouteReadiness),nameof(HasPassThroughCells),
+            nameof(HasGeometryOnlyCells),nameof(HasModelDecisionRows),
             nameof(HasCombinedRouteLayers),nameof(CombinedRouteLayerWarning),
             nameof(CompatibleModels),nameof(HasCompatibleModels),nameof(GuideTargetItem),
             nameof(CanOpenAssembly),nameof(CellHierarchyHint)})
@@ -231,7 +236,8 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     private void OnRowChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (_restoring || e.PropertyName is nameof(GdsLayerReviewRow.SelectedRole) or nameof(GdsPortReviewRow.NeedsKindReview)
-            or nameof(GdsCellReviewRow.IsPassThroughAssumed) or nameof(GdsCellReviewRow.PassThroughSummaryText)) return;
+            or nameof(GdsCellReviewRow.IsPassThroughAssumed) or nameof(GdsCellReviewRow.PassThroughSummaryText)
+            or nameof(GdsCellReviewRow.IsShapeOnly) or nameof(GdsCellReviewRow.GeometryOnlySummaryText)) return;
         if (e.PropertyName == nameof(GdsCellReviewRow.IncludeInGroup))
         {
             if (sender is GdsCellReviewRow { IncludeInGroup: true } cell) SelectedCell = cell;
