@@ -81,7 +81,7 @@ public sealed class AgentOperationGate
         {
             if (!_accepting || context.Generation != _generation || !_active.Contains(context))
                 throw new OperationCanceledException("The agent operation no longer owns mutation permission.");
-            context.CancellationToken.ThrowIfCancellationRequested();
+            context.ThrowIfCancellationRequested();
             mutation();
         }
     }

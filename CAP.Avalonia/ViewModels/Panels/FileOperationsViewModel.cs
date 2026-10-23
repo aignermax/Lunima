@@ -314,43 +314,29 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private async Task SaveDesign()
-    {
-        if (FileDialogService == null)
-        {
-            UpdateStatus?.Invoke("Save not available");
-            return;
-        }
-
-        var filePath = CurrentFilePath ?? await FileDialogService.ShowSaveFileDialogAsync(
-            "Save Design",
-            "lun",
-            "Lunima Files|*.lun|All Files|*.*");
-
-        if (filePath != null)
-        {
-            await SaveToFile(filePath);
-        }
-    }
+    private Task SaveDesign() => SaveWithDialogAsync(forcePicker: false);
 
     [RelayCommand]
-    private async Task SaveDesignAs()
+    private Task SaveDesignAs() => SaveWithDialogAsync(forcePicker: true);
+
+    private async Task SaveWithDialogAsync(bool forcePicker, CAP_Contracts.ICommitPermission? permission = null)
     {
+        await using var request = NativeDesignRequest.Begin(_canvas.Document, permission);
+        if (request == null) return;
         if (FileDialogService == null)
         {
-            UpdateStatus?.Invoke("Save not available");
+            request.TryCommit(() => UpdateStatus?.Invoke("Save not available"));
             return;
         }
-
-        var filePath = await FileDialogService.ShowSaveFileDialogAsync(
-            "Save Design As",
-            "lun",
-            "Lunima Files|*.lun|All Files|*.*");
-
-        if (filePath != null)
+        var filePath = forcePicker ? null : CurrentFilePath;
+        if (filePath == null)
         {
-            await SaveToFile(filePath);
+            Task<string?>? picking = null;
+            if (!request.TryCommit(() => picking = FileDialogService.ShowSaveFileDialogAsync(
+                    forcePicker ? "Save Design As" : "Save Design", "lun", "Lunima Files|*.lun|All Files|*.*"))) return;
+            filePath = await picking!;
         }
+        if (filePath != null && request.IsCurrent) await SaveToFile(filePath, request);
     }
 
     /// <summary>
@@ -358,14 +344,14 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// file — the scripted counterpart of Save As, used by the agent bridge.
     /// </summary>
     /// <returns>True when the file was written.</returns>
-    public Task<bool> SaveDesignToPathAsync(string filePath) => SaveToFile(filePath);
+    public Task<bool> SaveDesignToPathAsync(string filePath, CAP_Contracts.ICommitPermission? permission = null) => SaveToFile(filePath, permission);
 
-    private Task<bool> SaveToFile(string filePath) => _nativeIo.SaveAsync(filePath,
+    private Task<bool> SaveToFile(string filePath, CAP_Contracts.ICommitPermission? permission = null) => _nativeIo.SaveAsync(filePath,
         CaptureDesignForSave, saved => PublishSavedDesign(filePath, saved.UnresolvedPins), error =>
         {
             _errorConsole?.LogError($"Failed to save design: {error.Message}", error);
             UpdateStatus?.Invoke($"Save failed: {error.Message}");
-        });
+        }, permission);
 
     private NativeDesignSaveData CaptureDesignForSave()
     {
@@ -460,20 +446,20 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task LoadDesign()
     {
+        await using var request = NativeDesignRequest.Begin(_canvas.Document);
+        if (request == null) return;
         if (FileDialogService == null)
         {
             UpdateStatus?.Invoke("Load not available");
             return;
         }
 
-        if (!await ConfirmUnsavedChangesAsync(LoadPromptMessage))
-            return;
-
-        var filePath = await FileDialogService.ShowOpenFileDialogAsync(
-            "Load Design",
-            "Lunima Files|*.lun|GDS files (*.gds;*.gdsii)|*.gds;*.gdsii|All Files|*.*");
-
-        if (filePath == null)
+        if (!await ConfirmUnsavedChangesAsync(LoadPromptMessage, request)) return;
+        Task<string?>? picking = null;
+        if (!request.TryCommit(() => picking = FileDialogService.ShowOpenFileDialogAsync(
+                "Load Design", "Lunima Files|*.lun|GDS files (*.gds;*.gdsii)|*.gds;*.gdsii|All Files|*.*"))) return;
+        var filePath = await picking!;
+        if (filePath == null || !request.IsCurrent)
             return;
 
         // A GDS pick routes into the GDS import flow instead of the .lun load
@@ -483,11 +469,11 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         // unsaved-changes prompt: prompt → pick → clear → import.
         if (IsGdsFile(filePath))
         {
-            await OpenGdsImportAsync(filePath);
+            await OpenGdsImportAsync(filePath, request);
             return;
         }
 
-        await LoadDesignFromFileAsync(filePath);
+        await LoadDesignFromFileAsync(filePath, permission: request);
     }
 
     /// <summary>True for GDS II layout files (.gds/.gdsii, case-insensitive).</summary>
@@ -511,7 +497,7 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// tracking) and detaches it from the previous project file — a later Save
     /// must not overwrite a .lun the imported design did not come from.
     /// </summary>
-    private async Task OpenGdsImportAsync(string gdsPath)
+    private async Task OpenGdsImportAsync(string gdsPath, NativeDesignRequest request)
     {
         if (OpenGdsImportRequested is null)
         {
@@ -520,13 +506,24 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
             return;
         }
 
-        ClearCanvas();
-        _loadDiagnostics.PinCalibrationMigrations.Clear();
-        CurrentFilePath = null;
-        _loadedMetadata = null;
-
-        await OpenGdsImportRequested(gdsPath);
-        ProjectOpened?.Invoke();
+        Task? importing = null;
+        CAP_Core.Documents.DocumentIdentity importedDocument = default;
+        if (!request.TryCommit(() =>
+            {
+                ClearCanvas();
+                _loadDiagnostics.PinCalibrationMigrations.Clear();
+                CurrentFilePath = null;
+                _loadedMetadata = null;
+                importedDocument = _canvas.Document.CaptureIdentity();
+                importing = OpenGdsImportRequested(gdsPath);
+            })) return;
+        await importing!;
+        try
+        {
+            using var completed = _canvas.Document.CaptureOperation(importedDocument, scopeBound: false);
+            completed.TryPublish(() => ProjectOpened?.Invoke());
+        }
+        catch (OperationCanceledException) { /* The importing document was replaced or retired. */ }
     }
 
     /// <summary>
@@ -538,10 +535,9 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// <returns>True when the design was loaded; false when cancelled, missing, or failed.</returns>
     public async Task<bool> LoadDesignFromPathAsync(string filePath)
     {
-        if (!await ConfirmUnsavedChangesAsync(LoadPromptMessage))
-            return false;
-
-        return await LoadDesignFromFileAsync(filePath);
+        await using var request = NativeDesignRequest.Begin(_canvas.Document);
+        if (request == null || !await ConfirmUnsavedChangesAsync(LoadPromptMessage, request)) return false;
+        return await LoadDesignFromFileAsync(filePath, permission: request);
     }
 
     /// <summary>
@@ -556,22 +552,13 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     public Task<bool> OpenDesignAsCopyAsync(string filePath) => OpenDesignAsCopyAsync(filePath, null);
 
     /// <summary>Opens a copy only while its initiating navigation request is still current.</summary>
-    public async Task<bool> OpenDesignAsCopyAsync(string filePath, Func<bool>? canProceed)
+    public async Task<bool> OpenDesignAsCopyAsync(string filePath, Func<bool>? canProceed,
+        CAP_Contracts.ICommitPermission? permission = null, Action? onOpened = null)
     {
-        if (canProceed?.Invoke() == false) return false;
-        if (!await ConfirmUnsavedChangesAsync(LoadPromptMessage))
-            return false;
-        if (canProceed?.Invoke() == false) return false;
-
-        if (!await LoadDesignFromFileAsync(filePath, recordRecent: false, canProceed: canProceed))
-            return false;
-
-        CurrentFilePath = null;
-        // A copy must not inherit the source's metadata (Created date, author);
-        // BuildMetadataForSave then stamps fresh values on the first save.
-        _loadedMetadata = null;
-        HasUnsavedChanges = true;
-        return true;
+        await using var request = NativeDesignRequest.Begin(_canvas.Document, permission, canProceed);
+        if (request == null || !await ConfirmUnsavedChangesAsync(LoadPromptMessage, request)) return false;
+        return await LoadDesignFromFileAsync(filePath, recordRecent: false,
+            asCopy: true, permission: request, onOpened: onOpened);
     }
 
     /// <summary>
@@ -579,15 +566,20 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// reads a .lun file and replaces the current canvas contents with it.
     /// Does NOT prompt about unsaved changes — callers do that first.
     /// </summary>
-    private Task<bool> LoadDesignFromFileAsync(string filePath, bool recordRecent = true, Func<bool>? canProceed = null) =>
-        _nativeIo.LoadAsync(filePath, canProceed, data => ApplyLoadedDesign(filePath, recordRecent, data),
+    private Task<bool> LoadDesignFromFileAsync(string filePath, bool recordRecent = true, Func<bool>? canProceed = null,
+        bool asCopy = false, CAP_Contracts.ICommitPermission? permission = null, Action? onOpened = null) =>
+        _nativeIo.LoadAsync(filePath, canProceed, data =>
+            {
+                ApplyLoadedDesign(filePath, recordRecent, data, asCopy);
+                onOpened?.Invoke();
+            },
             message => UpdateStatus?.Invoke(message), error =>
             {
                 _errorConsole?.LogError($"Failed to load design: {error.Message}", error);
                 UpdateStatus?.Invoke($"Load failed: {error.Message}");
-            });
+            }, permission);
 
-    private void ApplyLoadedDesign(string filePath, bool recordRecent, DesignFileData designData)
+    private void ApplyLoadedDesign(string filePath, bool recordRecent, DesignFileData designData, bool asCopy)
     {
         if (designData.FormatVersion != CurrentFormatVersion)
         {
@@ -695,7 +687,6 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         CoherentModeRestoredAfterLoad?.Invoke();
 
         _loadDiagnostics.ReportPinCalibrationMigrations();
-        PostLoadRouting = _postLoad.StartPostLoadRouting(MaxConnectionsRoutedOnLoad);
 
         // Rebuild dissolution records for loaded auto-inserted crossings (#705)
         // so they dissolve/re-evaluate exactly like ones inserted this session.
@@ -712,7 +703,7 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         _postLoad.RestoreAnalysisOutput(designData);
 
         // Preserve PIR metadata so Created date survives subsequent saves
-        _loadedMetadata = designData.Metadata;
+        _loadedMetadata = asCopy ? null : designData.Metadata;
 
         _processBindings.RestoreDesign(designData,
             _canvas.Components.Select(vm => vm.Component), selection => ActiveProcess = selection);
@@ -720,8 +711,8 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         if (_models.Restore(designData.SMatrices) > 0)
             HasUnsavedChanges = true;
 
-        CurrentFilePath = filePath;
-        HasUnsavedChanges = false;
+        CurrentFilePath = asCopy ? null : filePath;
+        HasUnsavedChanges = asCopy;
         if (migratedGdsSets > 0)
         {
             // The design must be re-saved to embed the migrated components —
@@ -748,6 +739,8 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         ZoomToFitAfterLoad?.Invoke(900, 800);
 
         RestoreWorkspace?.Invoke(designData.Workspace);
+        // Capture routing input only after the complete restored document is visible.
+        PostLoadRouting = _postLoad.StartPostLoadRouting(MaxConnectionsRoutedOnLoad);
         ProjectOpened?.Invoke();
     }
 
@@ -757,20 +750,19 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// unsaved, the user saved successfully, or chose Don't Save. Returns false
     /// on Cancel or when the user aborted the save dialog.
     /// </summary>
-    private async Task<bool> ConfirmUnsavedChangesAsync(string message)
+    private async Task<bool> ConfirmUnsavedChangesAsync(string message, NativeDesignRequest request)
     {
-        if (!HasUnsavedChanges || MessageBoxService == null)
-            return true;
-
-        var result = await MessageBoxService.ShowSavePromptAsync(message, "Save Changes?");
+        if (!request.IsCurrent) return false;
+        if (!HasUnsavedChanges || MessageBoxService == null) return true;
+        Task<SavePromptResult>? prompting = null;
+        if (!request.TryCommit(() => prompting = MessageBoxService.ShowSavePromptAsync(message, "Save Changes?"))) return false;
+        var result = await prompting!;
+        if (!request.IsCurrent) return false;
         if (result == SavePromptResult.Save)
         {
-            await SaveDesign();
-
-            // Still dirty means the user cancelled the save dialog — abort the action.
-            return !HasUnsavedChanges;
+            await SaveWithDialogAsync(forcePicker: false, permission: request);
+            return request.IsCurrent && !HasUnsavedChanges;
         }
-
         return result == SavePromptResult.DontSave;
     }
 
@@ -781,7 +773,8 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// <returns>True when closing may proceed; false when the user cancelled.</returns>
     public async Task<bool> ConfirmCloseAsync()
     {
-        return await ConfirmUnsavedChangesAsync("Do you want to save your changes before closing?");
+        await using var request = NativeDesignRequest.Begin(_canvas.Document);
+        return request != null && await ConfirmUnsavedChangesAsync("Do you want to save your changes before closing?", request);
     }
 
     /// <summary>
@@ -803,12 +796,14 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// <summary>Creates a project only while the initiating navigation request is still current.</summary>
     public async Task<bool> TryNewProjectAsync(Func<bool>? canProceed)
     {
-        if (canProceed?.Invoke() == false) return false;
-        if (!await ConfirmUnsavedChangesAsync(
-                "Do you want to save your changes before creating a new project?"))
-            return false;
-        if (canProceed?.Invoke() == false) return false;
+        await using var request = NativeDesignRequest.Begin(_canvas.Document, canProceed: canProceed);
+        if (request == null || !await ConfirmUnsavedChangesAsync(
+                "Do you want to save your changes before creating a new project?", request)) return false;
+        return request.TryCommit(CreateNewProject);
+    }
 
+    private void CreateNewProject()
+    {
         // Clear the canvas
         ClearCanvas();
 
@@ -827,7 +822,6 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
 
         RestoreWorkspace?.Invoke(null);
         ProjectOpened?.Invoke();
-        return true;
     }
 
     /// <summary>

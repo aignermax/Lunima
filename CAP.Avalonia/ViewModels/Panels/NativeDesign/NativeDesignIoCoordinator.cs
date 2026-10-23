@@ -9,48 +9,53 @@ internal sealed record NativeDesignSaveData(DesignFileData Data, IReadOnlyList<s
 internal sealed class NativeDesignIoCoordinator(DocumentSession document, INativeDesignFileStore files)
 {
     public async Task<bool> SaveAsync(string path, Func<NativeDesignSaveData> capture,
-        Action<NativeDesignSaveData> publish, Action<Exception> reportFailure)
+        Action<NativeDesignSaveData> publish, Action<Exception> reportFailure,
+        CAP_Contracts.ICommitPermission? permission = null)
     {
-        using var operation = TryBegin();
+        await using var operation = TryBegin(permission?.CancellationToken ?? default);
         if (operation == null) return false;
         try
         {
-            var saved = capture();
+            NativeDesignSaveData saved = null!;
+            if (!Publish(operation, permission, () => saved = capture())) return false;
             // Finish an accepted write even if editing continues. Retirement waits
             // for it; only presentation permission is revoked by document changes.
             await files.WriteAsync(path, saved.Data);
-            operation.TryPublish(() => publish(saved));
+            Publish(operation, permission, () => publish(saved));
             return true;
         }
         catch (Exception error)
         {
-            operation.TryPublish(() => reportFailure(error));
+            Publish(operation, permission, () => reportFailure(error));
             return false;
         }
     }
 
     public async Task<bool> LoadAsync(string path, Func<bool>? canProceed,
-        Action<DesignFileData> apply, Action<string> reportStatus, Action<Exception> reportFailure)
+        Action<DesignFileData> apply, Action<string> reportStatus, Action<Exception> reportFailure,
+        CAP_Contracts.ICommitPermission? permission = null)
     {
-        using var operation = TryBegin();
+        await using var operation = TryBegin(permission?.CancellationToken ?? default);
         if (operation == null) return false;
         try
         {
             if (!files.Exists(path))
             {
-                operation.TryPublish(() => reportStatus($"File not found: {path}"));
+                Publish(operation, permission, () => reportStatus($"File not found: {path}"));
                 return false;
             }
-            var json = await files.ReadAsync(path, operation.CancellationToken);
+            Task<string>? reading = null;
+            if (!Publish(operation, permission, () => reading = files.ReadAsync(path, operation.CancellationToken))) return false;
+            var json = await reading!;
             if (!operation.IsCurrent || canProceed?.Invoke() == false) return false;
-            var data = NativeDesignCodec.Parse(json);
+            var data = await Task.Run(() => NativeDesignCodec.Parse(json), operation.CancellationToken);
             if (data == null)
             {
-                operation.TryPublish(() => reportStatus("Invalid design file"));
+                Publish(operation, permission, () => reportStatus("Invalid design file"));
                 return false;
             }
             var applied = false;
-            operation.TryPublish(() =>
+            Publish(operation, permission, () =>
             {
                 // Applying replaces the document identity itself. Its synchronous
                 // failures still belong to this admitted transition, not a stale read.
@@ -61,14 +66,28 @@ internal sealed class NativeDesignIoCoordinator(DocumentSession document, INativ
         }
         catch (Exception error)
         {
-            operation.TryPublish(() => reportFailure(error));
+            Publish(operation, permission, () => reportFailure(error));
             return false;
         }
     }
 
-    private DocumentOperation? TryBegin()
+    private static bool Publish(DocumentOperation operation, CAP_Contracts.ICommitPermission? permission, Action action)
     {
-        try { return document.CaptureOperation(scopeBound: false); }
+        if (permission == null) return operation.TryPublish(action);
+        var entered = false;
+        var published = false;
+        try
+        {
+            // Admission lock precedes the document lock. No async work runs in either.
+            permission.Commit(() => { entered = true; published = operation.TryPublish(action); });
+            return published;
+        }
+        catch (OperationCanceledException) when (!entered) { return false; }
+    }
+
+    private DocumentOperation? TryBegin(CancellationToken cancellationToken = default)
+    {
+        try { return document.CaptureOperation(cancellationToken, scopeBound: false); }
         catch (OperationCanceledException) { return null; }
     }
 }

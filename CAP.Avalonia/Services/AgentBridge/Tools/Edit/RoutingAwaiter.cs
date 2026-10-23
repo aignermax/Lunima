@@ -26,7 +26,8 @@ public static class RoutingAwaiter
 
     /// <summary>Waits until no routing pass is running.</summary>
     /// <returns>True when routing is idle within <paramref name="timeout"/>.</returns>
-    public static async Task<bool> WaitForIdleAsync(DesignCanvasViewModel canvas, TimeSpan? timeout = null)
+    public static async Task<bool> WaitForIdleAsync(DesignCanvasViewModel canvas, TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
     {
         var limit = timeout ?? DefaultTimeout;
         var clock = Stopwatch.StartNew();
@@ -34,7 +35,7 @@ public static class RoutingAwaiter
         {
             if (clock.Elapsed > limit)
                 return false;
-            await Task.Delay(PollInterval);
+            await Task.Delay(PollInterval, cancellationToken);
         }
         return true;
     }

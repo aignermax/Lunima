@@ -3,10 +3,12 @@ using CAP.Avalonia.Services.AgentBridge.Hosting;
 namespace CAP.Avalonia.Services.AgentBridge.Tools;
 
 /// <summary>Cancellation and revocable commit permission for one admitted tool call.</summary>
-public sealed class AgentToolContext : IDisposable
+public sealed class AgentToolContext : IDisposable, CAP_Contracts.ICommitPermission
 {
     private readonly AgentOperationGate _owner;
     private readonly CancellationTokenSource _cancellation;
+    private readonly CancellationToken _requestToken;
+    private readonly CancellationToken _lifetimeToken;
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _disposed;
     internal long Generation { get; }
@@ -17,12 +19,22 @@ public sealed class AgentToolContext : IDisposable
     {
         _owner = owner;
         Generation = generation;
+        _requestToken = requestToken;
+        _lifetimeToken = lifetimeToken;
         _cancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken, requestToken);
         CancellationToken = _cancellation.Token;
     }
 
     /// <summary>Cancelled when the caller cancels or bridge admission closes.</summary>
     public CancellationToken CancellationToken { get; }
+
+    internal void ThrowIfCancellationRequested()
+    {
+        // Linked-source propagation may be queued behind an unrelated cancellation callback.
+        _requestToken.ThrowIfCancellationRequested();
+        _lifetimeToken.ThrowIfCancellationRequested();
+        CancellationToken.ThrowIfCancellationRequested();
+    }
 
     /// <summary>Rejects execution after cancellation, closure, or completion of this call.</summary>
     public void ThrowIfStopped() => _owner.Commit(this, static () => { });

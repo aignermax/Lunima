@@ -1,7 +1,7 @@
 namespace CAP_Core.Documents;
 
 /// <summary>A revision-scoped operation. Dispose only after its worker and cleanup have finished.</summary>
-public sealed class DocumentOperation : IDisposable
+public sealed class DocumentOperation : IDisposable, IAsyncDisposable
 {
     private readonly DocumentSession _owner;
     private readonly object _sync = new();
@@ -73,6 +73,13 @@ public sealed class DocumentOperation : IDisposable
             cancellation = _cancelling ?? Task.CompletedTask;
         }
         _ = FinishAsync(cancellation);
+    }
+
+    /// <summary>Revokes admission and awaits cancellation callbacks and registration cleanup.</summary>
+    public ValueTask DisposeAsync()
+    {
+        Dispose();
+        return new ValueTask(Completion);
     }
 
     private async Task FinishAsync(Task cancellation)
