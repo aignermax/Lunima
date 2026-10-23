@@ -1,8 +1,9 @@
 # Lunima architecture
 
-This guide describes the code inspected on October 23, 2026, at the start of the
-architecture-hardening work. It is a navigation and responsibility map, not a
-claim that the hardening targets have already been implemented. Follow
+This guide describes the architecture-hardening branch as of October 23, 2026.
+Several ownership and dependency boundaries are implemented and regression-tested;
+the remaining work is explicitly called out below. This is not a release-readiness
+or whole-application equivalence claim. Follow
 [CODEBASE_MAP.md](docs/CODEBASE_MAP.md) for entry points and the
 [hardening design](docs/superpowers/specs/2026-10-23-architecture-hardening-design.md)
 for the required end state and verification criteria.
@@ -22,10 +23,13 @@ for the required end state and verification criteria.
 Core references `CAP_Contracts` and must remain free of presentation dependencies.
 Project names alone do not establish clean boundaries: Core currently includes
 external-process/export support, and `CAP.Avalonia/Services` includes both use
-cases and infrastructure. Current project serialization also has UI ownership.
+cases and infrastructure. Native document contracts now live outside presentation.
 The target direction is presentation → application/session → domain/contracts,
-with infrastructure implementing narrow boundary contracts. Extracting those
-responsibilities and enforcing semantic dependency rules remains hardening work.
+with infrastructure implementing narrow boundary contracts. Feature contracts now
+cover preferences, Python setup/registry, GDS execution, previews, native file I/O
+and the component registry. The semantic analyzer has an explicit namespace/type
+ownership inventory; eliminating the remaining forbidden edges and making its
+strict mode mandatory are still tracked work.
 
 ## Composition and presentation
 
@@ -61,18 +65,24 @@ per-die process context distinct when editing nested designs.
 The `.lun` format carries design data and is the basis for the evolving Photonic
 Intermediate Representation (PIR). `CAP-DataAccess/Persistence/PIR/` contains
 metadata, S-matrix, simulation result and external-reference data. Current project
-load/save orchestration is still coupled to presentation. The native document DTOs
-now live in `CAP-DataAccess/Persistence/NativeDesign/`. The unused alternate UI
+DTOs live in `CAP-DataAccess/Persistence/NativeDesign/`. The presentation-facing
+`FileOperationsViewModel` delegates native workflows to `NativeDesignIoCoordinator`,
+with separate capture, component/group mapping, loading and post-load services.
+`INativeDesignFileStore` is the file I/O boundary; document requests keep prompts,
+pickers, accepted I/O and cleanup under one owner. The unused alternate UI
 workflow (`ProjectPersistenceViewModel`/`ProjectPersistenceService`) was retired.
 `GridPersistenceWithGroupsManager` remains a separately tested low-level grid
-serializer; it is not the application's native-document workflow. Extracting the
-native load/save use cases from presentation is still tracked in the hardening
-design. Preserve serialized names, IDs, geometry, models and process data.
+serializer; it is not the application's native-document workflow. Capture isolation
+and cross-platform atomic file publication have additional verification in progress.
+Preserve serialized names, IDs, geometry, models and process data.
 
-`CAP.Avalonia/Commands/CommandManager` owns undo/redo history. Command effects,
-worker lifetimes and document replacement need coordinated ownership; the
-session/revision/lease model in the hardening design is the target, not a description
-of a completed session layer.
+`CAP.Avalonia/Commands/CommandManager` owns undo/redo history and entry-scoped side
+effects. `CAP_Core.Documents.DocumentSession` owns document identity, revision,
+navigation scope and accepted operations. `DocumentOperation` guards publication
+and drains cancellation callbacks asynchronously. Non-owning identity bookmarks
+admit configured windows only to the document they were opened for. Canvas group
+projections use canonical roots and group route publication; remaining feature
+owners must adopt these boundaries rather than invent independent root copies.
 
 ## Geometry, routing and simulation
 
@@ -82,7 +92,12 @@ and orientations; routing must account for component translation and rotation.
 `LightCalculation/` contains optical propagation and time-domain calculations;
 `Analysis/` contains sweeps and other analysis; `Logic/` contains photonic logic.
 `CAP.Avalonia/Services/SimulationService.cs` coordinates presentation-facing
-simulation. Isolating worker input from mutable live state is a hardening requirement.
+simulation. The main simulation captures immutable matrices, sources and transfers
+under `LightCalculation/Snapshots/` before worker execution. Routing captures a
+private hierarchy, graph, constraints and crossing physics under `Routing/Snapshots/`;
+progress and final results are admitted against the document revision. Additional
+analysis pipelines, including some sweeps and logic extraction, still need detached
+physics inputs. A cancellation token alone is not snapshot isolation.
 
 PDK JSON files are bundled under `CAP-DataAccess/PDKs/`; the schema is documented in
 [PDK_JSON_FORMAT.md](docs/PDK_JSON_FORMAT.md). Process policies constrain compatible
@@ -98,9 +113,14 @@ paths, crossing geometry, assembly cells and the Python script envelope. Complet
 script regression fixtures protect emission order and coordinate conventions.
 
 External tools use `CAP_Core.Export.ProcessLaunchFactory`; opening URLs and files
-uses `IUrlLauncher`. Solver cancellation, Python environment identity, preview
-cache invalidation and update provenance are separate hardening concerns. Do not
-infer their correctness merely from the presence of a shared process launcher.
+uses `IUrlLauncher`. Solver, Python-probe and openEBL owned process sessions drain
+stdout/stderr, exit and descendant cleanup. Other preview/export process call sites
+still need migration; the shared launcher alone does not provide this ownership.
+Python setup, registry activation and preview caches have separate capability
+contracts and effective-environment identity; shared DI aliases preserve one cache
+owner. Update manifests are authenticated, while operational release-signing secret
+provisioning remains outstanding. These guarantees are tested separately, rather
+than inferred from the presence of a shared launcher.
 
 ## Assistant and MCP bridge
 
@@ -110,8 +130,22 @@ The assistant already has a tool registry. `AiAssistantFeatureExtensions` regist
 adapters for assistant tools; bridge tools take precedence for matching names.
 Tool calls are dispatched to the UI thread. The loopback bridge is opt-in and
 its trust boundary is documented in [AGENT_BRIDGE.md](docs/AGENT_BRIDGE.md).
-Tracking accepted operations through stop/cancellation remains an explicit
-hardening requirement.
+The operation gate tracks accepted tool work through actual cleanup. Mutations
+check revocable commit permission at the mutation itself, including post-await
+routing and assistant-adapter publication; responses are checked after cleanup.
+Transport retirement drains accepted connections before restart. Speculative repair
+trials are being verified on private graphs with separate history, including group
+scope and all repair families.
+
+## Feature lifetimes
+
+`Services/Lifetime/ApplicationWorkCoordinator` drains registered feature owners
+before application disposal. `ShellWorkScope` closes admission and waits for actual
+jobs and asynchronous cancellation callbacks. Analyzer/spectrum, Python, solver,
+editor and registry workflows have adopted this ownership in verified slices;
+remaining panels are tracked in the hardening plan. Async-only owners require
+`await using` or `DisposeAsync`, including in test containers. Synchronous disposal
+must not block the UI to hide unfinished work.
 
 ## Build, tests and contribution rules
 

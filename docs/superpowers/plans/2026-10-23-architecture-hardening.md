@@ -373,3 +373,94 @@ Further integration checkpoints (same day):
 - `tests-20261023-165920-47532.log`: 215 passed, nine intended REDs, no skips. All MCP edit/repair/response corrections pass. Remaining REDs reproduce seven actual assistant-adapter permission gaps and two UI-blocking analysis cleanup cases.
 - A forced desktop rebuild with the real semantic analyzer (`architecture-desktop-audit-4.log`) succeeds with zero errors and finds 280 distinct forbidden dependency edges, down from 1,203 in audit 3; no unclassified ownership/project diagnostics remain. This is still an opt-in remediation inventory, not a passing mandatory architecture gate. Remaining implementation owners include Python setup/process launching, bridge registration/hosting, registry download, calibration/import and file exporters.
 - Final combined CI, desktop/browser publish, remaining lifetime/snapshot work, mandatory semantic enforcement, operational signing-key provisioning and whole-branch independent review remain outstanding. The draft PR is not ready to merge or release.
+
+
+### 2026-10-23 — Save isolation and remaining lifecycle regressions
+
+- `5b0496b6` propagates revocable permission through the actual assistant adapters
+  into connection edits and simulation publication. All twelve actual-adapter
+  regressions passed in `tests-20261023-170448-37172.log` (259 passed, fifteen
+  intentional new failures elsewhere).
+- `57fceafb` removes synchronous linked-token cleanup from analyzer/spectrum
+  retirement. All six controlled UI-blocking callback cases now pass.
+  `c630130a` separates managed Python package sequencing from presentation;
+  cancellation lag, late publication, package order and existing setup flows pass.
+- `tests-20261023-171506-16196.log`: 335 passed, eight intended save-isolation
+  failures, one Unix-only permission test skipped on Windows. Atomic file-write
+  failure/visibility and file-format controls passed. The eight failures showed
+  live metadata, models, group roles/outlines and imported definitions entering
+  the background save without detachment.
+- `tests-20261023-172553-54296.log`: 205 passed, twenty failed, no skips.
+  All native-save isolation fixes, nested model/dispersion captures and existing
+  native/GDS persistence cases pass. Remaining failures comprise seven private
+  repair-workbench cases, six analyzer export/window-retirement cases, four
+  openEBL process-lifetime cases, two deterministic transport stop races and
+  the existing die-drop background-grid regression. One openEBL failure also
+  exposed test cleanup deleting a directory before its child exited.
+- Independent save review found no remaining aliases in the changed capture
+  paths, but identified Unix file-mode and symlink compatibility follow-ups for
+  atomic replacement. New platform regressions are pending; no cross-platform
+  save-completion claim is made yet.
+- Remote `a819bd90` architecture, signing and native-process checks pass. Its full
+  xUnit run is still in progress with two confirmed failures: die-drop grid
+  extent publication and an MCP listener stop/start race. Both are reproduced
+  locally; fixes and re-verification are in progress. No release readiness claim.
+
+- `tests-20261023-174143-6256.log`: 450 passed, 22 failed, one Unix-only skip.
+  Private-repair root-scope controls, all analyzer exports, openEBL process cases,
+  transport stop races and the die-drop correction pass. Eleven new LogicPanel
+  cases and eight new registry cases reproduce lifetime/publication gaps; the
+  existing GDS source-geometry identity assertion also fails. Two symbolic-link
+  tests fail during Windows fixture creation (missing privilege 1314), **not**
+  because the save behavior was exercised. They require precise platform skips
+  locally and real execution on the Unix CI matrix. The earlier 173940 attempt
+  failed compilation on a remaining old repair-candidate fixture and is not a
+  test success. Its fixture was migrated without changing ranking assertions.
+- `489752cb`, `073172ed` and `1709f0e1` commit the verified transport/analyzer/
+  openEBL/die corrections. Additional private-scope parity, source-geometry
+  publication, wired-die undo and registry/LogicPanel corrections remain under
+  verification. The final architecture acceptance gate is still open.
+
+
+### 2026-10-23 — Integrated verification and follow-up review
+
+- `tests-20261023-180153-69092.log`: 548 passed, zero failures, three explicit
+  Windows platform skips (two symlink privileges and Unix file mode), 551 total.
+  Includes all five expensive repair-family parity cases, LogicPanel retirement,
+  registry retirement/latest-selection, native capture, imported source-geometry
+  identity, die undo and existing GDS editing regressions.
+- `962f4e79` commits native capture detachment and atomic save. Unix atomic-save
+  tests are added to the Linux/macOS CI matrix with zero skips permitted; their
+  execution on the new commit remains pending. `e9b41f21` commits LogicPanel
+  lifetime ownership, and `4d63b655` asserts measured-overlay retirement against
+  the actual reader token rather than thread-pool callback dispatch latency.
+- Full remote xUnit run 39974830789 at `a819bd90` finished with three failures:
+  die-drop bounds, MCP stop/start race and existing GDS geometry identity.
+  All three now pass locally. A new full remote run is still required.
+- Forced semantic desktop rebuild `architecture-desktop-audit-5.log` succeeds
+  with zero errors, 197 distinct LUN001 edges (280 previously), no LUN002/003.
+  Semantic enforcement is not yet mandatory or passing.
+- Independent review found two additional issues despite the passing test batch:
+  actual agent UndoTool can admit a die-grid capture inside its outer document
+  commit, and private repair graph construction still rasterizes on the UI thread.
+  New boundary regressions and fixes are required before those slices are accepted.
+
+- `tests-20261023-181649-72124.log`: seven intended failures reproduced actual
+  agent-undo partial-commit capture, UI-thread private graph construction (four
+  controls), and direct server/CLI dependencies in both bridge presentation models.
+- `tests-20261023-182540-71460.log`: 160 passed, nine intended spectral-isolation
+  failures, no skips. Actual undo/grid controls, private construction retirement,
+  all five heavy repair-family parity cases, bridge settings/registration and
+  FDTD parsing pass. The nine failures show seven live-physics aliases and two
+  actual ONA/Spectrum runner paths; snapshot implementation is still pending.
+- `6575c152` separates bridge status/registration capabilities from transport/CLI
+  implementations, preserving configured DI owners and existing connection syntax.
+  Independent review found no new defect in that cut. `e5c1bef4` routes FDTD parsing
+  directly through the existing shared protocol parser. Neither commit claims to
+  finish all presentation/process lifetimes.
+- Review additionally identified early disposal of an operation while borrowed
+  die-grid work is still running, and old-grid publication after a later commit by
+  the same operation. Explicit retirement/rebased-input regressions are next.
+- Source tooling: 3,994 tracked authored source/documentation files satisfy the
+  999-line ceiling; all 24 Python guardrail tests pass. Non-source data inventory
+  remains separately reported rather than silently included in this claim.

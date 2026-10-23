@@ -36,6 +36,14 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | Main presentation coordinator | `CAP.Avalonia/ViewModels/MainViewModel.cs` |
 | Main window | `CAP.Avalonia/Views/MainWindow.axaml` |
 | Canvas viewmodel | `CAP.Avalonia/ViewModels/Canvas/DesignCanvasViewModel.cs` |
+| Document identity, revision and operations | `Connect-A-Pic-Core/Documents/` |
+| Immutable main simulation input | `Connect-A-Pic-Core/LightCalculation/Snapshots/` |
+| Private routing input and results | `Connect-A-Pic-Core/Routing/Snapshots/` |
+| Application and feature retirement | `CAP.Avalonia/Services/Lifetime/` |
+| Native document workflow | `CAP.Avalonia/ViewModels/Panels/NativeDesign/` |
+| Registry read capability | `Connect-A-Pic-Core/ComponentRegistry/RegistryClient/IRegistryCatalog.cs` |
+| Registry adoption capability | `CAP.Avalonia/Services/ComponentRegistry/IRegistryAdoption.cs` |
+| Python/export capabilities | `Connect-A-Pic-Core/Export/Contracts/` |
 | Canvas bounds | `CAP.Avalonia/ViewModels/Canvas/BoundingBoxCalculator.cs` |
 | Parameter sweep viewmodel | `CAP.Avalonia/ViewModels/Analysis/ParameterSweepViewModel.cs` |
 | Parameter sweep calculation | `Connect-A-Pic-Core/Analysis/ParameterSweeper.cs` |
@@ -59,7 +67,7 @@ analysis dock; focused workflows use windows, dialogs or flyouts. **The right
 sidebar is only for properties of the current selection.**
 
 Prefer new files of 250 lines or fewer. The hard ceiling is 999 physical lines
-per authored source file; separate responsibilities into collaborators rather
+per authored source/documentation file; separate responsibilities into collaborators rather
 than adding partial-class fragments to meet the count.
 
 ## Build and verification
