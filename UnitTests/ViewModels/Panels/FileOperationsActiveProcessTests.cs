@@ -241,7 +241,7 @@ public class FileOperationsActiveProcessTests
         var canvas = new DesignCanvasViewModel();
         var commandManager = new CommandManager();
         var nazcaExporter = new SimpleNazcaExporter();
-        var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService());
+        var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService());
         var photonTorchExport = new PhotonTorchExportViewModel(
             new CAP_Core.Export.PhotonTorchExporter(), canvas);
 

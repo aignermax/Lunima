@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,8 +14,8 @@ namespace CAP.Avalonia.ViewModels.Export;
 /// </summary>
 public partial class GdsExportViewModel : ObservableObject
 {
-    private readonly GdsExportService _exportService;
-    private readonly PythonDiscoveryService _discoveryService;
+    private readonly IGdsExportSession _exportService;
+    private readonly IPythonDiscovery _discoveryService;
 
     [ObservableProperty]
     private bool _pythonAvailable;
@@ -44,7 +45,7 @@ public partial class GdsExportViewModel : ObservableObject
     private bool _isSearching;
 
     [ObservableProperty]
-    private ObservableCollection<PythonDiscoveryService.PythonInstallation> _availablePythons = new();
+    private ObservableCollection<PythonInstallation> _availablePythons = new();
 
     [ObservableProperty]
     private string _pythonPathSource = string.Empty;
@@ -87,11 +88,12 @@ public partial class GdsExportViewModel : ObservableObject
 
     /// <summary>Initializes a new instance of <see cref="GdsExportViewModel"/>.</summary>
     /// <param name="exportService">GDS export service.</param>
+    /// <param name="discovery">Available Python interpreter discovery.</param>
     /// <param name="errorConsole">Optional service for error logging.</param>
-    public GdsExportViewModel(GdsExportService exportService, ErrorConsoleService? errorConsole = null)
+    public GdsExportViewModel(IGdsExportSession exportService, IPythonDiscovery discovery, ErrorConsoleService? errorConsole = null)
     {
         _exportService = exportService;
-        _discoveryService = new PythonDiscoveryService();
+        _discoveryService = discovery;
         _errorConsole = errorConsole;
     }
 
@@ -320,7 +322,7 @@ public partial class GdsExportViewModel : ObservableObject
     /// <param name="scriptPath">Path to the exported Python script.</param>
     /// <param name="exportRequestId">Identity reserved by the outer command before its first await; omitted for direct exports.</param>
     /// <returns>Export result with status information.</returns>
-    public async Task<GdsExportService.ExportResult> ExportScriptToGdsAsync(string scriptPath, long? exportRequestId = null)
+    public async Task<GdsExportResult> ExportScriptToGdsAsync(string scriptPath, long? exportRequestId = null)
     {
         var requestId = exportRequestId ?? BeginExportRequest();
         var result = await _exportService.ExportToGdsAsync(scriptPath, GenerateGdsEnabled);
@@ -348,7 +350,7 @@ public partial class GdsExportViewModel : ObservableObject
     /// Runs the actual interpreter discovery. Virtual so tests can substitute a
     /// controllable discovery to exercise overlapping-search behavior.
     /// </summary>
-    protected virtual Task<List<PythonDiscoveryService.PythonInstallation>> DiscoverPythonsAsync(CancellationToken cancellationToken = default) =>
+    protected virtual Task<List<PythonInstallation>> DiscoverPythonsAsync(CancellationToken cancellationToken = default) =>
         _discoveryService.DiscoverPythonWithNazcaAsync(cancellationToken);
 
     /// <summary>
@@ -426,9 +428,9 @@ public partial class GdsExportViewModel : ObservableObject
     /// </summary>
     /// <param name="installation">The Python installation to use.</param>
     [RelayCommand]
-    public Task SelectPython(PythonDiscoveryService.PythonInstallation installation) => SelectPython(installation, CancellationToken.None);
+    public Task SelectPython(PythonInstallation installation) => SelectPython(installation, CancellationToken.None);
 
-    public async Task SelectPython(PythonDiscoveryService.PythonInstallation installation, CancellationToken cancellationToken)
+    public async Task SelectPython(PythonInstallation installation, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         CustomPythonPath = installation.Path;

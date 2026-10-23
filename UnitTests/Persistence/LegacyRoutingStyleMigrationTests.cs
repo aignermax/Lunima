@@ -95,7 +95,7 @@ public class LegacyRoutingStyleMigrationTests
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             _library,
-            new GdsExportViewModel(new CAP_Core.Export.GdsExportService()),
+            new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas),
             null!);
         return (vm, canvas);

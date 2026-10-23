@@ -30,6 +30,18 @@ public class AppDiContainerTests
         Path.Combine(Path.GetTempPath(), $"lunima-di-test-{Guid.NewGuid():N}.json");
 
     [Fact]
+    public async Task Container_GdsContractsShareInterpreterAndEnvironmentCacheOwner()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        var export = sp.GetRequiredService<GdsExportService>();
+
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IGdsScriptRunner>().ShouldBeSameAs(export);
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IGdsExportSession>().ShouldBeSameAs(export);
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IPythonDiscovery>()
+            .ShouldBeSameAs(sp.GetRequiredService<PythonDiscoveryService>());
+    }
+
+    [Fact]
     public async Task Container_HomeAndLearningPreferencesShareThePersistedUserStore()
     {
         await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());

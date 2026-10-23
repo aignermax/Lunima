@@ -1,6 +1,7 @@
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 using CAP_Core.Export;
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export.PythonEnvironmentManager;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +24,7 @@ internal static class PythonEnvFeatureExtensions
         services.AddSingleton<UvBootstrapper>();
         services.AddSingleton<NazcaPackageInstaller>();
         services.AddSingleton<PythonDiscoveryService>();
+        services.AddSingleton<IPythonDiscovery>(sp => sp.GetRequiredService<PythonDiscoveryService>());
         services.AddSingleton<EnvironmentHealthChecker>();
         services.AddSingleton<IManagedPythonProvisioner, ManagedPythonProvisioner>();
         services.AddSingleton<PythonStartupViewModel>();
@@ -48,7 +50,7 @@ internal static class PythonEnvFeatureExtensions
                 sp.GetRequiredService<UvBootstrapper>(),
                 sp.GetRequiredService<NazcaPackageInstaller>(),
                 sp.GetRequiredService<EnvironmentHealthChecker>(),
-                sp.GetRequiredService<PythonDiscoveryService>(),
+                sp.GetRequiredService<IPythonDiscovery>(),
                 // The active interpreter path is the shared preference the registry callback
                 // keeps in sync — reuse it to mark the active system interpreter (issue #645).
                 () => sp.GetRequiredService<UserPreferencesService>().GetCustomPythonPath(),

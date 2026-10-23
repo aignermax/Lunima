@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.GdsFactoryExport.MixedBackend;
 using CAP.Avalonia.Services.Localization;
@@ -46,11 +47,11 @@ public class MixedBackendExportViewModelTests
         public RecordingExportService(Func<string, bool>? succeeds = null) =>
             _succeeds = succeeds ?? (_ => true);
 
-        public override Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
         {
             RunScripts.Add(scriptPath);
             var ok = _succeeds(scriptPath);
-            return Task.FromResult(new ExportResult
+            return Task.FromResult(new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = ok,

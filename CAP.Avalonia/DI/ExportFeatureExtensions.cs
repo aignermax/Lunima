@@ -2,6 +2,7 @@ using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 using CAP_Core.Export;
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export.PythonEnvironmentManager;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,10 +21,13 @@ internal static class ExportFeatureExtensions
     public static IServiceCollection AddExportFeature(this IServiceCollection services)
     {
         services.AddSingleton<GdsExportService>();
+        services.AddSingleton<IGdsScriptRunner>(sp => sp.GetRequiredService<GdsExportService>());
+        services.AddSingleton<IGdsExportSession>(sp => sp.GetRequiredService<GdsExportService>());
         services.AddSingleton<GdsExportViewModel>(sp =>
         {
             var vm = new GdsExportViewModel(
-                sp.GetRequiredService<GdsExportService>(),
+                sp.GetRequiredService<IGdsExportSession>(),
+                sp.GetRequiredService<IPythonDiscovery>(),
                 sp.GetRequiredService<CAP_Core.ErrorConsoleService>());
             var prefs = sp.GetRequiredService<UserPreferencesService>();
             vm.Initialize(prefs.GetCustomPythonPath());
@@ -54,7 +58,7 @@ internal static class ExportFeatureExtensions
         {
             var vm = new GdsFactoryExportViewModel(
                 sp.GetRequiredService<CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel>(),
-                sp.GetRequiredService<GdsExportService>(),
+                sp.GetRequiredService<IGdsScriptRunner>(),
                 sp.GetService<IUrlLauncher>(),
                 sp.GetService<CAP_Core.ErrorConsoleService>());
             // Auto-install gdsfactory on export (env-manager slice resolved lazily so the
@@ -84,7 +88,7 @@ internal static class ExportFeatureExtensions
             new CAP.Avalonia.ViewModels.Export.OpenEbl.OpenEblCheckViewModel(
                 sp.GetRequiredService<CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel>(),
                 sp.GetRequiredService<SimpleNazcaExporter>(),
-                sp.GetRequiredService<GdsExportService>(),
+                sp.GetRequiredService<IGdsScriptRunner>(),
                 sp.GetRequiredService<CAP.Avalonia.Services.OpenEblCheck.OpenEblSubmissionChecker>(),
                 sp.GetService<CAP_Core.ErrorConsoleService>()));
 

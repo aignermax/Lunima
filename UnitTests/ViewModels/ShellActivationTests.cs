@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP_DataAccess.Updates;
 using System.Net;
 using System.Net.Http;
@@ -91,14 +92,14 @@ public sealed class ShellActivationTests
 
     private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    private sealed class EmptyDiscovery() : GdsExportViewModel(new GdsExportService())
+    private sealed class EmptyDiscovery() : GdsExportViewModel(new GdsExportService(), new PythonDiscoveryService())
     {
         public int Searches;
-        protected override Task<List<PythonDiscoveryService.PythonInstallation>> DiscoverPythonsAsync(CancellationToken cancellationToken = default)
+        protected override Task<List<PythonInstallation>> DiscoverPythonsAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.CanBeCanceled.ShouldBeTrue();
             Searches++;
-            return Task.FromResult(new List<PythonDiscoveryService.PythonInstallation>());
+            return Task.FromResult(new List<PythonInstallation>());
         }
     }
 

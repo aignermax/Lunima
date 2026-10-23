@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export;
 
 namespace UnitTests.Export;

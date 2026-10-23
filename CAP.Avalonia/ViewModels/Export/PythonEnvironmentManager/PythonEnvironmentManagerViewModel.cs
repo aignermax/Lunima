@@ -28,7 +28,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
     private readonly UvBootstrapper _bootstrapper;
     private readonly NazcaPackageInstaller _installer;
     private readonly EnvironmentHealthChecker _healthChecker;
-    private readonly PythonDiscoveryService _discovery;
+    private readonly CAP_Core.Export.Contracts.IPythonDiscovery _discovery;
     private readonly Func<string?> _getActiveInterpreterPath;
     private readonly IManagedPythonProvisioner _provisioner;
     private readonly PythonStartupViewModel? _startup;
@@ -60,8 +60,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
     /// <param name="bootstrapper">uv bootstrapper for venv creation.</param>
     /// <param name="installer">Nazca / gdsfactory package installer.</param>
     /// <param name="healthChecker">Environment health prober.</param>
-    /// <param name="discovery">Discovers system Python interpreters (issue #645); null
-    /// falls back to a fresh <see cref="PythonDiscoveryService"/>.</param>
+    /// <param name="discovery">Discovers system Python interpreters (issue #645).</param>
     /// <param name="getActiveInterpreterPath">Returns the currently active interpreter path
     /// so discovered system interpreters can be marked active; null treats none as active.</param>
     public PythonEnvironmentManagerViewModel(
@@ -69,7 +68,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
         UvBootstrapper bootstrapper,
         NazcaPackageInstaller installer,
         EnvironmentHealthChecker healthChecker,
-        PythonDiscoveryService? discovery = null,
+        CAP_Core.Export.Contracts.IPythonDiscovery discovery,
         Func<string?>? getActiveInterpreterPath = null,
         IManagedPythonProvisioner? provisioner = null,
         PythonStartupViewModel? startup = null,
@@ -79,7 +78,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
         _bootstrapper = bootstrapper;
         _installer = installer;
         _healthChecker = healthChecker;
-        _discovery = discovery ?? new PythonDiscoveryService();
+        _discovery = discovery;
         _getActiveInterpreterPath = getActiveInterpreterPath ?? (() => null);
         _provisioner = provisioner ?? new ManagedPythonProvisioner(bootstrapper, installer, ProcessLaunchFactory.CreateDefault());
         _startup = startup;

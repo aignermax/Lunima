@@ -41,7 +41,7 @@ public class FileOperationsProjectLifecycleTests : IDisposable
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(),
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             photonTorchVm,
             null!,
             recentProjects: _recentProjects);

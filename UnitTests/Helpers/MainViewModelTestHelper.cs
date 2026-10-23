@@ -73,7 +73,7 @@ public static class MainViewModelTestHelper
         var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager);
 
         var errorConsoleService = new CAP_Core.ErrorConsoleService();
-        var gdsExportVm = new GdsExportViewModel(new GdsExportService(), errorConsoleService);
+        var gdsExportVm = new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService(), errorConsoleService);
         var updateVm = updateViewModel ?? new UpdateViewModel(
             new UpdateChecker(new HttpClient(), "aignermax", "Connect-A-PIC-Pro"),
             new UpdateDownloader(new HttpClient()),

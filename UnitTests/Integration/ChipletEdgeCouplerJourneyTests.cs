@@ -233,7 +233,7 @@ public class ChipletEdgeCouplerJourneyTests
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             library,
-            new GdsExportViewModel(new CAP_Core.Export.GdsExportService()),
+            new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas),
             null!,
             errorConsole: new CAP_Core.ErrorConsoleService());

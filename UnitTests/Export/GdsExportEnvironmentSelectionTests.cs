@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Export;
 using CAP_Core.Export;
@@ -14,7 +15,7 @@ namespace UnitTests.Export;
 public class GdsExportEnvironmentSelectionTests
 {
     private static GdsExportViewModel CreateViewModel() =>
-        new(new InstantEnvironmentGdsExportService());
+        new(new InstantEnvironmentGdsExportService(), new PythonDiscoveryService());
 
     [Fact]
     public void RefreshManagedCandidates_WithProvider_ListsAllCandidates()
@@ -117,7 +118,7 @@ public class GdsExportEnvironmentSelectionTests
         {
             new ManagedEnvCandidate("nazca", "/envs/nazca/bin/python", "Managed · nazca"),
         };
-        vm.AvailablePythons.Add(new PythonDiscoveryService.PythonInstallation
+        vm.AvailablePythons.Add(new PythonInstallation
         {
             Path = "/usr/bin/python3",
             Source = "System",
@@ -193,21 +194,21 @@ public class GdsExportEnvironmentSelectionTests
     /// <summary>Test double with hand-controlled discovery completion, to interleave runs.</summary>
     private sealed class ControllableDiscoveryViewModel : GdsExportViewModel
     {
-        public Queue<TaskCompletionSource<List<PythonDiscoveryService.PythonInstallation>>> PendingDiscoveries { get; } = new();
+        public Queue<TaskCompletionSource<List<PythonInstallation>>> PendingDiscoveries { get; } = new();
 
-        public ControllableDiscoveryViewModel() : base(new GdsExportService()) { }
+        public ControllableDiscoveryViewModel() : base(new GdsExportService(), new PythonDiscoveryService()) { }
 
-        protected override Task<List<PythonDiscoveryService.PythonInstallation>> DiscoverPythonsAsync(CancellationToken cancellationToken = default)
+        protected override Task<List<PythonInstallation>> DiscoverPythonsAsync(CancellationToken cancellationToken = default)
         {
-            var tcs = new TaskCompletionSource<List<PythonDiscoveryService.PythonInstallation>>();
+            var tcs = new TaskCompletionSource<List<PythonInstallation>>();
             PendingDiscoveries.Enqueue(tcs);
             return tcs.Task;
         }
     }
 
-    private static List<PythonDiscoveryService.PythonInstallation> OneSystemPython() => new()
+    private static List<PythonInstallation> OneSystemPython() => new()
     {
-        new PythonDiscoveryService.PythonInstallation
+        new PythonInstallation
         {
             Path = "/usr/bin/python3",
             Source = "System",
@@ -249,7 +250,7 @@ public class GdsExportEnvironmentSelectionTests
         // darf das neue nicht mehr überschreiben oder ergänzen.
         vm.PendingDiscoveries.ToArray()[1].SetResult(OneSystemPython());
         await second;
-        vm.PendingDiscoveries.Dequeue().SetResult(new List<PythonDiscoveryService.PythonInstallation>());
+        vm.PendingDiscoveries.Dequeue().SetResult(new List<PythonInstallation>());
         await first;
 
         vm.AvailablePythons.Count.ShouldBe(1);
@@ -262,7 +263,7 @@ public class GdsExportEnvironmentSelectionTests
         // Deleting the active managed environment pushes null through the registry
         // callback — the stale (deleted) interpreter path must not survive that.
         var service = new GdsExportService();
-        var vm = new GdsExportViewModel(service);
+        var vm = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
         vm.Initialize("/envs/deleted/bin/python");
 
         vm.Initialize(null);

@@ -183,7 +183,7 @@ public class CoherentPropagationPhasePersistenceTests
             new SimpleNazcaExporter(),
             new SaxExporter(),
             _library,
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
             null!);
         return (vm, canvas);

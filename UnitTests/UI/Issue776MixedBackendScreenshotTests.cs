@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -148,8 +149,8 @@ public class Issue776MixedBackendScreenshotTests
     /// <summary>Export service reporting script success without running Python.</summary>
     private sealed class StubSuccessExportService : GdsExportService
     {
-        public override Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
-            Task.FromResult(new ExportResult { ScriptPath = scriptPath, Success = true });
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
+            Task.FromResult(new GdsExportResult { ScriptPath = scriptPath, Success = true });
     }
 
     private sealed class StubFileDialog(string? path) : IFileDialogService

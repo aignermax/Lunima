@@ -39,6 +39,7 @@ internal static class RepositoryModelNamespaces
         yield return new("CAP_Core.Components.Process", RepositoryModules.Domain);
         yield return new("CAP_Core.Documents", RepositoryModules.Application);
         yield return new("CAP_Core.Export", RepositoryModules.Application);
+        yield return new("CAP_Core.Export.Contracts", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.InterconnectRouting", RepositoryModules.Application);
         yield return new("CAP_Core.Export.Netlist", RepositoryModules.Application);
         yield return new("CAP_Core.Export.PdkResolution", RepositoryModules.Infrastructure);

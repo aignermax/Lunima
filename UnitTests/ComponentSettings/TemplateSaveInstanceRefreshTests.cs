@@ -41,7 +41,7 @@ public class TemplateSaveInstanceRefreshTests : IDisposable
             new SimpleNazcaExporter(),
             new SaxExporter(),
             library,
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
             null!, // verilogAExport — not exercised here
             errorConsole: errorConsole,

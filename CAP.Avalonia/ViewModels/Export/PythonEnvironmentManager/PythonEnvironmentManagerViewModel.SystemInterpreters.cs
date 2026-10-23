@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using System.Collections.ObjectModel;
 using CAP_Core.Export.PythonEnvironmentManager;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,7 +16,7 @@ namespace CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 /// </summary>
 public partial class PythonEnvironmentManagerViewModel
 {
-    private List<CAP_Core.Export.PythonDiscoveryService.PythonInstallation> _discoveredSystem = new();
+    private List<PythonInstallation> _discoveredSystem = new();
     private int _discoveryGeneration;
 
     /// <summary>Managed environments and discovered system Pythons, in one list.</summary>

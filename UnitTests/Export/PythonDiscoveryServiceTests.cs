@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export;
 using Shouldly;
 using Xunit;
@@ -27,7 +28,7 @@ public class PythonDiscoveryServiceTests
         // Assert
         result.ShouldNotBeNull();
         // May return empty list if no Python/Nazca installed
-        result.ShouldBeOfType<List<PythonDiscoveryService.PythonInstallation>>();
+        result.ShouldBeOfType<List<PythonInstallation>>();
     }
 
     [Fact]
@@ -78,7 +79,7 @@ public class PythonDiscoveryServiceTests
     public void PythonInstallation_HasNazca_ReturnsTrueWhenNazcaVersionSet()
     {
         // Arrange
-        var withNazca = new PythonDiscoveryService.PythonInstallation
+        var withNazca = new PythonInstallation
         {
             Path = "/usr/bin/python3",
             Source = "System",
@@ -86,7 +87,7 @@ public class PythonDiscoveryServiceTests
             NazcaVersion = "0.6.1"
         };
 
-        var withoutNazca = new PythonDiscoveryService.PythonInstallation
+        var withoutNazca = new PythonInstallation
         {
             Path = "/usr/bin/python3",
             Source = "System",
@@ -103,7 +104,7 @@ public class PythonDiscoveryServiceTests
     public void PythonInstallation_DisplayText_IncludesSourceAndVersions()
     {
         // Arrange
-        var installation = new PythonDiscoveryService.PythonInstallation
+        var installation = new PythonInstallation
         {
             Path = "/home/user/.venvs/nazca/bin/python",
             Source = "venv: nazca",
@@ -127,7 +128,7 @@ public class PythonDiscoveryServiceTests
     {
         // Both package slots are always shown so a Nazca-only interpreter is
         // distinguishable from a gdsfactory-capable one at a glance (issue #645).
-        var installation = new PythonDiscoveryService.PythonInstallation
+        var installation = new PythonInstallation
         {
             Path = "/usr/bin/python3",
             Source = "System",

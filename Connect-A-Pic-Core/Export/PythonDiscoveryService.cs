@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export.Processes;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -8,7 +9,7 @@ namespace CAP_Core.Export;
 /// Discovers Python installations with Nazca in common locations.
 /// Supports system Python, virtual environments, and conda environments.
 /// </summary>
-public partial class PythonDiscoveryService
+public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
 {
     private readonly ProcessLaunchFactory _launchFactory;
 

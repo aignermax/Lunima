@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.OpenEblCheck;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -132,12 +133,12 @@ internal sealed class FakeGdsExportService : GdsExportService
 
     public int CallCount { get; private set; }
 
-    public override Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
+    public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
     {
         CallCount++;
         if (!_success)
         {
-            return Task.FromResult(new ExportResult
+            return Task.FromResult(new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,
@@ -148,7 +149,7 @@ internal sealed class FakeGdsExportService : GdsExportService
 
         var gdsPath = Path.ChangeExtension(scriptPath, ".gds");
         File.WriteAllText(gdsPath, "fake gds content");
-        return Task.FromResult(new ExportResult
+        return Task.FromResult(new GdsExportResult
         {
             ScriptPath = scriptPath,
             GdsPath = gdsPath,

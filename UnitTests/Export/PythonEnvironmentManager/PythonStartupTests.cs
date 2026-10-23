@@ -29,7 +29,7 @@ public sealed class PythonStartupTests : IDisposable
         var pending = startup.StartOnceAsync();
         var manager = new PythonEnvironmentManagerViewModel(_registry,
             new UvBootstrapper(), new NazcaPackageInstaller(), new EnvironmentHealthChecker(new CAP_Core.Export.PythonDiscoveryService()),
-            provisioner: _installer, startup: startup);
+            discovery: new CAP_Core.Export.PythonDiscoveryService(), provisioner: _installer, startup: startup);
         await manager.CreateAndInstallCommand.ExecuteAsync(null);
         _installer.Installs.ShouldBe(1);
         _registry.GetAll().Count().ShouldBe(1);
@@ -43,7 +43,7 @@ public sealed class PythonStartupTests : IDisposable
     {
         var manager = new PythonEnvironmentManagerViewModel(_registry,
             new UvBootstrapper(), new NazcaPackageInstaller(), new EnvironmentHealthChecker(new CAP_Core.Export.PythonDiscoveryService()),
-            provisioner: _installer);
+            discovery: new CAP_Core.Export.PythonDiscoveryService(), provisioner: _installer);
         var pending = manager.CreateAndInstallCommand.ExecuteAsync(null);
         _installer.Installs.ShouldBe(1);
         _installer.Finish();

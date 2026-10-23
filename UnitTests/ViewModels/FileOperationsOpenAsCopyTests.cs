@@ -48,7 +48,7 @@ public class FileOperationsOpenAsCopyTests : IDisposable
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(),
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), _canvas),
             null!,
             recentProjects: _recentProjects);

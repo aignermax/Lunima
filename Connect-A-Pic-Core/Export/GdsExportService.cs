@@ -1,4 +1,5 @@
 using CAP_Core.Export.Processes;
+using CAP_Core.Export.Contracts;
 using System.Diagnostics;
 
 namespace CAP_Core.Export;
@@ -7,13 +8,13 @@ namespace CAP_Core.Export;
 /// Core service for GDS export functionality.
 /// Detects Python/Nazca availability and executes Python scripts to generate GDS files.
 /// </summary>
-public class GdsExportService
+public class GdsExportService : IGdsExportSession
 {
     private const string MinimumNazcaVersion = "0.5.0";
     private const string DefaultPythonCommand = "python3";
 
     private readonly ProcessLaunchFactory _launchFactory;
-    private readonly PythonDiscoveryService _pythonDiscovery;
+    private readonly IPythonDiscovery _pythonDiscovery;
     private string? _customPythonPath;
 
     /// <summary>
@@ -28,87 +29,10 @@ public class GdsExportService
     /// </summary>
     /// <param name="launchFactory">Factory used to build process start info.</param>
     /// <param name="pythonDiscovery">Service used to locate a Python interpreter with Nazca.</param>
-    public GdsExportService(ProcessLaunchFactory? launchFactory = null, PythonDiscoveryService? pythonDiscovery = null)
+    public GdsExportService(ProcessLaunchFactory? launchFactory = null, IPythonDiscovery? pythonDiscovery = null)
     {
         _launchFactory   = launchFactory   ?? ProcessLaunchFactory.CreateDefault();
         _pythonDiscovery = pythonDiscovery ?? new PythonDiscoveryService(_launchFactory);
-    }
-
-    /// <summary>
-    /// Result of a GDS export operation.
-    /// </summary>
-    public class ExportResult
-    {
-        /// <summary>
-        /// Path to the exported Python script.
-        /// </summary>
-        public string ScriptPath { get; init; } = string.Empty;
-
-        /// <summary>
-        /// Path to the generated GDS file (null if generation failed or was skipped).
-        /// </summary>
-        public string? GdsPath { get; init; }
-
-        /// <summary>
-        /// Status message describing the export outcome.
-        /// </summary>
-        public string Status { get; init; } = string.Empty;
-
-        /// <summary>
-        /// True if both script and GDS were successfully created.
-        /// </summary>
-        public bool Success { get; init; }
-
-        /// <summary>
-        /// Error message if export failed.
-        /// </summary>
-        public string? ErrorMessage { get; init; }
-    }
-
-    /// <summary>
-    /// Information about Python environment availability.
-    /// </summary>
-    public class PythonEnvironmentInfo
-    {
-        /// <summary>
-        /// True if Python executable was found.
-        /// </summary>
-        public bool PythonAvailable { get; set; }
-
-        /// <summary>
-        /// Python version string (e.g., "3.10.5").
-        /// </summary>
-        public string? PythonVersion { get; set; }
-
-        /// <summary>
-        /// True if Nazca package is installed.
-        /// </summary>
-        public bool NazcaAvailable { get; set; }
-
-        /// <summary>
-        /// Nazca version string (e.g., "0.5.10").
-        /// </summary>
-        public string? NazcaVersion { get; set; }
-
-        /// <summary>
-        /// True if both Python and Nazca are available.
-        /// </summary>
-        public bool IsReady => PythonAvailable && NazcaAvailable;
-
-        /// <summary>
-        /// Descriptive status message for UI display.
-        /// </summary>
-        public string StatusMessage
-        {
-            get
-            {
-                if (!PythonAvailable)
-                    return "Python not found";
-                if (!NazcaAvailable)
-                    return "Nazca not installed";
-                return $"Python {PythonVersion}, Nazca {NazcaVersion}";
-            }
-        }
     }
 
     /// <summary>
@@ -174,11 +98,11 @@ public class GdsExportService
     /// <param name="scriptPath">Path to the Python script to execute.</param>
     /// <param name="generateGds">If true, attempts to generate GDS from the script.</param>
     /// <returns>Export result with status information.</returns>
-    public virtual async Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
+    public virtual async Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
     {
         if (!File.Exists(scriptPath))
         {
-            return new ExportResult
+            return new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,
@@ -188,7 +112,7 @@ public class GdsExportService
 
         if (!generateGds)
         {
-            return new ExportResult
+            return new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = true,
@@ -201,7 +125,7 @@ public class GdsExportService
             : await CheckPythonEnvironmentAsync();
         if (!envInfo.IsReady)
         {
-            return new ExportResult
+            return new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,
@@ -217,7 +141,7 @@ public class GdsExportService
 
             if (exitCode == 0 && File.Exists(gdsPath))
             {
-                return new ExportResult
+                return new GdsExportResult
                 {
                     ScriptPath = scriptPath,
                     GdsPath = gdsPath,
@@ -227,7 +151,7 @@ public class GdsExportService
             }
 
             var errorMsg = string.IsNullOrWhiteSpace(error) ? output : error;
-            return new ExportResult
+            return new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,
@@ -237,7 +161,7 @@ public class GdsExportService
         }
         catch (Exception ex)
         {
-            return new ExportResult
+            return new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,

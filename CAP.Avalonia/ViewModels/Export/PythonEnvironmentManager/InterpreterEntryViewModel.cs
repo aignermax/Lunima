@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.Services.Localization;
 using CAP_Core.Export;
 using CAP_Core.Export.PythonEnvironmentManager;
@@ -42,7 +43,7 @@ public partial class InterpreterEntryViewModel : ObservableObject
     /// <summary>Creates a row for a discovered system interpreter.</summary>
     /// <param name="install">The discovered installation.</param>
     /// <param name="isActive">Whether this is the active interpreter.</param>
-    public InterpreterEntryViewModel(PythonDiscoveryService.PythonInstallation install, bool isActive)
+    public InterpreterEntryViewModel(PythonInstallation install, bool isActive)
     {
         _systemDisplayText = install.DisplayText;
         Path = install.Path;

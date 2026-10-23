@@ -232,7 +232,7 @@ public class PrefabConnectionPersistenceTests
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             _library,
-            new GdsExportViewModel(new CAP_Core.Export.GdsExportService()),
+            new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas),
             null!);
         return (vm, canvas);

@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export;
 using Shouldly;
 using Xunit;
@@ -22,10 +23,10 @@ public class GdsExportServiceTests
     /// The real environment probe (spawns python, imports Nazca — seconds), taken once per
     /// test run: every probe test below inspects the same machine state.
     /// </summary>
-    private static readonly Lazy<Task<GdsExportService.PythonEnvironmentInfo>> RealEnvironment =
+    private static readonly Lazy<Task<PythonEnvironmentInfo>> RealEnvironment =
         new(() => new GdsExportService().CheckPythonEnvironmentAsync());
 
-    private static Task<GdsExportService.PythonEnvironmentInfo> ProbeRealEnvironmentAsync() => RealEnvironment.Value;
+    private static Task<PythonEnvironmentInfo> ProbeRealEnvironmentAsync() => RealEnvironment.Value;
 
     [Fact]
     public async Task CheckPythonEnvironmentAsync_ReturnsEnvironmentInfo()
@@ -191,7 +192,7 @@ public class GdsExportServiceTests
     public void ExportResult_StatusMessage_ShouldBeDescriptive()
     {
         // Arrange & Act
-        var result = new GdsExportService.ExportResult
+        var result = new GdsExportResult
         {
             ScriptPath = "test.py",
             GdsPath = "test.gds",
@@ -208,19 +209,19 @@ public class GdsExportServiceTests
     public void PythonEnvironmentInfo_IsReady_RequiresBothPythonAndNazca()
     {
         // Arrange & Act
-        var notReady1 = new GdsExportService.PythonEnvironmentInfo
+        var notReady1 = new PythonEnvironmentInfo
         {
             PythonAvailable = false,
             NazcaAvailable = false
         };
 
-        var notReady2 = new GdsExportService.PythonEnvironmentInfo
+        var notReady2 = new PythonEnvironmentInfo
         {
             PythonAvailable = true,
             NazcaAvailable = false
         };
 
-        var ready = new GdsExportService.PythonEnvironmentInfo
+        var ready = new PythonEnvironmentInfo
         {
             PythonAvailable = true,
             NazcaAvailable = true
@@ -236,19 +237,19 @@ public class GdsExportServiceTests
     public void PythonEnvironmentInfo_StatusMessage_ReflectsState()
     {
         // Arrange & Act
-        var noPython = new GdsExportService.PythonEnvironmentInfo
+        var noPython = new PythonEnvironmentInfo
         {
             PythonAvailable = false
         };
 
-        var noNazca = new GdsExportService.PythonEnvironmentInfo
+        var noNazca = new PythonEnvironmentInfo
         {
             PythonAvailable = true,
             PythonVersion = "3.10.0",
             NazcaAvailable = false
         };
 
-        var ready = new GdsExportService.PythonEnvironmentInfo
+        var ready = new PythonEnvironmentInfo
         {
             PythonAvailable = true,
             PythonVersion = "3.10.0",
