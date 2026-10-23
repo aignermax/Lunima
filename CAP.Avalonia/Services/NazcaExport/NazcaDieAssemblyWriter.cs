@@ -1,37 +1,34 @@
 using System.Globalization;
 using System.Text;
+using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Canvas.DieSurface;
-using CAP_Core.Components.Connections.Ownership;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.Connections;
+using CAP_Core.Components.Connections.Ownership;
 using CAP_Core.Components.Dies;
-using CAP_Core.Export;
-using CAP_Core.Export.InterconnectRouting;
-using CAP_Core.Routing;
 using CAP_Core.Routing.InterconnectRouting;
 using CAP_Core.Routing.MetalRouting;
+using static CAP.Avalonia.Services.NazcaExport.NazcaComponentPlacementWriter;
+using static CAP.Avalonia.Services.NazcaExport.NazcaComponentStubWriter;
+using static CAP.Avalonia.Services.NazcaExport.NazcaFrozenPathWriter;
+using static CAP.Avalonia.Services.NazcaExport.NazcaScriptEnvelope;
 
-namespace CAP.Avalonia.Services;
+namespace CAP.Avalonia.Services.NazcaExport;
 
-/// <summary>
-/// Die-assembly half of <see cref="SimpleNazcaExporter"/>: one GDS cell per die, in die-local
-/// coordinates (the die's lower-left corner at the origin, its outline drawn on
-/// <see cref="DieFrameLayer"/>), and an assembly top cell placing every die where it sits on
-/// the carrier. Die-to-die facet links are free-space couplings and never become geometry.
-/// Single-die designs never reach this path, so their export output is unchanged.
-/// </summary>
-public partial class SimpleNazcaExporter
+/// <summary>Builds die-local cells and places them under the assembly top cell without inter-die waveguides.</summary>
+internal static class NazcaDieAssemblyWriter
 {
-    /// <summary>GDS layer of the die outline frame (documentation/floorplan layer).</summary>
-    public const int DieFrameLayer = 999;
+    internal const int DieFrameLayer = 999;
 
     /// <summary>
     /// Exports a die assembly: every die as its own cell under one top cell, or — with
     /// <paramref name="onlyDie"/> — just that die as the top cell (the "one file per die" export).
     /// </summary>
-    public string ExportAssembly(
+    internal static string ExportAssembly(
         DesignCanvasViewModel canvas,
+        InterconnectSettings interconnectSettings,
         ComponentGroup? onlyDie = null,
         MetalRoutingSpec? metalSpec = null,
         List<string>? skippedConnections = null,
@@ -41,7 +38,6 @@ public partial class SimpleNazcaExporter
         ArgumentNullException.ThrowIfNull(canvas);
         var sb = new StringBuilder();
         var metal = metalSpec ?? MetalRoutingSpec.Default;
-        var interconnectSettings = SettingsSource?.Invoke() ?? new InterconnectSettings();
         var interconnectPlan = NazcaProcessInterconnectPlan.Build(canvas, interconnectSettings);
         // Keep the canvas-wide interconnect plan: it detects heterogeneous process stacks.
         // Geometry dependencies, however, must belong to the selected fabrication die.
@@ -75,7 +71,7 @@ public partial class SimpleNazcaExporter
     }
 
     /// <summary>Python-safe cell name for a die ("Die 2" → "Die_2").</summary>
-    public static string DieCellName(ComponentGroup die)
+    internal static string DieCellName(ComponentGroup die)
     {
         var chars = die.GroupName.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray();
         var name = new string(chars).Trim('_');
