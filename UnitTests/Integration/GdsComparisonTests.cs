@@ -108,7 +108,7 @@ public class GdsComparisonTests
     [Fact]
     public void ViewModel_InitialState_IsReady()
     {
-        var vm = new GdsCoordinateComparisonViewModel();
+        var vm = new GdsCoordinateComparisonViewModel(new GdsCoordinateComparisonService());
 
         vm.IsComparing.ShouldBeFalse();
         vm.HasResults.ShouldBeFalse();
@@ -124,7 +124,7 @@ public class GdsComparisonTests
     [Fact]
     public void ViewModel_RunCommand_CannotExecute_WhenPathsEmpty()
     {
-        var vm = new GdsCoordinateComparisonViewModel();
+        var vm = new GdsCoordinateComparisonViewModel(new GdsCoordinateComparisonService());
 
         vm.RunComparisonCommand.CanExecute(null).ShouldBeFalse(
             "Comparison must not start without both JSON paths set.");
@@ -136,7 +136,7 @@ public class GdsComparisonTests
     [Fact]
     public void ViewModel_RunCommand_CanExecute_WhenBothPathsSet()
     {
-        var vm = new GdsCoordinateComparisonViewModel();
+        var vm = new GdsCoordinateComparisonViewModel(new GdsCoordinateComparisonService());
         vm.ReferenceJsonPath = "/tmp/ref.json";
         vm.SystemJsonPath = "/tmp/sys.json";
 
@@ -150,7 +150,7 @@ public class GdsComparisonTests
     [Fact]
     public void ViewModel_ClearResults_ResetsState()
     {
-        var vm = new GdsCoordinateComparisonViewModel();
+        var vm = new GdsCoordinateComparisonViewModel(new GdsCoordinateComparisonService());
         // Simulate having results by direct property manipulation via commands
         vm.ClearResultsCommand.Execute(null);
 
@@ -295,7 +295,7 @@ public class GdsComparisonTests
 
         try
         {
-            var vm = new GdsCoordinateComparisonViewModel();
+            var vm = new GdsCoordinateComparisonViewModel(new GdsCoordinateComparisonService());
             vm.ReferenceJsonPath = refPath;
             vm.SystemJsonPath = sysPath;
 
@@ -332,7 +332,7 @@ public class GdsComparisonTests
 
         try
         {
-            var vm = new GdsCoordinateComparisonViewModel();
+            var vm = new GdsCoordinateComparisonViewModel(new GdsCoordinateComparisonService());
             vm.ReferenceJsonPath = refPath;
             vm.SystemJsonPath = sysPath;
 

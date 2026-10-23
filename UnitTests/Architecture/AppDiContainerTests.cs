@@ -26,6 +26,16 @@ namespace UnitTests.Architecture;
 /// </summary>
 public class AppDiContainerTests
 {
+    [Fact]
+    public async Task Container_CoordinatePortsShareTheConfiguredServices()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IGdsCoordinateExtractor>()
+            .ShouldBeSameAs(sp.GetRequiredService<GdsCoordinateExtractor>());
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IGdsCoordinateComparer>()
+            .ShouldBeSameAs(sp.GetRequiredService<GdsCoordinateComparisonService>());
+    }
+
     private static string NewTempPreferencesPath() =>
         Path.Combine(Path.GetTempPath(), $"lunima-di-test-{Guid.NewGuid():N}.json");
 

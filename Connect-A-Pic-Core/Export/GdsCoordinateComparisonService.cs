@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -8,38 +9,10 @@ namespace CAP_Core.Export;
 /// scripts/compare_gds_coords.py tool.  Reports exact deviations in micrometres
 /// so fabrication-blocking alignment bugs can be confirmed or refuted.
 /// </summary>
-public class GdsCoordinateComparisonService
+public class GdsCoordinateComparisonService : IGdsCoordinateComparer
 {
     private readonly ProcessLaunchFactory _launchFactory;
 
-    /// <summary>Result of a GDS coordinate comparison run.</summary>
-    public class ComparisonResult
-    {
-        /// <summary>True if all elements are within tolerance.</summary>
-        public bool Passed { get; init; }
-
-        /// <summary>Maximum centroid deviation across all elements in µm.</summary>
-        public double MaxDeviationUm { get; init; }
-
-        /// <summary>Root-mean-square centroid deviation in µm.</summary>
-        public double RmsDeviationUm { get; init; }
-
-        /// <summary>Tolerance used for the comparison in µm.</summary>
-        public double ToleranceUm { get; init; }
-
-        /// <summary>Full human-readable report from the Python script stdout.</summary>
-        public string RawOutput { get; init; } = string.Empty;
-
-        /// <summary>Error text from stderr (populated on failure).</summary>
-        public string ErrorOutput { get; init; } = string.Empty;
-
-        /// <summary>
-        /// Formatted status line for UI display, e.g. "PASS — max Δ 0.000001 µm".
-        /// </summary>
-        public string StatusText => Passed
-            ? $"PASS — max \u0394 {MaxDeviationUm:F6} \u03bcm"
-            : $"FAIL — max \u0394 {MaxDeviationUm:F6} \u03bcm";
-    }
 
     private string? _customPythonPath;
 
@@ -68,7 +41,7 @@ public class GdsCoordinateComparisonService
     /// When null, <see cref="FindDefaultScriptPath"/> is used.
     /// </param>
     /// <returns>Structured comparison result.</returns>
-    public async Task<ComparisonResult> CompareAsync(
+    public async Task<GdsCoordinateComparisonResult> CompareAsync(
         string referenceJsonPath,
         string systemJsonPath,
         string? scriptPath = null)
@@ -99,7 +72,7 @@ public class GdsCoordinateComparisonService
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private ComparisonResult ParseResult(int exitCode, string stdout, string stderr, string reportPath)
+    private GdsCoordinateComparisonResult ParseResult(int exitCode, string stdout, string stderr, string reportPath)
     {
         try
         {
@@ -109,7 +82,7 @@ public class GdsCoordinateComparisonService
                 File.Delete(reportPath);
                 var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                return new ComparisonResult
+                return new GdsCoordinateComparisonResult
                 {
                     Passed = root.GetProperty("passed").GetBoolean(),
                     MaxDeviationUm = root.GetProperty("max_deviation_um").GetDouble(),
@@ -125,7 +98,7 @@ public class GdsCoordinateComparisonService
             return ErrorResult($"Failed to parse report: {ex.Message}\nStdout: {stdout}\nStderr: {stderr}");
         }
 
-        return new ComparisonResult
+        return new GdsCoordinateComparisonResult
         {
             Passed = exitCode == 0,
             RawOutput = stdout,
@@ -133,7 +106,7 @@ public class GdsCoordinateComparisonService
         };
     }
 
-    private static ComparisonResult ErrorResult(string message) => new()
+    private static GdsCoordinateComparisonResult ErrorResult(string message) => new()
     {
         Passed = false,
         RawOutput = message,

@@ -20,6 +20,10 @@ internal static class ExportFeatureExtensions
     /// </summary>
     public static IServiceCollection AddExportFeature(this IServiceCollection services)
     {
+        services.AddSingleton<GdsCoordinateExtractor>();
+        services.AddSingleton<IGdsCoordinateExtractor>(sp => sp.GetRequiredService<GdsCoordinateExtractor>());
+        services.AddSingleton<GdsCoordinateComparisonService>();
+        services.AddSingleton<IGdsCoordinateComparer>(sp => sp.GetRequiredService<GdsCoordinateComparisonService>());
         services.AddSingleton<GdsExportService>();
         services.AddSingleton<IGdsScriptRunner>(sp => sp.GetRequiredService<GdsExportService>());
         services.AddSingleton<IGdsExportSession>(sp => sp.GetRequiredService<GdsExportService>());
