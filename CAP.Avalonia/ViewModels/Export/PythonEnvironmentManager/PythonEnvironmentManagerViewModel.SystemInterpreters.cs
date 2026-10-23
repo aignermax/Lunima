@@ -170,7 +170,7 @@ public partial class PythonEnvironmentManagerViewModel
             _work.ThrowIfStopping();
             ct.ThrowIfCancellationRequested();
             var deletable = EnvironmentNaming.IsInsideDirectory(
-                UvBootstrapper.EnvironmentsBaseDir, env.VenvPath);
+                _options.EnvironmentsRoot, env.VenvPath);
             if (deletable && Directory.Exists(env.VenvPath))
                 await Task.Run(() => Directory.Delete(env.VenvPath, recursive: true));
 

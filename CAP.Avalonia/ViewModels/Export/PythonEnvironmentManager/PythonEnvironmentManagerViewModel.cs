@@ -1,5 +1,4 @@
 using CAP_Core.Export.Contracts;
-using CAP_Core.Export;
 using System.ComponentModel;
 using CAP.Avalonia.Services.Lifetime;
 using CAP_Core.Export.PythonEnvironmentManager;
@@ -26,9 +25,9 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
     public ValueTask DisposeAsync() => new(StopAsync());
     private readonly ShellWorkScope _work = new();
     private readonly IPythonEnvironmentRegistry _registry;
-    private readonly UvBootstrapper _bootstrapper;
-    private readonly NazcaPackageInstaller _installer;
-    private readonly EnvironmentHealthChecker _healthChecker;
+    private readonly IManagedEnvironmentPackages _packages;
+    private readonly IPythonEnvironmentHealth _healthChecker;
+    private readonly ManagedPythonEnvironmentOptions _options;
     private readonly CAP_Core.Export.Contracts.IPythonDiscovery _discovery;
     private readonly Func<string?> _getActiveInterpreterPath;
     private readonly IManagedPythonProvisioner _provisioner;
@@ -37,12 +36,12 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
-    private string _pythonVersion = UvBootstrapper.DefaultPythonVersion;
+    private string _pythonVersion;
 
     /// <summary>
     /// Python versions offered in the create-environment dropdown. Limited to versions
     /// with known-good Nazca/pyclipper support (3.14+ currently breaks numpy/nazca);
-    /// the default is <see cref="UvBootstrapper.DefaultPythonVersion"/>.
+    /// the default is supplied by the managed environment configuration.
     /// </summary>
     public IReadOnlyList<string> PythonVersionChoices { get; } =
         new[] { "3.10", "3.11", "3.12", "3.13" };
@@ -58,30 +57,31 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
 
     /// <summary>Initialises the ViewModel with core services.</summary>
     /// <param name="registry">Managed-environment registry.</param>
-    /// <param name="bootstrapper">uv bootstrapper for venv creation.</param>
-    /// <param name="installer">Nazca / gdsfactory package installer.</param>
+    /// <param name="packages">Managed package setup workflow.</param>
+    /// <param name="options">Managed locations and Python creation defaults.</param>
     /// <param name="healthChecker">Environment health prober.</param>
     /// <param name="discovery">Discovers system Python interpreters (issue #645).</param>
     /// <param name="getActiveInterpreterPath">Returns the currently active interpreter path
     /// so discovered system interpreters can be marked active; null treats none as active.</param>
     public PythonEnvironmentManagerViewModel(
         IPythonEnvironmentRegistry registry,
-        UvBootstrapper bootstrapper,
-        NazcaPackageInstaller installer,
-        EnvironmentHealthChecker healthChecker,
+        IManagedEnvironmentPackages packages,
+        ManagedPythonEnvironmentOptions options,
+        IPythonEnvironmentHealth healthChecker,
         CAP_Core.Export.Contracts.IPythonDiscovery discovery,
+        IManagedPythonProvisioner provisioner,
         Func<string?>? getActiveInterpreterPath = null,
-        IManagedPythonProvisioner? provisioner = null,
         PythonStartupViewModel? startup = null,
         ApplicationWorkCoordinator? applicationWork = null)
     {
         _registry = registry;
-        _bootstrapper = bootstrapper;
-        _installer = installer;
+        _packages = packages;
+        _options = options;
+        _pythonVersion = options.DefaultPythonVersion;
         _healthChecker = healthChecker;
         _discovery = discovery;
         _getActiveInterpreterPath = getActiveInterpreterPath ?? (() => null);
-        _provisioner = provisioner ?? new ManagedPythonProvisioner(bootstrapper, installer, ProcessLaunchFactory.CreateDefault());
+        _provisioner = provisioner;
         _startup = startup;
         RebuildInterpreters();
         _work.RegisterWith(applicationWork, StopAsync);
@@ -108,15 +108,15 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
     {
         if (OperationInProgress()) return;
 
-        if (_registry.Exists(DefaultEnvironmentName))
+        if (_registry.Exists(_options.DefaultEnvironmentName))
         {
-            ProgressText = $"Environment '{DefaultEnvironmentName}' already exists — "
+            ProgressText = $"Environment '{_options.DefaultEnvironmentName}' already exists — "
                 + "select it in the list below, or remove it and recreate it if it is broken.";
             return;
         }
 
-        PythonVersion = UvBootstrapper.DefaultPythonVersion;
-        await CreateAndInstallCoreAsync(DefaultEnvironmentName, UvBootstrapper.DefaultPythonVersion);
+        PythonVersion = _options.DefaultPythonVersion;
+        await CreateAndInstallCoreAsync(_options.DefaultEnvironmentName, _options.DefaultPythonVersion);
     }
 
     /// <summary>
@@ -146,7 +146,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
     /// </summary>
     private async Task CreateAndInstallCoreAsync(string name, string pythonVersion)
     {
-        var venvPath = Path.Combine(UvBootstrapper.EnvironmentsBaseDir, name);
+        var venvPath = Path.Combine(_options.EnvironmentsRoot, name);
         var env = new PythonEnvironment { Name = name, VenvPath = venvPath };
 
         _registry.AddOrUpdate(env);
@@ -191,31 +191,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
             _work.ThrowIfStopping();
             ct.ThrowIfCancellationRequested();
             token.ThrowIfCancellationRequested();
-            var uvPath = await _bootstrapper.EnsureUvAsync(progress, token);
-            _work.ThrowIfStopping();
-            ct.ThrowIfCancellationRequested();
-            token.ThrowIfCancellationRequested();
-
-            if (target == null)
-            {
-                var venvPath = Path.Combine(UvBootstrapper.EnvironmentsBaseDir, DefaultEnvironmentName);
-                target = new PythonEnvironment { Name = DefaultEnvironmentName, VenvPath = venvPath };
-                progress.Report($"Creating managed environment '{DefaultEnvironmentName}'...");
-                await _bootstrapper.CreateVenvAsync(uvPath, venvPath, UvBootstrapper.DefaultPythonVersion, progress, token);
-                _work.ThrowIfStopping();
-                ct.ThrowIfCancellationRequested();
-                token.ThrowIfCancellationRequested();
-                await _installer.InstallAsync(uvPath, venvPath, progress, token);
-                _work.ThrowIfStopping();
-                ct.ThrowIfCancellationRequested();
-                token.ThrowIfCancellationRequested();
-            }
-
-            await _installer.InstallGdsFactoryAsync(uvPath, target.VenvPath, progress, token);
-            _work.ThrowIfStopping();
-            ct.ThrowIfCancellationRequested();
-            token.ThrowIfCancellationRequested();
-            await _healthChecker.CheckAsync(target, token);
+            target = await _packages.EnsureGdsFactoryAsync(target, progress, token, ct, stopping);
             _work.ThrowIfStopping();
             ct.ThrowIfCancellationRequested();
             token.ThrowIfCancellationRequested();
@@ -273,31 +249,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
             _work.ThrowIfStopping();
             ct.ThrowIfCancellationRequested();
             token.ThrowIfCancellationRequested();
-            var uvPath = await _bootstrapper.EnsureUvAsync(progress, token);
-            _work.ThrowIfStopping();
-            ct.ThrowIfCancellationRequested();
-            token.ThrowIfCancellationRequested();
-
-            if (target == null)
-            {
-                var venvPath = Path.Combine(UvBootstrapper.EnvironmentsBaseDir, DefaultEnvironmentName);
-                target = new PythonEnvironment { Name = DefaultEnvironmentName, VenvPath = venvPath };
-                progress.Report($"Creating managed environment '{DefaultEnvironmentName}'...");
-                await _bootstrapper.CreateVenvAsync(uvPath, venvPath, UvBootstrapper.DefaultPythonVersion, progress, token);
-                _work.ThrowIfStopping();
-                ct.ThrowIfCancellationRequested();
-                token.ThrowIfCancellationRequested();
-                await _installer.InstallAsync(uvPath, venvPath, progress, token);
-                _work.ThrowIfStopping();
-                ct.ThrowIfCancellationRequested();
-                token.ThrowIfCancellationRequested();
-            }
-
-            await _installer.InstallPackageAsync(uvPath, target.VenvPath, packageSpec, progress, token);
-            _work.ThrowIfStopping();
-            ct.ThrowIfCancellationRequested();
-            token.ThrowIfCancellationRequested();
-            await _healthChecker.CheckAsync(target, token);
+            target = await _packages.EnsureBackendAsync(target, packageSpec, progress, token, ct, stopping);
             _work.ThrowIfStopping();
             ct.ThrowIfCancellationRequested();
             token.ThrowIfCancellationRequested();

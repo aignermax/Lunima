@@ -149,7 +149,8 @@ public class VisualLearningJourneyTests
             Directory.CreateDirectory(_folder);
             Preferences = new UserPreferencesService(Path.Combine(_folder, "prefs.json"));
             var registry = new PythonEnvironmentRegistry(Path.Combine(_folder, "envs.json"));
-            Startup = new PythonStartupViewModel(registry, Preferences, new FakePythonProvisioner(), _folder);
+            Startup = new PythonStartupViewModel(registry, Preferences, new FakePythonProvisioner(),
+                new CAP_Core.Export.Contracts.ManagedPythonEnvironmentOptions(_folder));
         }
 
         public void Start() => Pending = Startup.StartOnceAsync();

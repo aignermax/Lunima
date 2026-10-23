@@ -58,8 +58,8 @@ public sealed class PythonPanelRetirementTests
         {
             _registry = new(_path);
             _registry.AddOrUpdate(new PythonEnvironment { Name = "existing", VenvPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()) });
-            Model = new(_registry, new UvBootstrapper(), new NazcaPackageInstaller(), new Health(Barrier),
-                new Discovery(Barrier), provisioner: new Provisioner(Barrier));
+            Model = PythonSetupTestServices.Create(_registry, new Discovery(Barrier), new Health(Barrier),
+                provisioner: new Provisioner(Barrier));
         }
 
         public Task Start(string operation) => operation switch

@@ -14,9 +14,8 @@ public sealed class PythonCancellationOrderingTests
         var path = Path.Combine(Path.GetTempPath(), "python-order-" + Guid.NewGuid() + ".json");
         var install = new Installer();
         using var discovery = new Discovery();
-        await using var model = new PythonEnvironmentManagerViewModel(new PythonEnvironmentRegistry(path),
-            new UvBootstrapper(), new NazcaPackageInstaller(), new EnvironmentHealthChecker(discovery),
-            discovery, provisioner: install);
+        await using var model = PythonSetupTestServices.Create(new PythonEnvironmentRegistry(path),
+            discovery, new EnvironmentHealthChecker(discovery), provisioner: install);
         var installing = model.CreateAndInstallCommand.ExecuteAsync(null);
         var discovering = Task.CompletedTask;
         var stopping = Task.CompletedTask;

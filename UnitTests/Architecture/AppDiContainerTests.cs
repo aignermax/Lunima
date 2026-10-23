@@ -32,6 +32,10 @@ public class AppDiContainerTests
         await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
         sp.GetRequiredService<CAP_Core.Export.Contracts.IPythonEnvironmentRegistry>()
             .ShouldBeSameAs(sp.GetRequiredService<CAP_Core.Export.PythonEnvironmentManager.PythonEnvironmentRegistry>());
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IPythonEnvironmentHealth>()
+            .ShouldBeSameAs(sp.GetRequiredService<CAP_Core.Export.PythonEnvironmentManager.EnvironmentHealthChecker>());
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IManagedEnvironmentPackages>()
+            .ShouldBeSameAs(sp.GetRequiredService<CAP_Core.Export.PythonEnvironmentManager.ManagedEnvironmentPackageSetup>());
     }
 
     [Fact]

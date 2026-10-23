@@ -29,7 +29,8 @@ public class PythonStartupJourneyTests
             var registry = new PythonEnvironmentRegistry(Path.Combine(folder, "envs.json"));
             registry.OnActiveEnvironmentChanged = prefs.SetCustomPythonPath;
             var installer = new FakePythonProvisioner();
-            var startup = new PythonStartupViewModel(registry, prefs, installer, folder);
+            var startup = new PythonStartupViewModel(registry, prefs, installer,
+                new CAP_Core.Export.Contracts.ManagedPythonEnvironmentOptions(folder));
             var backend = new Mock<NazcaComponentPreviewService>("python", "script", null, null);
             backend.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => installer.Ready

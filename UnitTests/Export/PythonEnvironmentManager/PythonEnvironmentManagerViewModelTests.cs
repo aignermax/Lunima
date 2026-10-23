@@ -19,10 +19,7 @@ public class PythonEnvironmentManagerViewModelTests : IDisposable
     private PythonEnvironmentRegistry CreateRegistry() => new(_tempRegistryFile);
 
     private static PythonEnvironmentManagerViewModel CreateViewModel(PythonEnvironmentRegistry registry) =>
-        new(registry,
-            new UvBootstrapper(),
-            new NazcaPackageInstaller(),
-            new EnvironmentHealthChecker(new PythonDiscoveryService()), new PythonDiscoveryService());
+        PythonSetupTestServices.Create(registry);
 
     [Fact]
     public async Task CreateAndInstall_InvalidPythonVersion_IsRejectedWithoutSideEffects()

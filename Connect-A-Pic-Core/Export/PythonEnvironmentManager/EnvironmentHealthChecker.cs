@@ -6,7 +6,7 @@ namespace CAP_Core.Export.PythonEnvironmentManager;
 /// Reuses <see cref="PythonDiscoveryService.CheckPythonInstallation"/> for
 /// Python and Nazca version detection.
 /// </summary>
-public class EnvironmentHealthChecker
+public class EnvironmentHealthChecker : CAP_Core.Export.Contracts.IPythonEnvironmentHealth
 {
     private readonly PythonDiscoveryService _discovery;
     private readonly ProcessLaunchFactory _launchFactory;

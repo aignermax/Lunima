@@ -17,9 +17,7 @@ public class PythonEnvironmentRegistryPortTests
         registry.Setup(x => x.GetAll()).Returns(new[] { environment });
         registry.Setup(x => x.GetActive()).Returns(() => active);
         registry.Setup(x => x.SetActive(environment.Name)).Callback(() => active = environment);
-        var vm = new PythonEnvironmentManagerViewModel(registry.Object,
-            new UvBootstrapper(), new NazcaPackageInstaller(),
-            new EnvironmentHealthChecker(new CAP_Core.Export.PythonDiscoveryService()),
+        var vm = PythonSetupTestServices.Create(registry.Object,
             Mock.Of<IPythonDiscovery>(), provisioner: Mock.Of<IManagedPythonProvisioner>());
         try
         {

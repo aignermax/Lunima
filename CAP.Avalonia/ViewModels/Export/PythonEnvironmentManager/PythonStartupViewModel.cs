@@ -14,6 +14,8 @@ public partial class PythonStartupViewModel : ObservableObject, IAsyncDisposable
     private readonly IPythonInterpreterPreferences _preferences;
     private readonly IManagedPythonProvisioner _provisioner;
     private readonly string _root;
+    private readonly string _defaultVersion;
+    private readonly string _defaultName;
     private readonly CancellationTokenSource _shutdown = new();
     private Task? _attempt;
     private Task? _cancellation;
@@ -22,12 +24,14 @@ public partial class PythonStartupViewModel : ObservableObject, IAsyncDisposable
     private int _generation;
 
     public PythonStartupViewModel(IPythonEnvironmentRegistry registry, IPythonInterpreterPreferences preferences,
-        IManagedPythonProvisioner provisioner, string? environmentsRoot = null)
+        IManagedPythonProvisioner provisioner, ManagedPythonEnvironmentOptions options)
     {
         _registry = registry;
         _preferences = preferences;
         _provisioner = provisioner;
-        _root = environmentsRoot ?? UvBootstrapper.EnvironmentsBaseDir;
+        _root = options.EnvironmentsRoot;
+        _defaultVersion = options.DefaultPythonVersion;
+        _defaultName = options.DefaultEnvironmentName;
     }
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(RetryCommand))] private bool _isRunning;
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(RetryCommand))] private bool _hasError;
@@ -86,14 +90,13 @@ public partial class PythonStartupViewModel : ObservableObject, IAsyncDisposable
             }
             if (target == null)
             {
-                target = selected ?? _registry.GetAll().FirstOrDefault(e => e.Name == PythonEnvironmentManagerViewModel.DefaultEnvironmentName)
-                    ?? new PythonEnvironment { Name = PythonEnvironmentManagerViewModel.DefaultEnvironmentName,
-                        VenvPath = Path.Combine(_root, PythonEnvironmentManagerViewModel.DefaultEnvironmentName) };
+                target = selected ?? _registry.GetAll().FirstOrDefault(e => e.Name == _defaultName)
+                    ?? new PythonEnvironment { Name = _defaultName, VenvPath = Path.Combine(_root, _defaultName) };
                 if (!EnvironmentNaming.IsInsideDirectory(_root, target.VenvPath))
                     throw new InvalidOperationException("Automatic setup can only repair environments inside Lunima's managed directory.");
                 _registry.AddOrUpdate(target);
                 var progress = new Progress<string>(message => { if (!_retired && IsRunning && generation == _generation) ProgressText = message; });
-                await _provisioner.ProvisionAsync(target, UvBootstrapper.DefaultPythonVersion, progress, token);
+                await _provisioner.ProvisionAsync(target, _defaultVersion, progress, token);
                 if (!await _provisioner.IsReadyAsync(target, token))
                     throw new InvalidOperationException(target.LastError ?? "The Python environment is missing required preview packages.");
             }
