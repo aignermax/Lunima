@@ -150,3 +150,34 @@ Files: architecture tests/checker, explicit module policy, every remaining path 
 - 2026-10-23: Baseline 53 architecture/command/crossing tests passed. A01 regression: five failures proved overflow/retirement/cancel/reset defects. Fixed with per-entry retirement and weak canceled-reservation ownership. Independent fresh review clean. Combined verification: 124 passed, zero failed/skipped, including conversion/history/architecture and process tests. A01 resolved.
 - 2026-10-23: A02 regression: five real-Python pipe/lifetime tests failed (initial interpreter-discovery skips corrected, then actual RED confirmed). Concurrent draining/deadline/cleanup fix passes six process cases in combined run. Independent review found no new regression, but highlighted pre-existing orphan descendants after root exit and an immediate descendant-exit assertion. Track process ownership/robust descendant verification before claiming the full lifecycle contract complete.
 - 2026-10-23: Source checker, staged hook, non-destructive installer and checked-in safe test runner implemented. Seventeen Python tests pass, including real Git commit rejection at exactly 1000 lines. Whole-tree checker intentionally fails on ten existing over-limit sources. Required xUnit aggregate will now fail if source checking fails in shard selection. April assessment and false migration report removed; active docs reconciled. Overall goal remains active.
+- 2026-10-23: Four oversized test files decomposed by behavior, not partial classes. Hierarchy/pin tests retain 97 methods and 615 assertions (105 cases); coordinate/preview tests retain 60 methods and 166 assertions (88 cases, including 15 Slow coordinate cases not yet rerun). Default baseline for both families was 178 passing cases. Full GDS namespace passed after first decomposition; preview family passed in the later combined 208-pass run. Commits cbdd3961 and f47d84e3.
+- 2026-10-23: A08 declarations now share AvaloniaVersion=11.3.13 for desktop/browser/UI/headless, after two observed RED tests. Both architecture tests and subsequent headless regressions pass. Desktop/browser publish verification remains outstanding. Commit bc3d1f71.
+- 2026-10-23: A02 follow-up found PythonModeSolverService duplicated the old unbounded IO pattern instead of using the shared runner. Two real child-process RED cases failed at their guards, then passed after migration; error/missing-backend compatibility retained. Descendant test now waits for descendant exit separately from immediate root reaping. Removed its direct-launch exemption. Commit 1bab2053. Root-exits-first descendant containment remains open.
+- 2026-10-23: Local runner now rejects all-skipped runs rather than treating a Passed! heading as verification. Actual subprocess-output RED observed, then all 20 Python tooling tests passed. Commit 5d39df01.
+- 2026-10-23: Cache lifetime RED reproduced four core environment failures plus presentation activation/in-flight/inline failures. Initial implementation passed its selected tests in a combined run (208 passed, 4 expected new watchdog/document-boundary failures). Review additionally identified hot-path file probing, synchronous disk parsing, derivative geometry ownership and oversized-result repaint loops. Separate regressions/ownership work underway; A03 not yet marked complete.
+- 2026-10-23: A09 continuation regressions fail against the old prefix-only watchdog. New heartbeat under review; shutdown/no-pump cleanup regression added. Existing best-of-retry responsiveness harness still needs equivalent fresh measured state. A mixed exporter/heartbeat run was stopped after hanging and is NOT counted as verification; isolate subprocess integration from pure script checks.
+- 2026-10-23: A10 transport/call-admission RED confirmed: queued work executes after Stop, Stop returns before accepted work drains, and tools interleave across awaits. Gate1 adds explicit revocable context and drain/serialization; validation pending. Real post-await tool/routing/simulation commits remain Gate2 and depend on A04/A18; compatibility token plumbing alone is not a complete fix.
+- 2026-10-23: A17 boundary RED confirmed ten native-format types lived in presentation. Moved these contracts to CAP-DataAccess/Persistence/NativeDesign with unchanged serialized properties and updated consumers. Verification pending. MainViewModel is still oversized; no claim that the namespace move alone completes decoupling.
+
+## Current acceptance status
+
+| Finding | Status |
+|---|---|
+| A01 | Resolved, reviewed, 124-case combined verification |
+| A02 | Pipe/deadline and mode-solver fixes verified; orphan containment open |
+| A03 | Cache implementation/review in progress |
+| A04 | Simulation snapshot/session work pending |
+| A05 | Export responsibility split designed; main/file/input/window extraction pending |
+| A06 | Directed domain/application/infrastructure boundaries pending |
+| A07 | Semantic dependency enforcement pending |
+| A08 | Shared runtime declarations/tests verified; shipping build/publish pending |
+| A09 | Whole-operation heartbeat in progress; benchmark state reset pending |
+| A10 | Admission/draining gate in progress; real commit-boundary integration pending |
+| A11 | Signed updater manifest and pinned uv implementation pending |
+| A12 | Checked-in runner/docs implemented; 20 tool tests pass |
+| A13 | April report removed, active docs reconciled; update as extractions land |
+| A14 | Hook/CI guard implemented; four test suites decomposed, six production files oversized |
+| A15 | Cache ownership partly addressed; session/temporary-resource lifecycle pending |
+| A16 | Roadmap/workflow docs aligned; binary/SDK supply cleanup pending |
+| A17 | Native DTO extraction pending verification; persistence use-case extraction pending |
+| A18 | Document/scope authority and revisioned operation ownership pending |
