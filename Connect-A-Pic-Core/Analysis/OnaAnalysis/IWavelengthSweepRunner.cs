@@ -1,6 +1,4 @@
-using CAP_Core.ExternalPorts;
 using CAP_Core.Grid;
-using CAP_Core.LightCalculation;
 
 namespace CAP_Core.Analysis.OnaAnalysis;
 
@@ -11,10 +9,22 @@ public interface IWavelengthSweepRunner
         GridManager grid, IExternalPortManager ports, CancellationToken cancellationToken);
 }
 
-/// <summary>Runs the existing wavelength solver for a prepared circuit and its sources.</summary>
-public sealed class WavelengthSweepRunner : IWavelengthSweepRunner
+/// <summary>Captures caller-owned physics, then runs the sweep on detached worker input.</summary>
+public class WavelengthSweepRunner : IWavelengthSweepRunner
 {
     public Task<WavelengthSweepResult> RunAsync(WavelengthSweepConfiguration configuration,
-        GridManager grid, IExternalPortManager ports, CancellationToken cancellationToken) =>
-        new WavelengthSweeper(new SystemMatrixBuilder(grid), ports).RunSweepAsync(configuration, grid, cancellationToken);
+        GridManager grid, IExternalPortManager ports, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var snapshot = WavelengthSweepSnapshot.Capture(configuration, grid, ports);
+        return RunDetachedAsync(snapshot, cancellationToken);
+    }
+
+    // Keep closure creation away from method parameters containing live editor objects.
+    private Task<WavelengthSweepResult> RunDetachedAsync(WavelengthSweepSnapshot snapshot, CancellationToken token) =>
+        Task.Run(() => SolveSnapshotAsync(snapshot, token), token);
+
+    /// <summary>Executes prepared physics without taking ownership of the document.</summary>
+    protected virtual Task<WavelengthSweepResult> SolveSnapshotAsync(
+        WavelengthSweepSnapshot snapshot, CancellationToken cancellationToken) => snapshot.SolveAsync(cancellationToken);
 }
