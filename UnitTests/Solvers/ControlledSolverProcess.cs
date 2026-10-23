@@ -47,14 +47,61 @@ internal sealed class ControlledSolverProcess : IAsyncDisposable
         (child == null || child.HasExited).ShouldBeTrue("the runner must reap its child before returning");
     }
 
+    internal async Task WaitForRootExitAsync()
+    {
+        using var deadline = new CancellationTokenSource(GuardTimeout);
+        while (!File.Exists(_pidFile) || !int.TryParse(await File.ReadAllTextAsync(_pidFile, deadline.Token), out _))
+            await Task.Delay(10, deadline.Token);
+        await WaitForTerminationAsync(_pidFile, deadline.Token);
+    }
+
     internal async Task DescendantsShouldHaveExitedAsync()
     {
         foreach (var pidFile in Directory.GetFiles(_directory, "*.pid").Where(path => path != _pidFile))
         {
-            using var child = FindChild(pidFile);
-            if (child != null)
-                await child.WaitForExitAsync().WaitAsync(GuardTimeout);
+            using var deadline = new CancellationTokenSource(GuardTimeout);
+            await WaitForTerminationAsync(pidFile, deadline.Token);
         }
+    }
+
+    private static async Task WaitForTerminationAsync(string pidFile, CancellationToken token)
+    {
+        while (true)
+        {
+            using var process = FindChild(pidFile);
+            if (process == null || process.HasExited || await IsZombieAsync(process.Id, token)) return;
+            await Task.Delay(10, token);
+        }
+    }
+
+    private static async Task<bool> IsZombieAsync(int pid, CancellationToken token)
+    {
+        if (OperatingSystem.IsWindows()) return false;
+        if (OperatingSystem.IsLinux())
+        {
+            try
+            {
+                var stat = await File.ReadAllTextAsync($"/proc/{pid}/stat", token);
+                var stateOffset = stat.LastIndexOf(')') + 2;
+                return stateOffset >= 2 && stateOffset < stat.Length && stat[stateOffset] is 'Z' or 'X';
+            }
+            catch (FileNotFoundException) { return true; }
+            catch (DirectoryNotFoundException) { return true; }
+        }
+        var factory = ProcessLaunchFactory.CreateDefault();
+        factory.TryBuild("ps", new[] { "-o", "stat=", "-p", pid.ToString(System.Globalization.CultureInfo.InvariantCulture) },
+            null, null, out var info, out var error).ShouldBeTrue(error);
+        info.RedirectStandardOutput = true;
+        using var probe = new Process { StartInfo = info };
+        probe.Start();
+        var output = probe.StandardOutput.ReadToEndAsync(token);
+        try
+        {
+            await probe.WaitForExitAsync(token);
+            var state = (await output).Trim();
+            return state.Length == 0 || state.StartsWith('Z');
+        }
+        finally { await KillAndReapAsync(probe); }
     }
 
     public async ValueTask DisposeAsync()
@@ -62,7 +109,11 @@ internal sealed class ControlledSolverProcess : IAsyncDisposable
         foreach (var pidFile in Directory.GetFiles(_directory, "*.pid"))
         {
             using var child = FindChild(pidFile);
-            if (child != null) await KillAndReapAsync(child);
+            if (child != null)
+            {
+                using var deadline = new CancellationTokenSource(GuardTimeout);
+                if (!await IsZombieAsync(child.Id, deadline.Token)) await KillAndReapAsync(child);
+            }
         }
         Directory.Delete(_directory, recursive: true);
     }

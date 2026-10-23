@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CAP_Core.Export.Processes;
 using System.Text.Json;
 
 namespace CAP.Avalonia.Services.Solvers;
@@ -55,17 +56,18 @@ public static class SubprocessJsonRunner
 
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
         lifetime.CancelAfter(timeout);
-        using var process = new Process { StartInfo = startInfo };
+        OwnedProcess process;
 
         try
         {
-            process.Start();
+            process = OwnedProcess.Start(startInfo);
         }
         catch (Exception ex)
         {
             return new RunResult(Outcome.StartFailed, -1, string.Empty, string.Empty, ex.Message);
         }
 
+        await using var owner = process;
         var stdoutTask = process.StandardOutput.ReadToEndAsync(lifetime.Token);
         var stderrTask = ReadStderrAsync(process, onStderrLine, lifetime.Token);
         var inputTask = WriteInputAsync(process, stdinPayload, lifetime.Token);
@@ -76,6 +78,7 @@ public static class SubprocessJsonRunner
         {
             await AwaitOperationsAsync(operations, lifetime.Token);
             lifetime.Token.ThrowIfCancellationRequested();
+            await process.StopAsync();
             completed = true;
             return new RunResult(Outcome.Completed, process.ExitCode,
                 await stdoutTask, await stderrTask, null);
@@ -92,7 +95,7 @@ public static class SubprocessJsonRunner
         }
     }
 
-    private static async Task WriteInputAsync(Process process, string payload, CancellationToken ct)
+    private static async Task WriteInputAsync(OwnedProcess process, string payload, CancellationToken ct)
     {
         await process.StandardInput.WriteAsync(payload.AsMemory(), ct);
         await process.StandardInput.FlushAsync(ct);
@@ -111,10 +114,10 @@ public static class SubprocessJsonRunner
         }
     }
 
-    private static async Task StopAsync(Process process, CancellationTokenSource lifetime, Task[] operations)
+    private static async Task StopAsync(OwnedProcess process, CancellationTokenSource lifetime, Task[] operations)
     {
-        TryKill(process);
-        lifetime.Cancel();
+        await process.StopAsync();
+        await lifetime.CancelAsync();
         using var cleanup = new CancellationTokenSource(CleanupTimeout);
         try { await Task.WhenAll(operations).WaitAsync(cleanup.Token); }
         catch (Exception) when (!cleanup.IsCancellationRequested)
@@ -128,7 +131,7 @@ public static class SubprocessJsonRunner
     /// while accumulating the full text for error reporting.
     /// </summary>
     private static async Task<string> ReadStderrAsync(
-        Process process, Action<string>? onLine, CancellationToken ct)
+        OwnedProcess process, Action<string>? onLine, CancellationToken ct)
     {
         var sb = new System.Text.StringBuilder();
         string? line;
@@ -162,9 +165,4 @@ public static class SubprocessJsonRunner
         return null;
     }
 
-    private static void TryKill(Process process)
-    {
-        try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-        catch { /* best-effort */ }
-    }
 }
