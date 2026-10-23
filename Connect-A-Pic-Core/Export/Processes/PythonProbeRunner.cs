@@ -2,8 +2,8 @@ using System.Diagnostics;
 
 namespace CAP_Core.Export.Processes;
 
-/// <summary>Runs a short interpreter probe, retiring its entire owned process group before completing.</summary>
-internal static class PythonProbeRunner
+/// <summary>Captures Python probes or validation scripts, retiring their owned process group before completing.</summary>
+public static class PythonProbeRunner
 {
     public static async Task<(int ExitCode, string Output, string Error)> RunAsync(
         ProcessStartInfo startInfo, TimeSpan timeout, CancellationToken cancellationToken)

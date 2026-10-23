@@ -322,10 +322,11 @@ public partial class DesignCanvasViewModel : ObservableObject
     {
         Placement.EndDrag();
         DragRouteSnapshot = null;
+        // Complete the edit's revision change before admitting its derived routing/grid work.
+        InvalidateSimulation();
         // A die moves rigidly: its wires were translated with it, nothing needs routing.
         if (!OnDieDragEnded(component))
             await RecalculateRoutesAsync();
-        InvalidateSimulation();
     }
 
     // ── Movement / placement delegation ───────────────────────────────────

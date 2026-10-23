@@ -49,10 +49,16 @@ internal sealed class ControlledSolverProcess : IAsyncDisposable
 
     internal async Task WaitForRootExitAsync()
     {
+        await WaitForStartedAsync();
+        using var deadline = new CancellationTokenSource(GuardTimeout);
+        await WaitForTerminationAsync(_pidFile, deadline.Token);
+    }
+
+    internal async Task WaitForStartedAsync()
+    {
         using var deadline = new CancellationTokenSource(GuardTimeout);
         while (!File.Exists(_pidFile) || !int.TryParse(await File.ReadAllTextAsync(_pidFile, deadline.Token), out _))
             await Task.Delay(10, deadline.Token);
-        await WaitForTerminationAsync(_pidFile, deadline.Token);
     }
 
     internal async Task DescendantsShouldHaveExitedAsync()
@@ -106,6 +112,12 @@ internal sealed class ControlledSolverProcess : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        await TerminateChildrenAsync();
+        Directory.Delete(_directory, recursive: true);
+    }
+
+    internal async Task TerminateChildrenAsync()
+    {
         foreach (var pidFile in Directory.GetFiles(_directory, "*.pid"))
         {
             using var child = FindChild(pidFile);
@@ -115,7 +127,6 @@ internal sealed class ControlledSolverProcess : IAsyncDisposable
                 if (!await IsZombieAsync(child.Id, deadline.Token)) await KillAndReapAsync(child);
             }
         }
-        Directory.Delete(_directory, recursive: true);
     }
 
     private static Process? FindChild(string pidFile)
