@@ -1,4 +1,5 @@
 using CAP_Core.Export;
+using CAP_Core.Export.Contracts;
 
 namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 
@@ -6,8 +7,8 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 internal sealed class GdsGeometryCache
 {
     internal const int MaxEntries = PreviewGeometryCache.MaxEntries;
-    private readonly PreviewGeometryCache _owner;
-    public GdsGeometryCache(PreviewGeometryCache? owner = null) => _owner = owner ?? new();
+    private readonly IPreviewGeometryStore _owner;
+    public GdsGeometryCache(IPreviewGeometryStore? owner = null) => _owner = owner ?? new PreviewGeometryCache();
     public bool TryGet(string key, out NazcaPreviewResult? value) => _owner.TryGet(key, out value);
     public void Set(string key, NazcaPreviewResult? value, long? generation = null) => _owner.Set(key, value, generation);
     public void Clear() => _owner.Clear();

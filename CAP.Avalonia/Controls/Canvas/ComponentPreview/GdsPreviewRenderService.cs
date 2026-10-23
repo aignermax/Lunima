@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using System.Collections.Concurrent;
 using System.Globalization;
 using Avalonia.Threading;
@@ -73,12 +74,12 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     private IDisposable? _environmentBindings;
     private bool _stopping;
     private Task? _retirement;
-    private readonly NazcaComponentPreviewService _previewService;
+    private readonly IPdkPreviewBackend _previewService;
 
     /// <summary>Renders gdsfactory-native components (cspdk etc.); null falls back to no preview.
     /// Typed as the base so it can be mocked in tests; DI injects the
     /// <see cref="GdsFactoryComponentPreviewService"/> instance.</summary>
-    private readonly NazcaComponentPreviewService? _gdsFactoryPreviewService;
+    private readonly IPdkPreviewBackend? _gdsFactoryPreviewService;
 
     private readonly GdsPreviewCache _cache = new();
 
@@ -198,8 +199,8 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     /// default disk cache.
     /// </summary>
     public GdsPreviewRenderService(
-        NazcaComponentPreviewService previewService,
-        NazcaComponentPreviewService? gdsFactoryPreviewService = null,
+        IPdkPreviewBackend previewService,
+        IPdkPreviewBackend? gdsFactoryPreviewService = null,
         ApplicationWorkCoordinator? applicationWork = null)
         : this(previewService, new GdsPreviewDiskCache(), gdsFactoryPreviewService, applicationWork)
     {
@@ -211,14 +212,14 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     /// for gdsfactory-native components (#570).
     /// </summary>
     public GdsPreviewRenderService(
-        NazcaComponentPreviewService previewService, GdsPreviewDiskCache diskCache,
-        NazcaComponentPreviewService? gdsFactoryPreviewService = null,
+        IPdkPreviewBackend previewService, GdsPreviewDiskCache diskCache,
+        IPdkPreviewBackend? gdsFactoryPreviewService = null,
         ApplicationWorkCoordinator? applicationWork = null)
     {
         _previewService = previewService ?? throw new ArgumentNullException(nameof(previewService));
         _diskCache = diskCache ?? throw new ArgumentNullException(nameof(diskCache));
         _gdsFactoryPreviewService = gdsFactoryPreviewService;
-        _memGeometry = new GdsGeometryCache(previewService.GeometryCache);
+        _memGeometry = new GdsGeometryCache(previewService);
         _applicationRegistration = applicationWork?.Register(StopAsync);
     }
 
@@ -452,7 +453,7 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
             _memGeometry.Set(key, result);
     }
 
-    private string CurrentEnvironmentIdentity() => PreviewEnvironmentIdentity.Hash(
+    private string CurrentEnvironmentIdentity() => PreviewIdentityHash.Compute(
         _previewService.EnvironmentIdentity + "|" + _gdsFactoryPreviewService?.EnvironmentIdentity +
         "|" + _diskCache.ActivationIdentity);
 

@@ -1,6 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-
 namespace CAP_Core.Export;
 
 /// <summary>Stable identity of the renderer, resolved interpreter and loaded PDK revision.</summary>
@@ -19,5 +16,5 @@ public static class PreviewEnvironmentIdentity
         catch { return path; }
     }
 
-    public static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+    public static string Hash(string value) => PreviewIdentityHash.Compute(value);
 }

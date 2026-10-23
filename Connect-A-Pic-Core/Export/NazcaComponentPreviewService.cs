@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using CAP_Core.Export.Contracts;
 
 namespace CAP_Core.Export;
 
@@ -71,7 +72,7 @@ public class NazcaPreviewResult
 /// cell and returns bounding-box, polygon and pin data for the PDK Offset Editor overlay.
 /// Results are cached by (module, function, parameters) key.
 /// </summary>
-public class NazcaComponentPreviewService : IPdkGeometryRenderer
+public class NazcaComponentPreviewService : IPdkPreviewBackend
 {
     /// <summary>Default subprocess timeout.</summary>
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(90);
@@ -94,6 +95,13 @@ public class NazcaComponentPreviewService : IPdkGeometryRenderer
 
     /// <summary>Discards successes and prevents running renders from repopulating them.</summary>
     public void InvalidateCache() => GeometryCache.Clear();
+
+    bool IPreviewGeometryStore.TryGet(string key, out NazcaPreviewResult? result) => GeometryCache.TryGet(key, out result);
+    void IPreviewGeometryStore.Set(string key, NazcaPreviewResult? result, long? expectedGeneration) =>
+        GeometryCache.Set(key, result, expectedGeneration);
+    void IPreviewGeometryStore.Clear() => GeometryCache.Clear();
+    int IPreviewGeometryStore.Count => GeometryCache.Count;
+    long IPreviewGeometryStore.Generation => GeometryCache.Generation;
 
     /// <summary>
     /// Initializes the service.

@@ -1,10 +1,12 @@
+using CAP_Core.Export.Contracts;
+
 namespace CAP_Core.Export;
 
 /// <summary>
 /// Weighted LRU owner shared by render backends and presentation adapters.
 /// The budget estimates coordinate payload and UTF-16 strings, not managed heap size.
 /// </summary>
-public sealed class PreviewGeometryCache
+public sealed class PreviewGeometryCache : IPreviewGeometryStore
 {
     public const int MaxEntries = 200;
     public const long MaxPayloadBytes = 32L * 1024 * 1024;
