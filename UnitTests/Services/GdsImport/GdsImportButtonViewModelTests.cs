@@ -47,7 +47,7 @@ public class GdsImportButtonViewModelTests
         var canvas = new DesignCanvasViewModel();
         // Throwaway service/executor: the failure paths tested here never reach
         // an actual import — only the dialog hand-off is exercised.
-        var importService = new CAP.Avalonia.Services.GdsImport.GdsImportService();
+        var importService = new CAP.Avalonia.Services.GdsImport.GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader());
         var placementExecutor = new CAP.Avalonia.Services.GdsImport.GdsPlacementExecutor(
             canvas, new CommandManager(), () => Array.Empty<ComponentTemplate>());
         return new GdsImportButtonViewModel(importService, placementExecutor);

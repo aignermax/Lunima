@@ -410,7 +410,7 @@ public class GdsMziElectricalRoundTripTests
         // Wired like the app (GdsImportButtonViewModel): the full loaded library
         // resolves known cells; newly imported drafts join it.
         var service = host.CreateService(() => bundled.Concat(host.Templates).ToList());
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         analysis.TopCellCandidates.ShouldBe(new[] { "ConnectAPIC_Design" });
         var dialogOptions = new GdsHierarchyImportOptions
         {
@@ -432,7 +432,7 @@ public class GdsMziElectricalRoundTripTests
         using var host = new GdsDesignScopeTestHost();
         var bundled = TestPdkLoader.LoadAllTemplates();
         var service = host.CreateService(() => bundled.Concat(host.Templates).ToList());
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         var outcome = await service.ImportAsync(
             gdsPath, analysis.TopCellCandidates[0],
             new GdsHierarchyImportOptions

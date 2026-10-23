@@ -170,7 +170,7 @@ public class GdsUserDesignRoundTripTests : IDisposable
         }
 
         // ── 4. Analyze: the dialog offers the design cell, not a nazca wrapper ──
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         analysis.TopCellCandidates.ShouldBe(new[] { "ConnectAPIC_Design" });
         analysis.TopCells.ShouldBe(new[] { new GdsTopCellSummary("ConnectAPIC_Design", 7) });
 

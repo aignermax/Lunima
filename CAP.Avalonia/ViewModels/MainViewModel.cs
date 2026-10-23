@@ -317,7 +317,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         ViewModels.GdsImport.LayerVisibility.GdsLayerVisibilityViewModel? layerVisibility = null,
         ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters? learningChapters = null,
         ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? claudeConnectPrompt = null,
-        ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null)
+        ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
+        Services.GdsImport.GdsHierarchyExpansionService? hierarchyExpansion = null)
     {
         _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
         // Injected for activation: constructing the binder wires the adaptive
@@ -353,7 +354,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         // restores/migrates them, New Project clears them.
         FileOperations.DesignScopedGdsComponents = designScopedGdsComponents;
         ImportedHierarchy = new GdsImport.GdsHierarchyActionsViewModel(_canvas, commandManager,
-            designScopedGdsComponents is null ? null : new Services.GdsImport.GdsHierarchyExpansionService(designScopedGdsComponents))
+            designScopedGdsComponents is null ? null : hierarchyExpansion ??
+                throw new ArgumentNullException(nameof(hierarchyExpansion), "A design-scoped import requires hierarchy expansion."))
         { ReportStatus = text => StatusText = text };
         // Per-layer visibility of imported GDS geometry (#858): edits mark the
         // design dirty, and save/load/new-project round-trip through the .lun.

@@ -54,7 +54,7 @@ public sealed class GdsDesignScopeTestHost : IDisposable
     /// </param>
     public GdsImportService CreateService(
         Func<IReadOnlyList<ComponentTemplate>>? templateProvider = null) =>
-        new(Scope, templateProvider ?? (() => Templates.ToList()));
+        new(new CAP_DataAccess.Import.Gds.GdsSourceReader(), Scope, templateProvider ?? (() => Templates.ToList()));
 
     private void RegisterPdk(string pdkName, IReadOnlyList<PdkComponentDraft> drafts)
     {

@@ -81,7 +81,7 @@ public class ConnectionsRoundTripTests : IDisposable
         // ── Re-import the exported GDS ─────────────────────────────────────
         using var importHost = new GdsDesignScopeTestHost();
         _hosts.Add(importHost);
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         var service = importHost.CreateService(() => loadHost.Templates.ToList());
         var outcome = await service.ImportAsync(gdsPath, analysis.TopCellCandidates[0],
             new GdsHierarchyImportOptions

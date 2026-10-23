@@ -33,7 +33,7 @@ public class GdsInterpretationPersistenceTests
         var restored = host.Scope.Sets.Single().Interpretation.ShouldNotBeNull();
         restored.Cells.Single().Pins!.Single().XUm.ShouldBe(2.5);
         restored.Groups.Single().CellNames.ShouldBe(["device"]);
-        var copy = new CAP.Avalonia.Services.GdsImport.GdsImportService(host.Scope).FindInterpretation("", "chip")!;
+        var copy = new CAP.Avalonia.Services.GdsImport.GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope).FindInterpretation("", "chip")!;
         copy.Cells.Clear();
         host.Scope.Sets.Single().Interpretation!.Cells.Count.ShouldBe(1);
     }

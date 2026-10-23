@@ -53,7 +53,7 @@ public class GdsHierarchyActionsTests
         using var host = new GdsDesignScopeTestHost();
         var (canvas, original) = await Setup(host);
         var commands = new CommandManager();
-        var vm = new GdsHierarchyActionsViewModel(canvas, commands, new(host.Scope));
+        var vm = new GdsHierarchyActionsViewModel(canvas, commands, new(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope));
         vm.IsVisible.ShouldBeFalse();
         vm.ConfigureForSelection(original);
         vm.IsVisible.ShouldBeTrue();
@@ -74,7 +74,7 @@ public class GdsHierarchyActionsTests
         using var host = new GdsDesignScopeTestHost();
         var (canvas, original) = await Setup(host);
         var commands = new CommandManager();
-        var vm = new GdsHierarchyActionsViewModel(canvas, commands, new(host.Scope));
+        var vm = new GdsHierarchyActionsViewModel(canvas, commands, new(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope));
         string? status = null;
         vm.ReportStatus = text => status = text;
         vm.ConfigureForSelection(original);

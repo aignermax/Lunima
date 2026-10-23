@@ -55,7 +55,7 @@ public class GdsSourceIdentityTests
         var canvas = new DesignCanvasViewModel();
         var placement = PlaceComponentCommand.CreateExact(canvas, host.Templates.Single(), 100, 200);
         placement.Execute();
-        var service = new GdsHierarchyExpansionService(host.Scope);
+        var service = new GdsHierarchyExpansionService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope);
         if (legacyReviewedDraft)
         {
             var error = await Should.ThrowAsync<InvalidOperationException>(() => service.PrepareAsync(canvas, placement.CreatedViewModel!));

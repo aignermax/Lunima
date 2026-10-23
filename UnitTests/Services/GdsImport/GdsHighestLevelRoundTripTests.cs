@@ -623,7 +623,7 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     internal static async Task<GdsImportOutcome> ImportExplodeAsync(
         GdsDesignScopeTestHost host, string gdsPath, Func<IReadOnlyList<ComponentTemplate>>? templateProvider = null)
     {
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         analysis.TopCellCandidates.ShouldBe(new[] { "ConnectAPIC_Design" });
         analysis.TopCells.ShouldBe(new[] { new GdsTopCellSummary("ConnectAPIC_Design", 7) });
 

@@ -4,6 +4,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.GdsImport;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP_DataAccess.Components.AddCustomComponent;
+using CAP_DataAccess.Import.Gds;
 using Microsoft.Extensions.DependencyInjection;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 
@@ -21,6 +22,9 @@ internal static class GdsImportFeatureExtensions
     /// <summary>Adds the design-scope store, GDS import service, placement executor, and button ViewModel.</summary>
     public static IServiceCollection AddGdsImportFeature(this IServiceCollection services)
     {
+        services.AddSingleton<GdsSourceReader>();
+        services.AddSingleton<IGdsSourceReader>(sp => sp.GetRequiredService<GdsSourceReader>());
+        services.AddSingleton<GdsHierarchyExpansionService>();
         services.AddSingleton(sp =>
         {
             var leftPanel = sp.GetRequiredService<LeftPanelViewModel>();
@@ -34,6 +38,7 @@ internal static class GdsImportFeatureExtensions
         {
             var leftPanel = sp.GetRequiredService<LeftPanelViewModel>();
             return new GdsImportService(
+                sp.GetRequiredService<IGdsSourceReader>(),
                 sp.GetRequiredService<DesignScopedGdsComponentService>(),
                 () => leftPanel.AllTemplates.ToList(),
                 // Resolved lazily inside the delegate (like the bend-radius wiring in

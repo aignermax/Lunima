@@ -85,7 +85,7 @@ public sealed class ImportedGdsCellLogicGateSeamJourney : IDisposable
         var gdsPath = WriteGds();
         var designScope = mainVm.FileOperations.DesignScopedGdsComponents.ShouldNotBeNull(
             "the MainViewModel wiring carries the design-scoped GDS store");
-        var service = new GdsImportService(designScope, () => mainVm.LeftPanel.AllTemplates.ToList());
+        var service = new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), designScope, () => mainVm.LeftPanel.AllTemplates.ToList());
         var outcome = await service.ImportAsync(gdsPath, "TOP", null, null);
         outcome.Warnings.ShouldBeEmpty("the fixture cell imports cleanly");
         return mainVm.LeftPanel.AllTemplates.Single(t =>

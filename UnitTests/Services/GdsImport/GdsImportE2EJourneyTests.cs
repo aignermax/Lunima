@@ -54,7 +54,7 @@ public class GdsImportE2EJourneyTests : IDisposable
         var gds1 = await GdsE2EJourneyHarness.ExportAsync(python!, _root, "gen1", originalCanvas, bundled);
 
         // ── Step 2: hierarchy-explode import with auto-connect ALL pins ON ──
-        var analysis = await GdsImportService.AnalyzeAsync(gds1);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gds1);
         analysis.TopCellCandidates.ShouldBe(new[] { "ConnectAPIC_Design" }, "step 2: our export's top cell");
         var (canvas1, report1, host1) = await ImportAndPlaceAsync(gds1, bundled, autoConnectAllPins: true);
         report1.PlacedCount.ShouldBe(5, "step 2: every instance resolves to a bundled template and places");

@@ -92,9 +92,10 @@ public static class MainViewModelTestHelper
             capturedLeftPanel.RegisterDesignScopedPdk,
             capturedLeftPanel.RemoveDesignScopedPdk,
             Path.Combine(Path.GetTempPath(), $"cap-test-gds-cache-{Guid.NewGuid()}"));
+        var gdsSource = new CAP_DataAccess.Import.Gds.GdsSourceReader();
         var gdsImportButton = new CAP.Avalonia.ViewModels.GdsImport.GdsImportButtonViewModel(
             new CAP.Avalonia.Services.GdsImport.GdsImportService(
-                designScope,
+                gdsSource, designScope,
                 () => capturedLeftPanel.AllTemplates.ToList()),
             new CAP.Avalonia.Services.GdsImport.GdsPlacementExecutor(
                 canvas, commandManager, () => capturedLeftPanel.AllTemplates.ToList()),
@@ -132,6 +133,7 @@ public static class MainViewModelTestHelper
             registryBrowser,
             gdsImportButton,
             designScopedGdsComponents: designScope, pythonStartup: pythonStartup,
+            hierarchyExpansion: new CAP.Avalonia.Services.GdsImport.GdsHierarchyExpansionService(gdsSource, designScope),
             learningChapters: CAP.Avalonia.ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters.Create(
                 canvas, rightPanel, bottomPanel, commandManager, isaPlayground));
     }
