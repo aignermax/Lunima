@@ -17,8 +17,31 @@ namespace CAP.Avalonia.ViewModels.Analysis.WavelengthSpectrum;
 /// photonics spectrum view. Once a sweep has run, changing any sweep parameter
 /// re-runs it automatically (debounced), so the plot stays live without a reload.
 /// </summary>
-public partial class WavelengthSpectrumViewModel : ObservableObject
+public partial class WavelengthSpectrumViewModel : ObservableObject, IAsyncDisposable
 {
+    /// <summary>Retires sweep work before the analysis owner is released.</summary>
+    public Task StopAsync() => _retirement ??= RetireAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private readonly Services.Lifetime.ShellWorkScope _work = new();
+    private Task? _retirement;
+    private long _configurationVersion;
+    private long _requestVersion;
+
+    private async Task RetireAsync()
+    {
+        var work = _work.StopAsync();
+        Overlay.OverlayChanged -= OnOverlayChanged;
+        try { await work; }
+        finally
+        {
+            _sweepGate.Dispose();
+            _canvas = null;
+            _lastCurves = null;
+            _lastPinNames = null;
+            _lastInputLabel = null;
+            HasResult = false;
+        }
+    }
     /// <summary>Debounce applied before a parameter change triggers an automatic re-sweep.</summary>
     internal static readonly TimeSpan DefaultAutoRefreshDelay = TimeSpan.FromMilliseconds(600);
 
@@ -60,6 +83,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     internal Task? PendingAutoRefresh { get; private set; }
 
     private readonly CAP_Core.ErrorConsoleService? _errorConsole;
+    private readonly IWavelengthSweepRunner _runner;
     private readonly SemaphoreSlim _sweepGate = new(1, 1);
     private DesignCanvasViewModel? _canvas;
     private bool _suppressToggleRefresh;
@@ -75,17 +99,28 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
 
     /// <summary>Initializes a new instance of <see cref="WavelengthSpectrumViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
-    public WavelengthSpectrumViewModel(CAP_Core.ErrorConsoleService? errorConsole = null)
+    public WavelengthSpectrumViewModel(CAP_Core.ErrorConsoleService? errorConsole = null,
+        IWavelengthSweepRunner? runner = null, Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
     {
         _errorConsole = errorConsole;
+        _runner = runner ?? new WavelengthSweepRunner();
         Overlay = new MeasuredSpectrumOverlayViewModel(errorConsole);
-        Overlay.OverlayChanged += (_, _) => RedrawPlotWithOverlay();
+        _work.RegisterWith(applicationWork, StopAsync);
+        Overlay.OverlayChanged += OnOverlayChanged;
+    }
+
+    private void OnOverlayChanged(object? sender, EventArgs args)
+    {
+        if (!_work.IsStopping) RedrawPlotWithOverlay();
     }
 
     /// <summary>Configures the panel with the current canvas context.</summary>
     /// <param name="canvas">Canvas providing components and connections.</param>
     public void Configure(DesignCanvasViewModel? canvas)
     {
+        if (_work.IsStopping) return;
+        _configurationVersion++;
+        _sweepCts?.Cancel();
         _canvas = canvas;
         StatusText = "";
         HasResult = false;
@@ -102,7 +137,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
 
     /// <summary>Runs the wavelength sweep and updates the transmission plot.</summary>
     [RelayCommand]
-    private Task RunSweep() => RunSweepInternalAsync();
+    private Task RunSweep() => _work.RunAsync(RunSweepInternalAsync);
 
     /// <summary>Cancels a running sweep.</summary>
     [RelayCommand]
@@ -114,6 +149,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
 
     partial void OnIsCoherentInterferenceChanged(bool value)
     {
+        if (_work.IsStopping) return;
         if (_canvas != null)
             _canvas.ConnectionManager.EnableCoherentPropagationPhase = value;
         if (!_suppressToggleRefresh)
@@ -146,57 +182,82 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     /// </summary>
     private void ScheduleAutoRefresh()
     {
-        if (!HasResult) return;
+        if (_work.IsStopping || !HasResult) return;
         _debounceCts?.Cancel();
-        _debounceCts = new CancellationTokenSource();
-        PendingAutoRefresh = AutoRefreshAsync(_debounceCts.Token);
+        var debounce = new CancellationTokenSource();
+        _debounceCts = debounce;
+        PendingAutoRefresh = _work.RunAsync(stop => AutoRefreshAsync(debounce, stop));
     }
 
-    private async Task AutoRefreshAsync(CancellationToken token)
+    private async Task AutoRefreshAsync(CancellationTokenSource debounce, CancellationToken stop)
     {
-        try { await Task.Delay(AutoRefreshDelay, token); }
-        catch (OperationCanceledException) { return; }
-        if (token.IsCancellationRequested) return;
-        await RunSweepInternalAsync();
-    }
-
-    private async Task RunSweepInternalAsync()
-    {
-        if (_canvas == null) return;
-
-        // A newer request supersedes a running sweep: cancel it, then take the gate.
-        _sweepCts?.Cancel();
-        await _sweepGate.WaitAsync();
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(debounce.Token, stop);
         try
         {
+            await Task.Delay(AutoRefreshDelay, linked.Token);
+            _work.ThrowIfStopping();
+            linked.Token.ThrowIfCancellationRequested();
+            await RunSweepInternalAsync(linked.Token);
+        }
+        catch (OperationCanceledException) when (_work.IsStopping || linked.IsCancellationRequested) { }
+        finally
+        {
+            if (ReferenceEquals(_debounceCts, debounce)) _debounceCts = null;
+            debounce.Dispose();
+        }
+    }
+
+    private async Task RunSweepInternalAsync(CancellationToken stop)
+    {
+        var canvas = _canvas;
+        if (canvas == null || _work.IsStopping) return;
+        var configuration = _configurationVersion;
+        var request = ++_requestVersion;
+        _sweepCts?.Cancel();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        AnalysisSweepOperation? operation = null;
+        var entered = false;
+        try
+        {
+            operation = new AnalysisSweepOperation(_work, canvas.Document,
+                () => configuration == _configurationVersion && request == _requestVersion,
+                stop, cancellation.Token);
+            if (!TryCreateConfiguration(out var config)) return;
+            await _sweepGate.WaitAsync(operation.Token);
+            entered = true;
+            operation.ThrowIfObsolete();
             IsSweeping = true;
-            _sweepCts = new CancellationTokenSource();
-            await ExecuteSweepAsync(_sweepCts.Token);
+            _sweepCts = cancellation;
+            await ExecuteSweepAsync(canvas, config!, operation);
         }
         catch (OperationCanceledException)
         {
+            if (operation?.IsContextCurrent != true) return;
             StatusText = LocalizationService.Instance.Translate("Analysis.Spectrum.Cancelled");
         }
         catch (Exception ex)
         {
+            if (operation?.CanPublish != true) return;
             _errorConsole?.LogError($"Spectrum sweep failed: {ex.Message}", ex);
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Common.Failed"), ex.Message);
         }
         finally
         {
-            IsSweeping = false;
-            _sweepCts?.Dispose();
-            _sweepCts = null;
-            _sweepGate.Release();
+            if (ReferenceEquals(_sweepCts, cancellation))
+            {
+                IsSweeping = false;
+                _sweepCts = null;
+            }
+            operation?.Dispose();
+            if (entered) _sweepGate.Release();
         }
     }
 
-    private async Task ExecuteSweepAsync(CancellationToken token)
+    private async Task ExecuteSweepAsync(DesignCanvasViewModel canvas, WavelengthSweepConfiguration config,
+        AnalysisSweepOperation operation)
     {
-        if (!TryCreateConfiguration(out var config)) return;
-
-        var circuit = SpectrumSweepCircuitFactory.Create(_canvas!);
+        var circuit = SpectrumSweepCircuitFactory.Create(canvas);
         if (circuit == null)
         {
             StatusText = LocalizationService.Instance.Translate("Analysis.Common.NoCircuit");
@@ -213,9 +274,11 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
         StatusText = string.Format(
             LocalizationService.Instance.Translate("Analysis.Spectrum.Running"), config!.StepCount);
 
-        var sweeper = new WavelengthSweeper(new SystemMatrixBuilder(circuit.GridManager), circuit.Ports);
-        var result = await sweeper.RunSweepAsync(config, circuit.GridManager, token);
+        var result = await _runner.RunAsync(config, circuit.GridManager, circuit.Ports, operation.Token);
+        operation.ThrowIfObsolete();
 
+        operation.TryPublish(() =>
+        {
         foreach (var warning in result.Warnings)
             _errorConsole?.LogWarning(warning);
 
@@ -233,6 +296,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
             : string.Format(
                 LocalizationService.Instance.Translate("Analysis.Spectrum.Complete"),
                 result.DataPoints.Count);
+        });
     }
 
     /// <summary>

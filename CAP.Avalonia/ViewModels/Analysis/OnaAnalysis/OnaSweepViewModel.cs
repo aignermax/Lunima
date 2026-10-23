@@ -22,8 +22,29 @@ namespace CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 /// ViewModel for the ONA (Optical Network Analyzer) wavelength-sweep panel.
 /// Sweeps the simulation across a wavelength range and plots insertion loss vs wavelength.
 /// </summary>
-public partial class OnaSweepViewModel : ObservableObject
+public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
 {
+    /// <summary>Retires sweep work before the analysis owner is released.</summary>
+    public Task StopAsync() => _retirement ??= RetireAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private readonly Services.Lifetime.ShellWorkScope _work = new();
+    private Task? _retirement;
+    private long _configurationVersion;
+
+    private async Task RetireAsync()
+    {
+        try { await _work.StopAsync(); }
+        finally
+        {
+            _canvas = null;
+            Analyzer = null;
+            FileDialogService = null;
+            OpenWindowAsync = null;
+            _pinNameMap.Clear();
+            _lastResult = null;
+            OnPropertyChanged(nameof(HasResult));
+        }
+    }
     [ObservableProperty] private int _startNm = 1500;
     [ObservableProperty] private int _endNm = 1600;
     [ObservableProperty] private int _stepCount = 100;
@@ -49,6 +70,7 @@ public partial class OnaSweepViewModel : ObservableObject
         : "ONA Sweep";
 
     private readonly ErrorConsoleService? _errorConsole;
+    private readonly IWavelengthSweepRunner _runner;
     private DesignCanvasViewModel? _canvas;
     private WavelengthSweepResult? _lastResult;
     private CancellationTokenSource? _sweepCts;
@@ -65,22 +87,35 @@ public partial class OnaSweepViewModel : ObservableObject
     public Func<Component, Task>? OpenWindowAsync { get; set; }
 
     /// <summary>Initializes a new instance of <see cref="OnaSweepViewModel"/>.</summary>
-    public OnaSweepViewModel(ErrorConsoleService? errorConsole = null)
+    public OnaSweepViewModel(ErrorConsoleService? errorConsole = null,
+        IWavelengthSweepRunner? runner = null, Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
     {
         _errorConsole = errorConsole;
+        _runner = runner ?? new WavelengthSweepRunner();
+        _work.RegisterWith(applicationWork, StopAsync);
     }
 
     /// <summary>Provides the canvas reference needed to build the simulation grid.</summary>
     public void Configure(DesignCanvasViewModel canvas)
     {
+        if (_work.IsStopping) return;
+        _configurationVersion++;
+        _sweepCts?.Cancel();
         _canvas = canvas;
     }
 
     /// <summary>Runs a wavelength sweep and updates the insertion-loss plot.</summary>
     [RelayCommand]
-    private async Task RunSweep()
+    private Task RunSweep() => _work.RunAsync(RunSweepCoreAsync);
+
+    private async Task RunSweepCoreAsync(CancellationToken stop)
     {
         if (_canvas == null || IsSweeping) return;
+        var canvas = _canvas;
+        var configuration = _configurationVersion;
+        var analyzer = Analyzer;
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        AnalysisSweepOperation? operation = null;
 
         IsSweeping = true;
         StatusText = LocalizationService.Instance.Translate("Analysis.Ona.Preparing");
@@ -90,6 +125,9 @@ public partial class OnaSweepViewModel : ObservableObject
 
         try
         {
+            operation = new AnalysisSweepOperation(_work, canvas.Document,
+                () => configuration == _configurationVersion && ReferenceEquals(analyzer, Analyzer),
+                stop, cancellation.Token);
             var config = new WavelengthSweepConfiguration(StartNm, EndNm, StepCount);
             var (gridManager, portManager) = BuildSimulationGrid();
             if (gridManager == null)
@@ -112,14 +150,15 @@ public partial class OnaSweepViewModel : ObservableObject
                 return;
             }
 
-            var builder = new SystemMatrixBuilder(gridManager);
-            var sweeper = new WavelengthSweeper(builder, portManager);
-            _sweepCts?.Dispose();
-            _sweepCts = new CancellationTokenSource();
+            _sweepCts = cancellation;
 
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Ona.Running"), StepCount);
-            _lastResult = await sweeper.RunSweepAsync(config, gridManager, _sweepCts.Token);
+            var result = await _runner.RunAsync(config, gridManager, portManager, operation.Token);
+            operation.ThrowIfObsolete();
+            operation.TryPublish(() =>
+            {
+            _lastResult = result;
             OnPropertyChanged(nameof(HasResult));
 
             if (_lastResult.Warnings.Count > 0)
@@ -132,13 +171,16 @@ public partial class OnaSweepViewModel : ObservableObject
             UpdatePlotModel(_lastResult);
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Ona.Complete"), _lastResult.DataPoints.Count);
+            });
         }
         catch (OperationCanceledException)
         {
+            if (operation?.IsContextCurrent != true) return;
             StatusText = LocalizationService.Instance.Translate("Analysis.Ona.Cancelled");
         }
         catch (Exception ex)
         {
+            if (operation?.CanPublish != true) return;
             _errorConsole?.LogError($"ONA sweep failed: {ex.Message}", ex);
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Sweep.Failed"), ex.Message);
@@ -146,8 +188,8 @@ public partial class OnaSweepViewModel : ObservableObject
         finally
         {
             IsSweeping = false;
-            _sweepCts?.Dispose();
-            _sweepCts = null;
+            if (ReferenceEquals(_sweepCts, cancellation)) _sweepCts = null;
+            operation?.Dispose();
         }
     }
 
