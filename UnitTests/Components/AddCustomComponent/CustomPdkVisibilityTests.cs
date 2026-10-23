@@ -35,7 +35,7 @@ public class CustomPdkVisibilityTests : IDisposable
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
 
-        _leftPanel = new LeftPanelViewModel(_canvas, groupLibrary, pdkLoader, preferencesService,
+        _leftPanel = new LeftPanelViewModel(_canvas, groupLibrary, pdkLoader, preferencesService, preferencesService,
             new HierarchyPanelViewModel(_canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(groupLibrary));
         _leftPanel.Initialize();
@@ -451,7 +451,7 @@ public class CustomPdkVisibilityTests : IDisposable
         var canvas = new DesignCanvasViewModel();
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
-        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, preferencesService,
+        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(groupLibrary));
 

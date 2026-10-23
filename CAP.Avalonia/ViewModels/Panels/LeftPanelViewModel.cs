@@ -22,7 +22,8 @@ public partial class LeftPanelViewModel : ObservableObject
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly IPdkReader _pdkLoader;
-    private readonly UserPreferencesService _preferencesService;
+    private readonly CAP_Core.Preferences.IPdkLibraryPreferences _preferencesService;
+    private readonly CAP_Core.Preferences.IPanelLayoutPreferences _panelLayoutPreferences;
     private readonly ErrorConsoleService? _errorConsole;
     private readonly AddCustomComponentDependencies? _addCustomComponentDeps;
     private readonly RegistryBrowserViewModel? _registryBrowser;
@@ -95,7 +96,8 @@ public partial class LeftPanelViewModel : ObservableObject
         DesignCanvasViewModel canvas,
         IGroupLibrary libraryManager,
         IPdkReader pdkLoader,
-        UserPreferencesService preferencesService,
+        CAP_Core.Preferences.IPdkLibraryPreferences preferencesService,
+        CAP_Core.Preferences.IPanelLayoutPreferences panelLayoutPreferences,
         HierarchyPanelViewModel hierarchyPanel,
         PdkManagerViewModel pdkManager,
         ComponentLibraryViewModel componentLibrary,
@@ -107,6 +109,7 @@ public partial class LeftPanelViewModel : ObservableObject
         _canvas = canvas;
         _pdkLoader = pdkLoader;
         _preferencesService = preferencesService;
+        _panelLayoutPreferences = panelLayoutPreferences;
         _errorConsole = errorConsole;
         _addCustomComponentDeps = addCustomComponentDeps;
         _userPdkLibrary = userPdkLibrary ?? addCustomComponentDeps?.UserPdkStore;
@@ -364,13 +367,13 @@ public partial class LeftPanelViewModel : ObservableObject
 
     private void RestoreLeftPanelWidth()
     {
-        var width = _preferencesService.GetLeftPanelWidth();
+        var width = _panelLayoutPreferences.GetLeftPanelWidth();
         LeftPanelWidth = new GridLength(width);
     }
 
     private void SaveLeftPanelWidth()
     {
-        _preferencesService.SetLeftPanelWidth(LeftPanelWidth.Value);
+        _panelLayoutPreferences.SetLeftPanelWidth(LeftPanelWidth.Value);
     }
 
     [RelayCommand]

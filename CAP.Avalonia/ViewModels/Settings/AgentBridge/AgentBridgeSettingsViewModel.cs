@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.AgentBridge.Hosting;
 using CAP.Avalonia.Services.AgentBridge.Registration;
@@ -21,7 +22,7 @@ public partial class AgentBridgeSettingsViewModel : ObservableObject, IDisposabl
     /// <summary>Highest TCP port.</summary>
     public const int MaxPort = 65535;
 
-    private readonly UserPreferencesService _preferences;
+    private readonly IAgentBridgePreferences _preferences;
     private readonly AgentBridgeHost _host;
     private readonly ClaudeCodeConnector _connector;
 
@@ -44,7 +45,7 @@ public partial class AgentBridgeSettingsViewModel : ObservableObject, IDisposabl
     /// <param name="connector">The one-click Claude Code registration; a default one using
     /// <see cref="ProcessLaunchFactory.CreateDefault"/> when null.</param>
     public AgentBridgeSettingsViewModel(
-        UserPreferencesService preferences, AgentBridgeHost host, ClaudeCodeConnector? connector = null)
+        IAgentBridgePreferences preferences, AgentBridgeHost host, ClaudeCodeConnector? connector = null)
     {
         _preferences = preferences;
         _host = host;

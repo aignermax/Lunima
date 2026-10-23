@@ -126,7 +126,7 @@ public class BundledPdkForkSemanticsTests : IDisposable
             new ComponentGeometryExtractor(nazca.Object, gds.Object), Fdtd: null, UserPdkStore: store);
 
         var leftPanel = new LeftPanelViewModel(
-            canvas, libraryManager, new PdkLoader(), _preferencesService,
+            canvas, libraryManager, new PdkLoader(), _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
             errorConsole: _errorConsole, addCustomComponentDeps: deps);

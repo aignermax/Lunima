@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services;
 using CAP_Core.Export.PythonEnvironmentManager;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,7 +10,7 @@ namespace CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 public partial class PythonStartupViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly PythonEnvironmentRegistry _registry;
-    private readonly UserPreferencesService _preferences;
+    private readonly IPythonInterpreterPreferences _preferences;
     private readonly IManagedPythonProvisioner _provisioner;
     private readonly string _root;
     private readonly CancellationTokenSource _shutdown = new();
@@ -19,7 +20,7 @@ public partial class PythonStartupViewModel : ObservableObject, IAsyncDisposable
     private bool _retired;
     private int _generation;
 
-    public PythonStartupViewModel(PythonEnvironmentRegistry registry, UserPreferencesService preferences,
+    public PythonStartupViewModel(PythonEnvironmentRegistry registry, IPythonInterpreterPreferences preferences,
         IManagedPythonProvisioner provisioner, string? environmentsRoot = null)
     {
         _registry = registry;

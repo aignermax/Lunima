@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.AgentBridge.Registration;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,7 +16,7 @@ namespace CAP.Avalonia.ViewModels.Settings.AgentBridge;
 /// </summary>
 public partial class ClaudeCodeConnectPromptViewModel : ObservableObject
 {
-    private readonly UserPreferencesService _preferences;
+    private readonly IAgentConnectionPromptPreferences _preferences;
     private readonly ClaudeCodeConnector _connector;
     private readonly string _appVersion;
 
@@ -26,7 +27,7 @@ public partial class ClaudeCodeConnectPromptViewModel : ObservableObject
 
     /// <summary>Creates the prompt (hidden until <see cref="CheckOnStartupAsync"/> decides to show it).</summary>
     public ClaudeCodeConnectPromptViewModel(
-        UserPreferencesService preferences, ClaudeCodeConnector connector, string appVersion)
+        IAgentConnectionPromptPreferences preferences, ClaudeCodeConnector connector, string appVersion)
     {
         _preferences = preferences;
         _connector = connector;

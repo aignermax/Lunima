@@ -53,7 +53,7 @@ public class PanelWidthPersistenceTests : IDisposable
 
     /// <summary>Creates a LeftPanelViewModel with all required sub-VM dependencies.</summary>
     private LeftPanelViewModel CreateLeftPanelViewModel() =>
-        new(_canvas, _libraryManager, _pdkLoader, _preferencesService,
+        new(_canvas, _libraryManager, _pdkLoader, _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(_canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(_libraryManager));

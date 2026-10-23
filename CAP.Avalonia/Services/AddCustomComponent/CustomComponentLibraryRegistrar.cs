@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,7 +17,7 @@ public static class CustomComponentLibraryRegistrar
         ObservableCollection<ComponentTemplate> allTemplates,
         ObservableCollection<string> categories,
         PdkManagerViewModel pdkManager,
-        UserPreferencesService preferencesService,
+        IPdkLibraryPreferences preferencesService,
         IPdkReader pdkLoader,
         List<PdkDraft> loadedPdkDrafts,
         Action reapplyActiveProcess,

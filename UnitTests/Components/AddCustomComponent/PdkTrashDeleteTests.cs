@@ -50,7 +50,7 @@ public class PdkTrashDeleteTests : IDisposable
         }
 
         return new LeftPanelViewModel(
-            canvas, libraryManager, pdkLoader, preferences,
+            canvas, libraryManager, pdkLoader, preferences, preferences,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),

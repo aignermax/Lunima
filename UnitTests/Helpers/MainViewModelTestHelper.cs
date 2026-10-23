@@ -51,7 +51,8 @@ public static class MainViewModelTestHelper
         GdsPreviewRenderService? previewService = null,
         CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
         CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
-        CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore? designFiles = null)
+        CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore? designFiles = null,
+        GdsExportViewModel? gdsExportViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -73,7 +74,7 @@ public static class MainViewModelTestHelper
         var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager);
 
         var errorConsoleService = new CAP_Core.ErrorConsoleService();
-        var gdsExportVm = new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService(), errorConsoleService);
+        var gdsExportVm = gdsExportViewModel ?? new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService(), errorConsoleService);
         var updateVm = updateViewModel ?? new UpdateViewModel(
             new UpdateChecker(new HttpClient(), "aignermax", "Connect-A-PIC-Pro"),
             new UpdateDownloader(new HttpClient()),
@@ -158,7 +159,7 @@ public static class MainViewModelTestHelper
             canvas,
             libraryManager,
             pdkLoader,
-            preferencesService,
+            preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),

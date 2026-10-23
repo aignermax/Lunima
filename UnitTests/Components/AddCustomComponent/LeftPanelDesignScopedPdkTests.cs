@@ -35,8 +35,9 @@ public class LeftPanelDesignScopedPdkTests : IDisposable
     {
         var canvas = new DesignCanvasViewModel();
         var libraryManager = new GroupLibraryManager();
+        var preferences = new UserPreferencesService(_prefsPath);
         return new LeftPanelViewModel(
-            canvas, libraryManager, new PdkLoader(), new UserPreferencesService(_prefsPath),
+            canvas, libraryManager, new PdkLoader(), preferences, preferences,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager));

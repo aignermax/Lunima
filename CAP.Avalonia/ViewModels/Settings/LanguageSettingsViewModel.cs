@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,7 +13,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 public partial class LanguageSettingsViewModel : ObservableObject
 {
     private readonly LocalizationService _localization;
-    private readonly UserPreferencesService _preferences;
+    private readonly ILanguagePreferences _preferences;
     private readonly bool _initialized;
 
     /// <summary>One selectable entry in the language picker.</summary>
@@ -30,7 +31,7 @@ public partial class LanguageSettingsViewModel : ObservableObject
     private LanguageOption _selectedOption;
 
     /// <summary>Initializes the page from the persisted preference.</summary>
-    public LanguageSettingsViewModel(LocalizationService localization, UserPreferencesService preferences)
+    public LanguageSettingsViewModel(LocalizationService localization, ILanguagePreferences preferences)
     {
         _localization = localization;
         _preferences = preferences;

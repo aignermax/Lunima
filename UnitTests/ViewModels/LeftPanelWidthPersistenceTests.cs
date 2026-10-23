@@ -81,7 +81,7 @@ public class LeftPanelWidthPersistenceTests : IDisposable
         var pdkLoader = new PdkLoader();
 
         // Act
-        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
+        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(groupLibrary));
         leftPanel.Initialize();
@@ -97,7 +97,7 @@ public class LeftPanelWidthPersistenceTests : IDisposable
         var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
-        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
+        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(groupLibrary));
 
@@ -115,7 +115,7 @@ public class LeftPanelWidthPersistenceTests : IDisposable
         var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
-        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
+        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(groupLibrary));
 
@@ -133,7 +133,7 @@ public class LeftPanelWidthPersistenceTests : IDisposable
         var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
-        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
+        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(groupLibrary));
         leftPanel.Initialize();

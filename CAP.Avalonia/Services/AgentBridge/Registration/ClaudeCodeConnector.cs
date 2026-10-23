@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services.AgentBridge.Hosting;
 
 namespace CAP.Avalonia.Services.AgentBridge.Registration;
@@ -10,11 +11,11 @@ namespace CAP.Avalonia.Services.AgentBridge.Registration;
 /// </summary>
 public sealed class ClaudeCodeConnector
 {
-    private readonly UserPreferencesService _preferences;
+    private readonly IAgentBridgePreferences _preferences;
     private readonly AgentBridgeHost _host;
 
     /// <summary>Creates the connector.</summary>
-    public ClaudeCodeConnector(UserPreferencesService preferences, AgentBridgeHost host, ClaudeCodeRegistrar registrar)
+    public ClaudeCodeConnector(IAgentBridgePreferences preferences, AgentBridgeHost host, ClaudeCodeRegistrar registrar)
     {
         _preferences = preferences;
         _host = host;

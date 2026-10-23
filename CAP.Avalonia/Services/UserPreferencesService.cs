@@ -13,7 +13,10 @@ namespace CAP.Avalonia.Services;
 /// Recent-projects preference access lives in the
 /// <c>UserPreferencesService.RecentProjects.cs</c> partial (file-size split).
 /// </summary>
-public partial class UserPreferencesService : IUpdatePreferences, IRecentProjectPreferences, IHomePreferences, ILearningPreferences
+public partial class UserPreferencesService : IUpdatePreferences, IRecentProjectPreferences, IHomePreferences,
+    ILearningPreferences, IPdkLibraryPreferences, IPanelLayoutPreferences, IPythonInterpreterPreferences,
+    IFdtdPreferences, IAgentBridgePreferences, IAgentConnectionPromptPreferences, IAiPreferences,
+    IChipSizePreferences, IInterconnectPreferences, ILanguagePreferences
 {
     private readonly string _preferencesFilePath;
     private readonly IDiagnosticSink? _errorConsole;

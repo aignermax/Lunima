@@ -35,7 +35,7 @@ public class LeftPanelNewComponentTests : IDisposable
         var preferencesService = new UserPreferencesService(preferencesPath);
 
         return new LeftPanelViewModel(
-            canvas, libraryManager, pdkLoader, preferencesService,
+            canvas, libraryManager, pdkLoader, preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager));

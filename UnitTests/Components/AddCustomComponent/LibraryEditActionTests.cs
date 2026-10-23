@@ -45,7 +45,7 @@ public class LibraryEditActionTests : IDisposable
         }
 
         return new LeftPanelViewModel(
-            canvas, libraryManager, pdkLoader, preferencesService,
+            canvas, libraryManager, pdkLoader, preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),

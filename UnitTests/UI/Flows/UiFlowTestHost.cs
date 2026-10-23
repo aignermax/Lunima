@@ -65,7 +65,7 @@ internal sealed class UiFlowTestHost : IDisposable
         UserPdkStore = new UserPdkStore(UserPdkRoot, new PdkJsonSaver(), new PdkLoader());
 
         var leftPanel = new LeftPanelViewModel(
-            canvas, libraryManager, new PdkLoader(), prefs,
+            canvas, libraryManager, new PdkLoader(), prefs, prefs,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
             errorConsole: new ErrorConsoleService(),

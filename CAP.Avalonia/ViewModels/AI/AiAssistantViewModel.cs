@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using Avalonia.Threading;
@@ -18,7 +19,7 @@ namespace CAP.Avalonia.ViewModels.AI;
 public partial class AiAssistantViewModel : ObservableObject
 {
     private readonly IAiService _aiService;
-    private readonly UserPreferencesService _preferencesService;
+    private readonly IAiPreferences _preferencesService;
     private readonly IAiToolRegistry? _toolRegistry;
     private readonly IUrlLauncher _urlLauncher;
     private CancellationTokenSource? _cancellationSource;
@@ -50,7 +51,7 @@ public partial class AiAssistantViewModel : ObservableObject
     /// </summary>
     public AiAssistantViewModel(
         IAiService aiService,
-        UserPreferencesService preferencesService,
+        IAiPreferences preferencesService,
         IAiToolRegistry? toolRegistry = null,
         IUrlLauncher? urlLauncher = null)
     {

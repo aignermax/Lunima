@@ -1,6 +1,7 @@
 using CAP.Avalonia.Services;
 using CAP_Contracts;
 using CAP_Core.Helpers;
+using CAP_Core.Preferences;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -52,6 +53,16 @@ internal static class CoreServicesExtensions
             sp.GetRequiredService<CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary>()));
         services.AddSingleton<Commands.CommandManager>();
         services.AddSingleton<UserPreferencesService>();
+        services.AddSingleton<IPdkLibraryPreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<IPanelLayoutPreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<IPythonInterpreterPreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<IFdtdPreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<IAgentBridgePreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<IAgentConnectionPromptPreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<IAiPreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<IChipSizePreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<IInterconnectPreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
+        services.AddSingleton<ILanguagePreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
         services.AddSingleton<UserSMatrixOverrideStore>(sp =>
             new UserSMatrixOverrideStore(sp.GetService<CAP_Contracts.Logger.IDiagnosticSink>()));
         services.AddSingleton<CAP_DataAccess.Persistence.PIR.ITemplateSMatrixStore>(sp =>

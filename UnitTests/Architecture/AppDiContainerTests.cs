@@ -30,6 +30,24 @@ public class AppDiContainerTests
         Path.Combine(Path.GetTempPath(), $"lunima-di-test-{Guid.NewGuid():N}.json");
 
     [Fact]
+    public async Task Container_FeaturePreferencesShareThePersistedUserStore()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        var preferences = sp.GetRequiredService<CAP.Avalonia.Services.UserPreferencesService>();
+
+        sp.GetRequiredService<CAP_Core.Preferences.IPdkLibraryPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IPanelLayoutPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IPythonInterpreterPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IFdtdPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IAgentBridgePreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IAgentConnectionPromptPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IAiPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IChipSizePreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IInterconnectPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.ILanguagePreferences>().ShouldBeSameAs(preferences);
+    }
+
+    [Fact]
     public async Task Container_GdsContractsShareInterpreterAndEnvironmentCacheOwner()
     {
         await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());

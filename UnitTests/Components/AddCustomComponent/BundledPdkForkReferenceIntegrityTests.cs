@@ -113,7 +113,7 @@ public class BundledPdkForkReferenceIntegrityTests : IDisposable
             Fdtd: null, UserPdkStore: store);
 
         var leftPanel = new LeftPanelViewModel(
-            canvas, libraryManager, new PdkLoader(), _preferencesService,
+            canvas, libraryManager, new PdkLoader(), _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
             errorConsole: _errorConsole, addCustomComponentDeps: deps);

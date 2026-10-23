@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using System.Globalization;
 using System.Net.Sockets;
 using CAP.Avalonia.Services.AgentBridge.Transport;
@@ -11,7 +12,7 @@ namespace CAP.Avalonia.Services.AgentBridge.Hosting;
 /// </summary>
 public sealed class AgentBridgeHost
 {
-    private readonly UserPreferencesService _preferences;
+    private readonly IAgentBridgePreferences _preferences;
     private readonly McpHttpServer _server;
     private readonly object _settingsSync = new();
     private readonly SemaphoreSlim _settingsApplication = new(1, 1);
@@ -19,7 +20,7 @@ public sealed class AgentBridgeHost
     private bool _retired;
 
     /// <summary>Creates the host (does not start the server — see <see cref="ApplySettings"/>).</summary>
-    public AgentBridgeHost(UserPreferencesService preferences, McpHttpServer server)
+    public AgentBridgeHost(IAgentBridgePreferences preferences, McpHttpServer server)
     {
         _preferences = preferences;
         _server = server;
