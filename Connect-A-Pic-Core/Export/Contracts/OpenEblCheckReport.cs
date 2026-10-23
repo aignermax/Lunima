@@ -1,6 +1,6 @@
-namespace CAP.Avalonia.Services.OpenEblCheck;
+namespace CAP_Core.Export.Contracts;
 
-/// <summary>Overall outcome of an <see cref="OpenEblSubmissionChecker"/> run.</summary>
+/// <summary>Overall outcome of an <see cref="IOpenEblSubmissionChecker"/> run.</summary>
 public enum OpenEblCheckStatus
 {
     /// <summary>Both checks ran and reported zero errors.</summary>
@@ -65,7 +65,7 @@ public sealed record OpenEblCheckError(
 /// <summary>Die extent in µm over the openEBL floorplan layers (1,0)+(4,0).</summary>
 public sealed record OpenEblDieBoundingBox(double WidthMicrometers, double HeightMicrometers);
 
-/// <summary>Typed result of <see cref="OpenEblSubmissionChecker.CheckAsync"/>.</summary>
+/// <summary>Typed result of <see cref="IOpenEblSubmissionChecker.CheckAsync"/>.</summary>
 public sealed record OpenEblCheckReport
 {
     /// <summary>Overall outcome; <see cref="OpenEblCheckStatus.Passed"/> means zero errors on both checks.</summary>

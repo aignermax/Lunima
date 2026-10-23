@@ -1,7 +1,8 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export.Processes;
 using CAP_Core.Export;
 
-namespace CAP.Avalonia.Services.OpenEblCheck;
+namespace CAP_Core.Export.OpenEbl;
 
 /// <summary>
 /// Locates a Python interpreter that can run the vendored openEBL check scripts:
@@ -16,7 +17,7 @@ public sealed class OpenEblPythonLocator
 
     /// <summary>pip packages a user must install when no candidate qualifies.</summary>
     internal const string PipInstallHint =
-        "pip install klayout siepic_ebeam_pdk SiEPIC-Tools";
+        OpenEblToolchainRequirements.PipInstallCommand;
 
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(30);
 

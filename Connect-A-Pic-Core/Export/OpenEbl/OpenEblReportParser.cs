@@ -1,7 +1,8 @@
+using CAP_Core.Export.Contracts;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace CAP.Avalonia.Services.OpenEblCheck;
+namespace CAP_Core.Export.OpenEbl;
 
 /// <summary>
 /// Parses the stdout of the vendored openEBL check scripts into typed entries.

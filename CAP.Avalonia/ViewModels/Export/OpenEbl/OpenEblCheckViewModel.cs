@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CAP.Avalonia.Services;
@@ -15,7 +16,7 @@ namespace CAP.Avalonia.ViewModels.Export.OpenEbl;
 /// ViewModel behind the "Check for openEBL…" dialog: exports the current design via the
 /// Nazca/EBeam path to a temp GDS named after the openEBL convention
 /// (<see cref="OpenEblFileNameHelper"/>) and runs the headless
-/// <see cref="OpenEblSubmissionChecker"/> against it. The run is asynchronous with a busy
+/// <see cref="IOpenEblSubmissionChecker"/> against it. The run is asynchronous with a busy
 /// state and stays cancellable (cancellation kills the Python process inside the service);
 /// every failure mode — export error, missing toolchain, crashed script — lands as a typed
 /// result state, never as an exception escaping the command.
@@ -33,7 +34,7 @@ public partial class OpenEblCheckViewModel : ObservableObject
     private readonly DesignCanvasViewModel _canvas;
     private readonly SimpleNazcaExporter _nazcaExporter;
     private readonly CAP_Core.Export.Contracts.IGdsScriptRunner _gdsExport;
-    private readonly OpenEblSubmissionChecker _checker;
+    private readonly IOpenEblSubmissionChecker _checker;
     private readonly ErrorConsoleService? _errorConsole;
 
     private CancellationTokenSource? _runCts;
@@ -105,7 +106,7 @@ public partial class OpenEblCheckViewModel : ObservableObject
         DesignCanvasViewModel canvas,
         SimpleNazcaExporter nazcaExporter,
         CAP_Core.Export.Contracts.IGdsScriptRunner gdsExport,
-        OpenEblSubmissionChecker checker,
+        IOpenEblSubmissionChecker checker,
         ErrorConsoleService? errorConsole = null)
     {
         _canvas = canvas;
@@ -117,7 +118,7 @@ public partial class OpenEblCheckViewModel : ObservableObject
     }
 
     /// <summary>The pip command installing the check toolchain; the copy button puts this on the clipboard.</summary>
-    public string PipInstallCommand => OpenEblPythonLocator.PipInstallHint;
+    public string PipInstallCommand => OpenEblToolchainRequirements.PipInstallCommand;
 
     /// <summary>Localized "passed"/"failed" word for the submission-check row.</summary>
     public string SubmissionOutcomeText => Translate(SubmissionPassed ? "OpenEblCheck.Passed" : "OpenEblCheck.Failed");

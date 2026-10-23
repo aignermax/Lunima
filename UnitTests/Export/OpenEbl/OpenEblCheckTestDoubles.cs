@@ -86,7 +86,7 @@ internal sealed class TestableOpenEblCheckViewModel : OpenEblCheckViewModel
     public TestableOpenEblCheckViewModel(
         DesignCanvasViewModel canvas,
         GdsExportService gdsExport,
-        OpenEblSubmissionChecker checker)
+        IOpenEblSubmissionChecker checker)
         : base(canvas, new SimpleNazcaExporter(), gdsExport, checker)
     {
     }
@@ -95,7 +95,7 @@ internal sealed class TestableOpenEblCheckViewModel : OpenEblCheckViewModel
 }
 
 /// <summary>Checker fake returning scripted reports; records invocations.</summary>
-internal sealed class FakeOpenEblSubmissionChecker : OpenEblSubmissionChecker
+internal sealed class FakeOpenEblSubmissionChecker : IOpenEblSubmissionChecker
 {
     private readonly Func<CancellationToken, Task<OpenEblCheckReport>> _run;
 
@@ -108,7 +108,7 @@ internal sealed class FakeOpenEblSubmissionChecker : OpenEblSubmissionChecker
 
     public string? LastGdsPath { get; private set; }
 
-    public override Task<OpenEblCheckReport> CheckAsync(
+    public Task<OpenEblCheckReport> CheckAsync(
         string gdsPath, CancellationToken cancellationToken = default)
     {
         CallCount++;

@@ -1,7 +1,8 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export.Processes;
 using CAP_Core.Export;
 
-namespace CAP.Avalonia.Services.OpenEblCheck;
+namespace CAP_Core.Export.OpenEbl;
 
 /// <summary>
 /// Headless openEBL submission checker: runs the two vendored klayout-only check
@@ -12,7 +13,7 @@ namespace CAP.Avalonia.Services.OpenEblCheck;
 /// SiEPIC-Tools not importable) yields <see cref="OpenEblCheckStatus.ToolchainMissing"/>
 /// with an actionable pip hint — never a crash and never a false "passed".
 /// </summary>
-public class OpenEblSubmissionChecker
+public class OpenEblSubmissionChecker : IOpenEblSubmissionChecker
 {
     private static readonly TimeSpan ScriptTimeout = TimeSpan.FromMinutes(5);
 

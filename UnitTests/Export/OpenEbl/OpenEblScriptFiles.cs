@@ -1,8 +1,9 @@
+using CAP_Core.Export.OpenEbl;
 namespace UnitTests.Export.OpenEbl;
 
 /// <summary>
 /// Locates the vendored openEBL check scripts under <c>scripts/openebl/</c> — the same
-/// files <see cref="CAP.Avalonia.Services.OpenEblCheck.OpenEblSubmissionChecker"/> runs —
+/// files <see cref="CAP_Core.Export.OpenEbl.OpenEblSubmissionChecker"/> runs —
 /// so the tests exercise exactly what the product ships and no script text is embedded
 /// in the test suite.
 /// </summary>

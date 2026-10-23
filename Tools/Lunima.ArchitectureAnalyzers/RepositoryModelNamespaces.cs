@@ -43,6 +43,7 @@ internal static class RepositoryModelNamespaces
         yield return new("CAP_Core.Export.InterconnectRouting", RepositoryModules.Application);
         yield return new("CAP_Core.Export.Netlist", RepositoryModules.Application);
         yield return new("CAP_Core.Export.PdkResolution", RepositoryModules.Infrastructure);
+        yield return new("CAP_Core.Export.OpenEbl", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Export.Processes", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Export.PythonEnvironmentManager", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.ExternalPorts", RepositoryModules.Domain);

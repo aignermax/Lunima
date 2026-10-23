@@ -1,3 +1,5 @@
+using CAP_Core.Export.Contracts;
+using CAP_Core.Export.OpenEbl;
 using System.Text.Json;
 using CAP.Avalonia.Services.OpenEblCheck;
 using CAP_Core.Export;

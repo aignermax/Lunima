@@ -1,3 +1,5 @@
+using CAP_Core.Export.Contracts;
+using CAP_Core.Export.OpenEbl;
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
