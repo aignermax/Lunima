@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """Enforce the source ceiling against tracked files or the exact staged blobs."""
 import argparse
+import json
 import pathlib
 import subprocess
 import sys
 
 
-MAX_LINES = 999
-SOURCE_SUFFIXES = frozenset({
-    ".cs", ".axaml", ".xaml", ".py", ".js", ".mjs", ".cjs", ".jsx",
-    ".ts", ".tsx", ".html", ".css", ".scss", ".sh", ".bash", ".ps1",
-    ".psm1", ".yml", ".yaml", ".props", ".targets", ".csproj", ".toml",
-})
-SOURCE_NAMES = frozenset({"Makefile", "Dockerfile", ".editorconfig"})
+POLICY = json.loads(pathlib.Path(__file__).with_name("source_size_policy.json").read_text(encoding="utf-8"))
+MAX_LINES = POLICY["max_lines"]
+SOURCE_SUFFIXES = frozenset(POLICY["source_suffixes"])
+SOURCE_NAMES = frozenset(POLICY["source_names"])
+SOURCE_PREFIXES = tuple(POLICY["source_prefixes"])
 
 
 def git(root, *args):
@@ -23,7 +22,7 @@ def git(root, *args):
 def is_source(path):
     name = pathlib.PurePosixPath(path)
     return (name.suffix.lower() in SOURCE_SUFFIXES or name.name in SOURCE_NAMES
-            or path.startswith(".githooks/"))
+            or path.startswith(SOURCE_PREFIXES))
 
 
 def physical_lines(data):

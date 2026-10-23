@@ -23,6 +23,7 @@ class HookInstallationTests(unittest.TestCase):
         (self.repo / "scripts").mkdir()
         shutil.copyfile(SCRIPTS.parent / ".githooks/pre-commit", self.repo / ".githooks/pre-commit")
         shutil.copyfile(SCRIPTS / "check_source_size.py", self.repo / "scripts/check_source_size.py")
+        shutil.copyfile(SCRIPTS / "source_size_policy.json", self.repo / "scripts/source_size_policy.json")
 
     def git(self, *args, check=True):
         return subprocess.run(["git", *args], cwd=self.repo, check=check,

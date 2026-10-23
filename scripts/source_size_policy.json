@@ -1,0 +1,36 @@
+{
+  "max_lines": 999,
+  "source_suffixes": [
+    ".cs",
+    ".axaml",
+    ".xaml",
+    ".py",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".html",
+    ".css",
+    ".scss",
+    ".sh",
+    ".bash",
+    ".ps1",
+    ".psm1",
+    ".yml",
+    ".yaml",
+    ".props",
+    ".targets",
+    ".csproj",
+    ".toml"
+  ],
+  "source_names": [
+    "Makefile",
+    "Dockerfile",
+    ".editorconfig"
+  ],
+  "source_prefixes": [
+    ".githooks/"
+  ]
+}
