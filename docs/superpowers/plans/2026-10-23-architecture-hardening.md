@@ -161,23 +161,82 @@ Files: architecture tests/checker, explicit module policy, every remaining path 
 
 ## Current acceptance status
 
+### Extraction checkpoint (not final acceptance)
+
+- `tests-20261023-110942-57176.log`: **700 passed, zero failed/skipped** after
+  correcting all extraction/review findings, including process-warning assignment
+  order. Covers native persistence, Main wiring, shell anchors, learning journeys,
+  canvas gestures, grouping/library actions, process enforcement and export workflows.
+  The combined extraction is committed as `5206d1fa`; its staged 106-source-file
+  size check passed. Full tracked source also passes after the new files are included.
+- `tests-20261023-110611-14052.log`: 37 passed, two intentional warning-order REDs,
+  one explicit Unix-permission skip on Windows. The subsequent 700-case run closes
+  those two REDs. uv deadline/caller cancellation tests passed in both runs; cached
+  Unix execute permissions still require a Unix host. Bootstrap follow-up `18a121f6`.
+
+- `tests-20261023-103246-40700.log`: 357 passed, zero failed/skipped after
+  cache edit invalidation, MCP cancellation-callback recovery, verified uv archives,
+  watchdog shutdown handling and the first model-ownership extraction.
+- `tests-20261023-105614-57476.log`: 650 passed, five failed after the combined
+  Main/FileOperations/input/window extraction. Failures exposed FileOperations
+  dirty subscriptions surviving disposal, unfinished canvas drag state, an invalid
+  pin fixture, virtualized tutorial-anchor timing, and an unbounded download body.
+  Corrections and targeted verification are in progress; this is not a green run.
+- All tracked authored sources pass the Python 999-line ceiling (3563 files).
+  New helpers still require the final staged check. Main is 998 lines and delegates
+  process, library, selection, learning and design-check responsibilities to separate
+  owners. This size result does not close remaining document/session ownership work.
+- The test runner now keeps compiler errors visible despite long warning output;
+  the complete log retains warnings. All 23 Python tooling tests pass (`106f9442`).
+- Pinned uv installer is committed (`69388c52`); post-header download deadlines
+  and Unix cached executable permissions are undergoing follow-up verification.
+- Native serialization DTOs and workflow adapters are extracted. Main/FileOperations,
+  window namescope and input-gesture behavior remain under combined review.
+
+Earlier verification checkpoints, 2026-10-23:
+
+- `tests-20261023-101544-52012.log`: 531 passed, zero failed/skipped, covering
+  cache ownership/scheduling, MCP Gate1, native DTO roundtrips, exporter golden
+  scripts, DI and watchdog continuations. Independent review then identified
+  warm inline-template scans, missing existing-PDK edit invalidation, cancellation
+  callback restart poisoning and diagnostic posting-failure masking. Separate
+  regressions are being added; these findings are not considered closed.
+- `tests-20261023-101800-48132.log`: 331 passed, zero failed/skipped, before the
+  Main/FileOperations coordinator extractions.
+- `tests-20261023-102058-59292.log`: 163 canvas/window baseline tests passed;
+  two intended RED tests demonstrated mutable uv downloads and watchdog posting
+  errors escaping diagnostics. No other failures/skips.
+- Desktop Release publish succeeded into a fresh `TestResults/publish-proof-20261023`
+  directory. MathNet SHA-256 is unchanged from the removed duplicate and NuGet 5.0.0:
+  `83B41A608E438409D6520D01124F52F57409E229791C0E074E315ACE7D9F4134`.
+  Browser publish and non-Windows platform checks remain outstanding.
+- 22 Python tooling tests passed. SDK now stays within the declared 10.0 line,
+  with prereleases disabled. Dependency cleanup committed as `99bb03b9`.
+- Export facade is 238 lines with fourteen responsibility-specific writers/helpers
+  (35–195 lines). No new partials. Complete script goldens unchanged and verified;
+  extraction committed as `2906b5d9`. Five other production files remain over limit.
+- Removed unreferenced alternate presentation persistence service/VM and DI entries
+  (`0c1afb86`); the tested legacy grid serializer remains. Native DTO move verified
+  in the 531-case run, but its Main/FileOperations edits cannot be committed until
+  those files satisfy the mandatory staged size gate.
+
 | Finding | Status |
 |---|---|
 | A01 | Resolved, reviewed, 124-case combined verification |
 | A02 | Pipe/deadline and mode-solver fixes verified; orphan containment open |
-| A03 | Cache implementation/review in progress |
+| A03 | Bounded cache, warm lookup and PDK edit invalidation verified; final combined review pending |
 | A04 | Simulation snapshot/session work pending |
-| A05 | Export responsibility split designed; main/file/input/window extraction pending |
+| A05 | Export split committed; main/file/input/window extraction implemented, combined verification in progress |
 | A06 | Directed domain/application/infrastructure boundaries pending |
 | A07 | Semantic dependency enforcement pending |
-| A08 | Shared runtime declarations/tests verified; shipping build/publish pending |
-| A09 | Whole-operation heartbeat in progress; benchmark state reset pending |
-| A10 | Admission/draining gate in progress; real commit-boundary integration pending |
-| A11 | Signed updater manifest and pinned uv implementation pending |
-| A12 | Checked-in runner/docs implemented; 20 tool tests pass |
+| A08 | Shared runtime verified; fresh desktop publish passed before shell extraction, browser pending |
+| A09 | Whole-operation heartbeat verified; benchmark state reset pending |
+| A10 | Admission/draining gate verified; real commit-boundary integration pending |
+| A11 | Pinned/verified uv implemented; signed updater manifest pending |
+| A12 | Checked-in runner/docs implemented; 23 tool tests pass |
 | A13 | April report removed, active docs reconciled; update as extractions land |
-| A14 | Hook/CI guard implemented; four test suites decomposed, six production files oversized |
+| A14 | Hook/CI guard implemented; tracked source ceiling passes, new files/final legacy guard replacement pending |
 | A15 | Cache ownership partly addressed; session/temporary-resource lifecycle pending |
-| A16 | Roadmap/workflow docs aligned; binary/SDK supply cleanup pending |
-| A17 | Native DTO extraction pending verification; persistence use-case extraction pending |
+| A16 | Binary/SDK cleanup verified with fresh desktop publish; final branch/platform checks pending |
+| A17 | Native DTO extraction verified; persistence workflow extraction undergoing combined regression |
 | A18 | Document/scope authority and revisioned operation ownership pending |

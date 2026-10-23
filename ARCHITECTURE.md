@@ -61,12 +61,13 @@ per-die process context distinct when editing nested designs.
 The `.lun` format carries design data and is the basis for the evolving Photonic
 Intermediate Representation (PIR). `CAP-DataAccess/Persistence/PIR/` contains
 metadata, S-matrix, simulation result and external-reference data. Current project
-load/save and DTO ownership are still coupled to `MainViewModel`; the separately
-registered `ProjectPersistenceService` wraps the older grid/group persistence
-manager. Do not mistake those two paths for one completed persistence boundary.
-Moving the current contract out of presentation and establishing one explicit
-workflow are tracked in the hardening design. Preserve serialized names, IDs,
-geometry, models and process data during that extraction.
+load/save orchestration is still coupled to presentation. The native document DTOs
+now live in `CAP-DataAccess/Persistence/NativeDesign/`. The unused alternate UI
+workflow (`ProjectPersistenceViewModel`/`ProjectPersistenceService`) was retired.
+`GridPersistenceWithGroupsManager` remains a separately tested low-level grid
+serializer; it is not the application's native-document workflow. Extracting the
+native load/save use cases from presentation is still tracked in the hardening
+design. Preserve serialized names, IDs, geometry, models and process data.
 
 `CAP.Avalonia/Commands/CommandManager` owns undo/redo history. Command effects,
 worker lifetimes and document replacement need coordinated ownership; the
@@ -90,6 +91,11 @@ gdsfactory and Nazca, alongside circuit/netlist exporters. Export coordinates
 must preserve the editor's Y-down to fabrication Y-up conversion, component
 rotations and PDK origin offsets. Consult the coordinate regression tools listed
 in CLAUDE.md before changing those transformations.
+
+`SimpleNazcaExporter` retains export orchestration and its public facade. Focused
+writers in `Services/NazcaExport/` own component stubs/placements, routed and frozen
+paths, crossing geometry, assembly cells and the Python script envelope. Complete
+script regression fixtures protect emission order and coordinate conventions.
 
 External tools use `CAP_Core.Export.ProcessLaunchFactory`; opening URLs and files
 uses `IUrlLauncher`. Solver cancellation, Python environment identity, preview

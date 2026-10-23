@@ -17,6 +17,7 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | `Connect-A-Pic-Core/Logic/` | Photonic logic and execution models |
 | `Connect-A-Pic-Core/Export/` | Export support and external process launching |
 | `CAP-DataAccess/Persistence/` | Persistence helpers, group DTOs and PIR data |
+| `CAP-DataAccess/Persistence/NativeDesign/` | UI-independent `.lun` document contract, process/die/import data |
 | `CAP-DataAccess/PDKs/` | Bundled process design kits |
 | `CAP.Avalonia/DI/` | Feature service registration |
 | `CAP.Avalonia/ViewModels/` | Presentation state, grouped by feature |
@@ -39,6 +40,8 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | Parameter sweep viewmodel | `CAP.Avalonia/ViewModels/Analysis/ParameterSweepViewModel.cs` |
 | Parameter sweep calculation | `Connect-A-Pic-Core/Analysis/ParameterSweeper.cs` |
 | Component groups | `Connect-A-Pic-Core/Components/Core/ComponentGroup.cs` |
+| Nazca export orchestration | `CAP.Avalonia/Services/SimpleNazcaExporter.cs` |
+| Nazca script writers | `CAP.Avalonia/Services/NazcaExport/` (components, connections, dies, geometry, script envelope) |
 | Workspaces | `CAP.Avalonia/ViewModels/Workspaces/` |
 | Dies and chiplets | `CAP.Avalonia/ViewModels/Dies/` |
 | Process policies | `Connect-A-Pic-Core/Components/Process/` |
