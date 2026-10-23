@@ -6,6 +6,7 @@ import datetime
 import json
 import os
 import pathlib
+import re
 import signal
 import subprocess
 import sys
@@ -78,8 +79,10 @@ def run(command, environment, timeout):
             stop_tree(process)
     lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
     print("\n".join(lines[-(18 if code == 0 else 100):]))
-    if code == 0 and not any("Passed!" in line and "Total:" in line for line in lines):
-        print("No completed test summary found; refusing to report success.", file=sys.stderr)
+    summaries = [re.search(r"Passed!.*Failed:\s*0,\s*Passed:\s*([1-9]\d*),.*Total:", line)
+                 for line in lines]
+    if code == 0 and not any(summaries):
+        print("No executed passing tests found; refusing to report success.", file=sys.stderr)
         return 1
     return code
 
