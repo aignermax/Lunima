@@ -77,7 +77,7 @@ namespace CAP_Core.Analysis.MeasuredSpectrum
         }
 
         /// <summary>Converts dB to linear power: 10^(dB/10).</summary>
-        public static double DecibelToLinear(double decibel) => Math.Pow(10.0, decibel / 10.0);
+        public static double DecibelToLinear(double decibel) => PowerConversion.DecibelToLinear(decibel);
 
         private static bool TryParseDouble(string token, out double value) =>
             double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
