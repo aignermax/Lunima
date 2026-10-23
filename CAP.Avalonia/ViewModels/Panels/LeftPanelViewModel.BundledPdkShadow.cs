@@ -343,6 +343,7 @@ public partial class LeftPanelViewModel
         }
 
         ReplaceLibraryTemplateWithBundledDefinition(pdkInfo, template, counterpart);
+        PdkManager.NotifyDefinitionsChanged();
         ReapplyActiveProcessAfterPdkChange();
         FilterComponents();
         // A revert changes physics like an editor save: placed instances must adopt the restored

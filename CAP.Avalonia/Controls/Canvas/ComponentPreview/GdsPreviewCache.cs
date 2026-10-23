@@ -1,77 +1,101 @@
+using Avalonia.Media.Imaging;
+using CAP_Core.Export;
+
 namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 
 /// <summary>
-/// Process-lifetime LRU cache for GDS preview data.
-/// Key format: <c>"{render-identity hash}|{width:F2}|{height:F2}|{layer-role signature}"</c>
-/// (see <see cref="GdsPreviewRenderService.BuildPreviewKey"/>).
-/// A <c>null</c> value means the fetch succeeded but yielded no polygons (or
-/// failed), so no retry should be attempted for that template in this session.
+/// Bounded raster LRU. Geometry and wrappers are weak: the shared geometry cache is
+/// their sole cache owner. Raster pixels have a separate 32 MiB estimated payload budget.
 /// </summary>
-/// <remarks>
-/// A typical canvas contains 5–15 unique component templates, so the default
-/// capacity of 50 entries provides a very high cache-hit rate in practice.
-/// </remarks>
 internal sealed class GdsPreviewCache
 {
-    /// <summary>Maximum number of entries retained in the cache.</summary>
     internal const int MaxEntries = 50;
+    private readonly long _maxBitmapBytes;
+    private readonly Dictionary<string, LinkedListNode<Entry>> _map = new();
+    private readonly LinkedList<Entry> _lru = new();
+    private readonly object _gate = new();
+    private long _bytes;
 
-    private readonly Dictionary<string, LinkedListNode<CacheEntry>> _map = new();
-    private readonly LinkedList<CacheEntry> _lru = new();
-    private readonly object _lock = new();
+    private sealed class Entry(string key, GdsPreviewData? value)
+    {
+        public string Key { get; } = key;
+        public bool Empty { get; } = value == null;
+        public WeakReference<GdsPreviewData>? Wrapper { get; } = value == null ? null : new(value);
+        public WeakReference<NazcaPreviewResult>? Geometry { get; } = value == null ? null : new(value.Result);
+        public RenderTargetBitmap? Bitmap { get; } = value?.Bitmap;
+        public double Width { get; } = value?.WidthMicrometers ?? 0;
+        public double Height { get; } = value?.HeightMicrometers ?? 0;
+        public GdsPreviewLayerRoles Roles { get; } = value?.LayerRoles ?? GdsPreviewLayerRoles.Default;
+        public long Bytes { get; } = value?.Bitmap is { } bitmap
+            ? 4L * bitmap.PixelSize.Width * bitmap.PixelSize.Height : 0;
+    }
 
-    private readonly record struct CacheEntry(string Key, GdsPreviewData? Value);
+    public GdsPreviewCache(long maxBitmapBytes = PreviewGeometryCache.MaxPayloadBytes)
+    {
+        if (maxBitmapBytes <= 0) throw new ArgumentOutOfRangeException(nameof(maxBitmapBytes));
+        _maxBitmapBytes = maxBitmapBytes;
+    }
 
-    /// <summary>
-    /// Attempts to retrieve a cached entry.
-    /// Returns <c>true</c> when the key is present (even when the stored value
-    /// is <c>null</c>, which indicates a completed-but-empty result).
-    /// </summary>
     public bool TryGet(string key, out GdsPreviewData? value)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            if (_map.TryGetValue(key, out var node))
+            value = null;
+            if (!_map.TryGetValue(key, out var node)) return false;
+            var entry = node.Value;
+            if (!entry.Empty)
             {
-                _lru.Remove(node);
-                _lru.AddFirst(node);
-                value = node.Value.Value;
-                return true;
+                if (!entry.Geometry!.TryGetTarget(out var geometry))
+                {
+                    Remove(node);
+                    return false;
+                }
+                if (!entry.Wrapper!.TryGetTarget(out value))
+                {
+                    value = new GdsPreviewData(geometry, entry.Width, entry.Height)
+                    {
+                        Bitmap = entry.Bitmap, LayerRoles = entry.Roles
+                    };
+                    entry.Wrapper.SetTarget(value);
+                }
             }
+            _lru.Remove(node);
+            _lru.AddFirst(node);
+            return true;
         }
-        value = null;
-        return false;
     }
 
-    /// <summary>
-    /// Stores a preview result. Evicts the least-recently-used entry when
-    /// <see cref="MaxEntries"/> is exceeded.
-    /// </summary>
     public void Set(string key, GdsPreviewData? value)
     {
-        lock (_lock)
+        var entry = new Entry(key, value);
+        lock (_gate)
         {
-            if (_map.TryGetValue(key, out var existing))
-            {
-                _lru.Remove(existing);
-                _map.Remove(key);
-            }
-
-            while (_lru.Count >= MaxEntries && _lru.Last != null)
-            {
-                var evicted = _lru.Last.Value;
-                _lru.RemoveLast();
-                _map.Remove(evicted.Key);
-            }
-
-            var node = _lru.AddFirst(new CacheEntry(key, value));
-            _map[key] = node;
+            if (_map.TryGetValue(key, out var existing)) Remove(existing);
+            // Geometry is weakly referenced, including oversized results owned by callers.
+            if (entry.Bytes > _maxBitmapBytes) return;
+            while (_lru.Last is { } oldest && (_lru.Count >= MaxEntries || _bytes + entry.Bytes > _maxBitmapBytes))
+                Remove(oldest);
+            _map.Add(key, _lru.AddFirst(entry));
+            _bytes += entry.Bytes;
         }
     }
 
-    /// <summary>Gets the current number of entries in the cache.</summary>
-    public int Count
+    public void Clear()
     {
-        get { lock (_lock) return _map.Count; }
+        lock (_gate)
+        {
+            _map.Clear();
+            _lru.Clear();
+            _bytes = 0;
+        }
+    }
+
+    public int Count { get { lock (_gate) return _map.Count; } }
+
+    private void Remove(LinkedListNode<Entry> node)
+    {
+        _map.Remove(node.Value.Key);
+        _lru.Remove(node);
+        _bytes -= node.Value.Bytes;
     }
 }

@@ -63,6 +63,9 @@ internal static class CanvasAndPanelExtensions
                 sp.GetRequiredService<NazcaComponentPreviewService>(),
                 sp.GetRequiredService<GdsFactoryComponentPreviewService>());
             sp.GetRequiredService<UserPreferencesService>().PythonInterpreterActivated += previews.RetryFailedPreviews;
+            sp.GetRequiredService<PdkManagerViewModel>().LoadedPdks.CollectionChanged +=
+                (_, _) => previews.InvalidatePdkPreviews();
+            sp.GetRequiredService<PdkManagerViewModel>().DefinitionsChanged += previews.InvalidatePdkPreviews;
             previews.ReportPreviewFailure = message => sp.GetService<CAP_Core.ErrorConsoleService>()?
                 .LogWarning($"Component preview: {message}");
             // Resolved lazily: the left panel itself shows previews through this service.

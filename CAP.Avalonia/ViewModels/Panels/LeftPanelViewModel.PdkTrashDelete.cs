@@ -80,6 +80,7 @@ public partial class LeftPanelViewModel
             d.FilePath != null && Path.GetFullPath(d.FilePath) == normalizedPath);
         draft?.Components.RemoveAll(c => string.Equals(c.Name, template.Name, StringComparison.OrdinalIgnoreCase));
 
+        PdkManager.NotifyDefinitionsChanged();
         ReapplyActiveProcessAfterPdkChange();
         FilterComponents();
     }

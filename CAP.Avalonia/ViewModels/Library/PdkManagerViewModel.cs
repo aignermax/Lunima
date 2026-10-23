@@ -18,6 +18,12 @@ public partial class PdkManagerViewModel : ObservableObject
 
     public ObservableCollection<PdkInfoViewModel> LoadedPdks { get; } = new();
 
+    /// <summary>Published after definitions change inside an already registered PDK.</summary>
+    public event Action? DefinitionsChanged;
+
+    /// <summary>Invalidates consumers after a completed definition/catalog update.</summary>
+    public void NotifyDefinitionsChanged() => DefinitionsChanged?.Invoke();
+
     public Action? OnFilterChanged { get; set; }
 
     public void RegisterPdk(string name, string? filePath, bool isBundled, int componentCount)

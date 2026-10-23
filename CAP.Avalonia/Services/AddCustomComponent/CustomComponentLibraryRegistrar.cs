@@ -73,6 +73,7 @@ public static class CustomComponentLibraryRegistrar
             }
         }
 
+        pdkManager.NotifyDefinitionsChanged();
         reapplyActiveProcess();
         filterComponents();
     }
