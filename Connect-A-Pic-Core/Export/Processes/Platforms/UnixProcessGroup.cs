@@ -10,6 +10,10 @@ internal static class UnixProcessGroup
         if (id <= 1) throw new InvalidOperationException("Refusing an invalid owned process group.");
         if (UnixProcessNative.kill(-id, UnixProcessNative.KillSignal) == 0) return;
         var error = Marshal.GetLastPInvokeError();
+        // Darwin killpg skips zombies and returns EPERM when none are signalable. WNOWAIT
+        // deliberately retains our root zombie. Suppress EPERM only after proving no member lives.
+        // https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sig.c#L1612-L1621
+        if (OperatingSystem.IsMacOS() && error == UnixProcessNative.OperationNotPermitted && !HasLiveMembers(id)) return;
         if (error != UnixProcessNative.NoSuchProcess) throw new Win32Exception(error);
     }
 
@@ -45,12 +49,11 @@ internal static class UnixProcessGroup
             return false;
         }
         using var memory = new NativeLaunchMemory();
-        var capacity = Math.Max(256, UnixProcessNative.proc_listpids(2, (uint)group, 0, 0) + 256);
+        var capacity = Math.Max(256, ReadDarwinGroupMembers(group, 0, 0) + 256);
         while (true)
         {
             var list = memory.Allocate(capacity);
-            var count = UnixProcessNative.proc_listpids(2, (uint)group, list, capacity);
-            if (count < 0) throw new Win32Exception(Marshal.GetLastPInvokeError());
+            var count = ReadDarwinGroupMembers(group, list, capacity);
             if (count >= capacity) { capacity = checked(capacity * 2); continue; }
             var info = memory.Allocate(136); // proc_bsdinfo on supported Darwin x64/arm64 ABIs.
             for (var offset = 0; offset < count; offset += sizeof(int))
@@ -58,9 +61,26 @@ internal static class UnixProcessGroup
                 var pid = Marshal.ReadInt32(list, offset);
                 if (pid <= 0) continue;
                 var length = UnixProcessNative.proc_pidinfo(pid, 3, 0, info, 136);
-                if (length > 0 && Marshal.ReadInt32(info, 4) != 5) return true; // SZOMB
+                if (length == 0)
+                {
+                    var error = Marshal.GetLastPInvokeError();
+                    if (error == UnixProcessNative.NoSuchProcess) continue; // Exited during enumeration.
+                    throw new Win32Exception(error, "Could not verify an owned process group member.");
+                }
+                if (length != 136) throw new InvalidDataException("Incomplete Darwin process status.");
+                if (Marshal.ReadInt32(info, 4) != 5) return true; // SZOMB
             }
             return false;
         }
+    }
+
+    private static int ReadDarwinGroupMembers(int group, nint buffer, int size)
+    {
+        // libproc returns zero on error, with errno set; .NET SetLastError clears errno before invocation.
+        var count = UnixProcessNative.proc_listpids(2, (uint)group, buffer, size);
+        var error = Marshal.GetLastPInvokeError();
+        if (count < 0 || (count == 0 && error != 0))
+            throw new Win32Exception(error, "Could not verify the owned process group.");
+        return count;
     }
 }

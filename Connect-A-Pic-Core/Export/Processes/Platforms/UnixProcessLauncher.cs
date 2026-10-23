@@ -38,10 +38,14 @@ internal static class UnixProcessLauncher
             for (var target = 0; target < 3; target++)
             {
                 // Reserve sources above stdin/out/err so dup2 cannot overwrite another source.
-                var fd = UnixProcessNative.fcntl((int)pipes.ChildHandles[target],
-                    OperatingSystem.IsMacOS() ? 67 : 1030, 3); // F_DUPFD_CLOEXEC
-                if (fd < 0) throw new Win32Exception(Marshal.GetLastPInvokeError());
-                duplicates.Add(fd);
+                int fd;
+                do
+                {
+                    fd = (int)UnixProcessNative.DuplicateCloseOnExec(pipes.ChildHandles[target]);
+                    if (fd < 0) throw new Win32Exception(Marshal.GetLastPInvokeError());
+                    // Keep any vacant 0/1/2 reserved until launch completes; the next dup moves higher.
+                    duplicates.Add(fd);
+                } while (fd < 3);
                 Check(UnixProcessNative.posix_spawn_file_actions_adddup2(actions, fd, target));
             }
             foreach (var descriptor in pipes.ChildHandles.Concat(pipes.ParentHandles)

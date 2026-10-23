@@ -5,6 +5,7 @@ namespace CAP_Core.Export.Processes;
 internal static class UnixProcessNative
 {
     internal const int Interrupted = 4;
+    internal const int OperationNotPermitted = 1;
     internal const int NoSuchProcess = 3;
     internal const int KillSignal = 9;
     internal const int ChildExited = 1;
@@ -21,7 +22,11 @@ internal static class UnixProcessNative
     [DllImport("libc", SetLastError = true)] internal static extern int kill(int pid, int signal);
     [DllImport("libc", SetLastError = true)] internal static extern int waitpid(int pid, out int status, int options);
     [DllImport("libc", SetLastError = true)] internal static extern int waitid(int type, uint pid, nint info, int options);
-    [DllImport("libc", SetLastError = true)] internal static extern int fcntl(int fd, int command, int value);
+    // .NET 10's fixed-signature PAL wrapper performs atomic F_DUPFD_CLOEXEC and retries EINTR.
+    // A fixed three-argument libc fcntl import is ABI-incorrect on Darwin ARM64 (variadic arg on stack).
+    // https://github.com/dotnet/runtime/blob/v10.0.0/src/native/libs/System.Native/pal_io.c#L328-L343
+    [DllImport("System.Native", EntryPoint = "SystemNative_Dup", SetLastError = true)]
+    internal static extern nint DuplicateCloseOnExec(nint fd);
     [DllImport("libc", SetLastError = true)] internal static extern int close(int fd);
     [DllImport("libc")] internal static extern int posix_spawnattr_init(nint attributes);
     [DllImport("libc")] internal static extern int posix_spawnattr_destroy(nint attributes);

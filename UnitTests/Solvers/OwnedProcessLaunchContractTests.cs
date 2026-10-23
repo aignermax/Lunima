@@ -9,6 +9,20 @@ namespace UnitTests.Solvers;
 public sealed class OwnedProcessLaunchContractTests
 {
     [SkippableFact]
+    public async Task NormalRootExit_WithoutDescendants_RetiresReservedProcessGroupAndPreservesExitCode()
+    {
+        await using var child = await ControlledSolverProcess.CreateAsync("os._exit(23)");
+        await using var process = OwnedProcess.Start(child.StartInfo);
+        await process.WaitForExitAsync().WaitAsync(ControlledSolverProcess.GuardTimeout);
+        process.ExitCode.ShouldBe(23);
+        // Unix retains the exited root with WNOWAIT until retirement; Darwin killpg returns
+        // EPERM for this zombie-only group. Retirement must verify it is empty of live members.
+        await process.StopAsync().WaitAsync(ControlledSolverProcess.GuardTimeout);
+        process.ExitCode.ShouldBe(23);
+        child.ShouldHaveExited();
+    }
+
+    [SkippableFact]
     public async Task Runner_PreservesArgumentsEnvironmentWorkingDirectoryAndInputEof()
     {
         await using var child = await ControlledSolverProcess.CreateAsync("""
