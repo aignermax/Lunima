@@ -101,7 +101,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         _activation.StopAsync(), _liveSimulation.StopAsync(), _work.StopAsync(),
         Canvas.Document.RetireAsync(), ModeProbe?.StopAsync() ?? Task.CompletedTask,
         _designChecks.StopAsync(), GateView.StopAsync(), RunHint.StopAsync(), Update.StopAsync(),
-        RightPanel.OnaAnalysis.StopAsync(), BottomPanel.Analysis.Spectrum.StopAsync());
+        RightPanel.OnaAnalysis.StopAsync(), BottomPanel.Analysis.Spectrum.StopAsync(), RightPanel.Logic.StopAsync());
     public async ValueTask DisposeAsync() { try { await StopAsync(); } finally { Dispose(); } }
 
     [ObservableProperty]

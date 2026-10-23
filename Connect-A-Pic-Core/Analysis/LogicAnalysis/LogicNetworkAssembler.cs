@@ -22,7 +22,7 @@ namespace CAP_Core.Analysis.LogicAnalysis;
 /// Identical groups are extracted per instance — the extraction is the source of the
 /// model, and caching would only ever save simulation runs, never change the result.
 /// </summary>
-public sealed class LogicNetworkAssembler
+public sealed class LogicNetworkAssembler : ILogicNetworkAssembler
 {
     private readonly TruthTableExtractor _extractor;
     private readonly LogicNetworkBuilder _builder;

@@ -32,6 +32,7 @@ public partial class LogicPanelViewModel
     private const int DefaultRunIntervalIndex = 1;
 
     private readonly ILogicRunClock _runClock;
+    private readonly bool _ownsRunClock;
 
     /// <summary>Initializes the panel; <paramref name="runClock"/> defaults to the dispatcher-based production clock.</summary>
     /// <param name="runClock">Clock source for auto-run; null uses the dispatcher clock.</param>
@@ -42,18 +43,23 @@ public partial class LogicPanelViewModel
     /// </param>
     public LogicPanelViewModel(
         ILogicRunClock? runClock = null,
-        BuiltLogicNetworkProvider? builtNetworkProvider = null)
+        BuiltLogicNetworkProvider? builtNetworkProvider = null,
+        CAP_Core.Analysis.LogicAnalysis.ILogicNetworkAssembler? assembler = null,
+        Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
     {
+        _assembler = assembler ?? new CAP_Core.Analysis.LogicAnalysis.LogicNetworkAssembler();
         _builtNetworkProvider = builtNetworkProvider;
+        _ownsRunClock = runClock == null;
+        _runClock = runClock ?? new DispatcherLogicRunClock();
+        RunIntervalOptions = RunIntervalValues.Select(value => new LogicRunIntervalOption(value)).ToList();
+        _selectedRunInterval = RunIntervalOptions[DefaultRunIntervalIndex];
+        _work.RegisterWith(applicationWork, StopAsync);
         if (_builtNetworkProvider != null)
         {
             _builtNetworkProvider.InputsDriven += OnInputsDriven;
         }
 
-        _runClock = runClock ?? new DispatcherLogicRunClock();
         _runClock.Tick += OnRunClockTick;
-        RunIntervalOptions = RunIntervalValues.Select(value => new LogicRunIntervalOption(value)).ToList();
-        _selectedRunInterval = RunIntervalOptions[DefaultRunIntervalIndex];
     }
 
     /// <summary>True while the network clocks itself (the button shows Stop).</summary>
@@ -80,6 +86,7 @@ public partial class LogicPanelViewModel
     [RelayCommand(CanExecute = nameof(HasRegisters))]
     private void ToggleRun()
     {
+        if (_work.IsStopping) return;
         if (IsRunning)
         {
             StopRun();
@@ -107,7 +114,7 @@ public partial class LogicPanelViewModel
     /// <summary>One auto-clock tick ≡ one Step press; a stray tick queued before Stop is ignored.</summary>
     private void OnRunClockTick(object? sender, EventArgs e)
     {
-        if (!IsRunning)
+        if (_work.IsStopping || !IsRunning)
             return;
         ClockOnce();
     }
@@ -115,7 +122,7 @@ public partial class LogicPanelViewModel
     /// <summary>Re-arms the running clock when the user picks another cadence mid-run.</summary>
     partial void OnSelectedRunIntervalChanged(LogicRunIntervalOption value)
     {
-        if (IsRunning && value != null)
+        if (!_work.IsStopping && IsRunning && value != null)
             _runClock.Start(value.Interval);
     }
 }
