@@ -14,6 +14,15 @@ namespace CAP.Avalonia.Services.AgentBridge.Transport;
 /// </summary>
 public sealed class McpHttpEndpoint
 {
+    /// <summary>Starts a fresh tool-admission generation.</summary>
+    public void OpenAdmission() => _dispatcher.OpenAdmission();
+
+    /// <summary>Revokes tool admission before transport shutdown.</summary>
+    public Task CloseAdmissionAsync() => _dispatcher.CloseAdmissionAsync();
+
+    /// <summary>Cancellation callback diagnostics from the drained tool generation.</summary>
+    public AggregateException? CancellationError => _dispatcher.CancellationError;
+
     /// <summary>The only path the bridge serves.</summary>
     public const string EndpointPath = "/mcp";
 

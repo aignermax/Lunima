@@ -14,6 +14,8 @@ public sealed class AgentToolCatalog
 {
     private readonly Dictionary<string, IAgentBridgeTool> _tools;
     private readonly IUiDispatcher _dispatcher;
+    private readonly AgentOperationGate _operations = new();
+    private readonly SemaphoreSlim _execution = new(1, 1);
 
     /// <summary>Builds the catalog.</summary>
     public AgentToolCatalog(
@@ -41,19 +43,33 @@ public sealed class AgentToolCatalog
     /// error result rather than a protocol error, per the MCP spec.
     /// </summary>
     /// <exception cref="KeyNotFoundException">No tool has that name.</exception>
-    public Task<AgentToolResult> InvokeAsync(string name, JsonElement arguments)
+    public async Task<AgentToolResult> InvokeAsync(
+        string name, JsonElement arguments, CancellationToken cancellationToken = default)
     {
         var tool = _tools[name];
-        return _dispatcher.InvokeAsync(async () =>
+        using var context = _operations.Enter(cancellationToken);
+        await _execution.WaitAsync(context.CancellationToken);
+        try
         {
-            try
+            return await _dispatcher.InvokeAsync(async () =>
             {
-                return await tool.ExecuteAsync(arguments);
-            }
-            catch (Exception ex) when (ex is not OutOfMemoryException)
-            {
-                return AgentToolResult.Error($"{name} failed: {ex.Message}");
-            }
-        });
+                context.ThrowIfStopped();
+                try { return await tool.ExecuteAsync(arguments, context); }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
+                {
+                    return AgentToolResult.Error($"{name} failed: {ex.Message}");
+                }
+            });
+        }
+        finally { _execution.Release(); }
     }
+
+    /// <summary>Opens fresh admission after the previous server generation drained.</summary>
+    public void OpenAdmission() => _operations.Open();
+
+    /// <summary>Revokes mutation permission before asynchronously draining accepted tools.</summary>
+    public Task CloseAdmissionAsync() => _operations.CloseAsync();
+
+    /// <summary>Cancellation callback diagnostics, available once admission has drained.</summary>
+    public AggregateException? CancellationError => _operations.CancellationError;
 }

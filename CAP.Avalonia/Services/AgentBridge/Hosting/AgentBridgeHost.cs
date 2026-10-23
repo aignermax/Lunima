@@ -13,6 +13,9 @@ public sealed class AgentBridgeHost
 {
     private readonly UserPreferencesService _preferences;
     private readonly McpHttpServer _server;
+    private readonly object _settingsSync = new();
+    private readonly SemaphoreSlim _settingsApplication = new(1, 1);
+    private long _settingsVersion;
 
     /// <summary>Creates the host (does not start the server — see <see cref="ApplySettings"/>).</summary>
     public AgentBridgeHost(UserPreferencesService preferences, McpHttpServer server)
@@ -67,26 +70,48 @@ public sealed class AgentBridgeHost
     /// restarts it on a port change, stops it when disabled. Never throws for a busy port —
     /// the failure is reported via <see cref="LastError"/>.
     /// </summary>
-    public async Task ApplySettingsAsync()
+    public Task ApplySettingsAsync()
     {
-        var enabled = _preferences.GetAgentBridgeEnabled();
-        var port = _preferences.GetAgentBridgePort();
+        lock (_settingsSync)
+        {
+            var version = ++_settingsVersion;
+            var enabled = _preferences.GetAgentBridgeEnabled();
+            var port = _preferences.GetAgentBridgePort();
+            var stopping = !enabled || !_server.IsRunning || _server.Port != port
+                ? _server.StopAsync() : Task.CompletedTask;
+            return ApplySettingsCoreAsync(version, enabled, port, stopping);
+        }
+    }
 
-        if (_server.IsRunning && (!enabled || _server.Port != port))
-            await _server.StopAsync();
-        if (enabled && !_server.IsRunning)
-            TryStart(port);
-        else if (!enabled)
-            LastError = null;
-
-        StatusChanged?.Invoke(this, EventArgs.Empty);
+    private async Task ApplySettingsCoreAsync(long version, bool enabled, int port, Task stopping)
+    {
+        await _settingsApplication.WaitAsync();
+        try
+        {
+            await stopping;
+            lock (_settingsSync)
+            {
+                if (version != _settingsVersion) return;
+                if (enabled && !_server.IsRunning) TryStart(port);
+                else if (!enabled) LastError = null;
+            }
+            StatusChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally { _settingsApplication.Release(); }
     }
 
     /// <summary>Fire-and-forget variant of <see cref="ApplySettingsAsync"/> for startup and UI toggles.</summary>
     public void ApplySettings() => _ = ApplySettingsAsync();
 
     /// <summary>Stops the server (application shutdown).</summary>
-    public Task StopAsync() => _server.StopAsync();
+    public Task StopAsync()
+    {
+        lock (_settingsSync)
+        {
+            _settingsVersion++;
+            return _server.StopAsync();
+        }
+    }
 
     private void TryStart(int port)
     {

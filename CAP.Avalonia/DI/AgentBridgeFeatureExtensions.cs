@@ -83,7 +83,9 @@ internal static class AgentBridgeFeatureExtensions
             return new McpHttpEndpoint(
                 sp.GetRequiredService<McpJsonRpcDispatcher>(), preferences.GetRequiredAgentBridgeToken);
         });
-        services.AddSingleton<McpHttpServer>();
+        services.AddSingleton(sp => new McpHttpServer(sp.GetRequiredService<McpHttpEndpoint>(),
+            error => sp.GetRequiredService<CAP_Core.ErrorConsoleService>().LogError(
+                "Agent bridge cancellation callback failed after shutdown drained.", error)));
         services.AddSingleton<AgentBridgeHost>();
         services.AddSingleton(sp => new ClaudeCodeRegistrar(sp.GetRequiredService<CAP_Core.Export.ProcessLaunchFactory>()));
         services.AddSingleton<ClaudeCodeConnector>();

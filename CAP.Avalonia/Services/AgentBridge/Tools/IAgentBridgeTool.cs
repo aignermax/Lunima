@@ -22,4 +22,14 @@ public interface IAgentBridgeTool
 
     /// <summary>Runs the tool with the call's <c>arguments</c> object.</summary>
     Task<AgentToolResult> ExecuteAsync(JsonElement arguments);
+
+    /// <summary>
+    /// Runs an admitted call. Async implementations must propagate cancellation and guard
+    /// each later mutation with the context; the legacy overload guards entry only.
+    /// </summary>
+    Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context)
+    {
+        context.ThrowIfStopped();
+        return ExecuteAsync(arguments);
+    }
 }

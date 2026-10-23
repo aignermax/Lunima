@@ -18,15 +18,23 @@ public sealed class McpHttpServer : IDisposable, IAsyncDisposable
     private const int StreamBufferBytes = 8 * 1024;
 
     private readonly McpHttpEndpoint _endpoint;
-    private TcpListener? _listener;
-    private CancellationTokenSource? _cts;
-    private Task? _acceptLoop;
+    private readonly Action<Exception>? _reportCancellationError;
+    private readonly object _lifecycle = new();
+    private McpServerSession? _session;
+    private Task _stopping = Task.CompletedTask;
 
     /// <summary>Creates a server that dispatches requests to <paramref name="endpoint"/>.</summary>
-    public McpHttpServer(McpHttpEndpoint endpoint) => _endpoint = endpoint;
+    public McpHttpServer(McpHttpEndpoint endpoint, Action<Exception>? reportCancellationError = null)
+    {
+        _endpoint = endpoint;
+        _reportCancellationError = reportCancellationError;
+    }
+
+    /// <summary>Callback diagnostics from the latest shutdown; they do not prevent restart.</summary>
+    public Exception? LastCancellationError { get; private set; }
 
     /// <summary>Whether the listener is currently accepting connections.</summary>
-    public bool IsRunning => _listener != null;
+    public bool IsRunning { get { lock (_lifecycle) return _session != null; } }
 
     /// <summary>The bound port (useful when started with port 0); 0 when stopped.</summary>
     public int Port { get; private set; }
@@ -37,63 +45,97 @@ public sealed class McpHttpServer : IDisposable, IAsyncDisposable
     /// <exception cref="SocketException">The port is in use or cannot be bound.</exception>
     public void Start(int port)
     {
-        if (_listener != null)
-            throw new InvalidOperationException("The agent bridge server is already running.");
-
-        var listener = new TcpListener(IPAddress.Loopback, port);
-        listener.Start();
-        _listener = listener;
-        Port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        _cts = new CancellationTokenSource();
-        _acceptLoop = Task.Run(() => AcceptLoopAsync(listener, _cts.Token));
+        lock (_lifecycle)
+        {
+            if (_session != null || !_stopping.IsCompleted)
+                throw new InvalidOperationException("The agent bridge server is already running or stopping.");
+            var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+            try { _endpoint.OpenAdmission(); }
+            catch { listener.Stop(); throw; }
+            var session = new McpServerSession(listener);
+            _session = session;
+            Port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            session.AcceptLoop = Task.Run(() => AcceptLoopAsync(session));
+        }
     }
 
-    /// <summary>Stops listening and waits for the accept loop to finish.</summary>
-    public async Task StopAsync()
+    /// <summary>Revokes admission, stops listening, and drains every accepted connection and tool.</summary>
+    public Task StopAsync()
     {
-        if (_listener == null)
-            return;
+        McpServerSession session;
+        TaskCompletionSource completion;
+        lock (_lifecycle)
+        {
+            if (_session == null) return _stopping;
+            session = _session;
+            _session = null;
+            Port = 0;
+            completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _stopping = completion.Task;
+        }
+        var tools = _endpoint.CloseAdmissionAsync();
+        session.Listener.Stop();
+        _ = DrainAsync(session, tools, completion);
+        return completion.Task;
+    }
 
-        _cts?.Cancel();
-        _listener.Stop();
-        _listener = null;
-        Port = 0;
-        if (_acceptLoop != null)
-            await _acceptLoop.ConfigureAwait(false);
-        _cts?.Dispose();
-        _cts = null;
-        _acceptLoop = null;
+    private async Task DrainAsync(McpServerSession session, Task tools, TaskCompletionSource completion)
+    {
+        try
+        {
+            AggregateException? transportError = null;
+            using (session)
+            {
+                try { await session.Cancellation.CancelAsync().ConfigureAwait(false); }
+                catch (AggregateException error) { transportError = error; }
+                finally { await Task.WhenAll(session.DrainAsync(), tools).ConfigureAwait(false); }
+            }
+            LastCancellationError = transportError == null ? _endpoint.CancellationError
+                : _endpoint.CancellationError is { } toolError
+                    ? new AggregateException(transportError, toolError) : transportError;
+            if (LastCancellationError != null) ReportCancellationError(LastCancellationError);
+            completion.SetResult();
+        }
+        catch (Exception error) { completion.SetException(error); }
+    }
+
+    private void ReportCancellationError(Exception error)
+    {
+        try
+        {
+            if (_reportCancellationError != null) _reportCancellationError(error);
+            else System.Diagnostics.Trace.TraceError("Agent bridge cancellation callback failed: {0}", error);
+        }
+        catch { /* A diagnostic sink cannot invalidate a completed shutdown. */ }
     }
 
     /// <inheritdoc/>
     public async ValueTask DisposeAsync() => await StopAsync();
 
     /// <summary>
-    /// Stops listening without waiting for the accept loop (synchronous container disposal
-    /// at application exit); the loop ends on its own once the listener is closed.
+    /// Revokes admission immediately and starts asynchronous draining during container disposal.
     /// </summary>
     public void Dispose()
     {
-        _cts?.Cancel();
-        _listener?.Stop();
-        _listener = null;
-        Port = 0;
+        _ = StopAsync();
     }
 
-    private async Task AcceptLoopAsync(TcpListener listener, CancellationToken token)
+    private async Task AcceptLoopAsync(McpServerSession session)
     {
+        var token = session.Cancellation.Token;
         while (!token.IsCancellationRequested)
         {
             TcpClient client;
             try
             {
-                client = await listener.AcceptTcpClientAsync(token);
+                client = await session.Listener.AcceptTcpClientAsync(token);
             }
             catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or SocketException)
             {
                 return;
             }
-            _ = Task.Run(() => ServeConnectionAsync(client, token), CancellationToken.None);
+            session.Track(() => ServeConnectionAsync(client, token));
         }
     }
 
