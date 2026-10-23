@@ -11,6 +11,8 @@ namespace CAP.Avalonia.Services.Solvers;
 /// </summary>
 public static class SubprocessJsonRunner
 {
+    private static readonly TimeSpan CleanupTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>How a subprocess run ended.</summary>
     public enum Outcome
     {
@@ -51,6 +53,8 @@ public static class SubprocessJsonRunner
         startInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
         startInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;
 
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        lifetime.CancelAfter(timeout);
         using var process = new Process { StartInfo = startInfo };
 
         try
@@ -62,26 +66,60 @@ public static class SubprocessJsonRunner
             return new RunResult(Outcome.StartFailed, -1, string.Empty, string.Empty, ex.Message);
         }
 
-        await process.StandardInput.WriteAsync(stdinPayload);
-        process.StandardInput.Close();
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = ReadStderrAsync(process, onStderrLine);
-
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var timeoutTask = Task.Delay(timeout, cts.Token);
-        var completed = await Task.WhenAny(Task.WhenAll(stdoutTask, stderrTask), timeoutTask);
-
-        if (completed == timeoutTask || ct.IsCancellationRequested)
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(lifetime.Token);
+        var stderrTask = ReadStderrAsync(process, onStderrLine, lifetime.Token);
+        var inputTask = WriteInputAsync(process, stdinPayload, lifetime.Token);
+        var exitTask = process.WaitForExitAsync(lifetime.Token);
+        Task[] operations = [stdoutTask, stderrTask, inputTask, exitTask];
+        var completed = false;
+        try
         {
-            TryKill(process);
+            await AwaitOperationsAsync(operations, lifetime.Token);
+            lifetime.Token.ThrowIfCancellationRequested();
+            completed = true;
+            return new RunResult(Outcome.Completed, process.ExitCode,
+                await stdoutTask, await stderrTask, null);
+        }
+        catch (Exception) when (lifetime.IsCancellationRequested)
+        {
             var outcome = ct.IsCancellationRequested ? Outcome.Cancelled : Outcome.TimedOut;
             return new RunResult(outcome, -1, string.Empty, string.Empty, null);
         }
+        finally
+        {
+            if (!completed)
+                await StopAsync(process, lifetime, operations);
+        }
+    }
 
-        cts.Cancel(); // stop the timeout delay
-        await process.WaitForExitAsync(CancellationToken.None);
-        return new RunResult(Outcome.Completed, process.ExitCode, await stdoutTask, await stderrTask, null);
+    private static async Task WriteInputAsync(Process process, string payload, CancellationToken ct)
+    {
+        await process.StandardInput.WriteAsync(payload.AsMemory(), ct);
+        await process.StandardInput.FlushAsync(ct);
+        process.StandardInput.Close();
+    }
+
+    private static async Task AwaitOperationsAsync(Task[] operations, CancellationToken ct)
+    {
+        var pending = operations.ToList();
+        while (pending.Count > 0)
+        {
+            // WhenAll delays reporting a broken pipe until the still-running child exits.
+            var finished = await Task.WhenAny(pending).WaitAsync(ct);
+            await finished;
+            pending.Remove(finished);
+        }
+    }
+
+    private static async Task StopAsync(Process process, CancellationTokenSource lifetime, Task[] operations)
+    {
+        TryKill(process);
+        lifetime.Cancel();
+        using var cleanup = new CancellationTokenSource(CleanupTimeout);
+        try { await Task.WhenAll(operations).WaitAsync(cleanup.Token); }
+        catch (Exception) when (!cleanup.IsCancellationRequested)
+        { /* Observe the canceled or failed pipe operations before disposing their streams. */ }
+        await process.WaitForExitAsync(cleanup.Token);
     }
 
     /// <summary>
@@ -89,11 +127,12 @@ public static class SubprocessJsonRunner
     /// also treats as a line break), forwarding each line to <paramref name="onLine"/>
     /// while accumulating the full text for error reporting.
     /// </summary>
-    private static async Task<string> ReadStderrAsync(Process process, Action<string>? onLine)
+    private static async Task<string> ReadStderrAsync(
+        Process process, Action<string>? onLine, CancellationToken ct)
     {
         var sb = new System.Text.StringBuilder();
         string? line;
-        while ((line = await process.StandardError.ReadLineAsync()) != null)
+        while ((line = await process.StandardError.ReadLineAsync(ct)) != null)
         {
             sb.AppendLine(line);
             if (onLine != null && line.Trim().Length > 0)
