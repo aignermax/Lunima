@@ -2286,6 +2286,8 @@
   "GdsReview.Model": "Simulation model",
   "GdsReview.GeometryOnly": "形状のみ · シミュレーションなし",
   "GdsReview.ModelWarning": "Geometry alone does not define simulation behavior. Assign a compatible model and match its ports to enable simulation.",
+  "GdsReview.PassThroughAssumed": "モデルが未割り当て — 損失のないパススルーとしてシミュレーションされます。",
+  "GdsReview.PassThroughSummaryRow": "{0}: モデルが未割り当て — 損失のないパススルーとしてシミュレーションされます。",
   "GdsReview.PinMapping": "Model port mapping",
   "GdsReview.Ready": "Ready to import",
   "GdsReview.Persistence": "Your layer roles, component choices, ports, and model assignments are saved with this design.",

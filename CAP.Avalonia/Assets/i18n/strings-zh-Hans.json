@@ -2286,6 +2286,8 @@
   "GdsReview.Model": "Simulation model",
   "GdsReview.GeometryOnly": "仅形状 · 无仿真",
   "GdsReview.ModelWarning": "Geometry alone does not define simulation behavior. Assign a compatible model and match its ports to enable simulation.",
+  "GdsReview.PassThroughAssumed": "未映射模型 — 将作为无损直通进行仿真。",
+  "GdsReview.PassThroughSummaryRow": "{0}:未映射模型 — 将作为无损直通进行仿真。",
   "GdsReview.PinMapping": "Model port mapping",
   "GdsReview.Ready": "Ready to import",
   "GdsReview.Persistence": "Your layer roles, component choices, ports, and model assignments are saved with this design.",

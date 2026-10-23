@@ -235,6 +235,9 @@
                        TextWrapping="Wrap" Classes="caption secondary"/>
             <Button x:Name="GdsReviewGeometryOnly" Content="{loc:Localize GdsReview.GeometryOnly}" Command="{Binding GeometryOnlyCommand}"/>
             <TextBlock Classes="caption secondary" Text="{loc:Localize GdsReview.ModelWarning}" TextWrapping="Wrap"/>
+            <TextBlock x:Name="GdsReviewPassThroughHint" Classes="caption success" TextWrapping="Wrap"
+                       Text="{loc:Localize GdsReview.PassThroughAssumed}"
+                       IsVisible="{Binding SelectedCell.IsPassThroughAssumed}"/>
             <TextBlock Classes="strong" Text="{loc:Localize GdsReview.PinMapping}" IsVisible="{Binding HasSelectedModel}"/>
             <ItemsControl ItemsSource="{Binding SelectedCell.Ports}" IsVisible="{Binding HasSelectedModel}">
               <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GdsPortReviewRow">
@@ -252,6 +255,15 @@
             <TextBlock Text="{Binding Summary}" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding ConnectionReadiness}" TextWrapping="Wrap" Classes="caption"/>
             <TextBlock Text="{Binding RouteReadiness}" TextWrapping="Wrap" Classes="caption"/>
+            <ItemsControl x:Name="GdsReviewPassThroughSummary" ItemsSource="{Binding ActiveCells}"
+                          IsVisible="{Binding HasPassThroughCells}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:GdsCellReviewRow">
+                  <TextBlock Classes="caption success" Text="{Binding PassThroughSummaryText}" TextWrapping="Wrap"
+                             IsVisible="{Binding IsPassThroughAssumed}"/>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
             <TextBlock Text="{loc:Localize GdsReview.Persistence}" TextWrapping="Wrap" Classes="secondary"/>
             <TextBlock Text="{loc:Localize GdsReview.NoReroute}" TextWrapping="Wrap" Classes="caption success"/>
             <TextBox Text="{Binding ProfileName}" Watermark="{loc:Localize GdsReview.ProfileName}"/>

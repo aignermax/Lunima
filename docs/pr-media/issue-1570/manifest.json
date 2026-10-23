@@ -1,0 +1,10 @@
+[
+  {
+    "file": "01-model-stage-pass-through-hint.png",
+    "caption": "Review, stage 5 (Models): with no model mapped, the two-optical-pin cell announces \u0027No model mapped \u2014 simulated as a lossless pass-through.\u0027 under the model warning."
+  },
+  {
+    "file": "02-summary-pass-through-row.png",
+    "caption": "Review, stage 6 (Summary): the eligible cell\u0027s row repeats the assumed lossless pass-through model, so the assumption is visible again right before Apply."
+  }
+]
