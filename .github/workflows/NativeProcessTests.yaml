@@ -6,6 +6,8 @@ on:
       - '.github/workflows/NativeProcessTests.yaml'
       - 'Connect-A-Pic-Core/Export/**'
       - 'CAP.Avalonia/Services/Solvers/**'
+      - 'CAP-DataAccess/Persistence/**'
+      - 'UnitTests/Persistence/**'
       - 'UnitTests/Solvers/**'
       - '**/*.csproj'
       - 'Directory.Build.*'
@@ -92,19 +94,32 @@ jobs:
             --logger 'console;verbosity=normal' \
             2>&1 | tee UnitTests/TestResults/native-process.log
 
+      - name: Exercise atomic native document saves
+        run: |
+          set -euo pipefail
+          dotnet test UnitTests/UnitTests.csproj --no-build \
+            --filter 'FullyQualifiedName~AtomicFileWriterTests|FullyQualifiedName~NativeDesignFileStoreTests' \
+            --results-directory UnitTests/TestResults \
+            --logger 'trx;LogFileName=native-save.trx' \
+            --logger 'console;verbosity=normal' \
+            2>&1 | tee UnitTests/TestResults/native-save.log
+
       - name: Require execution without skipped tests
         if: always()
         run: |
           python - <<'PY'
           import xml.etree.ElementTree as ET
-          root = ET.parse('UnitTests/TestResults/native-process.trx').getroot()
           ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
-          results = root.findall('.//t:UnitTestResult', ns)
-          assert results, 'The native process filter did not execute any tests'
+          results = []
+          for name in ('native-process', 'native-save'):
+              root = ET.parse(f'UnitTests/TestResults/{name}.trx').getroot()
+              batch = root.findall('.//t:UnitTestResult', ns)
+              assert batch, f'The {name} filter did not execute any tests'
+              results.extend(batch)
           unsuccessful = [(r.attrib['testName'], r.attrib['outcome']) for r in results
                           if r.attrib['outcome'] != 'Passed']
           assert not unsuccessful, unsuccessful
-          print(f'All {len(results)} native process tests executed and passed')
+          print(f'All {len(results)} native infrastructure tests executed and passed')
           PY
 
       - name: Upload native execution evidence

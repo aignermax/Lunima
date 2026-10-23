@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Collections.Immutable;
 
 namespace CAP_Core.Components.Core;
 
@@ -26,6 +27,9 @@ public readonly record struct OutlinePoint(
 /// </remarks>
 public sealed record OutlinePolygon
 {
+    /// <summary>Detaches mutable input arrays; already immutable vertices are safely shared.</summary>
+    public OutlinePolygon Copy() => this with { Points = Points.ToImmutableArray() };
+
     /// <summary>GDS layer number the polygon came from.</summary>
     [JsonPropertyName("layer")]
     public int Layer { get; init; }

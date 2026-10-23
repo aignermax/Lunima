@@ -78,7 +78,7 @@ public sealed class NativeGroupCapture
             // Truth Table pin roles persist on every group: a gate nested inside a
             // cell instance must keep its assignment or hierarchical designs lose
             // their gates on save.
-            TruthTablePinAssignment = group.TruthTablePinAssignment,
+            TruthTablePinAssignment = group.TruthTablePinAssignment?.Copy(),
             Die = group.ParentGroup == null ? DieData.From(group.Die) : null
         });
     }
@@ -109,7 +109,7 @@ public sealed class NativeGroupCapture
             CanvasX = group.PhysicalX,
             CanvasY = group.PhysicalY,
             // A nested gate keeps its Truth Table pin roles like a top-level one.
-            TruthTablePinAssignment = group.TruthTablePinAssignment
+            TruthTablePinAssignment = group.TruthTablePinAssignment?.Copy()
         });
     }
 

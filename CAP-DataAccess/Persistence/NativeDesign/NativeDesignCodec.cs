@@ -21,8 +21,9 @@ public static class NativeDesignCodec
 
         return new DesignMetadata
         {
-            PdkVersions = loadedMetadata?.PdkVersions ?? new Dictionary<string, string>(),
-            DesignRules = loadedMetadata?.DesignRules,
+            PdkVersions = loadedMetadata?.PdkVersions is { } versions
+                ? new Dictionary<string, string>(versions, versions.Comparer) : new(),
+            DesignRules = loadedMetadata?.DesignRules?.Copy(),
             Description = loadedMetadata?.Description,
             Authorship = new AuthorshipData
             {

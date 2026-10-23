@@ -84,7 +84,8 @@ public sealed class DesignModelOverrides : IDisposable
         var hierarchy = CAP_Core.Analysis.Hierarchy.DesignHierarchy.From(_documentRoots());
         var live = hierarchy.Leaves.Concat<Component>(hierarchy.Groups).ToArray();
         return SMatrixOverrideGc.Sweep(Stored, live.Select(ComponentGeometryKey.For).ToHashSet(),
-            live.Select(component => component.Identifier).ToHashSet());
+            live.Select(component => component.Identifier).ToHashSet())
+            .ToDictionary(pair => pair.Key, pair => pair.Value.Copy(), Stored.Comparer);
     }
 
     private void OnComponentsChanged(object? sender, NotifyCollectionChangedEventArgs args)

@@ -1,6 +1,5 @@
 using CAP_DataAccess.Persistence.NativeDesign;
 using System.Security.Cryptography;
-using System.Text.Json;
 using CAP_DataAccess.Components.AddCustomComponent;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
@@ -130,8 +129,8 @@ public sealed partial class DesignScopedGdsComponentService
             PdkName = s.PdkName,
             GdsFileName = s.GdsFileName,
             GdsBase64 = Convert.ToBase64String(s.GdsBytes),
-            Components = s.Drafts,
-            Interpretation = s.Interpretation,
+            Components = s.Drafts.Select(draft => draft.Copy()).ToList(),
+            Interpretation = s.Interpretation?.Copy(),
         }).ToList();
     }
 
@@ -184,7 +183,7 @@ public sealed partial class DesignScopedGdsComponentService
     }
 
     /// <summary>
-    /// Deep-clones the drafts (JSON round-trip — registration copies must never
+    /// Copies the drafts (registration copies must never
     /// alias the stored token-form drafts) and substitutes the cache path into
     /// their raw code.
     /// </summary>
@@ -194,7 +193,7 @@ public sealed partial class DesignScopedGdsComponentService
         var clones = new List<PdkComponentDraft>(drafts.Count);
         foreach (var draft in drafts)
         {
-            var clone = JsonSerializer.Deserialize<PdkComponentDraft>(JsonSerializer.Serialize(draft))!;
+            var clone = draft.Copy();
             if (clone.RawCode is not null)
                 clone.RawCode = GdsCellDraftMapper.SubstituteGdsFileName(clone.RawCode, gdsCachePath);
             clones.Add(clone);
