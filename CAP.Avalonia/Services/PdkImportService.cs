@@ -1,3 +1,4 @@
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_Core.Preferences;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -11,7 +12,7 @@ namespace CAP.Avalonia.Services;
 /// Handles module name extraction, PYTHONPATH setup, and conversion to PDK JSON format.
 /// Issue #476: PDK Import Wizard with Python/Nazca parser and AI-assisted error correction.
 /// </summary>
-public class PdkImportService
+public class PdkImportService : IPdkImportWorkflow
 {
     private readonly IPythonInterpreterPreferences _preferences;
     private readonly CAP_Core.Export.ProcessLaunchFactory _launchFactory;

@@ -46,6 +46,7 @@ internal static class CoreServicesExtensions
         services.AddSingleton<PdkLoader>();
         services.AddSingleton<IPdkReader>(sp => sp.GetRequiredService<PdkLoader>());
         services.AddSingleton<PdkImportService>();
+        services.AddSingleton<IPdkImportWorkflow>(sp => sp.GetRequiredService<PdkImportService>());
         services.AddSingleton<IProcessImporter, UpdkYamlProcessImporter>();
         services.AddSingleton<IProcessImporter, NazcaCsvProcessImporter>();
         services.AddSingleton(sp => new Views.Shell.ProcessEditorFactory(

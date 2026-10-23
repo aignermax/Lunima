@@ -1,3 +1,4 @@
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Notifications;
 using CAP.Avalonia.Services.Solvers;
@@ -39,7 +40,7 @@ public static class MainWindowComposition
             () => services.GetService<RunProgramTourViewModel>(), () => services.GetService<PdkResolutionCheckViewModel>(),
             () => services.GetService<OpenEblCheckViewModel>(),
             () => services.GetRequiredService<ViewModels.Analysis.OnaAnalysis.OnaSweepViewModel>());
-        var panels = new ShellPanelDialogBindings(services.GetService<PdkImportService>(),
+        var panels = new ShellPanelDialogBindings(services.GetService<IPdkImportWorkflow>(),
             services.GetService<OnaAnalyzerEditorProvider>(), services.GetService<NotificationService>());
         return new MainWindow(editors, tools, panels) { DataContext = model, RetireApplicationAsync = retire };
     }

@@ -17,6 +17,10 @@ internal static class RepositoryTypeOwnership
         yield return new("CAP.Avalonia.Services.ImportedModelReadiness", RepositoryModules.Domain);
         yield return new("CAP.Avalonia.Services.TemplateGeometryMatch", RepositoryModules.Domain);
         // Contracts responsibilities in namespaces that also contain another layer.
+        yield return new("CAP_Core.Export.PdkParseResult", RepositoryModules.Contracts);
+        yield return new("CAP_Core.Export.ParsedComponentGeometry", RepositoryModules.Contracts);
+        yield return new("CAP_Core.Export.ParsedPinGeometry", RepositoryModules.Contracts);
+        yield return new("CAP_DataAccess.Components.ComponentDraftMapper.IPdkImportWorkflow", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.NazcaPreviewPolygon", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.NazcaPreviewPin", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.NazcaPreviewResult", RepositoryModules.Contracts);
@@ -62,7 +66,6 @@ internal static class RepositoryTypeOwnership
         yield return new("CAP_DataAccess.Components.ComponentDraftMapper.NazcaCsvProcessImporter", RepositoryModules.Infrastructure);
         yield return new("CAP_DataAccess.Components.ComponentDraftMapper.PdkJsonSaver", RepositoryModules.Infrastructure);
         yield return new("CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader", RepositoryModules.Infrastructure);
-        yield return new("CAP_DataAccess.Components.ComponentDraftMapper.PdkOffsetCalibration", RepositoryModules.Infrastructure);
         yield return new("CAP_DataAccess.Components.ComponentDraftMapper.UpdkYamlProcessImporter", RepositoryModules.Infrastructure);
         yield return new("CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore", RepositoryModules.Infrastructure);
         yield return new("CAP.Avalonia.Services.PdkImportService", RepositoryModules.Infrastructure);

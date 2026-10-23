@@ -1,3 +1,4 @@
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using CAP.Avalonia.Services;
@@ -12,7 +13,7 @@ using CAP_Core.Components.Core;
 namespace CAP.Avalonia.Views.Shell;
 
 /// <summary>Owns optional dialog callbacks and notifications attached to one shell window.</summary>
-internal sealed class ShellPanelDialogBindings(PdkImportService? imports = null,
+internal sealed class ShellPanelDialogBindings(IPdkImportWorkflow? imports = null,
     OnaAnalyzerEditorProvider? ona = null, NotificationService? notifications = null) : IDisposable
 {
     private readonly CallbackBindings _bindings = new();
