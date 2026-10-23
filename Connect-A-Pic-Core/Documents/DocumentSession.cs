@@ -27,6 +27,24 @@ public sealed class DocumentSession
         }
     }
 
+    /// <summary>Captures revision and scope without retaining work or delaying retirement.</summary>
+    public DocumentRevisionStamp CaptureRevision()
+    {
+        lock (_sync)
+        {
+            if (_retired) throw new OperationCanceledException("The document session is retired.");
+            if (_commitOwner != null) throw new InvalidOperationException("Cannot capture a partially committed document.");
+            return new(_document, _revision, _scopeRevision);
+        }
+    }
+
+    /// <summary>Whether both document content and visible scope still match the captured revision.</summary>
+    public bool IsCurrentRevision(DocumentRevisionStamp stamp)
+    {
+        lock (_sync) return !_retired && _commitOwner == null && stamp.Document == _document
+            && stamp.Revision == _revision && stamp.ScopeRevision == _scopeRevision;
+    }
+
     /// <summary>Whether a configured document remains open, regardless of edits or navigation.</summary>
     public bool IsCurrentIdentity(DocumentIdentity identity)
     {

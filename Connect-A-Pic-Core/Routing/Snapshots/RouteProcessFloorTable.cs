@@ -20,6 +20,11 @@ internal sealed class RouteProcessFloorTable
         }
     }
 
+    internal void Include(ImmutableDictionary<(Guid, Guid), double> values)
+    {
+        foreach (var pair in values) _values[pair.Key] = pair.Value;
+    }
+
     internal void RegisterPrototypePin(Guid newId, Guid prototypeId) => _prototypePins.Add(newId, prototypeId);
 
     internal double? Resolve(PhysicalPin start, PhysicalPin end)

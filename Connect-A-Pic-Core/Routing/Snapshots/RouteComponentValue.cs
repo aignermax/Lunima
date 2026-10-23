@@ -21,6 +21,7 @@ internal sealed record RouteComponentValue
     internal double OriginalHeight { get; init; }
     internal bool Mirrored { get; init; }
     internal bool Obstacle { get; init; }
+    internal bool Locked { get; init; }
     internal bool InsertedCrossing { get; init; }
     internal double? ModeDiameter { get; init; }
     internal BendLossModel? BendLoss { get; init; }
@@ -41,7 +42,7 @@ internal sealed record RouteComponentValue
             Id = component.Id, Name = component.Name, NazcaFunction = component.NazcaFunctionName,
             Template = component.TemplateName, X = component.PhysicalX, Y = component.PhysicalY,
             Width = component.WidthMicrometers, Height = component.HeightMicrometers,
-            Rotation = component.RotationDegrees, Obstacle = component.IsRoutingObstacle,
+            Rotation = component.RotationDegrees, Obstacle = component.IsRoutingObstacle, Locked = component.IsLocked,
             OriginalWidth = component.UnrotatedWidthMicrometers, OriginalHeight = component.UnrotatedHeightMicrometers,
             Mirrored = component.IsMirroredHorizontally,
             InsertedCrossing = component.IsInsertedCrossing, ModeDiameter = component.ModeFieldDiameterMicrometers,
@@ -103,6 +104,7 @@ internal sealed record RouteComponentValue
         component.UnrotatedHeightMicrometers = OriginalHeight;
         component.IsMirroredHorizontally = Mirrored;
         component.IsRoutingObstacle = Obstacle;
+        component.IsLocked = Locked;
         component.IsInsertedCrossing = InsertedCrossing;
         component.ModeFieldDiameterMicrometers = ModeDiameter;
         component.WaveguideBendLoss = BendLoss;

@@ -116,7 +116,7 @@ public sealed class RoutingInputSnapshot
         var wires = _connections.ToDictionary(value => value.Id, value => value.Build(pins));
         foreach (var id in _connectionOrder) manager.AddExistingConnection(wires[id]);
         _manager.RestoreFailures(manager);
-        var graph = new RoutingWorkGraph(roots, router, manager);
+        var graph = new RoutingWorkGraph(roots, router, manager, floors);
         _crossings?.Attach(graph, components, wires, floors);
         return graph;
     }

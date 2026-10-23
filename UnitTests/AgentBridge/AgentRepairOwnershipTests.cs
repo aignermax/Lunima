@@ -39,9 +39,8 @@ public sealed class AgentRepairOwnershipTests
         canvas.InitializeAStarRouting(-40, -40, 300, 100);
         var commands = new CommandManager();
         var session = new AgentDesignSession(canvas, commands, () => null, new ExampleDesignsService());
-        var candidate = new RepairCandidate("controlled_two_step", "two admitted moves", 30, new { }, () =>
-            (new RepairEditPlan(new MoveComponentCommand(canvas, startView, 0, 0, 20, 0), () => start.PhysicalX == 20,
-                [new MoveComponentCommand(canvas, endView, 200, 0, 220, 0)]), null));
+        var candidate = new RepairCandidate("controlled_two_step", "two admitted moves", 30, new { },
+            new TwoStepRepair(new NudgeRepair(start.Id, 20, 0), new NudgeRepair(end.Id, 20, 0)));
         session.Suggestions = new RepairSuggestionSet(wire.Id.ToString(), RepairSuggestionSet.ComputeStamp(session),
             [new RepairSuggestion("s1", new TrialOutcome(candidate, true, null, 0, 0, true, 0))]);
         var tool = new ApplySuggestionTool(session);

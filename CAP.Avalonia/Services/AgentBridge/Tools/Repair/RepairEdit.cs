@@ -37,6 +37,7 @@ public static class RepairEdit
         var edit = operation ?? owned!;
         edit.Commit(() => session.Commands.ExecuteCommand(command));
         var routed = await edit.RouteAsync();
+        await edit.CompleteDerivedWorkAsync();
         edit.Commit(session.Canvas.InvalidateSimulation);
         return routed;
     }
@@ -53,6 +54,7 @@ public static class RepairEdit
             return true;
         var routed = routing.RestoredGeometryVersion != restoredBefore
             || await edit.RouteAsync();
+        await edit.CompleteDerivedWorkAsync();
         edit.Commit(session.Canvas.InvalidateSimulation);
         return routed;
     }

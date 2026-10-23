@@ -49,15 +49,7 @@ public sealed partial class RepairCandidateGenerator
             $"Shift straight #{straightIndex} of neighbouring wire {Name(connection)} by {step:+0;-0} µm");
         return new RepairCandidate("shift_segment", description, Math.Abs(step),
             new { Tool = "shift_segment", ConnectionId = connection.Id.ToString(), StraightIndex = straightIndex, OffsetUm = step },
-            () =>
-            {
-                var command = ShiftSegmentTool.Build(_session, wire, straightIndex, step, out var error);
-                if (command == null)
-                    return (null, error);
-                var target = ShiftSegmentTool.CurrentOffset(connection, straightIndex) + step;
-                return (new RepairEditPlan(command,
-                    () => Math.Abs(ShiftSegmentTool.CurrentOffset(connection, straightIndex) - target) < 1e-6), null);
-            });
+            new ShiftRepair(connection.Id, straightIndex, step));
     }
 
     private IEnumerable<RepairCandidate> Nudges()
@@ -110,14 +102,7 @@ public sealed partial class RepairCandidateGenerator
         var description = string.Create(CultureInfo.InvariantCulture, $"Move {id} by ({dx:+0;-0;0}, {dy:+0;-0;0}) µm");
         return new RepairCandidate("nudge_component", description, Hypot(dx, dy),
             new { Tool = "move_component", Id = id, Dx = dx, Dy = dy },
-            () =>
-            {
-                var (x, y) = (vm.X, vm.Y);
-                if (!_session.Canvas.CanMoveComponentTo(vm, x + dx, y + dy))
-                    return (null, "The move would overlap another component.");
-                var command = new MoveComponentCommand(_session.Canvas, vm, x, y, x + dx, y + dy);
-                return (new RepairEditPlan(command, () => Math.Abs(vm.X - x - dx) < 1e-6 && Math.Abs(vm.Y - y - dy) < 1e-6), null);
-            });
+            new NudgeRepair(vm.Component.Id, dx, dy));
     }
 
     /// <summary>A move perpendicular to the pin's facing direction — it changes the order wires arrive in.</summary>

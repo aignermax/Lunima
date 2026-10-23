@@ -172,9 +172,13 @@ public partial class DesignCanvasViewModel : ObservableObject
     public DesignCanvasViewModel(WaveguideRouter router) : this(router, null) { }
 
     internal DesignCanvasViewModel(WaveguideRouter router, CanvasRoutingFactory? routingFactory)
+        : this(router, new WaveguideConnectionManager(router), routingFactory, false) { }
+
+    internal DesignCanvasViewModel(WaveguideRouter router, WaveguideConnectionManager manager,
+        CanvasRoutingFactory? routingFactory, bool preserveRoutingState)
     {
         Router = router;
-        ConnectionManager = new WaveguideConnectionManager(router);
+        ConnectionManager = manager;
 
         Routing = routingFactory?.Invoke(router, ConnectionManager, Components, Connections, Document)
             ?? new RoutingOrchestrator(router, ConnectionManager, Components, Connections, Document);
@@ -226,10 +230,19 @@ public partial class DesignCanvasViewModel : ObservableObject
 
         // Product default: diagonal routing is opt-in (Settings → Routing);
         // the library-level router default is true, so sync it explicitly.
-        Router.UseDiagonalRouting = UseDiagonalRouting;
-        Router.PreferDirectStyledRoutes = PreferDirectStyledRoutes;
-
-        Routing.InitializeAStarRouting();
+        if (preserveRoutingState)
+        {
+            _useDiagonalRouting = Router.UseDiagonalRouting;
+            _preferDirectStyledRoutes = Router.PreferDirectStyledRoutes;
+            _minBendRadiusMicrometers = Router.MinBendRadiusMicrometers;
+            Routing.BuildConnectionProcessFloorProvider = () => Router.ConnectionProcessFloorProvider;
+        }
+        else
+        {
+            Router.UseDiagonalRouting = UseDiagonalRouting;
+            Router.PreferDirectStyledRoutes = PreferDirectStyledRoutes;
+            Routing.InitializeAStarRouting();
+        }
     }
 
     // ── Property change handlers ──────────────────────────────────────────

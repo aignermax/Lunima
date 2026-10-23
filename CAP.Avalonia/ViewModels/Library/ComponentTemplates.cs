@@ -39,6 +39,13 @@ public static class ComponentTemplates
 
     public static Component CreateFromTemplate(ComponentTemplate template, double x, double y)
     {
+        if (template.DetachedComponentFactory is { } detached)
+        {
+            var captured = detached();
+            captured.PhysicalX = x;
+            captured.PhysicalY = y;
+            return captured;
+        }
         // Interlocked: the crossing pass creates components on the routing thread.
         var instanceName = $"{template.Name}_{Interlocked.Increment(ref _componentCounter)}";
 
@@ -196,6 +203,9 @@ public partial class ComponentTemplate : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _isDeletable;
+
+    // Private workbenches supply a fully detached definition, never live PDK factory closures.
+    internal Func<Component>? DetachedComponentFactory { get; init; }
 
     public Func<List<Pin>, SMatrix>? CreateSMatrix { get; set; }
     public Func<List<Pin>, List<Slider>, SMatrix>? CreateSMatrixWithSliders { get; set; }

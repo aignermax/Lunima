@@ -43,6 +43,7 @@ public sealed class UndoTool : IAgentBridgeTool
 
         var routed = routing.RestoredGeometryVersion != restoredBefore
             || await edit.RouteAsync();
+        await edit.CompleteDerivedWorkAsync();
         edit.Commit(_session.Canvas.InvalidateSimulation);
 
         return AgentToolResult.Json(new

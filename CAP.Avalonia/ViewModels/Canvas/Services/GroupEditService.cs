@@ -104,6 +104,23 @@ public partial class GroupEditService
         foreach (var ancestor in _editModeStack) _modifiedGroups.Add(ancestor);
     }
 
+    /// <summary>Adopts an already reconstructed private projection without loading, routing or replacing its graph.</summary>
+    internal void AdoptCapturedScope(ComponentGroup group)
+    {
+        if (CurrentEditGroup != null || _rootCanvasBackup != null)
+            throw new InvalidOperationException("A captured scope requires a fresh projection owner.");
+        using var projection = _content.Project(group);
+        var ancestors = new List<ComponentGroup>();
+        for (var parent = group.ParentGroup as ComponentGroup; parent != null; parent = parent.ParentGroup as ComponentGroup)
+            ancestors.Add(parent);
+        foreach (var ancestor in ancestors.AsEnumerable().Reverse()) _editModeStack.Push(ancestor);
+        CurrentEditGroup = group;
+        CurrentEditGroupChanging?.Invoke(group);
+        UpdateBreadcrumbPath();
+        // EditStateChanged initiates a new routing grid in the interactive canvas. This
+        // projection already owns its captured grid, bounds, records and connection identities.
+    }
+
     /// <summary>Discards the outgoing document and its presentation scopes as one projection reset.</summary>
     public void ResetDocument()
     {

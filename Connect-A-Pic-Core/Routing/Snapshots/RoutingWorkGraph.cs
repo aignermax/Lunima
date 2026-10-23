@@ -8,10 +8,12 @@ namespace CAP_Core.Routing.Snapshots;
 public sealed class RoutingWorkGraph
 {
     private readonly List<Component> _components;
+    private readonly RouteProcessFloorTable _floors;
     private readonly List<CrossingChange> _crossingChanges = new();
 
-    internal RoutingWorkGraph(IReadOnlyList<Component> components, WaveguideRouter router, WaveguideConnectionManager manager)
+    internal RoutingWorkGraph(IReadOnlyList<Component> components, WaveguideRouter router, WaveguideConnectionManager manager, RouteProcessFloorTable floors)
     {
+        _floors = floors;
         _components = components.ToList();
         Components = _components.AsReadOnly();
         Router = router;
@@ -23,6 +25,13 @@ public sealed class RoutingWorkGraph
     // This journal intentionally stays inside the private graph. UI publication needs immutable topology values,
     // not these closures: each undo captures only private connections/components and their worker-owned grid.
     internal IReadOnlyList<CrossingChange> CrossingChanges => _crossingChanges;
+
+    /// <summary>Instantiates a captured definition and binds its new ports to this graph's process rules.</summary>
+    public Component CreateComponent(RoutingComponentPrototype prototype)
+    {
+        _floors.Include(prototype.Floors);
+        return prototype.Value.Build(_floors);
+    }
 
     public void Route(CancellationToken cancellationToken = default)
     {

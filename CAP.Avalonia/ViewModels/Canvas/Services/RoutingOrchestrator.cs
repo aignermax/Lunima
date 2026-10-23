@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Services.Localization;
+using CAP.Avalonia.Services.Lifetime;
 using CAP_Core.Components;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
@@ -186,24 +187,47 @@ public partial class RoutingOrchestrator
     /// under the routing lock, so a routing pass started meanwhile waits for it, and a request
     /// superseded by a newer one is skipped.
     /// </summary>
-    public async Task ReinitializeAStarRoutingInBackgroundAsync(double minX, double minY, double maxX, double maxY,
+    public Task ReinitializeAStarRoutingInBackgroundAsync(double minX, double minY, double maxX, double maxY,
         IReadOnlyList<(double X, double Y, double Width, double Height)>? regions)
+        => ReinitializeAStarRoutingInBackgroundAsync(minX, minY, maxX, maxY, regions, null, null);
+
+    /// <summary>Rebuilds derived grid state under a caller-owned edit, without recapturing its document.</summary>
+    internal async Task ReinitializeAStarRoutingInBackgroundAsync(double minX, double minY, double maxX, double maxY,
+        IReadOnlyList<(double X, double Y, double Width, double Height)>? regions,
+        DocumentOperation? suppliedOperation, ICommitPermission? permission)
     {
-        await using var operation = _document.CaptureOperation();
-        var token = operation.CancellationToken;
+        await using var ownedOperation = suppliedOperation == null ? _document.CaptureOperation() : null;
+        var operation = suppliedOperation ?? ownedOperation!;
+        await using var linked = new AsyncCancellationScope(operation.CancellationToken,
+            permission?.CancellationToken ?? default);
+        var token = linked.Token;
         int request = Interlocked.Increment(ref _gridRequest);
         try { await _routingSemaphore.WaitAsync(token); }
         catch (OperationCanceledException) { return; }
         try
         {
-            if (!operation.IsCurrent || request != _gridRequest) return;
-            var input = CaptureInput().WithGrid(minX, minY, maxX, maxY, regions, ComponentClearanceMicrometers);
-            var progress = new RoutingProgressMailbox();
-            var result = await RunSnapshotAsync(input, progress, token, calculateRoutes: false);
-            if (result == null || !operation.IsCurrent || request != _gridRequest) return;
-            var prepared = result.Prepare(_components.Select(view => view.Component).ToArray(), _connectionManager, _router);
-            // Derived grid state does not advance the document revision or revoke a queued routing lease.
-            operation.TryPublish(() => { if (request == _gridRequest) prepared.Apply(); });
+            while (operation.IsCurrent && request == _gridRequest)
+            {
+                var revision = _document.CaptureRevision();
+                var input = CaptureInput().WithGrid(minX, minY, maxX, maxY, regions, ComponentClearanceMicrometers);
+                var progress = new RoutingProgressMailbox();
+                var result = await RunSnapshotAsync(input, progress, token, calculateRoutes: false);
+                if (result == null || !operation.IsCurrent || request != _gridRequest) return;
+                // A borrowed owner can advance itself during computation. That does not make
+                // geometry captured before its latest edit safe to publish. Rebuild its latest
+                // input; a foreign edit instead revokes the operation and ends this job.
+                if (!_document.IsCurrentRevision(revision)) continue;
+                var prepared = result.Prepare(_components.Select(view => view.Component).ToArray(), _connectionManager, _router);
+                bool published = false;
+                void Publish() => operation.TryPublish(() =>
+                {
+                    if (request != _gridRequest || !_document.IsCurrentRevision(revision)) return;
+                    prepared.Apply();
+                    published = true;
+                });
+                if (permission == null) Publish(); else permission.Commit(Publish);
+                if (published) return;
+            }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         finally { _routingSemaphore.Release(); }
@@ -250,7 +274,7 @@ public partial class RoutingOrchestrator
         if (_routingCts != null) _ = _routingCts.CancelAsync();
         using var stop = new CancellationTokenSource();
         _routingCts = stop;
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(stop.Token, operation.CancellationToken,
+        await using var linked = new AsyncCancellationScope(stop.Token, operation.CancellationToken,
             cancellationToken, permission?.CancellationToken ?? default);
         var token = linked.Token;
         var generation = MutationGeneration;
