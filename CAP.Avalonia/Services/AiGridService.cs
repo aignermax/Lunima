@@ -149,8 +149,19 @@ public class AiGridService : IAiGridService
     }
 
     /// <inheritdoc/>
-    public async Task<string> CreateConnectionAsync(string fromComponentId, string toComponentId)
+    public Task<string> CreateConnectionAsync(string fromComponentId, string toComponentId) =>
+        CreateConnectionCoreAsync(fromComponentId, toComponentId, default, null);
+
+    /// <inheritdoc/>
+    public Task<string> CreateConnectionAsync(string fromComponentId, string toComponentId,
+        CancellationToken cancellationToken, CAP_Contracts.ICommitPermission permission) =>
+        CreateConnectionCoreAsync(fromComponentId, toComponentId, cancellationToken, permission);
+
+    private async Task<string> CreateConnectionCoreAsync(string fromComponentId, string toComponentId,
+        CancellationToken cancellationToken, CAP_Contracts.ICommitPermission? permission)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        permission?.Commit(static () => { });
         var fromVm = _canvas.Components.FirstOrDefault(c =>
             c.Component.Identifier.Equals(fromComponentId, StringComparison.OrdinalIgnoreCase));
         var toVm = _canvas.Components.FirstOrDefault(c =>
@@ -170,20 +181,34 @@ public class AiGridService : IAiGridService
         if (fromPin == null) return $"No available output pins on '{fromComponentId}'";
         if (toPin == null) return $"No available input pins on '{toComponentId}'";
 
-        await _canvas.ConnectPinsAsync(fromPin, toPin);
+        if (permission == null) await _canvas.ConnectPinsAsync(fromPin, toPin);
+        else await _canvas.ConnectPinsAsync(fromPin, toPin, cancellationToken, permission);
+        cancellationToken.ThrowIfCancellationRequested();
+        permission?.Commit(static () => { });
         return $"Connected '{fromComponentId}'.{fromPin.Name} → '{toComponentId}'.{toPin.Name}";
     }
 
     /// <inheritdoc/>
-    public async Task<string> RunSimulationAsync()
+    public Task<string> RunSimulationAsync() => RunSimulationCoreAsync(default, null);
+
+    /// <inheritdoc/>
+    public Task<string> RunSimulationAsync(CancellationToken cancellationToken, CAP_Contracts.ICommitPermission permission) =>
+        RunSimulationCoreAsync(cancellationToken, permission);
+
+    private async Task<string> RunSimulationCoreAsync(CancellationToken cancellationToken,
+        CAP_Contracts.ICommitPermission? permission)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        permission?.Commit(static () => { });
         if (_canvas.Components.Count == 0)
             return "No components on canvas to simulate.";
 
         if (_canvas.Connections.Count == 0)
             return "No connections found. Connect components before running simulation.";
 
-        var result = await _simulationService.RunAsync(_canvas);
+        var result = await _simulationService.RunAsync(_canvas, cancellationToken, permission);
+        cancellationToken.ThrowIfCancellationRequested();
+        permission?.Commit(static () => { });
         if (!result.Success)
             return $"Simulation failed: {result.ErrorMessage ?? "unknown error"}";
 

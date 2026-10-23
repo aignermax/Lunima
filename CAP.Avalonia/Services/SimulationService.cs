@@ -31,10 +31,16 @@ public class SimulationService
     /// </summary>
     public async Task<SimulationResult> RunAsync(
         DesignCanvasViewModel canvas,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        CAP_Contracts.ICommitPermission? permission = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using var operation = canvas.Document.CaptureOperation(cancellationToken);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, permission?.CancellationToken ?? default);
+        CAP_Core.Documents.DocumentOperation captured = null!;
+        void Capture() => captured = canvas.Document.CaptureOperation(linked.Token);
+        if (permission == null) Capture(); else permission.Commit(Capture);
+        await using var operation = captured;
         if (canvas.Components.Count == 0)
             return SimulationResult.Empty("No components placed");
 
@@ -91,12 +97,15 @@ public class SimulationService
         // Linear-time endpoint analysis stays outside the lease lock. Complete flattened
         // fields must never trigger the legacy live group-matrix reconstruction here.
         var preparedOverlay = canvas.PowerFlowVisualizer.PrepareFromFlattenedSimulation(connections, components, fields);
-        if (!operation.TryPublish(() =>
+        var published = false;
+        void Publish() => published = operation.TryPublish(() =>
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 canvas.PowerFlowVisualizer.PublishPreparedResult(preparedOverlay);
                 canvas.RefreshPowerFlowDisplay();
-            }))
-            return SimulationResult.Superseded();
+            });
+        if (permission == null) Publish(); else permission.Commit(Publish);
+        if (!published) return SimulationResult.Superseded();
 
         return new SimulationResult
         {

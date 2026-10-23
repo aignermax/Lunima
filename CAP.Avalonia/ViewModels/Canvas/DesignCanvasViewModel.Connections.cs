@@ -24,6 +24,39 @@ public partial class DesignCanvasViewModel
         return vm;
     }
 
+    /// <summary>Creates and routes under one document lease and externally revocable commit permission.</summary>
+    public async Task<WaveguideConnectionViewModel?> ConnectPinsAsync(PhysicalPin startPin, PhysicalPin endPin,
+        CancellationToken cancellationToken, CAP_Contracts.ICommitPermission permission)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, permission.CancellationToken);
+        CAP_Core.Documents.DocumentOperation captured = null!;
+        permission.Commit(() => captured = Document.CaptureOperation(linked.Token));
+        await using var operation = captured;
+
+        void Commit(Action change) => permission.Commit(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using var suspended = Routing.SuspendAutomaticRouting();
+            if (!operation.TryCommitAndAdvance(change))
+                throw new OperationCanceledException("The connection operation no longer owns this document revision or scope.");
+        });
+
+        if (!startPin.IsPlanarRoutable || !endPin.IsPlanarRoutable) return null;
+        WaveguideConnectionViewModel created = null!;
+        Commit(() =>
+        {
+            RemoveConnectionsForPin(startPin);
+            RemoveConnectionsForPin(endPin);
+            var connection = ConnectionManager.AddConnectionDeferred(startPin, endPin);
+            created = new WaveguideConnectionViewModel(connection);
+            Connections.Add(created);
+        });
+        await Routing.RecalculateRoutesAsync(operation, permission, cancellationToken);
+        Commit(InvalidateSimulation);
+        return created;
+    }
+
     public WaveguideConnectionViewModel? ConnectPins(PhysicalPin startPin, PhysicalPin endPin)
     {
         if (!startPin.IsPlanarRoutable || !endPin.IsPlanarRoutable) return null;

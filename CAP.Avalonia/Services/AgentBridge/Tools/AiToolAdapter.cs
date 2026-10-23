@@ -28,4 +28,8 @@ public sealed class AiToolAdapter : IAgentBridgeTool
     /// <inheritdoc/>
     public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments) =>
         AgentToolResult.Text(await _tool.ExecuteAsync(arguments));
+
+    /// <inheritdoc/>
+    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) =>
+        AgentToolResult.Text(await _tool.ExecuteAsync(arguments, context, context.CancellationToken));
 }

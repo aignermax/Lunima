@@ -36,4 +36,10 @@ public class CreateConnectionTool : IAiTool
         _gridService.CreateConnectionAsync(
             AiInputReader.GetString(input, "from_component"),
             AiInputReader.GetString(input, "to_component"));
+
+    /// <inheritdoc/>
+    public Task<string> ExecuteAsync(JsonElement input, CAP_Contracts.ICommitPermission permission,
+        CancellationToken cancellationToken) => _gridService.CreateConnectionAsync(
+            AiInputReader.GetString(input, "from_component"), AiInputReader.GetString(input, "to_component"),
+            cancellationToken, permission);
 }
