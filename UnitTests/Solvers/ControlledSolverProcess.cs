@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using CAP_Core.Export;
 using Shouldly;
 using Xunit;
@@ -11,21 +12,23 @@ internal sealed class ControlledSolverProcess : IAsyncDisposable
     private readonly string _directory;
     private readonly string _pidFile;
     internal ProcessStartInfo StartInfo { get; }
+    internal string PythonExecutable => StartInfo.FileName;
+    internal string ScriptPath { get; }
 
     private ControlledSolverProcess(string python, string body)
     {
         _directory = Path.Combine(Path.GetTempPath(), $"solver-lifecycle-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_directory);
         _pidFile = Path.Combine(_directory, "child.pid");
-        var script = Path.Combine(_directory, "child.py");
-        File.WriteAllText(script, """
+        ScriptPath = Path.Combine(_directory, "child.py");
+        File.WriteAllText(ScriptPath, $$"""
             import os, sys, time, threading
             threading.Timer(20, lambda: os._exit(99)).start()
-            with open(sys.argv[1], "w") as pid_file:
+            with open({{JsonSerializer.Serialize(_pidFile)}}, "w") as pid_file:
                 pid_file.write(str(os.getpid()))
             """ + "\n" + body);
         var factory = ProcessLaunchFactory.CreateDefault();
-        factory.TryBuild(python, new[] { "-u", script, _pidFile }, _directory, null,
+        factory.TryBuild(python, new[] { "-u", ScriptPath }, _directory, null,
             out var info, out var error).ShouldBeTrue(error);
         StartInfo = info;
     }
@@ -40,10 +43,17 @@ internal sealed class ControlledSolverProcess : IAsyncDisposable
     internal void ShouldHaveExited()
     {
         File.Exists(_pidFile).ShouldBeTrue("the controlled child must have started");
-        foreach (var pidFile in Directory.GetFiles(_directory, "*.pid"))
+        using var child = FindChild(_pidFile);
+        (child == null || child.HasExited).ShouldBeTrue("the runner must reap its child before returning");
+    }
+
+    internal async Task DescendantsShouldHaveExitedAsync()
+    {
+        foreach (var pidFile in Directory.GetFiles(_directory, "*.pid").Where(path => path != _pidFile))
         {
             using var child = FindChild(pidFile);
-            (child == null || child.HasExited).ShouldBeTrue("the runner must reap its process tree before returning");
+            if (child != null)
+                await child.WaitForExitAsync().WaitAsync(GuardTimeout);
         }
     }
 

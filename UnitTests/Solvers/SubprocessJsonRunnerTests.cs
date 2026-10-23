@@ -105,6 +105,7 @@ public class SubprocessJsonRunnerTests
 
         result.Outcome.ShouldBe(SubprocessJsonRunner.Outcome.Cancelled);
         child.ShouldHaveExited();
+        await child.DescendantsShouldHaveExitedAsync();
     }
 
     private static Task<SubprocessJsonRunner.RunResult> RunGuardedAsync(
