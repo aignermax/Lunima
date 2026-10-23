@@ -32,6 +32,12 @@ public sealed record GdsCellInterpretation
     public string? ModelPdkName { get; init; }
     /// <summary>Explicit model name.</summary>
     public string? ModelComponentName { get; init; }
+    /// <summary>
+    /// Explicit opt-out of every assumed model: without a mapped model the cell
+    /// imports geometry-only regardless of pin count. Absent (default) keeps the
+    /// lossless 2-optical-pin pass-through default.
+    /// </summary>
+    public bool GeometryOnly { get; init; }
     /// <summary>Imported port name to model port name; absent entries use identical names.</summary>
     public Dictionary<string, string> ModelPinMap { get; init; } = new(StringComparer.Ordinal);
 }

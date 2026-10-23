@@ -1,0 +1,10 @@
+[
+  {
+    "file": "01-model-stage-shape-only.png",
+    "caption": "Review, stage 5 (Models) after pressing \u0027Shape only \u00B7 no simulation\u0027: the green \u0027simulated as a lossless pass-through\u0027 hint is gone \u2014 the cell opts out of the assumed model and simulation will refuse it."
+  },
+  {
+    "file": "02-summary-shape-only-row.png",
+    "caption": "Review, stage 6 (Summary): the cell\u0027s row reads \u0027leaf: Shape only \u00B7 no simulation\u0027 instead of the assumed pass-through \u2014 the two choices stay distinct right before Apply."
+  }
+]
