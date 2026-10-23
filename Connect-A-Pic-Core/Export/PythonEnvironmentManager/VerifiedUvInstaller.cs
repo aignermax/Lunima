@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 namespace CAP_Core.Export.PythonEnvironmentManager;
 
 /// <summary>Installs a managed executable only from a verified pinned archive.</summary>
-internal sealed class VerifiedUvInstaller(HttpClient client, string toolsDirectory)
+internal sealed class VerifiedUvInstaller(HttpClient client, string toolsDirectory, TimeSpan? downloadTimeout = null)
 {
     // Setup is infrequent. One process-wide owner avoids duplicate downloads without
     // retaining a growing dictionary of locks keyed by test/user environment paths.
@@ -37,13 +37,13 @@ internal sealed class VerifiedUvInstaller(HttpClient client, string toolsDirecto
                 var expectedBinaryHash = await HashAsync(staging, token).ConfigureAwait(false);
                 if (!await MatchesHashAsync(binary, expectedBinaryHash, token).ConfigureAwait(false))
                 {
-                    if (!OperatingSystem.IsWindows())
-                        File.SetUnixFileMode(staging, UnixFileMode.UserRead | UnixFileMode.UserWrite |
-                            UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
-                            UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
                     token.ThrowIfCancellationRequested();
                     File.Move(staging, binary, overwrite: true);
                 }
+                if (!OperatingSystem.IsWindows())
+                    File.SetUnixFileMode(binary, UnixFileMode.UserRead | UnixFileMode.UserWrite |
+                        UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                        UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
                 return binary;
             }
             finally { DeleteStaging(staging); }
@@ -55,18 +55,25 @@ internal sealed class VerifiedUvInstaller(HttpClient client, string toolsDirecto
         IProgress<string>? progress, CancellationToken token)
     {
         var staging = archive + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+        deadline.CancelAfter(downloadTimeout ?? TimeSpan.FromMinutes(10));
+        var downloadToken = deadline.Token;
         try
         {
             progress?.Report($"Downloading verified uv {artifact.Version}...");
-            await using (var input = await client.GetStreamAsync(artifact.Url, token).ConfigureAwait(false))
+            await using (var input = await client.GetStreamAsync(artifact.Url, downloadToken).ConfigureAwait(false))
             await using (var output = new FileStream(staging, FileMode.CreateNew, FileAccess.Write, FileShare.None,
                 81920, useAsync: true))
-                await CopyBoundedAsync(input, output, MaximumArchiveBytes, token).ConfigureAwait(false);
+                await CopyBoundedAsync(input, output, MaximumArchiveBytes, downloadToken).ConfigureAwait(false);
 
-            if (!await MatchesHashAsync(staging, artifact.Sha256, token).ConfigureAwait(false))
+            if (!await MatchesHashAsync(staging, artifact.Sha256, downloadToken).ConfigureAwait(false))
                 throw new InvalidDataException("The uv download did not match its reviewed SHA-256 checksum.");
-            token.ThrowIfCancellationRequested();
+            downloadToken.ThrowIfCancellationRequested();
             File.Move(staging, archive, overwrite: true);
+        }
+        catch (OperationCanceledException error) when (deadline.IsCancellationRequested && !token.IsCancellationRequested)
+        {
+            throw new TimeoutException("The uv download exceeded its time limit.", error);
         }
         finally { DeleteStaging(staging); }
     }

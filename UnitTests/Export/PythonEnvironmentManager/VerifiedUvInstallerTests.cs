@@ -37,6 +37,22 @@ public sealed class VerifiedUvInstallerTests : IDisposable
         Directory.EnumerateFiles(_directory, "*", SearchOption.AllDirectories).ShouldBeEmpty();
     }
 
+    [SkippableFact]
+    public async Task CachedUnixBinary_RepairsMissingExecutePermission()
+    {
+        Skip.If(OperatingSystem.IsWindows(), "Unix permissions require a Unix test host.");
+        var bytes = Archive("uv.exe", "trusted binary");
+        using var handler = new ArchiveHandler(bytes);
+        using var client = new HttpClient(handler);
+        var installer = new VerifiedUvInstaller(client, _directory);
+        var spec = Artifact(bytes);
+        var path = await installer.EnsureAsync(spec, null, CancellationToken.None);
+        File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        await installer.EnsureAsync(spec, null, CancellationToken.None);
+        (File.GetUnixFileMode(path) & UnixFileMode.UserExecute).ShouldBe(UnixFileMode.UserExecute);
+        handler.Requests.ShouldBe(1);
+    }
+
     [Fact]
     public async Task TamperedInstalledBinary_IsRestoredFromVerifiedArchive()
     {
