@@ -8,9 +8,19 @@ internal sealed class McpServerSession(TcpListener listener) : IDisposable
 {
     private readonly ConcurrentDictionary<long, Task> _connections = new();
     private long _nextConnection;
+    private volatile bool _stopping;
+    internal bool IsStopping => _stopping;
     internal TcpListener Listener { get; } = listener;
     internal CancellationTokenSource Cancellation { get; } = new();
     internal Task AcceptLoop { get; set; } = Task.CompletedTask;
+
+    internal void StopAccepting()
+    {
+        // Publish retirement before Stop invalidates TcpListener.Active. An
+        // accept that already passed its loop condition can still enter later.
+        _stopping = true;
+        Listener.Stop();
+    }
 
     internal void Track(Func<Task> serve)
     {
@@ -26,8 +36,8 @@ internal sealed class McpServerSession(TcpListener listener) : IDisposable
 
     internal async Task DrainAsync()
     {
-        await AcceptLoop.ConfigureAwait(false);
-        await Task.WhenAll(_connections.Values).ConfigureAwait(false);
+        try { await AcceptLoop.ConfigureAwait(false); }
+        finally { await Task.WhenAll(_connections.Values).ConfigureAwait(false); }
     }
 
     public void Dispose() => Cancellation.Dispose();

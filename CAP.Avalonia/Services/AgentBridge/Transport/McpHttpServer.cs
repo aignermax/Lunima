@@ -18,6 +18,7 @@ public sealed class McpHttpServer : IDisposable, IAsyncDisposable
     private const int StreamBufferBytes = 8 * 1024;
 
     private readonly McpHttpEndpoint _endpoint;
+    private readonly Func<TcpListener, CancellationToken, ValueTask<TcpClient>> _accept;
     private readonly Action<Exception>? _reportCancellationError;
     private readonly object _lifecycle = new();
     private McpServerSession? _session;
@@ -25,9 +26,14 @@ public sealed class McpHttpServer : IDisposable, IAsyncDisposable
 
     /// <summary>Creates a server that dispatches requests to <paramref name="endpoint"/>.</summary>
     public McpHttpServer(McpHttpEndpoint endpoint, Action<Exception>? reportCancellationError = null)
+        : this(endpoint, reportCancellationError, (listener, token) => listener.AcceptTcpClientAsync(token)) { }
+
+    internal McpHttpServer(McpHttpEndpoint endpoint, Action<Exception>? reportCancellationError,
+        Func<TcpListener, CancellationToken, ValueTask<TcpClient>> accept)
     {
         _endpoint = endpoint;
         _reportCancellationError = reportCancellationError;
+        _accept = accept;
     }
 
     /// <summary>Callback diagnostics from the latest shutdown; they do not prevent restart.</summary>
@@ -75,7 +81,7 @@ public sealed class McpHttpServer : IDisposable, IAsyncDisposable
             _stopping = completion.Task;
         }
         var tools = _endpoint.CloseAdmissionAsync();
-        session.Listener.Stop();
+        session.StopAccepting();
         _ = DrainAsync(session, tools, completion);
         return completion.Task;
     }
@@ -124,15 +130,21 @@ public sealed class McpHttpServer : IDisposable, IAsyncDisposable
     private async Task AcceptLoopAsync(McpServerSession session)
     {
         var token = session.Cancellation.Token;
-        while (!token.IsCancellationRequested)
+        while (!session.IsStopping && !token.IsCancellationRequested)
         {
             TcpClient client;
             try
             {
-                client = await session.Listener.AcceptTcpClientAsync(token);
+                client = await _accept(session.Listener, token);
             }
             catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or SocketException)
             {
+                return;
+            }
+            catch (InvalidOperationException) when (session.IsStopping)
+            {
+                // TcpListener reports a stopped listener this way when Stop
+                // wins between our loop check and AcceptTcpClientAsync.
                 return;
             }
             session.Track(() => ServeConnectionAsync(client, token));
