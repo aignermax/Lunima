@@ -1,6 +1,7 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
+using CAP.Avalonia.Services.Lifetime;
 using CAP.Avalonia.Services.Update;
 using CAP_Core.Update;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -16,20 +17,27 @@ namespace CAP.Avalonia.ViewModels.Update;
 /// </summary>
 public partial class UpdateViewModel : ObservableObject
 {
-    private readonly UpdateChecker _updateChecker;
-    private readonly UpdateDownloader _downloader;
-    private readonly UserPreferencesService _preferences;
+    private readonly IReleaseCatalog _updateChecker;
+    private readonly IUpdatePreparation _downloader;
+    private readonly IUpdatePreferences _preferences;
     private readonly IUrlLauncher _urlLauncher;
     private readonly IInstaller _installer;
     private readonly SemanticVersion _currentVersion;
 
     private GitHubReleaseInfo? _availableRelease;
+    private readonly UpdateWorkScope _work = new();
+
+    /// <summary>Retires manual network work without awaiting the install command that initiates shutdown.</summary>
+    public Task StopAsync() => _work.StopAsync();
 
     /// <summary>Desktop host's save/discard/cancel guard, awaited before starting an updater.</summary>
     public Func<Task<bool>>? ConfirmShutdownAsync { get; set; }
 
     /// <summary>Closes the already-approved window without prompting a second time.</summary>
     public Action? ShutdownAfterConfirmation { get; set; }
+
+    /// <summary>Drains application work after a successful installer launch, before forced shutdown.</summary>
+    public Func<Task>? RetireBeforeShutdownAsync { get; set; }
 
     [ObservableProperty]
     private string _statusText = "";
@@ -63,9 +71,9 @@ public partial class UpdateViewModel : ObservableObject
 
     /// <summary>Initializes a new instance of <see cref="UpdateViewModel"/>.</summary>
     public UpdateViewModel(
-        UpdateChecker updateChecker,
-        UpdateDownloader downloader,
-        UserPreferencesService preferences,
+        IReleaseCatalog updateChecker,
+        IUpdatePreparation downloader,
+        IUpdatePreferences preferences,
         IUrlLauncher urlLauncher,
         IInstaller installer)
     {
@@ -84,7 +92,7 @@ public partial class UpdateViewModel : ObservableObject
     [RelayCommand]
     private async Task CheckForUpdates()
     {
-        if (IsChecking || IsDownloading) return;
+        if (_work.IsRetired || IsChecking || IsDownloading) return;
 
         IsChecking = true;
         UpdateAvailable = false;
@@ -92,7 +100,8 @@ public partial class UpdateViewModel : ObservableObject
 
         try
         {
-            var release = await _updateChecker.GetLatestReleaseAsync();
+            var release = await _work.CheckAsync(token => _updateChecker.GetLatestReleaseAsync(token));
+            if (_work.IsRetired) return;
             if (release == null)
             {
                 StatusText = LocalizationService.Instance.Translate("Update.NoServer");
@@ -101,7 +110,7 @@ public partial class UpdateViewModel : ObservableObject
 
             var releaseVersion = release.ParsedVersion;
 
-            if (!UpdateChecker.IsNewerThan(release, _currentVersion))
+            if (!ReleaseAssetPolicy.IsNewerThan(release, _currentVersion))
             {
                 StatusText = string.Format(
                     LocalizationService.Instance.Translate("Update.UpToDate"), releaseVersion ?? _currentVersion);
@@ -118,8 +127,10 @@ public partial class UpdateViewModel : ObservableObject
             // empty here so it isn't a redundant echo (it carries download progress later).
             StatusText = string.Empty;
         }
+        catch (OperationCanceledException) when (_work.IsRetired) { }
         catch (Exception ex)
         {
+            if (_work.IsRetired) return;
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Update.CheckFailed"), ex.Message);
         }
@@ -139,14 +150,14 @@ public partial class UpdateViewModel : ObservableObject
     [RelayCommand]
     private async Task InstallUpdate()
     {
-        if (_availableRelease == null || IsDownloading) return;
+        if (_work.IsRetired || _availableRelease == null || IsDownloading) return;
 
         var canSelfUpdate = _installer.CanInstallInPlace(out _);
-        var autoUpdateAsset = canSelfUpdate ? UpdateChecker.FindAutoUpdateAsset(_availableRelease) : null;
+        var autoUpdateAsset = canSelfUpdate ? ReleaseAssetPolicy.FindAutoUpdateAsset(_availableRelease) : null;
 
         // Fall back to the manual installer (macOS .dmg, Windows .msi, …) when in-place update
         // isn't possible or the release carries no auto-update archive.
-        var asset = autoUpdateAsset ?? UpdateChecker.FindPlatformAsset(_availableRelease);
+        var asset = autoUpdateAsset ?? ReleaseAssetPolicy.FindPlatformAsset(_availableRelease);
         var selfUpdate = autoUpdateAsset != null;
 
         if (asset == null)
@@ -159,11 +170,12 @@ public partial class UpdateViewModel : ObservableObject
         DownloadProgress = 0;
         StatusText = selfUpdate ? "Downloading update..." : "Downloading installer...";
 
-        string downloadedPath;
+        IUpdateDownload download;
         try
         {
             var progress = new Progress<double>(p =>
             {
+                if (_work.IsRetired) return;
                 DownloadProgress = p;
                 // Progress callbacks run off the UI thread; guard on IsDownloading so a late one
                 // can't clobber the terminal status set after the download finishes.
@@ -172,11 +184,20 @@ public partial class UpdateViewModel : ObservableObject
                         LocalizationService.Instance.Translate("Update.Downloading"), p.ToString("P0"));
             });
 
-            downloadedPath = await _downloader.DownloadInstallerAsync(
-                asset.BrowserDownloadUrl, asset.Size, progress);
+            download = await _work.PrepareAsync(token => _downloader.DownloadInstallerAsync(
+                _availableRelease, asset, _currentVersion, progress, token));
+        }
+        catch (OperationCanceledException) when (_work.IsRetired) { return; }
+        catch (InvalidDataException)
+        {
+            if (_work.IsRetired) return;
+            // Missing or invalid publisher evidence never reaches an executable path.
+            OpenReleasesPageInBrowser();
+            return;
         }
         catch (Exception ex)
         {
+            if (_work.IsRetired) return;
             // A failed download has no side effects — the user can simply click Install again.
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Update.DownloadFailed"), ex.Message);
@@ -187,19 +208,37 @@ public partial class UpdateViewModel : ObservableObject
             IsDownloading = false;
         }
 
-        if (selfUpdate)
+        try
         {
-            if (ConfirmShutdownAsync != null && !await ConfirmShutdownAsync())
+            if (_work.IsRetired) return;
+            if (selfUpdate)
             {
-                StatusText = string.Empty;
+                if (ConfirmShutdownAsync != null && !await ConfirmShutdownAsync())
+                {
+                    StatusText = string.Empty;
+                    return;
+                }
+                if (_work.IsRetired) return;
+                await ApplySelfUpdateAsync(download);
                 return;
             }
-            ApplySelfUpdate(downloadedPath);
-            return;
-        }
 
-        StatusText = LocalizationService.Instance.Translate("Update.DownloadComplete");
-        OpenDownloadedInstaller(downloadedPath);
+            try
+            {
+                await download.ValidateAsync();
+                if (_work.IsRetired) return;
+                StatusText = LocalizationService.Instance.Translate("Update.DownloadComplete");
+                // A manual installer or revealed file must remain available to its new owner.
+                download.HandOffToInstaller();
+                await OpenDownloadedInstallerAsync(download.Path);
+            }
+            catch (Exception error)
+            {
+                if (_work.IsRetired) return;
+                StatusText = string.Format(LocalizationService.Instance.Translate("Update.UpdateFailed"), error.Message);
+            }
+        }
+        finally { _work.Release(download); }
     }
 
     /// <summary>
@@ -207,21 +246,24 @@ public partial class UpdateViewModel : ObservableObject
     /// process to exit before replacing files, so the app shuts down right after launching it.
     /// When the updater cannot be launched the app keeps running — never quit into a broken swap.
     /// </summary>
-    private void ApplySelfUpdate(string archivePath)
+    private async Task ApplySelfUpdateAsync(IUpdateDownload download)
     {
         StatusText = LocalizationService.Instance.Translate("Update.Installing");
         try
         {
-            _installer.LaunchUpdater(archivePath);
+            await download.ValidateAsync();
+            if (_work.IsRetired) return;
+            _installer.LaunchUpdater(download.Path);
+            download.HandOffToInstaller();
         }
         catch (Exception ex)
         {
+            if (_work.IsRetired) return;
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Update.UpdateFailed"), ex.Message);
             return;
         }
-        if (ShutdownAfterConfirmation != null) ShutdownAfterConfirmation();
-        else ShutdownApplication();
+        await ShutdownAfterRetirementAsync();
     }
 
     /// <summary>
@@ -229,7 +271,7 @@ public partial class UpdateViewModel : ObservableObject
     /// user is pointed at it (status text + reveal in file manager) instead of being sent to
     /// re-download it from the releases page.
     /// </summary>
-    private void OpenDownloadedInstaller(string installerPath)
+    private async Task OpenDownloadedInstallerAsync(string installerPath)
     {
         try
         {
@@ -242,7 +284,7 @@ public partial class UpdateViewModel : ObservableObject
             TryRevealInstaller(installerPath);
             return;
         }
-        ShowPostDownloadGuidance();
+        await ShowPostDownloadGuidanceAsync();
     }
 
     private void TryRevealInstaller(string installerPath)
@@ -314,17 +356,21 @@ public partial class UpdateViewModel : ObservableObject
     /// banner only when an update is available and the user has not skipped today or
     /// permanently skipped this version.
     /// </summary>
-    public async Task CheckForUpdatesOnStartupAsync()
+    public async Task CheckForUpdatesOnStartupAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (_work.IsRetired) return;
         if (!_preferences.ShouldCheckToday()) return;
         if (IsChecking || IsDownloading) return;
 
         IsChecking = true;
         try
         {
-            var release = await _updateChecker.GetLatestReleaseAsync();
+            var release = await _work.CheckAsync(token => _updateChecker.GetLatestReleaseAsync(token), cancellationToken);
+            if (_work.IsRetired) return;
+            cancellationToken.ThrowIfCancellationRequested();
             if (release == null) return;
-            if (!UpdateChecker.IsNewerThan(release, _currentVersion)) return;
+            if (!ReleaseAssetPolicy.IsNewerThan(release, _currentVersion)) return;
 
             var skipped = _preferences.GetSkippedUpdateVersion();
             if (skipped != null && release.ParsedVersion != null && skipped >= release.ParsedVersion) return;
@@ -334,6 +380,10 @@ public partial class UpdateViewModel : ObservableObject
             ReleaseNotes = TruncateReleaseNotes(release.Body);
             UpdateAvailable = true;
             StatusText = string.Empty;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Application retirement is silent and cannot publish a late startup banner.
         }
         catch
         {
@@ -349,11 +399,11 @@ public partial class UpdateViewModel : ObservableObject
     /// After the installer is opened, either quits (Windows, where msiexec replaces the running
     /// binary) or leaves the app running with platform-specific guidance.
     /// </summary>
-    private void ShowPostDownloadGuidance()
+    private async Task ShowPostDownloadGuidanceAsync()
     {
         if (OperatingSystem.IsWindows())
         {
-            ShutdownApplication();
+            await ShutdownAfterRetirementAsync();
             return;
         }
 
@@ -392,6 +442,13 @@ public partial class UpdateViewModel : ObservableObject
         const int MaxLength = 800;
         if (notes.Length <= MaxLength) return notes;
         return notes[..MaxLength] + "\n\n[... see full release notes on GitHub]";
+    }
+
+    private async Task ShutdownAfterRetirementAsync()
+    {
+        if (RetireBeforeShutdownAsync != null) await RetireBeforeShutdownAsync();
+        if (ShutdownAfterConfirmation != null) ShutdownAfterConfirmation();
+        else ShutdownApplication();
     }
 
     private static void ShutdownApplication()

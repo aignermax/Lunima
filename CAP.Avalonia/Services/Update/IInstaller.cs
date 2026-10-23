@@ -2,7 +2,7 @@ namespace CAP.Avalonia.Services.Update;
 
 /// <summary>
 /// Installs a downloaded update over the current installation and relaunches the app.
-/// The download itself is handled by <see cref="UpdateDownloader"/>; this seam owns only the
+/// The download itself is handled by <see cref="CAP_Core.Update.IUpdatePreparation"/>; this seam owns only the
 /// "replace the installed app and restart" step, which differs per operating system.
 /// </summary>
 public interface IInstaller

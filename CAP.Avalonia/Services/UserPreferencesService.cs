@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using System.Text.Json;
 using CAP_Core;
 using CAP_Core.Routing.InterconnectRouting;
@@ -11,7 +12,7 @@ namespace CAP.Avalonia.Services;
 /// Recent-projects preference access lives in the
 /// <c>UserPreferencesService.RecentProjects.cs</c> partial (file-size split).
 /// </summary>
-public partial class UserPreferencesService
+public partial class UserPreferencesService : IUpdatePreferences, IRecentProjectPreferences
 {
     private readonly string _preferencesFilePath;
     private readonly ErrorConsoleService? _errorConsole;
