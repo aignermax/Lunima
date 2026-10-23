@@ -27,6 +27,15 @@ public partial class WaveguideConnectionManager
     /// <summary>Set when a wire was added or removed since the last pass (see <see cref="NoteWireSetChanged"/>).</summary>
     private volatile bool _wireSetChanged;
 
+    internal bool HasPendingWireSetChange => _wireSetChanged;
+
+    /// <summary>Restores pass-start failure knowledge after private graph construction, without inventing an edit.</summary>
+    internal void RestoreFailureState(IEnumerable<UnroutableWireMemory.SnapshotEntry> entries, bool pendingWireSetChange)
+    {
+        UnroutableWires.RestoreState(entries);
+        _wireSetChanged = pendingWireSetChange;
+    }
+
     /// <summary>True during a pass that follows an added or removed wire.</summary>
     private bool _wireSetChangedThisPass;
 

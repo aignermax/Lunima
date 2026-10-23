@@ -23,6 +23,9 @@ public partial class Component : ICloneable
     /// </summary>
     public Guid Id { get; private set; } = Guid.NewGuid();
 
+    /// <summary>Restores identity only for an isolated computation graph; ordinary Clone creates new identities.</summary>
+    internal void RestoreSnapshotIdentity(Guid identity) => Id = identity;
+
     /// <summary>
     /// Human-readable name for this component (e.g., "MMI_1x2_1").
     /// Can be changed freely without affecting lookup-by-Id.
