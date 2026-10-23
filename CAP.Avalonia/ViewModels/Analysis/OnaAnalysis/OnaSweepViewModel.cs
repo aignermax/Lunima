@@ -222,9 +222,10 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
     /// component, via the <see cref="OpenWindowAsync"/> delegate.
     /// </summary>
     [RelayCommand]
-    private async Task OpenWindow()
+    private Task OpenWindow() => _work.RunAsync(async stop =>
     {
-        if (OpenWindowAsync == null) return;
+        var openWindow = OpenWindowAsync;
+        if (openWindow == null) return;
         var selected = _canvas?.SelectedComponent?.Component;
         if (selected == null || !selected.IsAnalysisTool)
         {
@@ -232,17 +233,24 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
                 "Select an ONA Analyzer component on the canvas before opening the sweep window.");
             return;
         }
-        await OpenWindowAsync(selected);
-    }
+        // The delegate owns its UI operation; keep it in the feature's drain
+        // until it actually returns, even though this API has no cancel token.
+        await openWindow(selected);
+    });
 
     /// <summary>Exports the last sweep result as CSV.</summary>
     [RelayCommand]
-    private async Task ExportCsv()
+    private Task ExportCsv() => _work.RunAsync(ExportCsvCoreAsync);
+
+    private async Task ExportCsvCoreAsync(CancellationToken stop)
     {
         if (_lastResult == null) return;
 
         try
         {
+            // Export the result the user selected, including its labels. A new
+            // sweep may finish while the picker is open and replace panel state.
+            var content = _lastResult.GenerateCsvContent(ResolvePinName);
             string? path = null;
             if (FileDialogService != null)
             {
@@ -250,19 +258,27 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
                     "Export ONA Results", "csv", "CSV Files|*.csv|All Files|*.*");
             }
 
+            if (_work.IsStopping || stop.IsCancellationRequested) return;
             if (path == null) { StatusText = LocalizationService.Instance.Translate("Analysis.Common.ExportCancelled"); return; }
 
-            await File.WriteAllTextAsync(path, _lastResult.GenerateCsvContent(ResolvePinName));
+            await WriteCsvAsync(path, content, stop);
+            if (_work.IsStopping || stop.IsCancellationRequested) return;
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Common.ExportedTo"), Path.GetFileName(path));
         }
+        catch (OperationCanceledException) when (_work.IsStopping || stop.IsCancellationRequested) { }
         catch (Exception ex)
         {
+            if (_work.IsStopping || stop.IsCancellationRequested) return;
             _errorConsole?.LogError($"ONA export failed: {ex.Message}", ex);
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Common.ExportFailed"), ex.Message);
         }
     }
+
+    /// <summary>Writes an accepted CSV export and completes after its file work has finished.</summary>
+    protected virtual Task WriteCsvAsync(string path, string content, CancellationToken cancellationToken) =>
+        File.WriteAllTextAsync(path, content, cancellationToken);
 
     private (GridManager? gridManager, PhysicalExternalPortManager portManager) BuildSimulationGrid()
     {
