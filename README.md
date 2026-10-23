@@ -91,16 +91,27 @@ Once installed, Lunima **updates itself in place** (download, swap, relaunch) on
 
 ### Building from source
 
-**Prerequisites:** .NET 10.0 SDK
+**Prerequisites:** the .NET SDK selected by `global.json` and Python 3.
 
 ```bash
-# Quick start
+# Linux/macOS
 make run      # or ./run.sh
-
-# Build and test
 dotnet build
-dotnet test
+python3 scripts/run_tests.py
+python3 scripts/install_hooks.py
 ```
+
+```powershell
+# Windows
+dotnet run --project CAP.Desktop/CAP.Desktop.csproj
+dotnet build
+py scripts/run_tests.py
+py scripts/install_hooks.py
+```
+
+The test helper excludes Slow/Heavy tests by default and saves detailed output
+locally. See [Testing](docs/TESTING.md) for filters and CI coverage, and
+[Contributing](CONTRIBUTING.md) for source-size checks and the `dev` branch workflow.
 
 ---
 
@@ -154,40 +165,8 @@ Lunima acts as a **design and integration layer**, allowing information to flow 
 
 ## Roadmap
 
-### 🎯 High Priority: PIR Evolution
-
-- [ ] **Expand `.lun` format** — Add S-matrix storage, simulation metadata, external tool links
-- [ ] **Import S-parameters from Lumerical/Tidy3D** — Direct device simulation integration
-- [ ] **Export to PhotonTorch** — Circuit-level time-domain simulation
-- [ ] **Export to Verilog-A** — System-level co-simulation
-
-### 🎯 High Priority: Professional Features
-
-- [ ] **Connection validation** — Warn about pin angle mismatches, unconnected pins
-- [ ] **Design Rule Checking** — Min bend radius, spacing violations
-- [ ] **Wavelength sweep / spectral response** — Plot transmission vs wavelength
-- [ ] **Parameterized models** — Components with interpolated S-matrices
-- [ ] **Direct GDS export** — Without Nazca intermediate step
-
-### 🎯 High Priority: PDK Expansion
-
-- [ ] **Expand SiEPIC PDK** — Add remaining 31 components (43 total)
-- [ ] **SiEPIC SiN PDK** — Silicon nitride platform support
-
-### 🔮 Future Vision: Tool Integration
-
-- [ ] **Browser version** — WebAssembly deployment
-- [ ] **Python PDK extractor** — Convert Nazca PDKs to JSON
-- [ ] **Component properties panel** — Edit S-matrix parameters per instance
-
-### 🔮 Future Vision: Optical Computing
-
-- [ ] **Nonlinear components** — S-matrix depends on input power
-- [ ] **Delay lines** — Waveguide loops with propagation time
-- [ ] **Pulsed laser source** — Time-domain clock for optical logic
-- [ ] **Multi-chip interconnect** — Inter-chip optical cables
-
-See [CHANGELOG.md](CHANGELOG.md) for completed features.
+[docs/ROADMAP.md](docs/ROADMAP.md) tracks the product direction and open work.
+[CHANGELOG.md](CHANGELOG.md) records shipped features and milestones.
 
 ---
 
@@ -199,12 +178,9 @@ We welcome contributions! Please see:
 - [CLAUDE.md](CLAUDE.md) for agent development guidelines
 - [ARCHITECTURE.md](ARCHITECTURE.md) for technical details
 
-For AI-assisted development, use the provided Python tools:
-
-```bash
-python3 tools/smart_test.py              # Compact test output
-python3 tools/semantic_search.py "query" # Semantic code search
-```
+For AI-assisted development, follow [CLAUDE.md](CLAUDE.md) and use the checked-in
+`scripts/run_tests.py` helper described above. No external agent-tool installation
+is required.
 
 ---
 

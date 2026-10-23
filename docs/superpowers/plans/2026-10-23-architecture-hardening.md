@@ -36,10 +36,10 @@ Files: `CAP.Avalonia/Commands/CommandManager.cs`, `CAP.Avalonia/ViewModels/Canva
 
 Interface: add a history-entry retirement notification carrying `IUndoableCommand`; trimming the oldest entry, dropping redo, canceling an uncommitted reservation and clearing history must have defined ownership semantics. Journal removes only retired entry metadata; generation still rejects late worker changes.
 
-- [ ] Add regression for 130 nonmergeable commands with crossing metadata; undo retained entries and compare exact topology/order.
-- [ ] Coordinator runs focused wrapper test and observes expected failure.
-- [ ] Implement precise retirement; test undo/redo/merged/pending/reset cases.
-- [ ] Run related routing/history regressions, review diff, fix findings, commit.
+- [x] Add regression for 130 nonmergeable commands with crossing metadata; undo retained entries and compare exact topology/order.
+- [x] Coordinator runs focused wrapper test and observes expected failure.
+- [x] Implement precise retirement; test undo/redo/merged/pending/reset cases.
+- [x] Run related routing/history regressions, review diff, fix findings, commit.
 
 ### Task 2: Bounded subprocess lifecycle (A02)
 
@@ -147,3 +147,6 @@ Files: architecture tests/checker, explicit module policy, every remaining path 
 ## Execution log
 
 - 2026-10-23: Created active goal; inspected current dev changes; selected clean existing worktree and branch. Source/data ceiling clarification pending. No findings marked fixed yet.
+- 2026-10-23: Baseline 53 architecture/command/crossing tests passed. A01 regression: five failures proved overflow/retirement/cancel/reset defects. Fixed with per-entry retirement and weak canceled-reservation ownership. Independent fresh review clean. Combined verification: 124 passed, zero failed/skipped, including conversion/history/architecture and process tests. A01 resolved.
+- 2026-10-23: A02 regression: five real-Python pipe/lifetime tests failed (initial interpreter-discovery skips corrected, then actual RED confirmed). Concurrent draining/deadline/cleanup fix passes six process cases in combined run. Independent review found no new regression, but highlighted pre-existing orphan descendants after root exit and an immediate descendant-exit assertion. Track process ownership/robust descendant verification before claiming the full lifecycle contract complete.
+- 2026-10-23: Source checker, staged hook, non-destructive installer and checked-in safe test runner implemented. Seventeen Python tests pass, including real Git commit rejection at exactly 1000 lines. Whole-tree checker intentionally fails on ten existing over-limit sources. Required xUnit aggregate will now fail if source checking fails in shard selection. April assessment and false migration report removed; active docs reconciled. Overall goal remains active.

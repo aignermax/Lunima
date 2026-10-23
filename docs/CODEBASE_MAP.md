@@ -1,78 +1,66 @@
-# Codebase Map - Connect-A-PIC-Pro
+# Lunima codebase map
 
-## Architecture Overview
-- **Pattern**: MVVM (Model-View-ViewModel)
-- **UI Framework**: Avalonia (C# / XAML)
-- **DI Container**: Built-in Avalonia DI
+Use this as a navigation index. [ARCHITECTURE.md](../ARCHITECTURE.md) describes the
+current boundaries and outstanding hardening work; [CLAUDE.md](../CLAUDE.md)
+defines contributor rules. The UI uses Avalonia and CommunityToolkit.Mvvm;
+dependency injection uses Microsoft.Extensions.DependencyInjection.
 
-## Key Directories
+## Projects and feature areas
 
-### Core Logic
-- `Connect-A-Pic-Core/` - Business logic, no UI dependencies
-  - `Components/` - Photonic components (Waveguides, Couplers, etc.)
-  - `Simulation/` - S-Matrix simulation engine
-  - `Analysis/` - Analysis tools (ParameterSweeper, etc.)
+| Location | Responsibility |
+|---|---|
+| `CAP_Contracts/` | Shared data-access contracts |
+| `Connect-A-Pic-Core/Components/` | Components, pins, groups, processes and models |
+| `Connect-A-Pic-Core/LightCalculation/` | Optical simulation and time-domain calculations |
+| `Connect-A-Pic-Core/Analysis/` | Sweeps, checks and chiplet coupling/alignment |
+| `Connect-A-Pic-Core/Routing/` | Waveguide pathfinding and route geometry |
+| `Connect-A-Pic-Core/Logic/` | Photonic logic and execution models |
+| `Connect-A-Pic-Core/Export/` | Export support and external process launching |
+| `CAP-DataAccess/Persistence/` | Persistence helpers, group DTOs and PIR data |
+| `CAP-DataAccess/PDKs/` | Bundled process design kits |
+| `CAP.Avalonia/DI/` | Feature service registration |
+| `CAP.Avalonia/ViewModels/` | Presentation state, grouped by feature |
+| `CAP.Avalonia/Services/` | Application workflows and platform integrations; boundaries are being hardened |
+| `CAP.Avalonia/Controls/` | Canvas interaction and rendering |
+| `CAP.Avalonia/Views/` | AXAML windows, dialogs and panels |
+| `CAP.Desktop/` | Desktop entry point and packaging |
+| `CAP.Browser/` | Browser host project; not a released desktop target |
+| `UnitTests/` | xUnit 2 tests, including integration and headless Avalonia coverage |
 
-### UI Layer
-- `CAP.Avalonia/ViewModels/` - MVVM ViewModels (CommunityToolkit.Mvvm)
-  - `MainViewModel.cs` - Main window VM (central hub)
-  - `ParameterSweepViewModel.cs` - Example feature VM
-- `CAP.Avalonia/Views/` - AXAML Views
-  - `MainWindow.axaml` - Main UI layout
-  - Right panel = Properties/Tools area (add new features here)
+## Entry points
 
-### Testing
-- `UnitTests/` - xUnit tests
-  - `Analysis/` - Analysis feature tests
-  - `Helpers/TestComponentFactory.cs` - Test utilities
+| Purpose | Current path |
+|---|---|
+| Composition root | `CAP.Avalonia/App.axaml.cs` |
+| Main presentation coordinator | `CAP.Avalonia/ViewModels/MainViewModel.cs` |
+| Main window | `CAP.Avalonia/Views/MainWindow.axaml` |
+| Canvas viewmodel | `CAP.Avalonia/ViewModels/Canvas/DesignCanvasViewModel.cs` |
+| Canvas bounds | `CAP.Avalonia/ViewModels/Canvas/BoundingBoxCalculator.cs` |
+| Parameter sweep viewmodel | `CAP.Avalonia/ViewModels/Analysis/ParameterSweepViewModel.cs` |
+| Parameter sweep calculation | `Connect-A-Pic-Core/Analysis/ParameterSweeper.cs` |
+| Component groups | `Connect-A-Pic-Core/Components/Core/ComponentGroup.cs` |
+| Workspaces | `CAP.Avalonia/ViewModels/Workspaces/` |
+| Dies and chiplets | `CAP.Avalonia/ViewModels/Dies/` |
+| Process policies | `Connect-A-Pic-Core/Components/Process/` |
+| Assistant tool registration | `CAP.Avalonia/DI/AiAssistantFeatureExtensions.cs` |
+| MCP tool catalog | `CAP.Avalonia/Services/AgentBridge/Tools/AgentToolCatalog.cs` |
+| Example analysis tests | `UnitTests/Analysis/ParameterSweeperTests.cs` |
+| Test factories | `UnitTests/Helpers/TestComponentFactory.cs` |
 
-## Common Patterns
+## Adding a feature
 
-### Adding a New Feature (Vertical Slice)
-1. Core class in `Connect-A-Pic-Core/[Category]/FeatureName.cs`
-2. ViewModel in `CAP.Avalonia/ViewModels/FeatureNameViewModel.cs`
-3. View in `MainWindow.axaml` (right panel section)
-4. Tests in `UnitTests/[Category]/FeatureNameTests.cs`
+Keep domain calculations in Core and presentation in the matching feature's
+viewmodel/view folders. Register dependencies in the relevant `DI/` extension.
+Choose the UI surface using CLAUDE.md §5: whole-design analyses belong in the
+analysis dock; focused workflows use windows, dialogs or flyouts. **The right
+sidebar is only for properties of the current selection.**
 
-### Key Classes to Know
-- `MainViewModel` - Entry point, holds all feature VMs
-- `DesignCanvas` - Main design surface
-- `ComponentGroup` - Container for multiple components
-- `BoundingBoxCalculator` - Spatial calculations
-- `ParameterSweeper` - Example of complete vertical slice
+Prefer new files of 250 lines or fewer. The hard ceiling is 999 physical lines
+per authored source file; separate responsibilities into collaborators rather
+than adding partial-class fragments to meet the count.
 
-## File Naming Conventions
-- ViewModels: `*ViewModel.cs`
-- Tests: `*Tests.cs`
-- Core classes: Descriptive names (no suffix)
+## Build and verification
 
-## Build & Test
-```bash
-dotnet build
-python3 tools/smart_test.py
-```
-
-## Key Files Quick Reference
-
-### ViewModels
-- `CAP.Avalonia/ViewModels/MainViewModel.cs` — main window, holds all feature VMs
-- `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs` — example feature VM
-- `CAP.Avalonia/ViewModels/DesignCanvasViewModel.cs` — canvas, component placement
-
-### Core Classes
-- `Connect-A-Pic-Core/Analysis/ParameterSweeper.cs` — parameter sweeping logic
-- `Connect-A-Pic-Core/Layout/BoundingBoxCalculator.cs` — spatial calculations
-- `Connect-A-Pic-Core/Components/ComponentGroup.cs` — component containers
-
-### UI
-- `CAP.Avalonia/Views/MainWindow.axaml` — main UI; right panel lines 193-229 = ParameterSweep example
-
-### Tests
-- `UnitTests/Analysis/ParameterSweeperTests.cs` — example test pattern
-- `UnitTests/Helpers/TestComponentFactory.cs` — test utilities
-
-## Search Patterns
-- Analysis features: `**/Analysis/**/*`
-- ViewModels: `**/*ViewModel.cs`
-- Tests: `**/*Tests.cs`
-- UI panels: `**/MainWindow.axaml`
+Use the SDK policy in `global.json` and the commands in [TESTING.md](TESTING.md).
+The checked-in local test entry point is `py scripts/run_tests.py` on Windows
+or `python3 scripts/run_tests.py` on Linux/macOS.
