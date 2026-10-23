@@ -101,7 +101,7 @@ public class GdsReviewJourneyTests : IClassFixture<GdsReviewJourneyFixture>
     /// delivers non-zero power at the free output — the 2-pin pass-through default
     /// (#1012) must still apply to a reviewed import.
     /// </summary>
-    [Fact(Skip = "Reviewed unmodeled imports are geometry-only and refused by simulation — #1567")]
+    [Fact]
     public async Task Step4_Simulate_PowerArrivesAtFreeOutput()
     {
         _f.CellA.IsUserMarkedLightSource = true;
@@ -153,7 +153,7 @@ public class GdsReviewJourneyTests : IClassFixture<GdsReviewJourneyFixture>
     /// Step 5 (continued) — the simulated output of the reloaded design matches the
     /// pre-save simulation within 1e-9.
     /// </summary>
-    [Fact(Skip = "Reviewed unmodeled imports are geometry-only and refused by simulation — #1567")]
+    [Fact]
     public async Task Step6_SaveLoad_SimulatedOutputMatchesWithin1e9()
     {
         var before = await SimulateFreeOutputPower(_f.Canvas, _f.CellA, _f.CellB);
