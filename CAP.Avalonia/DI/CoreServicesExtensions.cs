@@ -40,7 +40,6 @@ internal static class CoreServicesExtensions
         services.AddSingleton<PdkImportService>();
         services.AddSingleton<Commands.CommandManager>();
         services.AddSingleton<UserPreferencesService>();
-        services.AddSingleton<ProjectPersistenceService>();
         services.AddSingleton<UserSMatrixOverrideStore>(sp =>
             new UserSMatrixOverrideStore(sp.GetService<CAP_Core.ErrorConsoleService>()));
         services.AddSingleton<Services.GroupPreviewGenerator>();
