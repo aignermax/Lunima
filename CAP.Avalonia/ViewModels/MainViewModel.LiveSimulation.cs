@@ -46,7 +46,7 @@ public partial class MainViewModel
         var cameFromHome = Home.IsHomeVisible;
         Home.OnProjectOpened();
         ResetWorkspacePresentationForNewDesign();
-        UpdateGuidanceForOpenedProject(cameFromHome);
+        _learning.Guidance.ProjectOpened(cameFromHome);
         if (!Canvas.ShowPowerFlow)
             return;
         if (Canvas.Components.Count == 0)

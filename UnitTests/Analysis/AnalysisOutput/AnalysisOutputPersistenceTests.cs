@@ -1,3 +1,4 @@
+using CAP_DataAccess.Persistence.NativeDesign;
 using System.Text.Json;
 using CAP.Avalonia.ViewModels;
 using Shouldly;

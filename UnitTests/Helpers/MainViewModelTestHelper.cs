@@ -125,7 +125,9 @@ public static class MainViewModelTestHelper
             previewService ?? new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")),
             registryBrowser,
             gdsImportButton,
-            designScopedGdsComponents: designScope, pythonStartup: pythonStartup, isaPlayground: isaPlayground);
+            designScopedGdsComponents: designScope, pythonStartup: pythonStartup,
+            learningChapters: CAP.Avalonia.ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters.Create(
+                canvas, rightPanel, bottomPanel, commandManager, isaPlayground));
     }
 
     /// <summary>

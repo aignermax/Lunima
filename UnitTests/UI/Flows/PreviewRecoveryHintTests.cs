@@ -34,7 +34,7 @@ public class PreviewRecoveryHintTests
         previews.TryGetGeometry(key);
         await previews.WaitForPendingAsync();
         UiInput.RunJobs();
-        var button = host.Window.FindControl<Button>("PreviewPythonSettingsButton");
+        var button = UiInput.Named<Button>(host.Window, "PreviewPythonSettingsButton");
         button.ShouldNotBeNull();
         button.IsEffectivelyVisible.ShouldBeTrue();
         if (Environment.GetEnvironmentVariable("UI_SHOT_DIR") is { Length: > 0 } shots)

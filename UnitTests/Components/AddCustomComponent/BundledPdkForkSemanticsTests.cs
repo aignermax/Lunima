@@ -265,7 +265,14 @@ public class BundledPdkForkSemanticsTests : IDisposable
         var edited = leftPanel.AllTemplates.Single(t => t.PdkSource == BundledPdkName && t.Name == "Bundled Coupler");
         leftPanel.IsComponentRevertToBundled(edited).ShouldBeTrue(
             "the confirm prompt must announce a restore, not a plain delete");
+        var revisions = 0;
+        leftPanel.PdkManager.DefinitionsChanged += () =>
+        {
+            leftPanel.AllTemplates.Single(t => t.Name == "Bundled Coupler").RawCode.ShouldBe(BundledCouplerCode);
+            revisions++;
+        };
         leftPanel.RemoveCustomComponentCommand.Execute(edited);
+        revisions.ShouldBe(1);
 
         var fork = new PdkLoader().LoadFromFileForEditing(store.ResolveNamedPath(BundledPdkName));
         var reverted = fork.Components.Single(c => c.Name == "Bundled Coupler");

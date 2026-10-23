@@ -99,7 +99,7 @@ public class VisualLearningJourneyTests
         Assert.Equal(4, vm.Tutorial.CurrentStepIndex);
         // Repeated placement remains armed while the pointer is still on the canvas.
         Assert.True(canvas.InteractionState.ShowPlacementPreview);
-        UiInput.Click(window, window.FindControl<Button>("ConnectModeButton")!);
+        UiInput.Click(window, UiInput.Named<Button>(window, "ConnectModeButton")!);
         Pump();
         Assert.Equal(5, vm.Tutorial.CurrentStepIndex);
         Assert.False(canvas.InteractionState.ShowPlacementPreview);
@@ -118,12 +118,12 @@ public class VisualLearningJourneyTests
         Assert.Single(vm.Canvas.Connections);
         await RefreshTarget();
         Save(window, language, "open-optics");
-        UiInput.Click(window, window.FindControl<Button>("OpticsWorkspaceButton")!);
+        UiInput.Click(window, UiInput.Named<Button>(window, "OpticsWorkspaceButton")!);
         Pump();
         Assert.Equal(7, vm.Tutorial.CurrentStepIndex);
         await RefreshTarget();
         Save(window, language, "simulate");
-        UiInput.Click(window, window.FindControl<Button>("RunSimulationButton")!);
+        UiInput.Click(window, UiInput.Named<Button>(window, "RunSimulationButton")!);
         Assert.NotNull(vm.RunWorkspaceCommand.ExecutionTask);
         await vm.RunWorkspaceCommand.ExecutionTask;
         Pump();
@@ -134,7 +134,7 @@ public class VisualLearningJourneyTests
         Assert.NotNull(flow);
         Assert.True(double.IsFinite(flow.OutputPower) && flow.OutputPower > 0, vm.StatusText);
         Assert.False(setup.Pending!.IsCompleted, "The whole circuit journey must work while Python setup is pending.");
-        Assert.True(window.FindControl<StackPanel>("PythonStartupProgress")!.IsEffectivelyVisible);
+        Assert.True(UiInput.Named<StackPanel>(window, "PythonStartupProgress")!.IsEffectivelyVisible);
     }
 
     private sealed class PendingPythonSetup : IAsyncDisposable

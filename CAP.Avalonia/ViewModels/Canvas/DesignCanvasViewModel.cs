@@ -275,6 +275,13 @@ public partial class DesignCanvasViewModel : ObservableObject
     public void BeginCommandExecution() => Placement.IsExecutingCommand = true;
     public void EndCommandExecution() => Placement.IsExecutingCommand = false;
 
+    /// <summary>Retires an unfinished gesture without scheduling work or recording undo.</summary>
+    internal void AbandonDrag()
+    {
+        Placement.EndDrag();
+        DragRouteSnapshot = null;
+    }
+
     public async void EndDragComponent(ComponentViewModel component)
     {
         Placement.EndDrag();

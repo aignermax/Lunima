@@ -1,3 +1,4 @@
+using CAP_DataAccess.Persistence.NativeDesign;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using CAP.Avalonia.Services.GdsImport.LayerVisibility;

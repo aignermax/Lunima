@@ -38,6 +38,7 @@ internal static class OnboardingFeatureExtensions
         services.AddSingleton(sp => new StoreNumberTourViewModel(
             sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().Logic,
             sp.GetRequiredService<ViewModels.Panels.BottomPanelViewModel>().Analysis));
+        services.AddSingleton<ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters>();
 
         return services;
     }

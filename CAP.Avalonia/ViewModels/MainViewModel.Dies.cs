@@ -31,9 +31,7 @@ public partial class MainViewModel
     /// assembly (each die answers for its own parts), the design-level process otherwise.
     /// </summary>
     public ActiveProcessSelection? CanvasScopeProcess =>
-        Canvas.Dies.ActiveDie is { } die ? die.ProcessBinding
-        : Canvas.Dies.IsAssemblyRoot ? null
-        : FileOperations.ActiveProcess;
+        _processContext.CanvasScopeProcess;
 
     /// <summary>
     /// Status-bar process chip for a die assembly: the open or selected die's process, else

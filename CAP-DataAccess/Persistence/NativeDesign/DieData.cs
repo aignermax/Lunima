@@ -1,6 +1,6 @@
 using CAP_Core.Components.Dies;
 
-namespace CAP.Avalonia.ViewModels.Dies;
+namespace CAP_DataAccess.Persistence.NativeDesign;
 
 /// <summary>
 /// Serialisable form of a <see cref="DieDefinition"/> stored on a top-level group of a

@@ -1,4 +1,5 @@
 using System;
+using CAP_Core;
 using System.Collections.Generic;
 using System.Linq;
 using CAP_Core.Components;
@@ -7,7 +8,7 @@ using CAP_Core.LightCalculation;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 
-namespace CAP.Avalonia.ViewModels.Panels;
+namespace CAP.Avalonia.ViewModels.Panels.DesignModels;
 
 /// <summary>
 /// Type-wide propagation of a saved component definition: placed instances snapshot their
@@ -15,29 +16,42 @@ namespace CAP.Avalonia.ViewModels.Panels;
 /// Pushes the saved template's matrices into every matching live instance; explicit overrides
 /// keep winning.
 /// </summary>
-public partial class FileOperationsViewModel
+public sealed class TemplateInstanceRefresher
 {
+    private readonly ComponentTemplateResolver _templates;
+    private readonly DesignModelOverrides _overrides;
+    private readonly ErrorConsoleService? _errorConsole;
+
+    /// <summary>Creates the template-to-instance model propagation workflow.</summary>
+    public TemplateInstanceRefresher(ComponentTemplateResolver templates, DesignModelOverrides overrides,
+        ErrorConsoleService? errorConsole)
+    {
+        _templates = templates;
+        _overrides = overrides;
+        _errorConsole = errorConsole;
+    }
+
     /// <summary>
     /// Rebuilds the base S-matrix map of every placed instance of <paramref name="template"/>
     /// (including instances inside groups), re-applies overrides on top, and invalidates the
-    /// running simulation.
+    /// caller's simulation when it reports matching instances.
     /// </summary>
-    public void RefreshInstancesFromTemplate(ComponentTemplate template)
+    public bool Refresh(IEnumerable<Component> components, ComponentTemplate template)
     {
         // The save path treats names case-insensitively; the instance match must too, or a
         // case-only rename silently skips every placed instance.
         var templateKey = $"{template.PdkSource}::{template.Name}";
-        var matching = FlattenGroupChildren(_canvas.Components.Select(vm => vm.Component))
-            .Where(c => string.Equals(ResolveTemplateKey(c), templateKey, StringComparison.OrdinalIgnoreCase))
+        var matching = FlattenGroupChildren(components)
+            .Where(c => string.Equals(_templates.Key(c), templateKey, StringComparison.OrdinalIgnoreCase))
             .ToList();
         if (matching.Count == 0)
-            return;
+            return false;
 
         foreach (var component in matching)
             RebuildBaseSMatrices(component, template);
 
-        ReapplyOverridesTo(matching);
-        _canvas.InvalidateSimulation();
+        _overrides.Apply(matching);
+        return true;
     }
 
     private static IEnumerable<Component> FlattenGroupChildren(IEnumerable<Component> components)
@@ -135,20 +149,4 @@ public partial class FileOperationsViewModel
         return new Dictionary<int, SMatrix> { { 1550, single }, { 1310, single }, { 980, single } };
     }
 
-    /// <summary>Precedence per-instance &gt; user-global &gt; template: per-instance overrides apply LAST and win.</summary>
-    private void ReapplyOverridesTo(IReadOnlyList<Component> components)
-    {
-        ApplyUserGlobalOverrides(components);
-
-        if (StoredSMatrices.Count > 0)
-        {
-            Services.SMatrixOverrideApplicator.ApplyAll(
-                components,
-                StoredSMatrices,
-                templateKeyResolver: ResolveTemplateKey,
-                geometryKeyResolver: ResolveGeometryKey,
-                errorConsole: _errorConsole,
-                keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate);
-        }
-    }
 }

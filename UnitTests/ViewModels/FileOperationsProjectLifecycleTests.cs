@@ -54,6 +54,7 @@ public class FileOperationsProjectLifecycleTests : IDisposable
 
     public void Dispose()
     {
+        _fileOps.Dispose();
         foreach (var path in new[] { _testPreferencesPath, _tempDesignPath })
         {
             if (File.Exists(path))
@@ -61,6 +62,20 @@ public class FileOperationsProjectLifecycleTests : IDisposable
                 File.Delete(path);
             }
         }
+    }
+
+    [Fact]
+    public void Dispose_DetachesCanvasDirtyStateSubscriptions()
+    {
+        (_fileOps as IDisposable)?.Dispose();
+        _fileOps.HasUnsavedChanges = false;
+
+        _canvas.Components.Clear();
+        _canvas.Connections.Clear();
+        _canvas.AnalysisOutput.Designate(Guid.NewGuid());
+
+        _fileOps.HasUnsavedChanges.ShouldBeFalse();
+        _fileOps.ShouldBeAssignableTo<IDisposable>();
     }
 
     private void SetupSavePrompt(SavePromptResult result)

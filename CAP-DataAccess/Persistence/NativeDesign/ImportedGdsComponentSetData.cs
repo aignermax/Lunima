@@ -1,10 +1,10 @@
 using System.Text.Json.Serialization;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 
-namespace CAP.Avalonia.Services.GdsImport.DesignScope;
+namespace CAP_DataAccess.Persistence.NativeDesign;
 
 /// <summary>
-/// .lun persistence shape of one <see cref="DesignScopedGdsSet"/>: the imported
+/// .lun persistence shape of one design-scoped GDS component set: the imported
 /// components AND the source .gds (base64) travel inside the design file, so a
 /// .lun that uses GDS-imported components stays self-contained — no global
 /// user-PDK file, no sidecar next to the design (issue #830).

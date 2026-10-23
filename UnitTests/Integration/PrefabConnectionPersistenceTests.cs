@@ -1,3 +1,4 @@
+using CAP_DataAccess.Persistence.NativeDesign;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;

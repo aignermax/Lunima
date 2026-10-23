@@ -1,4 +1,4 @@
-namespace CAP.Avalonia.Services.GdsImport.LayerVisibility;
+namespace CAP_DataAccess.Persistence.NativeDesign;
 
 /// <summary>
 /// Persisted per-design display override for one imported GDS (layer, datatype)

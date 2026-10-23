@@ -1,3 +1,4 @@
+using CAP_DataAccess.Persistence.NativeDesign;
 using System.Text.Json;
 using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.ViewModels;
@@ -9,8 +10,7 @@ namespace UnitTests.Persistence;
 /// <summary>
 /// Tests for PIR (Photonic Intermediate Representation) data model serialization.
 /// Verifies that the .lun v2.0 format can store and restore all new PIR sections.
-/// Legacy v1 files are rejected at load time (see FileOperationsViewModel); the
-/// DTOs themselves remain tolerant during raw JSON deserialization.
+/// Legacy files remain tolerant during deserialization and upgrade on the next save.
 /// </summary>
 public class PirDataSerializationTests
 {
