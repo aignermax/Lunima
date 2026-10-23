@@ -46,14 +46,15 @@ public sealed class AgentCancellationOrderingTests
             rejected.ShouldBeOfType<OperationCanceledException>();
             releaseCallback.Set();
             await cancellation.WaitAsync(TimeSpan.FromSeconds(5));
-            await running.WaitAsync(TimeSpan.FromSeconds(5));
+            await Should.ThrowAsync<OperationCanceledException>(() => running.WaitAsync(TimeSpan.FromSeconds(5)));
         }
         finally
         {
             releaseCallback.Set();
             finishWorker.TrySetResult();
             await cancellation.WaitAsync(TimeSpan.FromSeconds(5));
-            await running.WaitAsync(TimeSpan.FromSeconds(5));
+            try { await running.WaitAsync(TimeSpan.FromSeconds(5)); }
+            catch (OperationCanceledException) { }
             await catalog.CloseAdmissionAsync().WaitAsync(TimeSpan.FromSeconds(5));
         }
     }

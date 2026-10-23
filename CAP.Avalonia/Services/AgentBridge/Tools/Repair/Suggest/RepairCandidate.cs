@@ -15,16 +15,23 @@ public sealed record RepairEditPlan(IUndoableCommand Command, Func<bool> Applied
     /// <summary>Runs the command, then each follow-up after a routing pass; ends with a routing pass.</summary>
     public async Task<bool> ExecuteAndRouteAsync(AgentDesignSession session)
     {
-        session.Commands.ExecuteCommand(Command);
+        await using var operation = new AgentDocumentOperation(session.Canvas);
+        return await ExecuteAndRouteAsync(session, operation);
+    }
+
+    /// <summary>Retains the caller's permission across every follow-up and routing pass.</summary>
+    public async Task<bool> ExecuteAndRouteAsync(AgentDesignSession session, AgentDocumentOperation operation)
+    {
+        operation.Commit(() => session.Commands.ExecuteCommand(Command));
         if (!Applied())
             return false;
         foreach (var followUp in FollowUps ?? Array.Empty<IUndoableCommand>())
         {
-            await Edit.RoutingAwaiter.RerouteAndWaitAsync(session.Canvas);
-            session.Commands.ExecuteCommand(followUp);
+            await operation.RouteAsync();
+            operation.Commit(() => session.Commands.ExecuteCommand(followUp));
         }
-        await Edit.RoutingAwaiter.RerouteAndWaitAsync(session.Canvas);
-        session.Canvas.InvalidateSimulation();
+        await operation.RouteAsync();
+        operation.Commit(session.Canvas.InvalidateSimulation);
         return true;
     }
 }

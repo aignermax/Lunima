@@ -26,17 +26,24 @@ public sealed class UndoTool : IAgentBridgeTool
     public object InputSchema => new { type = "object", properties = new { } };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) => ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        await using var edit = new AgentDocumentOperation(_session.Canvas, context);
         var description = _session.Commands.UndoDescription;
         var routing = _session.Canvas.Routing;
         var restoredBefore = routing.RestoredGeometryVersion;
-        if (!await routing.ExecuteHistoryChangeAsync(_session.Commands.Undo, () => _session.Commands.CanUndo))
+        if (!await routing.ExecuteHistoryChangeAsync(() => edit.Commit(_session.Commands.Undo),
+                () => { edit.EnsureCurrent(); return _session.Commands.CanUndo; }))
             return AgentToolResult.Error("Nothing to undo.");
 
         var routed = routing.RestoredGeometryVersion != restoredBefore
-            || await RoutingAwaiter.RerouteAndWaitAsync(_session.Canvas);
-        _session.Canvas.InvalidateSimulation();
+            || await edit.RouteAsync();
+        edit.Commit(_session.Canvas.InvalidateSimulation);
 
         return AgentToolResult.Json(new
         {

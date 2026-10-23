@@ -25,11 +25,12 @@ public interface IAgentBridgeTool
 
     /// <summary>
     /// Runs an admitted call. Async implementations must propagate cancellation and guard
-    /// each later mutation with the context; the legacy overload guards entry only.
+    /// each later mutation with the context; the legacy overload guards the synchronous prefix only.
     /// </summary>
     Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context)
     {
-        context.ThrowIfStopped();
-        return ExecuteAsync(arguments);
+        Task<AgentToolResult> execution = null!;
+        context.Commit(() => execution = ExecuteAsync(arguments));
+        return execution;
     }
 }

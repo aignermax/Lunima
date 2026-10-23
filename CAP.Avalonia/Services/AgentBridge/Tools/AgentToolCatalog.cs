@@ -51,7 +51,7 @@ public sealed class AgentToolCatalog
         await _execution.WaitAsync(context.CancellationToken);
         try
         {
-            return await _dispatcher.InvokeAsync(async () =>
+            var result = await _dispatcher.InvokeAsync(async () =>
             {
                 context.ThrowIfStopped();
                 try { return await tool.ExecuteAsync(arguments, context); }
@@ -60,6 +60,10 @@ public sealed class AgentToolCatalog
                     return AgentToolResult.Error($"{name} failed: {ex.Message}");
                 }
             });
+            // Tool completion includes asynchronous disposal. A result prepared before
+            // that cleanup may no longer belong to an admitted request afterwards.
+            context.ThrowIfStopped();
+            return result;
         }
         finally { _execution.Release(); }
     }

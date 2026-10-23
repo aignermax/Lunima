@@ -45,8 +45,14 @@ public sealed class MoveComponentTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) => ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        await using var edit = new AgentDocumentOperation(_session.Canvas, context);
         var id = ToolArguments.GetString(arguments, "id") ?? "";
         var vm = _session.FindComponent(id);
         if (vm == null)
@@ -65,9 +71,9 @@ public sealed class MoveComponentTool : IAgentBridgeTool
                 $"Moving '{id}' to ({newX:F2}, {newY:F2}) would overlap another component or leave the chip. Pass force=true to move anyway."));
 
         var (oldX, oldY) = (vm.X, vm.Y);
-        _session.Commands.ExecuteCommand(new MoveComponentCommand(_session.Canvas, vm, oldX, oldY, newX, newY));
-        var routed = await RoutingAwaiter.RerouteAndWaitAsync(_session.Canvas);
-        _session.Canvas.InvalidateSimulation();
+        edit.Commit(() => _session.Commands.ExecuteCommand(new MoveComponentCommand(_session.Canvas, vm, oldX, oldY, newX, newY)));
+        var routed = await edit.RouteAsync();
+        edit.Commit(_session.Canvas.InvalidateSimulation);
 
         return AgentToolResult.Json(new
         {

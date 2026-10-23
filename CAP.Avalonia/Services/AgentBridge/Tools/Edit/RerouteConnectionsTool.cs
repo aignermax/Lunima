@@ -41,15 +41,21 @@ public sealed class RerouteConnectionsTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) => ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        await using var edit = new AgentDocumentOperation(_session.Canvas, context);
         var ids = ToolArguments.GetStringList(arguments, "ids");
         var unknown = ids.Where(id => _session.FindConnection(id) == null).ToList();
         if (unknown.Count > 0)
             return AgentToolResult.Error($"Unknown connection id(s): {string.Join(", ", unknown)}. Use list_connections.");
 
-        var routed = await RoutingAwaiter.RerouteAndWaitAsync(_session.Canvas);
-        _session.Canvas.InvalidateSimulation();
+        var routed = await edit.RouteAsync();
+        edit.Commit(_session.Canvas.InvalidateSimulation);
 
         if (ids.Count == 0)
             return AgentToolResult.Json(new { RoutingComplete = routed, Routing = ConnectionSnapshot.Report(_session) });

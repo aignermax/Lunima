@@ -47,8 +47,14 @@ public sealed class MoveCrossingAlongAxisTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) => ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        await using var edit = new AgentDocumentOperation(_session.Canvas, context);
         var id = ToolArguments.GetString(arguments, "crossing_id") ?? "";
         var vm = _session.FindComponent(id);
         if (vm == null || !CrossingComponentCatalog.IsCrossing(vm.Component))
@@ -65,10 +71,10 @@ public sealed class MoveCrossingAlongAxisTool : IAgentBridgeTool
 
         var (fromX, fromY) = (vm.X, vm.Y);
         var command = new MoveCrossingAlongAxisCommand(_session.Canvas, vm.Component, axis, delta.Value);
-        var routed = await RepairEdit.ExecuteAndRouteAsync(_session, command);
+        var routed = await RepairEdit.ExecuteAndRouteAsync(_session, command, edit);
         if (!command.Succeeded)
         {
-            await RepairEdit.UndoAndRouteAsync(_session);
+            await RepairEdit.UndoAndRouteAsync(_session, edit);
             return AgentToolResult.Error("Cannot move the crossing: " + (command.Error ?? "unknown reason"));
         }
 

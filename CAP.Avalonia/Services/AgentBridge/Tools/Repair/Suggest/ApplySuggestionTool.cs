@@ -37,8 +37,14 @@ public sealed class ApplySuggestionTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) => ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        await using var edit = new AgentDocumentOperation(_session.Canvas, context);
         var set = _session.Suggestions;
         if (set == null)
             return AgentToolResult.Error("No suggestions yet. Call suggest_fixes first.");
@@ -60,13 +66,13 @@ public sealed class ApplySuggestionTool : IAgentBridgeTool
             return AgentToolResult.Error("The suggestion cannot be applied any more: " + error);
 
         var before = RoutingMetrics.Measure(_session);
-        if (!await plan.ExecuteAndRouteAsync(_session))
+        if (!await plan.ExecuteAndRouteAsync(_session, edit))
         {
-            await RepairEdit.UndoAndRouteAsync(_session);
+            await RepairEdit.UndoAndRouteAsync(_session, edit);
             return AgentToolResult.Error("The edit did not take effect; nothing was changed.");
         }
 
-        _session.Suggestions = null;
+        edit.Commit(() => _session.Suggestions = null);
         var after = RoutingMetrics.Measure(_session);
         return AgentToolResult.Json(new
         {

@@ -46,8 +46,14 @@ public sealed class ShiftSegmentTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) => ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        await using var edit = new AgentDocumentOperation(_session.Canvas, context);
         var id = ToolArguments.GetString(arguments, "connection_id") ?? "";
         var vm = _session.FindConnection(id);
         if (vm == null)
@@ -62,14 +68,14 @@ public sealed class ShiftSegmentTool : IAgentBridgeTool
             return AgentToolResult.Error(error!);
 
         var target = CurrentOffset(vm.Connection, (int)index.Value) + offset.Value;
-        _session.Commands.ExecuteCommand(command);
+        edit.Commit(() => _session.Commands.ExecuteCommand(command));
         if (Math.Abs(CurrentOffset(vm.Connection, (int)index.Value) - target) > OffsetTolerance)
         {
-            await _session.Canvas.Routing.ExecuteHistoryChangeAsync(_session.Commands.Undo, () => _session.Commands.CanUndo);
+            await RepairEdit.UndoAndRouteAsync(_session, edit);
             return AgentToolResult.Error("The shift was rejected: an adjoining segment would collapse or invert. Try a smaller offset.");
         }
-        var routed = await RoutingAwaiter.RerouteAndWaitAsync(_session.Canvas);
-        _session.Canvas.InvalidateSimulation();
+        var routed = await edit.RouteAsync();
+        edit.Commit(_session.Canvas.InvalidateSimulation);
         return AgentToolResult.Json(new
         {
             Shifted = id,
