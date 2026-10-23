@@ -78,7 +78,11 @@ def run(command, environment, timeout):
         finally:
             stop_tree(process)
     lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
-    print("\n".join(lines[-(18 if code == 0 else 100):]))
+    visible = [line for line in lines if not re.search(r"\bwarning [A-Za-z]+\d+:", line)]
+    tail = visible[-(18 if code == 0 else 100):]
+    earlier_errors = [line for line in visible[:-len(tail)]
+                      if re.search(r"\berror [A-Za-z]+\d+:", line)] if tail else []
+    print("\n".join(earlier_errors + tail))
     summaries = [re.search(r"Passed!.*Failed:\s*0,\s*Passed:\s*([1-9]\d*),.*Total:", line)
                  for line in lines]
     if code == 0 and not any(summaries):
