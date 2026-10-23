@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Services.GdsImport;
 using CAP.Avalonia.Services.Localization;
+using CAP_Core.Components.PinKinds;
 using CAP_DataAccess.Import.Gds;
 using CAP_DataAccess.Import.Gds.LayerPicker;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -105,15 +106,41 @@ public sealed partial class GdsCellReviewRow : ObservableObject
     public GdsBoundingBox Bounds { get; }
     public GdsLayerGeometryScene Scene { get; }
     public ObservableCollection<GdsPortReviewRow> Ports { get; } = new();
-    [ObservableProperty] private string _displayName;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PassThroughSummaryText))]
+    private string _displayName;
     [ObservableProperty] private bool _expandChildren;
     [ObservableProperty] private bool _includeInGroup;
-    [ObservableProperty] private GdsModelCandidate? _selectedModel;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPassThroughAssumed))]
+    [NotifyPropertyChangedFor(nameof(PassThroughSummaryText))]
+    private GdsModelCandidate? _selectedModel;
     [ObservableProperty] private bool _detectionLimited;
     public bool PortsEdited { get; set; }
     public GdsCellReviewRow(string name, bool canExpand, GdsLayerGeometryScene scene)
     {
         CellName = name; _displayName = name; CanExpand = canExpand; Scene = scene; Bounds = scene.Bounds;
+    }
+    /// <summary>
+    /// True when this cell keeps no mapped model and its ports qualify for the
+    /// lossless 2-pin pass-through default — the assumed model the review must
+    /// surface instead of applying it silently. Ports feed the import's own rule
+    /// (<see cref="GdsImportService.IsPassThroughEligible(IEnumerable{string?})"/>)
+    /// through the same review→draft conversion (<see cref="GdsPortReviewRow.ToPin"/>)
+    /// that <c>BuildInterpretation</c> persists, so hint and import can never drift.
+    /// </summary>
+    public bool IsPassThroughAssumed => SelectedModel == null &&
+        GdsImportService.IsPassThroughEligible(Ports.Select(p =>
+            p.ToPin().IsElectrical == true ? PinKindHelper.ElectricalKindName : (string?)null));
+    /// <summary>Summary-stage line naming this cell's assumed pass-through model; empty when mapped or ineligible.</summary>
+    public string PassThroughSummaryText => IsPassThroughAssumed
+        ? string.Format(LocalizationService.Instance.Translate("GdsReview.PassThroughSummaryRow"), DisplayName)
+        : "";
+    /// <summary>Re-raises the pass-through hint after port edits; collection and kind changes don't notify the row.</summary>
+    public void NotifyPassThroughChanged()
+    {
+        OnPropertyChanged(nameof(IsPassThroughAssumed));
+        OnPropertyChanged(nameof(PassThroughSummaryText));
     }
     public override string ToString() => CellName;
 }

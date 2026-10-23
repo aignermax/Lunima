@@ -80,6 +80,8 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
     public string Summary => string.Format(Text("Summary"), Layers.Count, ActiveCells.Count, _groups.Count);
     public string ConnectionReadiness => string.Format(Text("ConnectionReadiness"),
         ActiveCells.Count(x => x.Ports.Count == 0), ActiveCells.Count(x => x.SelectedModel != null), ActiveCells.Count);
+    /// <summary>True when any active cell will import with the assumed lossless pass-through model.</summary>
+    public bool HasPassThroughCells => ActiveCells.Any(x => x.IsPassThroughAssumed);
     public string RouteReadiness => Text(Layers.Any(x => (x.Role & (GdsLayerRole.OpticalCore | GdsLayerRole.Electrical | GdsLayerRole.Heater)) != 0)
         ? "RouteLayersChosen" : "NoRouteLayers");
     public string GroupSummary => string.Join(", ", _groups.Select(x => x.Name));
@@ -214,11 +216,12 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
         RefreshHierarchyPresentation();
         RefreshOccurrences();
         NotifyOccurrenceSelection();
+        foreach (var cell in Cells) cell.NotifyPassThroughChanged();
         foreach (var property in new[]{nameof(IsLayoutStep),nameof(IsLayerStep),nameof(IsCellStep),nameof(IsPortStep),
             nameof(IsModelStep),nameof(IsSummaryStep),nameof(ShowCellSelector),nameof(StageTitle),nameof(StageDescription),
             nameof(NextText),nameof(Summary),nameof(Scene),nameof(HighlightLayer),nameof(PreviewPorts),nameof(GuideTargetName),
             nameof(SelectedPortIndex),nameof(LayersConfirmed),nameof(CanApply),nameof(GroupSummary),nameof(HasSelectedModel),
-            nameof(HighlightCellName),nameof(ConnectionReadiness),nameof(RouteReadiness),
+            nameof(HighlightCellName),nameof(ConnectionReadiness),nameof(RouteReadiness),nameof(HasPassThroughCells),
             nameof(HasCombinedRouteLayers),nameof(CombinedRouteLayerWarning),
             nameof(CompatibleModels),nameof(HasCompatibleModels),nameof(GuideTargetItem),
             nameof(CanOpenAssembly),nameof(CellHierarchyHint)})
@@ -227,7 +230,8 @@ public sealed partial class GdsInterpretationReviewViewModel : ObservableObject
 
     private void OnRowChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (_restoring || e.PropertyName is nameof(GdsLayerReviewRow.SelectedRole) or nameof(GdsPortReviewRow.NeedsKindReview)) return;
+        if (_restoring || e.PropertyName is nameof(GdsLayerReviewRow.SelectedRole) or nameof(GdsPortReviewRow.NeedsKindReview)
+            or nameof(GdsCellReviewRow.IsPassThroughAssumed) or nameof(GdsCellReviewRow.PassThroughSummaryText)) return;
         if (e.PropertyName == nameof(GdsCellReviewRow.IncludeInGroup))
         {
             if (sender is GdsCellReviewRow { IncludeInGroup: true } cell) SelectedCell = cell;

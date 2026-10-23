@@ -2286,6 +2286,8 @@
   "GdsReview.Model": "Simulationsmodell",
   "GdsReview.GeometryOnly": "Nur Form · keine Simulation",
   "GdsReview.ModelWarning": "Geometrie allein definiert kein Simulationsverhalten. Weisen Sie ein kompatibles Modell zu und ordnen Sie dessen Ports für die Simulation zu.",
+  "GdsReview.PassThroughAssumed": "Kein Modell zugeordnet — simuliert als verlustfreier Durchgang.",
+  "GdsReview.PassThroughSummaryRow": "{0}: kein Modell zugeordnet — simuliert als verlustfreier Durchgang.",
   "GdsReview.PinMapping": "Modellport-Zuordnung",
   "GdsReview.Ready": "Bereit zum Importieren",
   "GdsReview.Persistence": "Ihre Ebenenrollen, Komponentenauswahl, Ports und Modellzuordnungen werden mit diesem Design gespeichert.",

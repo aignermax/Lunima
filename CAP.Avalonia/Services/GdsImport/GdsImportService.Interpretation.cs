@@ -84,6 +84,17 @@ public sealed partial class GdsImportService
     /// pins, both optical.
     /// </summary>
     private static bool IsPassThroughEligible(PdkComponentDraft draft) =>
-        draft.Pins.Count == 2 && draft.Pins.All(p =>
-            PinKindHelper.TryParse(p.PinKind, out var kind) && kind == MatterType.Light);
+        IsPassThroughEligible(draft.Pins.Select(p => p.PinKind));
+
+    /// <summary>
+    /// The import's pass-through rule over raw pin-kind values, exposed so the
+    /// review can warn about the assumed lossless model with the exact same
+    /// decision the import makes — never a re-implemented copy.
+    /// </summary>
+    public static bool IsPassThroughEligible(IEnumerable<string?> pinKinds)
+    {
+        var kinds = pinKinds as IReadOnlyCollection<string?> ?? pinKinds.ToArray();
+        return kinds.Count == 2 && kinds.All(kind =>
+            PinKindHelper.TryParse(kind, out var matter) && matter == MatterType.Light);
+    }
 }
