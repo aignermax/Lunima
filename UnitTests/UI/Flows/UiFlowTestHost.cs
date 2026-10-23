@@ -122,7 +122,7 @@ internal sealed class UiFlowTestHost : IDisposable
     /// Geometry renderer stub: every render succeeds with a small 2-pin cell, so "Save changes"
     /// (which re-renders the edited code) works without a Python environment.
     /// </summary>
-    private static IComponentPreviewRenderer StubRenderer()
+    private static IPdkGeometryRenderer StubRenderer()
     {
         var ok = new NazcaPreviewResult
         {
@@ -137,7 +137,7 @@ internal sealed class UiFlowTestHost : IDisposable
                 new() { Name = "o2", X = 8, Y = 0.75, Angle = 0 },
             },
         };
-        var mock = new Mock<IComponentPreviewRenderer>();
+        var mock = new Mock<IPdkGeometryRenderer>();
         mock.Setup(r => r.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ok);
         mock.Setup(r => r.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

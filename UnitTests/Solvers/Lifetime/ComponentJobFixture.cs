@@ -19,7 +19,7 @@ internal sealed class ComponentJobFixture
 {
     public RetirementBarrier Barrier { get; } = new();
     public Mock<IFdtdSMatrixService> Solver { get; } = new();
-    public Mock<IComponentPreviewRenderer> Renderer { get; } = new();
+    public Mock<IPdkGeometryRenderer> Renderer { get; } = new();
     public Mock<IUserPdkLibrary> Library { get; } = new();
     public Mock<IFileDialogService> Files { get; } = new();
     public CAP_Core.Components.Core.Component Target { get; } = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();

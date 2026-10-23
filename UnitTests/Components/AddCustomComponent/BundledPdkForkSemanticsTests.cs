@@ -118,8 +118,8 @@ public class BundledPdkForkSemanticsTests : IDisposable
         var libraryManager = new GroupLibraryManager();
         var store = new UserPdkStore(_userPdkRoot, new PdkJsonSaver(), new PdkLoader());
 
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(PreviewOk());
         var deps = new AddCustomComponentDependencies(

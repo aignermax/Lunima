@@ -24,8 +24,8 @@ internal static class AddCustomComponentFeature
         services.AddSingleton(_ => UserPdkStore.CreateDefault());
         services.AddSingleton<IUserPdkLibrary>(sp => sp.GetRequiredService<UserPdkStore>());
         services.AddSingleton(sp => new ComponentGeometryExtractor(
-            new ComponentPreviewRendererAdapter(sp.GetRequiredService<NazcaComponentPreviewService>()),
-            new ComponentPreviewRendererAdapter(sp.GetRequiredService<GdsFactoryComponentPreviewService>())));
+            sp.GetRequiredService<NazcaComponentPreviewService>(),
+            sp.GetRequiredService<GdsFactoryComponentPreviewService>()));
         services.AddSingleton(sp => new AddCustomComponentDependencies(
             sp.GetRequiredService<ComponentGeometryExtractor>(),
             sp.GetRequiredService<IFdtdSMatrixService>(),

@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export;
 using System.ComponentModel;
 using CAP.Avalonia.Services.Lifetime;
@@ -24,7 +25,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
     }
     public ValueTask DisposeAsync() => new(StopAsync());
     private readonly ShellWorkScope _work = new();
-    private readonly PythonEnvironmentRegistry _registry;
+    private readonly IPythonEnvironmentRegistry _registry;
     private readonly UvBootstrapper _bootstrapper;
     private readonly NazcaPackageInstaller _installer;
     private readonly EnvironmentHealthChecker _healthChecker;
@@ -64,7 +65,7 @@ public partial class PythonEnvironmentManagerViewModel : ObservableObject, IAsyn
     /// <param name="getActiveInterpreterPath">Returns the currently active interpreter path
     /// so discovered system interpreters can be marked active; null treats none as active.</param>
     public PythonEnvironmentManagerViewModel(
-        PythonEnvironmentRegistry registry,
+        IPythonEnvironmentRegistry registry,
         UvBootstrapper bootstrapper,
         NazcaPackageInstaller installer,
         EnvironmentHealthChecker healthChecker,

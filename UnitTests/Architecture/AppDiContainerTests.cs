@@ -27,6 +27,14 @@ namespace UnitTests.Architecture;
 public class AppDiContainerTests
 {
     [Fact]
+    public async Task Container_PythonEnvironmentPortSharesTheSelectionOwner()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IPythonEnvironmentRegistry>()
+            .ShouldBeSameAs(sp.GetRequiredService<CAP_Core.Export.PythonEnvironmentManager.PythonEnvironmentRegistry>());
+    }
+
+    [Fact]
     public async Task Container_CoordinatePortsShareTheConfiguredServices()
     {
         await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());

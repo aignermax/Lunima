@@ -1,3 +1,4 @@
+using CAP_Core.Export;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -109,7 +110,7 @@ public class BundledPdkForkReferenceIntegrityTests : IDisposable
         var store = new UserPdkStore(_userPdkRoot, new PdkJsonSaver(), new PdkLoader());
         var deps = new AddCustomComponentDependencies(
             new ComponentGeometryExtractor(
-                new Mock<IComponentPreviewRenderer>().Object, new Mock<IComponentPreviewRenderer>().Object),
+                new Mock<IPdkGeometryRenderer>().Object, new Mock<IPdkGeometryRenderer>().Object),
             Fdtd: null, UserPdkStore: store);
 
         var leftPanel = new LeftPanelViewModel(

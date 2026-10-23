@@ -11,8 +11,8 @@ namespace CAP.Avalonia.Views.Shell;
 internal sealed class ComponentSettingsDialogFactory(
     Window owner, CAP_Core.ErrorConsoleService? errorConsole, IPortMappingDialogService? portMappingDialog,
     CAP_Core.Solvers.Fdtd.IFdtdSMatrixService? fdtdService,
-    CAP_Core.Export.NazcaComponentPreviewService? previewService,
-    CAP_Core.Export.GdsFactoryComponentPreviewService? gdsFactoryGeometryService,
+    CAP_Core.Export.IPdkGeometryRenderer? previewService,
+    CAP_Core.Export.IPdkGeometryRenderer? gdsFactoryGeometryService,
     CAP.Avalonia.Services.Solvers.IDockerSetupDialogService? dockerSetupDialog,
     INotificationService? notificationService,
     CAP.Avalonia.Services.Solvers.FdtdBackendRegistry? fdtdBackendRegistry, IUrlLauncher? urlLauncher,

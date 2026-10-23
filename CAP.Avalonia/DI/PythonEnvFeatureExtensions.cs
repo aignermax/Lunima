@@ -44,9 +44,11 @@ internal static class PythonEnvFeatureExtensions
             return registry;
         });
 
+        services.AddSingleton<IPythonEnvironmentRegistry>(sp => sp.GetRequiredService<PythonEnvironmentRegistry>());
+
         services.AddSingleton<PythonEnvironmentManagerViewModel>(sp =>
             new PythonEnvironmentManagerViewModel(
-                sp.GetRequiredService<PythonEnvironmentRegistry>(),
+                sp.GetRequiredService<IPythonEnvironmentRegistry>(),
                 sp.GetRequiredService<UvBootstrapper>(),
                 sp.GetRequiredService<NazcaPackageInstaller>(),
                 sp.GetRequiredService<EnvironmentHealthChecker>(),

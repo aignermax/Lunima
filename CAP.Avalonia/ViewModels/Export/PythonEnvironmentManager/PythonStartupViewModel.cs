@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core.Preferences;
 using CAP.Avalonia.Services;
 using CAP_Core.Export.PythonEnvironmentManager;
@@ -9,7 +10,7 @@ namespace CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 /// <summary>One background setup attempt per desktop start, with an explicit retry after failure.</summary>
 public partial class PythonStartupViewModel : ObservableObject, IAsyncDisposable
 {
-    private readonly PythonEnvironmentRegistry _registry;
+    private readonly IPythonEnvironmentRegistry _registry;
     private readonly IPythonInterpreterPreferences _preferences;
     private readonly IManagedPythonProvisioner _provisioner;
     private readonly string _root;
@@ -20,7 +21,7 @@ public partial class PythonStartupViewModel : ObservableObject, IAsyncDisposable
     private bool _retired;
     private int _generation;
 
-    public PythonStartupViewModel(PythonEnvironmentRegistry registry, IPythonInterpreterPreferences preferences,
+    public PythonStartupViewModel(IPythonEnvironmentRegistry registry, IPythonInterpreterPreferences preferences,
         IManagedPythonProvisioner provisioner, string? environmentsRoot = null)
     {
         _registry = registry;

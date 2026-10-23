@@ -41,8 +41,8 @@ public class NewComponentNewPdkSentinelTests : IDisposable
 
     private NewComponentViewModel Build(UserPdkStore store)
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Ok());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
         var vm = new NewComponentViewModel(extractor, fdtd: null, store,

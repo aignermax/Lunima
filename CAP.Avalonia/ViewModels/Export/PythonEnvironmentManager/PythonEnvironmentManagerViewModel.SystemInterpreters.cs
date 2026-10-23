@@ -11,7 +11,7 @@ namespace CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 /// listing managed environments <em>and</em> discovered system Pythons in one list. Every row
 /// shows its Nazca and gdsfactory version and is activated the same way; managed rows also
 /// offer a health check and removal. Managed activation and system activation both flow
-/// through <see cref="PythonEnvironmentRegistry"/> so export and preview pick the choice up
+/// through <see cref="IPythonEnvironmentRegistry"/> so export and preview pick the choice up
 /// immediately.
 /// </summary>
 public partial class PythonEnvironmentManagerViewModel
@@ -96,7 +96,7 @@ public partial class PythonEnvironmentManagerViewModel
 
     /// <summary>
     /// Activates an interpreter: managed rows go through the registry by name, system rows
-    /// through <see cref="PythonEnvironmentRegistry.SetActiveExternalPath"/>. Both clear the
+    /// through <see cref="IPythonEnvironmentRegistry.SetActiveExternalPath"/>. Both clear the
     /// other kind of active selection, so exactly one interpreter is ever active.
     /// </summary>
     /// <param name="entry">The interpreter row the user clicked.</param>

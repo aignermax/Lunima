@@ -30,7 +30,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     private readonly IPdkReader _pdkLoader;
     private readonly IPdkWriter _pdkSaver;
     private readonly PdkManagerViewModel _pdkManager;
-    private readonly NazcaComponentPreviewService? _previewService;
+    private readonly IPdkGeometryRenderer? _previewService;
 
     /// <summary>
     /// Store for the fork-on-save path: saving a BUNDLED PDK must never write
@@ -43,7 +43,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     /// <summary>gdsfactory preview back-end for gdsfactory-native components (#570); null → no preview.
     /// Typed as the base so it can be mocked in tests; DI injects the
     /// <see cref="GdsFactoryComponentPreviewService"/> instance.</summary>
-    private readonly NazcaComponentPreviewService? _gdsFactoryPreviewService;
+    private readonly IPdkGeometryRenderer? _gdsFactoryPreviewService;
 
     private PdkDraft? _loadedPdk;
     private string? _loadedFilePath;
@@ -243,8 +243,8 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         IPdkReader pdkLoader,
         IPdkWriter pdkSaver,
         PdkManagerViewModel pdkManager,
-        NazcaComponentPreviewService? previewService = null,
-        NazcaComponentPreviewService? gdsFactoryPreviewService = null,
+        IPdkGeometryRenderer? previewService = null,
+        IPdkGeometryRenderer? gdsFactoryPreviewService = null,
         CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary? userPdkStore = null)
     {
         _pdkLoader = pdkLoader;
