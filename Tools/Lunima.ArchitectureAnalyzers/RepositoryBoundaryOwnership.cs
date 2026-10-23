@@ -62,7 +62,6 @@ internal static class RepositoryBoundaryOwnership
         yield return new("CAP.Avalonia.Services.AiTools.IAiToolRegistry", RepositoryModules.Contracts);
         yield return new("CAP.Avalonia.Services.ComponentRegistry.RegistryArtifactChoice", RepositoryModules.Contracts);
         yield return new("CAP.Avalonia.Services.ComponentRegistry.RegistryDownloadResult", RepositoryModules.Contracts);
-        yield return new("CAP.Avalonia.Services.AgentBridge.Registration.ClaudeRegistrationResult", RepositoryModules.Contracts);
         yield return new("CAP.Avalonia.Services.AgentBridge.Registration.CliRunResult", RepositoryModules.Contracts);
         // Presentation
         yield return new("CAP_Core.ErrorConsoleService", RepositoryModules.Presentation);

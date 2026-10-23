@@ -1,5 +1,5 @@
 using CAP_Core.Preferences;
-using System.Globalization;
+using CAP.Avalonia.Services.AgentBridge.Contracts;
 using System.Net.Sockets;
 using CAP.Avalonia.Services.AgentBridge.Transport;
 
@@ -10,7 +10,7 @@ namespace CAP.Avalonia.Services.AgentBridge.Hosting;
 /// matches the persisted settings (enabled flag + port), and exposes the status and the
 /// connect command for the settings page.
 /// </summary>
-public sealed class AgentBridgeHost
+public sealed class AgentBridgeHost : IAgentBridgeControl
 {
     private readonly IAgentBridgePreferences _preferences;
     private readonly McpHttpServer _server;
@@ -38,34 +38,12 @@ public sealed class AgentBridgeHost
     /// <summary>Why the last start failed (e.g. port in use), or null.</summary>
     public string? LastError { get; private set; }
 
-    /// <summary>The MCP endpoint URL for <paramref name="port"/>.</summary>
-    public static string EndpointUrl(int port) =>
-        string.Create(CultureInfo.InvariantCulture, $"http://127.0.0.1:{port}{McpHttpEndpoint.EndpointPath}");
-
-    /// <summary>Name under which Claude Code knows the bridge (<c>claude mcp add … lunima …</c>).</summary>
-    public const string McpServerName = "lunima";
-
-    /// <summary>
-    /// Arguments of <c>claude mcp add</c> that register the bridge for the current user. The
-    /// <c>Authorization</c> header is only added when a token is required (<paramref name="token"/> not null).
-    /// </summary>
-    public static IReadOnlyList<string> ClaudeCodeAddArguments(int port, string? token)
-    {
-        var arguments = new List<string>
-        {
-            "mcp", "add", "--scope", "user", "--transport", "http", McpServerName, EndpointUrl(port),
-        };
-        if (!string.IsNullOrEmpty(token))
-            arguments.AddRange(new[] { "--header", $"Authorization: Bearer {token}" });
-        return arguments;
-    }
-
-    /// <summary>The copy-paste <c>claude mcp add</c> command that connects Claude Code to the bridge.</summary>
+    public static string EndpointUrl(int port) => AgentBridgeAddress.EndpointUrl(port);
+    public const string McpServerName = AgentBridgeAddress.ServerName;
+    public static IReadOnlyList<string> ClaudeCodeAddArguments(int port, string? token) =>
+        AgentBridgeAddress.AddArguments(port, token);
     public static string ClaudeCodeConnectCommand(int port, string? token) =>
-        "claude " + string.Join(" ", ClaudeCodeAddArguments(port, token).Select(QuoteIfNeeded));
-
-    private static string QuoteIfNeeded(string argument) =>
-        argument.Contains(' ') ? $"\"{argument}\"" : argument;
+        AgentBridgeAddress.ConnectCommand(port, token);
 
     /// <summary>
     /// Brings the server in line with the persisted settings: starts it when enabled,

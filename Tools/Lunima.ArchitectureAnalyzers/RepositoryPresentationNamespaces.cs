@@ -7,6 +7,7 @@ internal static class RepositoryPresentationNamespaces
 {
     internal static IEnumerable<KeyValuePair<string, string>> Entries()
     {
+        yield return new("CAP.Avalonia.Services.AgentBridge.Contracts", RepositoryModules.Contracts);
         // CAP.Avalonia
         yield return new("CAP.Avalonia", RepositoryModules.Composition);
         yield return new("CAP.Avalonia.Behaviors", RepositoryModules.Presentation);

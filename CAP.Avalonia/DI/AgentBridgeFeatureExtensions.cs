@@ -1,3 +1,4 @@
+using CAP.Avalonia.Services.AgentBridge.Contracts;
 using System.Reflection;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
@@ -87,11 +88,13 @@ internal static class AgentBridgeFeatureExtensions
             error => sp.GetRequiredService<CAP_Core.ErrorConsoleService>().LogError(
                 "Agent bridge cancellation callback failed after shutdown drained.", error)));
         services.AddSingleton<AgentBridgeHost>();
+        services.AddSingleton<IAgentBridgeControl>(sp => sp.GetRequiredService<AgentBridgeHost>());
         services.AddSingleton(sp => new ClaudeCodeRegistrar(sp.GetRequiredService<CAP_Core.Export.ProcessLaunchFactory>()));
         services.AddSingleton<ClaudeCodeConnector>();
+        services.AddSingleton<IAgentConnection>(sp => sp.GetRequiredService<ClaudeCodeConnector>());
         services.AddTransient<AgentBridgeSettingsViewModel>();
         services.AddSingleton(sp => new ClaudeCodeConnectPromptViewModel(
-            sp.GetRequiredService<UserPreferencesService>(), sp.GetRequiredService<ClaudeCodeConnector>(), AppVersion()));
+            sp.GetRequiredService<UserPreferencesService>(), sp.GetRequiredService<IAgentConnection>(), AppVersion()));
 
         return services;
     }

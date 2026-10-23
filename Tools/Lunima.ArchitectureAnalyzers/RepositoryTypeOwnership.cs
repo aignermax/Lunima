@@ -72,6 +72,7 @@ internal static class RepositoryTypeOwnership
         yield return new("CAP.Avalonia.Services.UserPreferencesService", RepositoryModules.Infrastructure);
         yield return new("CAP.Avalonia.Services.UserSMatrixOverrideStore", RepositoryModules.Infrastructure);
         yield return new("CAP.Avalonia.Services.VerilogAFileWriter", RepositoryModules.Infrastructure);
+        yield return new("CAP.Avalonia.Services.AgentBridge.Contracts.AgentBridgeAddress", RepositoryModules.Application);
         // Application responsibilities in namespaces that also contain another layer.
         yield return new("CAP_DataAccess.Persistence.NativeDesign.NativeComponentStateMapper", RepositoryModules.Application);
         yield return new("CAP_DataAccess.Persistence.NativeDesign.NativeEndpointMapper", RepositoryModules.Application);

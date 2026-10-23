@@ -24,7 +24,7 @@ public sealed class McpHttpEndpoint
     public AggregateException? CancellationError => _dispatcher.CancellationError;
 
     /// <summary>The only path the bridge serves.</summary>
-    public const string EndpointPath = "/mcp";
+    public const string EndpointPath = Contracts.AgentBridgeAddress.EndpointPath;
 
     private const string BearerPrefix = "Bearer ";
 

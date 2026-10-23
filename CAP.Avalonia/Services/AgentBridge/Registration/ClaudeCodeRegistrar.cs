@@ -1,14 +1,9 @@
+using CAP.Avalonia.Services.AgentBridge.Contracts;
 using System.Diagnostics;
 using CAP.Avalonia.Services.AgentBridge.Hosting;
 using ProcessLaunchFactory = CAP_Core.Export.ProcessLaunchFactory;
 
 namespace CAP.Avalonia.Services.AgentBridge.Registration;
-
-/// <summary>Outcome of registering or unregistering the bridge with Claude Code.</summary>
-/// <param name="Success">Whether the <c>claude</c> CLI reported success.</param>
-/// <param name="CliFound">False when the <c>claude</c> CLI is not installed (the caller shows the manual command).</param>
-/// <param name="Output">What the CLI printed, or why nothing ran.</param>
-public sealed record ClaudeRegistrationResult(bool Success, bool CliFound, string Output);
 
 /// <summary>
 /// Registers the agent bridge as the user-scope MCP server <c>lunima</c> in Claude Code by

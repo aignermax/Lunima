@@ -1,6 +1,6 @@
 using CAP_Core.Preferences;
 using CAP.Avalonia.Services;
-using CAP.Avalonia.Services.AgentBridge.Registration;
+using CAP.Avalonia.Services.AgentBridge.Contracts;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -17,7 +17,7 @@ namespace CAP.Avalonia.ViewModels.Settings.AgentBridge;
 public partial class ClaudeCodeConnectPromptViewModel : ObservableObject
 {
     private readonly IAgentConnectionPromptPreferences _preferences;
-    private readonly ClaudeCodeConnector _connector;
+    private readonly IAgentConnection _connector;
     private readonly string _appVersion;
 
     [ObservableProperty] private bool _isVisible;
@@ -27,7 +27,7 @@ public partial class ClaudeCodeConnectPromptViewModel : ObservableObject
 
     /// <summary>Creates the prompt (hidden until <see cref="CheckOnStartupAsync"/> decides to show it).</summary>
     public ClaudeCodeConnectPromptViewModel(
-        IAgentConnectionPromptPreferences preferences, ClaudeCodeConnector connector, string appVersion)
+        IAgentConnectionPromptPreferences preferences, IAgentConnection connector, string appVersion)
     {
         _preferences = preferences;
         _connector = connector;
@@ -42,7 +42,7 @@ public partial class ClaudeCodeConnectPromptViewModel : ObservableObject
     {
         if (_preferences.GetClaudeCodePromptDismissedVersion() == _appVersion)
             return;
-        var registered = await Task.Run(() => _connector.Registrar.IsRegisteredAsync(cancellationToken), cancellationToken);
+        var registered = await Task.Run(() => _connector.IsRegisteredAsync(cancellationToken), cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         IsVisible = registered == false;
     }
