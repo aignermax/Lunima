@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using CAP_Core.Export.Processes;
 using CAP_Core.Export;
 
 namespace CAP.Avalonia.Services.OpenEblCheck;
@@ -23,6 +23,7 @@ public class OpenEblSubmissionChecker
     private readonly OpenEblPythonLocator _pythonLocator;
     private readonly string? _pythonPathOverride;
     private readonly string? _scriptsDirectoryOverride;
+    private readonly TimeSpan _scriptTimeout;
 
     /// <summary>
     /// Initializes the checker. Production resolves the shared
@@ -38,12 +39,17 @@ public class OpenEblSubmissionChecker
     public OpenEblSubmissionChecker(
         ProcessLaunchFactory? factory = null,
         string? pythonPath = null,
-        string? scriptsDirectory = null)
+        string? scriptsDirectory = null) : this(factory ?? ProcessLaunchFactory.CreateDefault(),
+            pythonPath, scriptsDirectory, null, ScriptTimeout) { }
+
+    internal OpenEblSubmissionChecker(ProcessLaunchFactory factory, string? pythonPath, string? scriptsDirectory,
+        OpenEblPythonLocator? locator, TimeSpan scriptTimeout)
     {
-        _factory = factory ?? ProcessLaunchFactory.CreateDefault();
-        _pythonLocator = new OpenEblPythonLocator(_factory);
+        _factory = factory;
+        _pythonLocator = locator ?? new OpenEblPythonLocator(_factory);
         _pythonPathOverride = pythonPath;
         _scriptsDirectoryOverride = scriptsDirectory;
+        _scriptTimeout = scriptTimeout;
     }
 
     /// <summary>
@@ -170,33 +176,17 @@ public class OpenEblSubmissionChecker
         startInfo.RedirectStandardOutput = true;
         startInfo.RedirectStandardError = true;
 
-        Process process;
         try
         {
-            process = Process.Start(startInfo)!;
+            var result = await PythonProbeRunner.RunAsync(startInfo, _scriptTimeout, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return result.ExitCode < 0 ? null : new ScriptRun(result.ExitCode, result.Output, result.Error);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception)
         {
-            return null;   // interpreter vanished between probe and launch
-        }
-
-        using (process)
-        {
-            var stdOut = process.StandardOutput.ReadToEndAsync();
-            var stdErr = process.StandardError.ReadToEndAsync();
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(ScriptTimeout);
-            try
-            {
-                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                try { process.Kill(entireProcessTree: true); } catch { /* best effort */ }
-                cancellationToken.ThrowIfCancellationRequested();
-                return null;   // timed out → CheckCrashed, never a silent pass
-            }
-            return new ScriptRun(process.ExitCode, await stdOut, await stdErr);
+            cancellationToken.ThrowIfCancellationRequested();
+            return null; // A missing or failed executable is a crashed check, never a pass.
         }
     }
 }

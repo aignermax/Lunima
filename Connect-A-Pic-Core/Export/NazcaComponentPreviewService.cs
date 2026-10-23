@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
+using CAP_Core.Export.Contracts;
 
 namespace CAP_Core.Export;
 
@@ -72,7 +72,7 @@ public class NazcaPreviewResult
 /// cell and returns bounding-box, polygon and pin data for the PDK Offset Editor overlay.
 /// Results are cached by (module, function, parameters) key.
 /// </summary>
-public class NazcaComponentPreviewService
+public class NazcaComponentPreviewService : IPdkPreviewBackend
 {
     /// <summary>Default subprocess timeout.</summary>
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(90);
@@ -83,7 +83,25 @@ public class NazcaComponentPreviewService
     public Func<string>? PythonExecutableResolver { get; set; }
     private readonly string _scriptPath;
     private readonly TimeSpan _timeout;
-    private readonly ConcurrentDictionary<string, NazcaPreviewResult> _cache = new();
+    /// <summary>Shared bounded owner; DI supplies the same cache to both preview backends.</summary>
+    public PreviewGeometryCache GeometryCache { get; init; } = new();
+    /// <summary>Revision of the loaded PDK/code sources, provided by the composition root.</summary>
+    public Func<string>? EnvironmentRevisionResolver { get; set; }
+    private readonly object _environmentGate = new();
+    private string? _environmentIdentity;
+
+    /// <summary>Stable disk-cache identity, excluding process-local cache generations.</summary>
+    public string EnvironmentIdentity => ResolveEnvironment().Identity;
+
+    /// <summary>Discards successes and prevents running renders from repopulating them.</summary>
+    public void InvalidateCache() => GeometryCache.Clear();
+
+    bool IPreviewGeometryStore.TryGet(string key, out NazcaPreviewResult? result) => GeometryCache.TryGet(key, out result);
+    void IPreviewGeometryStore.Set(string key, NazcaPreviewResult? result, long? expectedGeneration) =>
+        GeometryCache.Set(key, result, expectedGeneration);
+    void IPreviewGeometryStore.Clear() => GeometryCache.Clear();
+    int IPreviewGeometryStore.Count => GeometryCache.Count;
+    long IPreviewGeometryStore.Generation => GeometryCache.Generation;
 
     /// <summary>
     /// Initializes the service.
@@ -108,14 +126,9 @@ public class NazcaComponentPreviewService
         string? moduleName, string nazcaFunction, string? nazcaParameters,
         CancellationToken ct = default)
     {
-        var key = $"{moduleName ?? ""}|{nazcaFunction}|{nazcaParameters ?? ""}";
-        if (_cache.TryGetValue(key, out var cached))
-            return cached;
-
-        var result = await RunScriptAsync(moduleName, nazcaFunction, nazcaParameters, ct);
-        if (result.Success)
-            _cache[key] = result;
-        return result;
+        var key = JsonSerializer.Serialize(new[] { moduleName ?? "", nazcaFunction, nazcaParameters ?? "" });
+        return await RenderCachedAsync(key,
+            python => RunScriptAsync(python, moduleName, nazcaFunction, nazcaParameters, ct));
     }
 
     /// <summary>
@@ -131,13 +144,44 @@ public class NazcaComponentPreviewService
     public virtual async Task<NazcaPreviewResult> RenderRawCodeAsync(string code, CancellationToken ct = default)
     {
         var key = "rawcode|" + ComputeCodeHash(code);
-        if (_cache.TryGetValue(key, out var cached))
-            return cached;
+        return await RenderCachedAsync(key, python => RunRawCodeScriptAsync(python, code, ct));
+    }
 
-        var result = await RunRawCodeScriptAsync(code, ct);
-        if (result.Success)
-            _cache[key] = result;
-        return result;
+    private (string Identity, string Python) ResolveEnvironment()
+    {
+        var python = PythonExecutableResolver?.Invoke() ?? _pythonExecutable;
+        python = _launchFactory.ResolveExecutable(python) ?? python;
+        return (PreviewEnvironmentIdentity.Create(python, _scriptPath, EnvironmentRevisionResolver?.Invoke()), python);
+    }
+
+    private async Task<NazcaPreviewResult> RenderCachedAsync(string requestKey,
+        Func<string, Task<NazcaPreviewResult>> render)
+    {
+        try
+        {
+            var environment = ResolveEnvironment();
+            var key = environment.Identity + "|" + requestKey;
+            long generation;
+            lock (_environmentGate)
+            {
+                if (_environmentIdentity != environment.Identity)
+                {
+                    // A first use must not clear another backend's entries in the shared owner.
+                    if (_environmentIdentity != null) GeometryCache.Clear();
+                    _environmentIdentity = environment.Identity;
+                }
+                if (GeometryCache.TryGet(key, out var cached) && cached != null) return cached;
+                generation = GeometryCache.Generation;
+            }
+            var result = await render(environment.Python);
+            lock (_environmentGate)
+            {
+                if (result.Success && ResolveEnvironment().Identity == environment.Identity)
+                    GeometryCache.Set(key, result, generation);
+            }
+            return result;
+        }
+        catch (Exception ex) { return NazcaPreviewResult.Fail($"Unexpected error: {ex.Message}"); }
     }
 
     private static string ComputeCodeHash(string code)
@@ -147,7 +191,7 @@ public class NazcaComponentPreviewService
         return Convert.ToHexString(bytes);
     }
 
-    private async Task<NazcaPreviewResult> RunRawCodeScriptAsync(string code, CancellationToken ct)
+    private async Task<NazcaPreviewResult> RunRawCodeScriptAsync(string python, string code, CancellationToken ct)
     {
         if (!File.Exists(_scriptPath))
             return NazcaPreviewResult.Fail($"Preview script not found: {_scriptPath}");
@@ -156,7 +200,7 @@ public class NazcaComponentPreviewService
         try
         {
             await File.WriteAllTextAsync(tempFile, code ?? string.Empty, ct);
-            return await RunProcessAsync(
+            return await RunProcessAsync(python,
                 new[] { _scriptPath, "--code-file", tempFile }, ct);
         }
         catch (Exception ex)
@@ -171,7 +215,7 @@ public class NazcaComponentPreviewService
     }
 
     private async Task<NazcaPreviewResult> RunScriptAsync(
-        string? moduleName, string nazcaFunction, string? nazcaParameters, CancellationToken ct)
+        string python, string? moduleName, string nazcaFunction, string? nazcaParameters, CancellationToken ct)
     {
         if (!File.Exists(_scriptPath))
             return NazcaPreviewResult.Fail($"Preview script not found: {_scriptPath}");
@@ -180,7 +224,7 @@ public class NazcaComponentPreviewService
         var args = new List<string> { _scriptPath, module, nazcaFunction };
         if (!string.IsNullOrWhiteSpace(nazcaParameters))
             args.Add(nazcaParameters);
-        return await RunProcessAsync(args, ct);
+        return await RunProcessAsync(python, args, ct);
     }
 
     /// <summary>
@@ -189,13 +233,11 @@ public class NazcaComponentPreviewService
     /// and parses stdout. Construction is delegated to <see cref="_launchFactory"/>
     /// so that WorkingDirectory and augmented PATH are applied consistently.
     /// </summary>
-    private async Task<NazcaPreviewResult> RunProcessAsync(
-        IReadOnlyList<string> arguments, CancellationToken ct)
+    protected virtual async Task<NazcaPreviewResult> RunProcessAsync(
+        string pythonExecutable, IReadOnlyList<string> arguments, CancellationToken ct)
     {
-        var pythonExecutable = _pythonExecutable;
         try
         {
-            pythonExecutable = PythonExecutableResolver?.Invoke() ?? _pythonExecutable;
             var workingDir = Path.GetDirectoryName(_scriptPath);
             // PYTHONSAFEPATH: stray sibling files next to the script must not shadow
             // stdlib/Nazca modules (see PythonModuleShadowing).

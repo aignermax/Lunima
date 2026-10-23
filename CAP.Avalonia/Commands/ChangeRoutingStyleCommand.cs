@@ -60,6 +60,7 @@ public sealed class ChangeRoutingStyleCommand : IUndoableCommand
     {
         foreach (var state in _states)
             ApplyStyle(state.Connection.Connection, _style);
+        _canvas.Groups.PublishRouteChanges(_states.Select(state => state.Connection));
         RecalculateOnce();
     }
 
@@ -68,6 +69,7 @@ public sealed class ChangeRoutingStyleCommand : IUndoableCommand
     {
         foreach (var state in _states)
             RestoreState(state);
+        _canvas.Groups.PublishRouteChanges(_states.Select(state => state.Connection));
         RecalculateOnce();
     }
 

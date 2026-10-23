@@ -1,1 +1,1 @@
-../docs/CLAUDE.md
+../CLAUDE.md

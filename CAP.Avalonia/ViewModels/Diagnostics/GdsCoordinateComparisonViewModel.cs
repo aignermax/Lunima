@@ -1,5 +1,5 @@
 using System.Globalization;
-using CAP_Core.Export;
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.Services.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,7 +14,7 @@ namespace CAP.Avalonia.ViewModels.Diagnostics;
 /// </summary>
 public partial class GdsCoordinateComparisonViewModel : ObservableObject
 {
-    private readonly GdsCoordinateComparisonService _service;
+    private readonly IGdsCoordinateComparer _service;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunComparisonCommand))]
@@ -58,10 +58,10 @@ public partial class GdsCoordinateComparisonViewModel : ObservableObject
     public Func<Task<string?>>? BrowseForSystemJson { get; set; }
 
     /// <summary>Initializes a new instance of <see cref="GdsCoordinateComparisonViewModel"/>.</summary>
-    /// <param name="service">Comparison service.  When null a default instance is created.</param>
-    public GdsCoordinateComparisonViewModel(GdsCoordinateComparisonService? service = null)
+    /// <param name="service">Comparison operation supplied by the composition root.</param>
+    public GdsCoordinateComparisonViewModel(IGdsCoordinateComparer service)
     {
-        _service = service ?? new GdsCoordinateComparisonService();
+        _service = service ?? throw new ArgumentNullException(nameof(service));
     }
 
     /// <summary>

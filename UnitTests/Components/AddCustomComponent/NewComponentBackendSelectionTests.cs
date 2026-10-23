@@ -95,8 +95,8 @@ public class NewComponentBackendSelectionTests : IDisposable
         IFdtdSMatrixService meep, IFdtdSMatrixService tidy3d,
         CAP_Core.ErrorConsoleService? errorConsole = null)
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Ok());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());

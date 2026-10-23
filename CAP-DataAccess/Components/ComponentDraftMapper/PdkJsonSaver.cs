@@ -9,7 +9,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
     /// Refuses targets inside the bundled-PDK directory (see <see cref="BundledPdkPaths"/>):
     /// shipped foundry JSONs are read-only at runtime, every edit must go to a user fork.
     /// </summary>
-    public class PdkJsonSaver
+    public class PdkJsonSaver : IPdkWriter
     {
         private static readonly JsonSerializerOptions WriteOptions = new()
         {

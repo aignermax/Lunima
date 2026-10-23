@@ -69,11 +69,11 @@ public class EditorSMatrixFlowTests : IDisposable
         }
     };
 
-    private (NewComponentViewModel vm, Mock<IFdtdSMatrixService> fdtd, Mock<IComponentPreviewRenderer> gds, UserPdkStore store)
+    private (NewComponentViewModel vm, Mock<IFdtdSMatrixService> fdtd, Mock<IPdkGeometryRenderer> gds, UserPdkStore store)
         Build(bool renderSucceeds = true, bool withSecondPdk = false)
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(renderSucceeds ? RenderOk() : new NazcaPreviewResult { Success = false, Error = "render exploded" });
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);

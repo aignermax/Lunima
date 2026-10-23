@@ -55,13 +55,13 @@ public class LogicExamplesSweepTests
 
         var canvas = new DesignCanvasViewModel();
         var errorConsole = new ErrorConsoleService();
-        var fileOps = new FileOperationsViewModel(
+        var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates()),
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: errorConsole);

@@ -181,6 +181,7 @@ public partial class DesignValidationViewModel : ObservableObject
         double? wavelengthNm = null,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var request = new DesignValidationRequest(
             connections, groups, allComponents,
             chipWidthMicrometers, chipHeightMicrometers,
@@ -190,6 +191,7 @@ public partial class DesignValidationViewModel : ObservableObject
             connectionDrcRuleProvider, wavelengthNm);
         BeginValidation();
         var issues = await Task.Run(() => ComputeIssues(request), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         CommitIssues(issues);
     }
 

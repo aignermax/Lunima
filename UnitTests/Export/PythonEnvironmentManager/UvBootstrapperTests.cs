@@ -11,6 +11,14 @@ namespace UnitTests.Export.PythonEnvironmentManager;
 public class UvBootstrapperTests
 {
     [Fact]
+    public void ManagedDownload_UsesReviewedVersionRatherThanMutableLatest()
+    {
+        var url = UvReleaseCatalog.Current.Url;
+        url.ShouldNotContain("/latest/");
+        url.ShouldContain("/download/0.13.5/");
+    }
+
+    [Fact]
     public void ShutdownCancellation_KillsOwnedProcessWithoutAwaitingAnyContinuation()
     {
         using var cancellation = new CancellationTokenSource();

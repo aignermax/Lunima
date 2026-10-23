@@ -1,3 +1,4 @@
+using CAP.Avalonia.Services.Lifetime;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CAP.Avalonia.Services.ComponentRegistry;
@@ -11,15 +12,29 @@ namespace CAP.Avalonia.ViewModels.ComponentRegistry.RegistryBrowser;
 /// <summary>
 /// Read-only browser for the open photonic component registry (issue #656),
 /// hosted in the "Component Registry" tool window. Loads the index via
-/// <see cref="RegistryClient"/> (cache-first, offline tolerant), lists
+/// <see cref="IRegistryCatalog"/> (cache-first, offline tolerant), lists
 /// components as tiles with tier badges and status chips, filters by free
 /// text / process / trust status, flags components whose process differs
 /// from the active one, and shows manifest details (parameters, artifact
 /// provenance) for the selected component.
 /// </summary>
-public partial class RegistryBrowserViewModel : ObservableObject
+public partial class RegistryBrowserViewModel : ObservableObject, IAsyncDisposable
 {
-    private readonly RegistryClient _client;
+    private readonly IRegistryCatalog _client;
+
+    private readonly ShellWorkScope _work = new();
+    private Task? _retirement;
+    private long _indexVersion;
+
+    /// <summary>Closes admission and drains index, preview, detail and adoption operations.</summary>
+    public Task StopAsync() => _retirement ??= RetireAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+
+    private async Task RetireAsync()
+    {
+        Details.ManifestPopulated -= NotifyDownloadStateChanged;
+        await Task.WhenAll(_work.StopAsync(), Details.StopAsync());
+    }
 
     /// <summary>All registry components, ordered by name (unfiltered).</summary>
     public ObservableCollection<RegistryComponentItemViewModel> Components { get; } = new();
@@ -104,11 +119,13 @@ public partial class RegistryBrowserViewModel : ObservableObject
     /// <paramref name="downloadService"/> enables the "download into the local
     /// library" feature (issue #773); null keeps the browser read-only.
     /// </summary>
-    public RegistryBrowserViewModel(RegistryClient client, RegistryDownloadService? downloadService = null)
+    public RegistryBrowserViewModel(IRegistryCatalog client, IRegistryAdoption? downloadService = null,
+        ApplicationWorkCoordinator? applicationWork = null)
     {
         _client = client;
         _downloadService = downloadService;
         Details.ManifestPopulated += NotifyDownloadStateChanged;
+        _work.RegisterWith(applicationWork, StopAsync);
     }
 
     /// <summary>
@@ -118,8 +135,8 @@ public partial class RegistryBrowserViewModel : ObservableObject
     /// </summary>
     public void EnsureLoaded()
     {
-        if (Components.Count == 0 && !IsLoading)
-            IndexLoadTask = LoadCoreAsync(forceRefresh: false);
+        if (!_work.IsStopping && Components.Count == 0 && !IsLoading)
+            IndexLoadTask = StartIndexLoad(false);
     }
 
     /// <summary>
@@ -131,7 +148,7 @@ public partial class RegistryBrowserViewModel : ObservableObject
     /// </summary>
     public int? CountDiskCachedSearchHits(string? query)
     {
-        if (string.IsNullOrWhiteSpace(query))
+        if (_work.IsStopping || string.IsNullOrWhiteSpace(query))
             return null;
 
         return GetDiskCachedEntries()?.Count(entry =>
@@ -156,13 +173,16 @@ public partial class RegistryBrowserViewModel : ObservableObject
 
     /// <summary>Loads the registry index (cache-first).</summary>
     [RelayCommand]
-    private Task Load() => IndexLoadTask = LoadCoreAsync(forceRefresh: false);
+    private Task Load() => IndexLoadTask = StartIndexLoad(false);
 
     /// <summary>Re-downloads the registry index, bypassing the local cache.</summary>
     [RelayCommand]
-    private Task Refresh() => IndexLoadTask = LoadCoreAsync(forceRefresh: true);
+    private Task Refresh() => IndexLoadTask = StartIndexLoad(true);
 
-    private async Task LoadCoreAsync(bool forceRefresh)
+    private Task StartIndexLoad(bool forceRefresh) =>
+        _work.RunAsync(stop => LoadCoreAsync(forceRefresh, stop));
+
+    private async Task LoadCoreAsync(bool forceRefresh, CancellationToken stop)
     {
         if (IsLoading)
             return;
@@ -170,9 +190,14 @@ public partial class RegistryBrowserViewModel : ObservableObject
         IsLoading = true;
         ErrorMessage = "";
         SourceNote = "";
-        var result = await _client.GetIndexAsync(forceRefresh);
-        ApplyIndexResult(result, forceRefresh);
-        IsLoading = false;
+        try
+        {
+            var result = await _client.GetIndexAsync(forceRefresh, stop);
+            if (_work.IsStopping || stop.IsCancellationRequested) return;
+            ApplyIndexResult(result, forceRefresh);
+        }
+        catch (OperationCanceledException) when (_work.IsStopping || stop.IsCancellationRequested) { }
+        finally { if (!_work.IsStopping) IsLoading = false; }
     }
 
     private void ApplyIndexResult(RegistryResult<RegistryIndex> result, bool forceRefresh)
@@ -187,6 +212,7 @@ public partial class RegistryBrowserViewModel : ObservableObject
 
         // Set before the Adds: CollectionChanged subscribers recomputing on each
         // Add (library search hint) must already see the loaded state.
+        var version = ++_indexVersion;
         HasIndexLoaded = true;
         SelectedComponent = null;
         Components.Clear();
@@ -199,7 +225,8 @@ public partial class RegistryBrowserViewModel : ObservableObject
 
         RebuildFilterOptions();
         ApplyFilters();
-        PreviewsLoadTask = LoadPreviewsAsync(Components.ToList());
+        var items = Components.ToList();
+        PreviewsLoadTask = _work.RunAsync(stop => LoadPreviewsAsync(items, version, stop));
 
         if (result.Source == RegistrySource.Cache)
             SourceNote = LocalizationService.Instance.Translate(
@@ -211,13 +238,16 @@ public partial class RegistryBrowserViewModel : ObservableObject
     /// this is disk-only once populated). Every failure — no preview declared,
     /// download error, unparseable SVG — silently keeps the placeholder.
     /// </summary>
-    private async Task LoadPreviewsAsync(IReadOnlyList<RegistryComponentItemViewModel> items)
+    private async Task LoadPreviewsAsync(IReadOnlyList<RegistryComponentItemViewModel> items,
+        long version, CancellationToken stop)
     {
         foreach (var item in items)
         {
+            if (_work.IsStopping || stop.IsCancellationRequested || version != _indexVersion) return;
             if (string.IsNullOrWhiteSpace(item.Entry.Preview))
                 continue;
-            var result = await _client.GetPreviewAsync(item.Entry);
+            var result = await _client.GetPreviewAsync(item.Entry, cancellationToken: stop);
+            if (_work.IsStopping || stop.IsCancellationRequested || version != _indexVersion) return;
             if (result.IsSuccess && RegistryPreviewSvgParser.TryParse(result.Value) is not null)
                 item.PreviewSvg = result.Value!;
         }
@@ -295,6 +325,7 @@ public partial class RegistryBrowserViewModel : ObservableObject
 
     partial void OnSelectedComponentChanged(RegistryComponentItemViewModel? value)
     {
+        if (_work.IsStopping) return;
         PendingDisputedConfirm = false;
         DownloadMessage = null;
         DownloadIsError = false;

@@ -50,13 +50,13 @@ public class RamExamplesSealedPinHonestyTests
     }
 
     private static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas) =>
-        new(
+        new(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates()),
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: new ErrorConsoleService());

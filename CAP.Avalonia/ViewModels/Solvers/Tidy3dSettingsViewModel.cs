@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,7 +10,7 @@ namespace CAP.Avalonia.ViewModels.Solvers;
 // preferences and passed to the tidy3d Python package via SIMCLOUD_APIKEY.
 public partial class Tidy3dSettingsViewModel : ObservableObject
 {
-    private readonly UserPreferencesService _preferences;
+    private readonly IFdtdPreferences _preferences;
     private readonly IUrlLauncher? _urlLauncher;
 
     [ObservableProperty]
@@ -21,7 +22,7 @@ public partial class Tidy3dSettingsViewModel : ObservableObject
 
     public bool IsApiKeySet => !string.IsNullOrWhiteSpace(ApiKey);
 
-    public Tidy3dSettingsViewModel(UserPreferencesService preferences, IUrlLauncher? urlLauncher = null)
+    public Tidy3dSettingsViewModel(IFdtdPreferences preferences, IUrlLauncher? urlLauncher = null)
     {
         _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
         _urlLauncher = urlLauncher;

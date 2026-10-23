@@ -12,11 +12,15 @@ namespace CAP.Avalonia;
 public partial class App : Application
 {
     public static IServiceProvider Services { get; private set; } = null!;
+    private Services.Lifetime.ApplicationLifetimeCoordinator? _lifetime;
+
+    /// <summary>Single-view hosts await this before unloading the application; desktop close uses the same owner.</summary>
+    public Task RetireAsync() => _lifetime?.StopAsync() ?? Task.CompletedTask;
 
     /// <summary>
     /// Test seam (InternalsVisibleTo UnitTests): headless UI-flow tests run without
     /// <see cref="OnFrameworkInitializationCompleted"/>, so they install their own provider here —
-    /// MainWindow's code-behind resolves optional collaborators via <see cref="Services"/>.
+    /// Test composition resolves window factories through <see cref="Services"/>.
     /// </summary>
     internal static void OverrideServicesForTesting(IServiceProvider services) => Services = services;
 
@@ -84,7 +88,8 @@ public partial class App : Application
 
         var services = new ServiceCollection();
         ConfigureServices(services);
-        Services = services.BuildServiceProvider();
+        var provider = services.BuildServiceProvider();
+        Services = provider;
         ActivateStartupSingletons(Services);
 
         // Error-console entries are bound to the UI, but simulations/renders log from
@@ -100,25 +105,31 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var mainVm = Services.GetRequiredService<MainViewModel>();
+            _lifetime = new Services.Lifetime.ApplicationLifetimeCoordinator(mainVm,
+                Services.GetRequiredService<Services.AgentBridge.Hosting.AgentBridgeHost>().RetireAsync,
+                provider.DisposeAsync, Services.GetRequiredService<Services.Lifetime.ApplicationWorkCoordinator>());
             // A .lun file passed on the command line (or via OS file association)
             // is opened by MainWindow's Loaded handler.
             mainVm.StartupDesignFile = CAP.Avalonia.Services.DesignFileArguments
                 .FindDesignFile(desktop.Args ?? Array.Empty<string>());
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = mainVm
-            };
-            var pythonStartup = Services.GetRequiredService<ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel>();
-            desktop.MainWindow.Opened += (_, _) => _ = pythonStartup.StartOnceAsync();
-            desktop.Exit += (_, _) => pythonStartup.Cancel();
+            var window = MainWindowComposition.Create(Services, mainVm, RetireAsync);
+            desktop.MainWindow = window;
+            window.Opened += async (_, _) => await _lifetime.ActivateAsync();
+            // OS shutdown requests must pass through the same save/discard/cancel guard.
+            desktop.ShutdownRequested += (_, args) => { args.Cancel = true; window.Close(); };
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
         {
             var mainVm = Services.GetRequiredService<MainViewModel>();
+            _lifetime = new Services.Lifetime.ApplicationLifetimeCoordinator(mainVm,
+                Services.GetRequiredService<Services.AgentBridge.Hosting.AgentBridgeHost>().RetireAsync,
+                provider.DisposeAsync, Services.GetRequiredService<Services.Lifetime.ApplicationWorkCoordinator>());
             singleView.MainView = new MainView
             {
                 DataContext = mainVm
             };
+            singleView.MainView.Loaded += async (_, _) => await _lifetime.ActivateAsync();
+            singleView.MainView.Unloaded += async (_, _) => await RetireAsync();
         }
 
         base.OnFrameworkInitializationCompleted();

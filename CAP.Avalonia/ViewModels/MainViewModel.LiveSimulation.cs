@@ -13,27 +13,15 @@ namespace CAP.Avalonia.ViewModels;
 public partial class MainViewModel
 {
     private bool _liveRunDeferred;
+    private LiveSimulationCoordinator _liveSimulation = null!;
 
     /// <summary>Re-runs the switched-on simulation after design changes.</summary>
-    public LiveSimulationScheduler LiveSimulation { get; private set; } = null!;
+    public LiveSimulationScheduler LiveSimulation => _liveSimulation.Scheduler;
 
     private void InitializeLiveSimulation()
     {
-        LiveSimulation = new LiveSimulationScheduler(
-            isSimulationOn: () => Canvas.ShowPowerFlow,
-            isRouting: () => Canvas.IsRouting,
-            simulate: token => ExecuteSimulation(token, isLiveRun: true));
-        Canvas.SimulationRequested = LiveSimulation.Request;
-        CommandManager.StateChanged += (_, _) => LiveSimulation.Request();
-        Canvas.PropertyChanged += OnCanvasPropertyChangedForLiveSimulation;
-    }
-
-    private void OnCanvasPropertyChangedForLiveSimulation(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(DesignCanvasViewModel.IsRouting) && !Canvas.IsRouting)
-            LiveSimulation.OnRoutingFinished();
-        else if (e.PropertyName == nameof(DesignCanvasViewModel.ShowPowerFlow) && !Canvas.ShowPowerFlow)
-            LiveSimulation.Cancel();
+        _liveSimulation = new LiveSimulationCoordinator(Canvas, CommandManager,
+            token => ExecuteSimulation(token, isLiveRun: true));
     }
 
     /// <summary>
@@ -46,7 +34,7 @@ public partial class MainViewModel
         var cameFromHome = Home.IsHomeVisible;
         Home.OnProjectOpened();
         ResetWorkspacePresentationForNewDesign();
-        UpdateGuidanceForOpenedProject(cameFromHome);
+        _learning.Guidance.ProjectOpened(cameFromHome);
         if (!Canvas.ShowPowerFlow)
             return;
         if (Canvas.Components.Count == 0)

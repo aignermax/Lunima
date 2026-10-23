@@ -191,13 +191,13 @@ public class ChipletAlignmentJourneyTests
             .Single(g => g.GroupName == name);
 
     private static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas) =>
-        new(
+        new(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates()),
-            new GdsExportViewModel(new CAP_Core.Export.GdsExportService()),
+            new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas),
             null!);
 

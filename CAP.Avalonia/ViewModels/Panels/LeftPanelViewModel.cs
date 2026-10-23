@@ -21,8 +21,9 @@ namespace CAP.Avalonia.ViewModels.Panels;
 public partial class LeftPanelViewModel : ObservableObject
 {
     private readonly DesignCanvasViewModel _canvas;
-    private readonly PdkLoader _pdkLoader;
-    private readonly UserPreferencesService _preferencesService;
+    private readonly IPdkReader _pdkLoader;
+    private readonly CAP_Core.Preferences.IPdkLibraryPreferences _preferencesService;
+    private readonly CAP_Core.Preferences.IPanelLayoutPreferences _panelLayoutPreferences;
     private readonly ErrorConsoleService? _errorConsole;
     private readonly AddCustomComponentDependencies? _addCustomComponentDeps;
     private readonly RegistryBrowserViewModel? _registryBrowser;
@@ -93,21 +94,25 @@ public partial class LeftPanelViewModel : ObservableObject
     public Func<CAP.Avalonia.ViewModels.Components.AddCustomComponent.NewComponentViewModel, Task>? ShowNewComponentWindowAsync { get; set; }
     public LeftPanelViewModel(
         DesignCanvasViewModel canvas,
-        GroupLibraryManager libraryManager,
-        PdkLoader pdkLoader,
-        UserPreferencesService preferencesService,
+        IGroupLibrary libraryManager,
+        IPdkReader pdkLoader,
+        CAP_Core.Preferences.IPdkLibraryPreferences preferencesService,
+        CAP_Core.Preferences.IPanelLayoutPreferences panelLayoutPreferences,
         HierarchyPanelViewModel hierarchyPanel,
         PdkManagerViewModel pdkManager,
         ComponentLibraryViewModel componentLibrary,
         ErrorConsoleService? errorConsole = null,
         AddCustomComponentDependencies? addCustomComponentDeps = null,
-        RegistryBrowserViewModel? registryBrowser = null)
+        RegistryBrowserViewModel? registryBrowser = null,
+        CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary? userPdkLibrary = null)
     {
         _canvas = canvas;
         _pdkLoader = pdkLoader;
         _preferencesService = preferencesService;
+        _panelLayoutPreferences = panelLayoutPreferences;
         _errorConsole = errorConsole;
         _addCustomComponentDeps = addCustomComponentDeps;
+        _userPdkLibrary = userPdkLibrary ?? addCustomComponentDeps?.UserPdkStore;
         _registryBrowser = registryBrowser;
 
         HierarchyPanel = hierarchyPanel;
@@ -362,13 +367,13 @@ public partial class LeftPanelViewModel : ObservableObject
 
     private void RestoreLeftPanelWidth()
     {
-        var width = _preferencesService.GetLeftPanelWidth();
+        var width = _panelLayoutPreferences.GetLeftPanelWidth();
         LeftPanelWidth = new GridLength(width);
     }
 
     private void SaveLeftPanelWidth()
     {
-        _preferencesService.SetLeftPanelWidth(LeftPanelWidth.Value);
+        _panelLayoutPreferences.SetLeftPanelWidth(LeftPanelWidth.Value);
     }
 
     [RelayCommand]

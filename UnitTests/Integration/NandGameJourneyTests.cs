@@ -256,13 +256,13 @@ public class NandGameJourneyFixture : IAsyncLifetime
     private (FileOperationsViewModel, DesignCanvasViewModel) CreateFileOperations()
     {
         var canvas = new DesignCanvasViewModel();
-        var vm = new FileOperationsViewModel(
+        var vm = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             _library,
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
             null!);
         return (vm, canvas);

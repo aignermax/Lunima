@@ -24,7 +24,7 @@ public enum GateNetLevel
 /// driver's output bit; a network-input net takes its input toggle's bit (or, failing
 /// that, the badge of one of its named input pins).
 /// </summary>
-public sealed class GateNetLevels
+public sealed class GateNetLevels : IDisposable
 {
     private readonly LogicGateStateOverlay _overlay;
     private readonly Func<IReadOnlyDictionary<string, bool>>? _networkInputBits;
@@ -41,12 +41,15 @@ public sealed class GateNetLevels
     {
         _overlay = overlay ?? throw new ArgumentNullException(nameof(overlay));
         _networkInputBits = networkInputBits;
-        _overlay.StatesChanged += (_, _) => Refresh();
+        _overlay.StatesChanged += OverlayChanged;
         Refresh();
     }
 
     /// <summary>Raised after the levels changed (new evaluation, or cleared).</summary>
     public event Action? Changed;
+
+    public void Dispose() => _overlay.StatesChanged -= OverlayChanged;
+    private void OverlayChanged(object? sender, EventArgs args) => Refresh();
 
     /// <summary>True while an evaluated network supplies levels.</summary>
     public bool HasLevels => _bits.Count > 0;

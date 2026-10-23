@@ -34,9 +34,10 @@ public class PdkLifecycleFlowTests : IDisposable
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
 
-        _leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, preferencesService,
+        _leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
-            new ComponentLibraryViewModel(groupLibrary));
+            new ComponentLibraryViewModel(groupLibrary),
+            userPdkLibrary: new UserPdkStore(_userPdkRoot, new PdkJsonSaver(), pdkLoader));
         _leftPanel.Initialize();
     }
 

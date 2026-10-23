@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using System.Diagnostics;
 
 namespace CAP_Core.Export;
@@ -8,7 +9,7 @@ namespace CAP_Core.Export;
 /// Supports debugging coordinate mismatches between component pins
 /// and waveguide placements (issue #329).
 /// </summary>
-public class GdsCoordinateExtractor
+public class GdsCoordinateExtractor : IGdsCoordinateExtractor
 {
     private const string ScriptRelativePath = "scripts/extract_gds_coords.py";
     private const int ExtractionTimeoutMs = 30_000;
@@ -25,24 +26,6 @@ public class GdsCoordinateExtractor
         _launchFactory = launchFactory ?? ProcessLaunchFactory.CreateDefault();
     }
 
-    /// <summary>Result of a coordinate extraction operation.</summary>
-    public class ExtractionResult
-    {
-        /// <summary>True if extraction completed successfully.</summary>
-        public bool Success { get; init; }
-
-        /// <summary>Path to the output JSON file.</summary>
-        public string? JsonOutputPath { get; init; }
-
-        /// <summary>Raw JSON string with extracted coordinates.</summary>
-        public string? JsonContent { get; init; }
-
-        /// <summary>Error message if extraction failed.</summary>
-        public string? ErrorMessage { get; init; }
-
-        /// <summary>Status message for UI display.</summary>
-        public string Status { get; init; } = string.Empty;
-    }
 
     /// <summary>Sets a custom Python executable path to use instead of the system default.</summary>
     /// <param name="pythonPath">Path to Python executable, or null to use system default.</param>
@@ -59,7 +42,7 @@ public class GdsCoordinateExtractor
     /// <param name="outputJsonPath">Output JSON path; defaults to .coords.json alongside the GDS file.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Extraction result containing the JSON coordinate data.</returns>
-    public async Task<ExtractionResult> ExtractAsync(
+    public async Task<GdsCoordinateExtractionResult> ExtractAsync(
         string gdsPath,
         string? outputJsonPath = null,
         CancellationToken cancellationToken = default)
@@ -124,7 +107,7 @@ public class GdsCoordinateExtractor
                 return Failure("Script ran but no output JSON was created.");
 
             var content = await File.ReadAllTextAsync(jsonPath, cancellationToken);
-            return new ExtractionResult
+            return new GdsCoordinateExtractionResult
             {
                 Success = true,
                 JsonOutputPath = jsonPath,
@@ -207,6 +190,6 @@ public class GdsCoordinateExtractor
         return null;
     }
 
-    private static ExtractionResult Failure(string message) =>
+    private static GdsCoordinateExtractionResult Failure(string message) =>
         new() { Success = false, ErrorMessage = message, Status = message };
 }

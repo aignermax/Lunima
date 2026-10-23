@@ -32,7 +32,7 @@ public partial class OpenEblCheckViewModel : ObservableObject
 
     private readonly DesignCanvasViewModel _canvas;
     private readonly SimpleNazcaExporter _nazcaExporter;
-    private readonly GdsExportService _gdsExport;
+    private readonly CAP_Core.Export.Contracts.IGdsScriptRunner _gdsExport;
     private readonly OpenEblSubmissionChecker _checker;
     private readonly ErrorConsoleService? _errorConsole;
 
@@ -104,7 +104,7 @@ public partial class OpenEblCheckViewModel : ObservableObject
     public OpenEblCheckViewModel(
         DesignCanvasViewModel canvas,
         SimpleNazcaExporter nazcaExporter,
-        GdsExportService gdsExport,
+        CAP_Core.Export.Contracts.IGdsScriptRunner gdsExport,
         OpenEblSubmissionChecker checker,
         ErrorConsoleService? errorConsole = null)
     {

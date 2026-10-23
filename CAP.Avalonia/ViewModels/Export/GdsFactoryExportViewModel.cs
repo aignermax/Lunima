@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.GdsFactoryExport;
@@ -24,7 +25,7 @@ namespace CAP.Avalonia.ViewModels.Export;
 public partial class GdsFactoryExportViewModel : ObservableObject
 {
     private readonly DesignCanvasViewModel _canvas;
-    private readonly GdsExportService _exportService;
+    private readonly IGdsScriptRunner _exportService;
     private readonly IUrlLauncher _urlLauncher;
     private readonly ErrorConsoleService? _errorConsole;
     private readonly GdsFactoryExporter _exporter = new();
@@ -69,7 +70,7 @@ public partial class GdsFactoryExportViewModel : ObservableObject
     /// <param name="errorConsole">Optional error logging.</param>
     public GdsFactoryExportViewModel(
         DesignCanvasViewModel canvas,
-        GdsExportService exportService,
+        IGdsScriptRunner exportService,
         IUrlLauncher? urlLauncher = null,
         ErrorConsoleService? errorConsole = null)
     {
@@ -365,7 +366,7 @@ public partial class GdsFactoryExportViewModel : ObservableObject
         }
     }
 
-    private string DescribeResult(string filePath, GdsExportService.ExportResult result)
+    private string DescribeResult(string filePath, GdsExportResult result)
     {
         var scriptName = Path.GetFileName(filePath);
         if (result.Success && result.GdsPath != null)

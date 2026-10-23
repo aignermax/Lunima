@@ -77,6 +77,21 @@ public partial class WaveguideConnectionManager
     /// </summary>
     private readonly HashSet<WaveguideConnection> _reroutesInPlace = new();
 
+    internal System.Collections.Immutable.ImmutableArray<Guid> CapturePendingReroutes()
+    {
+        lock (_reroutesInPlace)
+            return System.Collections.Immutable.ImmutableArray.CreateRange(_reroutesInPlace.Select(wire => wire.Id));
+    }
+
+    internal void RestorePendingReroutes(IEnumerable<WaveguideConnection> wires)
+    {
+        lock (_reroutesInPlace)
+        {
+            _reroutesInPlace.Clear();
+            _reroutesInPlace.UnionWith(wires);
+        }
+    }
+
     /// <summary>
     /// Drops the route of <paramref name="connection"/> so the next pass routes it again
     /// between its current pins, WITHOUT taking out the routing-placed crossing chain it docks

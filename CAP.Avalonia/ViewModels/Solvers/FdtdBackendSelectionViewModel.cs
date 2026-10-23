@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
+using CAP.Avalonia.Services.Lifetime;
 using CAP.Avalonia.Services.Solvers;
 using CAP_Core.Solvers.Fdtd;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,8 +16,17 @@ namespace CAP.Avalonia.ViewModels.Solvers;
 // Implements IDisposable: every instance subscribes to the singleton registry's
 // SelectedBackendChanged (cross-window sync), so hosts must Dispose it on window
 // close or the registry keeps probing availability for dead windows.
-public partial class FdtdBackendSelectionViewModel : ObservableObject, IDisposable
+public partial class FdtdBackendSelectionViewModel : ObservableObject, IDisposable, IAsyncDisposable
 {
+    /// <summary>Detaches backend observation and drains availability probes.</summary>
+    public Task StopAsync()
+    {
+        _registry.SelectedBackendChanged -= OnRegistrySelectedBackendChanged;
+        LocalizationService.Instance.PropertyChanged -= OnLocalizationChanged;
+        return _work.StopAsync();
+    }
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private readonly ShellWorkScope _work = new();
     public const string Tidy3dPortalUrl = "https://tidy3d.simulation.cloud";
 
     private readonly FdtdBackendRegistry _registry;
@@ -61,7 +71,8 @@ public partial class FdtdBackendSelectionViewModel : ObservableObject, IDisposab
         }
     }
 
-    public FdtdBackendSelectionViewModel(FdtdBackendRegistry registry, IUrlLauncher? urlLauncher = null)
+    public FdtdBackendSelectionViewModel(FdtdBackendRegistry registry, IUrlLauncher? urlLauncher = null,
+        ApplicationWorkCoordinator? applicationWork = null)
     {
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _urlLauncher = urlLauncher;
@@ -69,6 +80,7 @@ public partial class FdtdBackendSelectionViewModel : ObservableObject, IDisposab
         BackendItems = AvailableBackends.Select(b => new FdtdBackendItemViewModel(b, this)).ToList();
         _selectedBackend = registry.SelectedBackend;
         SyncItemSelection();
+        _work.RegisterWith(applicationWork, StopAsync);
         // Follow backend changes made in another window's picker (shared singleton registry).
         _registry.SelectedBackendChanged += OnRegistrySelectedBackendChanged;
         // Re-raise the localized computed labels (solver label, item name/description)
@@ -94,6 +106,7 @@ public partial class FdtdBackendSelectionViewModel : ObservableObject, IDisposab
 
     partial void OnSelectedBackendChanged(FdtdBackendType value)
     {
+        if (_work.IsStopping) return;
         // Guard against echo: when this change came FROM the registry (another window's
         // picker via OnRegistrySelectedBackendChanged), the value is already persisted —
         // writing it again would fire SelectedBackendChanged a second time.
@@ -108,7 +121,7 @@ public partial class FdtdBackendSelectionViewModel : ObservableObject, IDisposab
         OnPropertyChanged(nameof(CurrentSolverLabel));
         // Probe right away so a known-bad pick (e.g. Tidy3D without API key) warns immediately,
         // not only when the user clicks compute.
-        _ = CheckAvailabilityAsync();
+        _ = RefreshAvailabilityAsync();
     }
 
     private void SyncItemSelection()
@@ -128,8 +141,7 @@ public partial class FdtdBackendSelectionViewModel : ObservableObject, IDisposab
     /// <summary>Unsubscribes from the singleton registry and localization. Hosts call this on window close.</summary>
     public void Dispose()
     {
-        _registry.SelectedBackendChanged -= OnRegistrySelectedBackendChanged;
-        LocalizationService.Instance.PropertyChanged -= OnLocalizationChanged;
+        _ = StopAsync();
     }
 
     // {loc:Localize} bindings refresh themselves on a language switch; the labels this
@@ -142,8 +154,22 @@ public partial class FdtdBackendSelectionViewModel : ObservableObject, IDisposab
             item.RefreshLocalizedLabels();
     }
 
-    public async Task<FdtdAvailability> CheckAvailabilityAsync(CancellationToken ct = default)
+    private async Task RefreshAvailabilityAsync()
     {
+        try { await CheckAvailabilityAsync(); }
+        catch (OperationCanceledException) { }
+    }
+
+    public Task<FdtdAvailability> CheckAvailabilityAsync(CancellationToken ct = default) =>
+        _work.RunAsync(stopping => CheckAvailabilityCoreAsync(ct, stopping));
+
+    private async Task<FdtdAvailability> CheckAvailabilityCoreAsync(CancellationToken caller, CancellationToken stopping)
+    {
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(caller, stopping);
+        var ct = cancellation.Token;
+        _work.ThrowIfStopping();
+        caller.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
         // Capture what is being probed BEFORE awaiting: the result may only be applied
         // while this probe is still the newest one for the current selection — a slow
         // probe finishing after a backend switch must not overwrite the new backend's
@@ -166,6 +192,10 @@ public partial class FdtdBackendSelectionViewModel : ObservableObject, IDisposab
             availability = FdtdAvailability.Unavailable(ex.Message);
         }
 
+        _work.ThrowIfStopping();
+
+        caller.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
         if (seq == _availabilityProbeSeq && probedBackend == SelectedBackend)
             ApplyAvailability(availability);
         return availability;

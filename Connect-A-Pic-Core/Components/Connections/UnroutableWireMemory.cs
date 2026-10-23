@@ -20,6 +20,25 @@ public sealed class UnroutableWireMemory
     private readonly Dictionary<Guid, Entry> _entries = new();
     private readonly object _sync = new();
 
+    internal readonly record struct SnapshotEntry(Guid Id, long StartX, long StartY, long EndX, long EndY, bool Exhausted);
+
+    internal System.Collections.Immutable.ImmutableArray<SnapshotEntry> CaptureState()
+    {
+        lock (_sync) return System.Collections.Immutable.ImmutableArray.CreateRange(_entries.Select(pair =>
+            new SnapshotEntry(pair.Key, pair.Value.Pins.StartX, pair.Value.Pins.StartY,
+                pair.Value.Pins.EndX, pair.Value.Pins.EndY, pair.Value.ChainSearchExhausted)));
+    }
+
+    internal void RestoreState(IEnumerable<SnapshotEntry> entries)
+    {
+        lock (_sync)
+        {
+            _entries.Clear();
+            foreach (var entry in entries) _entries.Add(entry.Id,
+                new Entry(new PinKey(entry.StartX, entry.StartY, entry.EndX, entry.EndY), entry.Exhausted));
+        }
+    }
+
     /// <summary>Number of wires currently remembered.</summary>
     public int Count
     {

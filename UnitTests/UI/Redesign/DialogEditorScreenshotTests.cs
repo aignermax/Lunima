@@ -66,7 +66,7 @@ public class DialogEditorScreenshotTests : IDisposable
         if (!DialogShot.Enabled) return;
         Directory.CreateDirectory(_root);
         var extractor = new ComponentGeometryExtractor(
-            Mock.Of<IComponentPreviewRenderer>(), Mock.Of<IComponentPreviewRenderer>());
+            Mock.Of<IPdkGeometryRenderer>(), Mock.Of<IPdkGeometryRenderer>());
         var vm = new NewComponentViewModel(
             extractor, Mock.Of<IFdtdSMatrixService>(), Store(), new List<ProcessDefinition> { SampleProcess() })
         {

@@ -1,325 +1,178 @@
-# Architecture
+# Lunima architecture
 
-This document describes the technical architecture of Lunima.
+This guide describes the architecture-hardening branch as of October 23, 2026.
+Several ownership and dependency boundaries are implemented and regression-tested;
+the remaining work is explicitly called out below. This is not a release-readiness
+or whole-application equivalence claim. Follow
+[CODEBASE_MAP.md](docs/CODEBASE_MAP.md) for entry points and the
+[hardening design](docs/superpowers/specs/2026-10-23-architecture-hardening-design.md)
+for the required end state and verification criteria.
 
----
+## Projects and dependencies
 
-## Project Structure
+| Project | Current responsibility |
+|---|---|
+| `CAP_Contracts` | Shared data-access and resource contracts |
+| `Connect-A-Pic-Core` (`CAP_Core`) | Components, geometry, groups, routing, optical calculation, logic, analysis and export support |
+| `CAP-DataAccess` (`CAP_DataAccess`) | JSON access, PDKs, persistence helpers and PIR data structures |
+| `CAP.Avalonia` | Shared Avalonia UI, CommunityToolkit.Mvvm viewmodels, application workflows and platform integrations |
+| `CAP.Desktop` | Desktop host and Windows/Linux/macOS packaging |
+| `CAP.Browser` | Browser host project; browser delivery remains separate from desktop release support |
+| `UnitTests` | xUnit 2 tests referencing production projects, including headless Avalonia tests |
 
+Core references `CAP_Contracts` and must remain free of presentation dependencies.
+Project names alone do not establish clean boundaries: Core currently includes
+external-process/export support, and `CAP.Avalonia/Services` includes both use
+cases and infrastructure. Native document contracts now live outside presentation.
+The target direction is presentation → application/session → domain/contracts,
+with infrastructure implementing narrow boundary contracts. Feature contracts now
+cover preferences, Python setup/registry, GDS execution, previews, native file I/O
+and the component registry. The semantic analyzer has an explicit namespace/type
+ownership inventory; eliminating the remaining forbidden edges and making its
+strict mode mandatory are still tracked work.
+
+## Composition and presentation
+
+`CAP.Avalonia/App.axaml.cs::ConfigureServices` composes feature extensions from
+`CAP.Avalonia/DI/` using `Microsoft.Extensions.DependencyInjection`. This is not
+an Avalonia-provided DI container. `CoreServicesExtensions` registers simulation,
+PDK loading, undo history, preferences and persistence services; other extensions
+own export, AI, MCP, Python environments, canvas/panels and feature-specific wiring.
+`MainViewModel` is the root presentation coordinator. Existing `App.Services`
+access in UI code is implementation debt, not a pattern to extend into domain code.
+
+Viewmodels use CommunityToolkit.Mvvm observable properties and commands. Views
+bind presentation state, while `Controls/` contains canvas interaction/rendering.
+The Layout, Optics, Logic and System workspaces share a design and choose different
+tools, run actions, analysis surfaces and visual emphasis. Their presentation lives
+in `ViewModels/Workspaces/`, with shell integration in `MainViewModel.Workspaces.cs`
+and the related workspace partials. This describes existing files, not permission
+to split new responsibilities into more partials.
+
+The right sidebar contains **properties of the current selection only**. Put
+whole-design analysis in the analysis dock and choose windows, dialogs, flyouts
+or canvas overlays for other workflows according to [CLAUDE.md §5](CLAUDE.md).
+
+## Design state and persistence
+
+Components, physical pins and nested groups live under `Connect-A-Pic-Core/Components/`.
+Canvas viewmodels project these into the UI. Dies/chiplets have presentation under
+`ViewModels/Dies/`; fabrication and group process policies live under
+`Components/Process/`. `Analysis/` includes chiplet interface checks, alignment
+and optical coupling calculations. Keep the document root, active group and
+per-die process context distinct when editing nested designs.
+
+The `.lun` format carries design data and is the basis for the evolving Photonic
+Intermediate Representation (PIR). `CAP-DataAccess/Persistence/PIR/` contains
+metadata, S-matrix, simulation result and external-reference data. Current project
+DTOs live in `CAP-DataAccess/Persistence/NativeDesign/`. The presentation-facing
+`FileOperationsViewModel` delegates native workflows to `NativeDesignIoCoordinator`,
+with separate capture, component/group mapping, loading and post-load services.
+`INativeDesignFileStore` is the file I/O boundary; document requests keep prompts,
+pickers, accepted I/O and cleanup under one owner. The unused alternate UI
+workflow (`ProjectPersistenceViewModel`/`ProjectPersistenceService`) was retired.
+`GridPersistenceWithGroupsManager` remains a separately tested low-level grid
+serializer; it is not the application's native-document workflow. Capture isolation
+and cross-platform atomic file publication have additional verification in progress.
+Preserve serialized names, IDs, geometry, models and process data.
+
+`CAP.Avalonia/Commands/CommandManager` owns undo/redo history and entry-scoped side
+effects. `CAP_Core.Documents.DocumentSession` owns document identity, revision,
+navigation scope and accepted operations. `DocumentOperation` guards publication
+and drains cancellation callbacks asynchronously. Non-owning identity bookmarks
+admit configured windows only to the document they were opened for. Canvas group
+projections use canonical roots and group route publication; remaining feature
+owners must adopt these boundaries rather than invent independent root copies.
+
+## Geometry, routing and simulation
+
+Physical positions and dimensions use micrometres. Physical pins hold local offsets
+and orientations; routing must account for component translation and rotation.
+`Connect-A-Pic-Core/Routing/` provides route calculation and geometry.
+`LightCalculation/` contains optical propagation and time-domain calculations;
+`Analysis/` contains sweeps and other analysis; `Logic/` contains photonic logic.
+`CAP.Avalonia/Services/SimulationService.cs` coordinates presentation-facing
+simulation. The main simulation captures immutable matrices, sources and transfers
+under `LightCalculation/Snapshots/` before worker execution. Routing captures a
+private hierarchy, graph, constraints and crossing physics under `Routing/Snapshots/`;
+progress and final results are admitted against the document revision. Additional
+analysis pipelines, including some sweeps and logic extraction, still need detached
+physics inputs. A cancellation token alone is not snapshot isolation.
+
+PDK JSON files are bundled under `CAP-DataAccess/PDKs/`; the schema is documented in
+[PDK_JSON_FORMAT.md](docs/PDK_JSON_FORMAT.md). Process policies constrain compatible
+components and fabrication settings. Python-backed previews and exports support
+gdsfactory and Nazca, alongside circuit/netlist exporters. Export coordinates
+must preserve the editor's Y-down to fabrication Y-up conversion, component
+rotations and PDK origin offsets. Consult the coordinate regression tools listed
+in CLAUDE.md before changing those transformations.
+
+`SimpleNazcaExporter` retains export orchestration and its public facade. Focused
+writers in `Services/NazcaExport/` own component stubs/placements, routed and frozen
+paths, crossing geometry, assembly cells and the Python script envelope. Complete
+script regression fixtures protect emission order and coordinate conventions.
+
+External tools use `CAP_Core.Export.ProcessLaunchFactory`; opening URLs and files
+uses `IUrlLauncher`. Solver, Python-probe and openEBL owned process sessions drain
+stdout/stderr, exit and descendant cleanup. Other preview/export process call sites
+still need migration; the shared launcher alone does not provide this ownership.
+Python setup, registry activation and preview caches have separate capability
+contracts and effective-environment identity; shared DI aliases preserve one cache
+owner. Update manifests are authenticated, while operational release-signing secret
+provisioning remains outstanding. These guarantees are tested separately, rather
+than inferred from the presence of a shared launcher.
+
+## Assistant and MCP bridge
+
+The assistant already has a tool registry. `AiAssistantFeatureExtensions` registers
+`IAiTool` implementations and `IAiToolRegistry`, which `AiAssistantViewModel` uses.
+`Services/AgentBridge/Tools/AgentToolCatalog.cs` combines bridge-specific tools with
+adapters for assistant tools; bridge tools take precedence for matching names.
+Tool calls are dispatched to the UI thread. The loopback bridge is opt-in and
+its trust boundary is documented in [AGENT_BRIDGE.md](docs/AGENT_BRIDGE.md).
+The operation gate tracks accepted tool work through actual cleanup. Mutations
+check revocable commit permission at the mutation itself, including post-await
+routing and assistant-adapter publication; responses are checked after cleanup.
+Transport retirement drains accepted connections before restart. Speculative repair
+trials are being verified on private graphs with separate history, including group
+scope and all repair families.
+
+## Feature lifetimes
+
+`Services/Lifetime/ApplicationWorkCoordinator` drains registered feature owners
+before application disposal. `ShellWorkScope` closes admission and waits for actual
+jobs and asynchronous cancellation callbacks. Analyzer/spectrum, Python, solver,
+editor and registry workflows have adopted this ownership in verified slices;
+remaining panels are tracked in the hardening plan. Async-only owners require
+`await using` or `DisposeAsync`, including in test containers. Synchronous disposal
+must not block the UI to hide unfinished work.
+
+## Build, tests and contribution rules
+
+`global.json` defines SDK selection. Production projects target .NET 10; the
+current test project uses xUnit 2.4.2 through VSTest, not the xUnit v3 executable
+runner. [TESTING.md](docs/TESTING.md) documents the checked-in test entry point,
+result logs, selective runs and CI shards. Run local .NET tests serially with
+Slow and Heavy categories excluded by default:
+
+```powershell
+# Windows
+py scripts/run_tests.py
+py scripts/run_tests.py ParameterSweeperTests
 ```
-Lunima/
-├── CAP_Contracts/        # Shared interfaces
-├── Connect-A-Pic-Core/   # Core simulation engine
-│   ├── Components/       # Component models, pins, S-matrices, parametric
-│   ├── Routing/          # Waveguide routing (A*, Manhattan, CSC)
-│   ├── LightCalculation/ # S-Matrix propagation, power flow analysis
-│   ├── Analysis/         # Parameter sweep, sweep configuration
-│   └── Grid/             # Component placement, connection management
-├── CAP-DataAccess/       # JSON persistence, PDK loading
-│   └── PDKs/             # Bundled PDK JSON files (demo-pdk.json, siepic-ebeam-pdk.json)
-├── CAP.Avalonia/         # Shared cross-platform UI
-│   ├── ViewModels/       # MVVM ViewModels (30+ view models)
-│   ├── Views/            # AXAML views and controls
-│   ├── Commands/         # Undo/redo commands (IUndoableCommand, CommandManager)
-│   └── Services/         # SimulationService, NazcaExporter, FileDialogService, AiService
-├── CAP.Desktop/          # Desktop application entry point
-├── CAP.Browser/          # WebAssembly browser entry point (planned)
-└── UnitTests/            # 1600+ xUnit tests
-```
-
----
-
-## Dependency Injection
-
-Services are registered in `App.axaml.cs` using `Microsoft.Extensions.DependencyInjection`:
-
-| Service | Lifetime | Purpose |
-|---------|----------|---------|
-| `SimulationService` | Singleton | S-Matrix light simulation orchestrator |
-| `SimpleNazcaExporter` | Singleton | Nazca Python export |
-| `PdkLoader` | Singleton | PDK JSON file loading |
-| `CommandManager` | Singleton | Undo/redo command history |
-| `AiService` | Singleton | Claude API integration for AI assistant |
-| `MainViewModel` | Singleton | Root ViewModel |
-| `FileDialogService` | Property | Cross-platform file dialogs |
-
-The container is accessible via `App.Services` for view code-behind when needed.
-
----
-
-## Physical Coordinate System
-
-Components have physical dimensions and positions:
-
-```csharp
-component.WidthMicrometers = 250.0;   // Physical width in µm
-component.HeightMicrometers = 250.0;  // Physical height in µm
-component.PhysicalX = 1000.0;         // X position in µm
-component.PhysicalY = 500.0;          // Y position in µm
-component.RotationDegrees = 45.0;     // Rotation angle
-```
-
-Physical pins define optical ports with µm offsets:
-
-```csharp
-var pin = new PhysicalPin
-{
-    Name = "output",
-    OffsetXMicrometers = 250.0,  // Position relative to component origin
-    OffsetYMicrometers = 125.0,
-    AngleDegrees = 0.0           // Pin direction (0 = pointing right)
-};
-```
-
----
-
-## Waveguide Routing
-
-Connections are automatically routed between physical pins:
-
-```csharp
-var connection = new WaveguideConnection
-{
-    StartPin = componentA.PhysicalPins[0],
-    EndPin = componentB.PhysicalPins[1],
-    PropagationLossDbPerCm = 2.0,    // Loss parameter
-    BendLossDbPer90Deg = 0.05,       // Bend loss parameter
-    BendRadiusMicrometers = 10.0     // Minimum bend radius
-};
-
-// Calculate actual routed path and transmission coefficient
-connection.RecalculateTransmission();
-
-// Access results
-double pathLength = connection.PathLengthMicrometers;
-double bendCount = connection.BendCount;
-double totalLoss = connection.TotalLossDb;
-Complex transmission = connection.TransmissionCoefficient;
-```
-
-### Routing Strategies
-
-The router supports three strategies:
-
-1. **Straight** — Direct line when pins are aligned
-2. **S-Bend** — Two opposing bends for parallel offset pins
-3. **Manhattan** — Rounded corners for perpendicular pin orientations
-
----
-
-## S-Matrix Simulation
-
-The core S-Matrix light propagation simulation is physically grounded and compatible with standard photonic compact model formats:
-
-- Components define wavelength-specific S-matrices
-- Light propagates through the system based on matrix multiplication
-- Waveguide connections contribute transmission coefficients to the system matrix
-- Supports non-linear formulas with slider parameters
-
-### Multi-Wavelength Support
-
-S-matrices are stored per wavelength with automatic nearest-wavelength fallback:
-
-```csharp
-// Define S-matrix for specific wavelength
-component.AddSMatrix(wavelength: 1550.0, sMatrix: matrix);
-
-// Simulation uses nearest available wavelength if exact match not found
-var result = simulation.CalculateAtWavelength(1549.5);
-```
-
----
-
-## Nazca Export
-
-Export designs to Nazca Python for fabrication:
-
-```csharp
-string nazcaCode = exporter.Export(canvas);
-// Generates Python code like:
-// cell_0 = ebeam_gc_te1550().put(100.0, 200.0, 0.0)
-// cell_1 = ebeam_y_1550().put(500.0, 200.0, 0.0)
-// nd.strt(length=350.5).put(100.0, -200.0, 0.0)
-```
-
-### Coordinate Transformations
-
-Lunima uses a Y-down viewport coordinate system, while Nazca uses Y-up. The exporter handles:
-
-- Y-axis flip: `nazcaY = -editorY`
-- Component rotation
-- Pin angle calculations
-- NazcaOriginOffset for PDK components
-
----
-
-## PDK Integration
-
-PDKs are defined as JSON files in `CAP-DataAccess/PDKs/`:
-
-```json
-{
-  "pdk_name": "SiEPIC EBeam PDK",
-  "description": "Silicon photonics 220nm SOI platform",
-  "components": [
-    {
-      "name": "Grating Coupler TE1550",
-      "nazca_function": "ebeam_gc_te1550",
-      "width_um": 25.0,
-      "height_um": 30.0,
-      "pins": [
-        {
-          "name": "opt1",
-          "offset_x": 12.5,
-          "offset_y": 0.0,
-          "angle_degrees": 0.0
-        }
-      ],
-      "s_matrices": {
-        "1550": [[0, 0.5], [0.5, 0]]
-      }
-    }
-  ]
-}
-```
-
-PDKs are automatically loaded at startup from the `PDKs/` directory.
-
----
-
-## MVVM Pattern
-
-Lunima uses the MVVM pattern with `CommunityToolkit.Mvvm`:
-
-```csharp
-public partial class MyViewModel : ObservableObject
-{
-    [ObservableProperty]
-    private string _statusText = "";
-
-    [ObservableProperty]
-    private bool _isProcessing;
-
-    [RelayCommand]
-    private async Task RunSimulation()
-    {
-        IsProcessing = true;
-        StatusText = "Running...";
-
-        await _simulationService.RunAsync();
-
-        StatusText = "Complete";
-        IsProcessing = false;
-    }
-}
-```
-
-All ViewModels are registered in the DI container in `App.axaml.cs`.
-
----
-
-## Command Pattern (Undo/Redo)
-
-All user actions that modify the design implement `IUndoableCommand`:
-
-```csharp
-public class AddComponentCommand : IUndoableCommand
-{
-    private readonly DesignCanvasViewModel _canvas;
-    private readonly Component _component;
-    private ComponentViewModel? _addedVm;
-
-    public void Execute()
-    {
-        _addedVm = _canvas.AddComponent(_component);
-    }
-
-    public void Undo()
-    {
-        if (_addedVm != null)
-            _canvas.RemoveComponent(_addedVm);
-    }
-}
-```
-
-Commands are managed by `CommandManager` which maintains undo/redo stacks.
-
----
-
-## Testing
-
-The project uses xUnit for testing with 1600+ tests:
 
 ```bash
-# Run all tests
-dotnet test
-
-# Run specific test file
-dotnet test --filter FullyQualifiedName~RoutingTests
-
-# Use smart_test.py for compact output (recommended)
-python3 tools/smart_test.py
-python3 tools/smart_test.py RoutingTests
+# Linux/macOS
+python3 scripts/run_tests.py
+python3 scripts/run_tests.py ParameterSweeperTests
 ```
 
-Test categories:
-- **Unit tests** — Core logic (routing, S-matrix, coordinate transforms)
-- **Integration tests** — GDS export, Nazca code generation
-- **UI tests** — ViewModel behavior, command execution
+Prefer new files no longer than 250 lines; authored source and documentation have a hard ceiling of
+999 physical lines. Extract real responsibilities instead of adding partial files,
+minifying code or dropping assertions. The source-size checker and hook setup are
+documented in [CONTRIBUTING.md](CONTRIBUTING.md). Data/fixture/generated-artifact
+scope remains an open hardening decision and is not a blanket source exemption.
 
----
-
-## AI Assistant Architecture
-
-The AI assistant uses Claude's tool-calling API to interact with the design canvas:
-
-1. **User message** → AiAssistantViewModel
-2. **Tool definitions** → Sent to Claude API
-3. **Claude responds** with tool calls (e.g., `place_component`, `connect_pins`)
-4. **Tools execute** via AiGridService
-5. **Results returned** to Claude
-6. **Claude summarizes** what was done
-
-Tools are currently hardcoded in `AiGridService.cs` and `AiAssistantViewModel.cs`. See [Issue #468](https://github.com/aignermax/Lunima/issues/468) for planned plugin/registry pattern refactoring.
-
----
-
-## Build System
-
-The project uses standard .NET tooling with optional Make/bash wrappers:
-
-```bash
-# Build all projects
-dotnet build
-
-# Run desktop app
-dotnet run --project CAP.Desktop/CAP.Desktop.csproj
-
-# Run tests
-dotnet test
-
-# Quick start (Make)
-make run
-make build
-make test
-```
-
-See [Makefile](Makefile) and [run.sh](run.sh) for details.
-
----
-
-## Code Style
-
-See [CLAUDE.md](CLAUDE.md) for detailed code style guidelines used by AI agents:
-
-- C# naming conventions (PascalCase public, _camelCase private)
-- MVVM with CommunityToolkit.Mvvm
-- Maximum 250 lines per new file
-- XML documentation for all public APIs
-- No magic numbers (use named constants)
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) *(coming soon)* for contribution guidelines.
+Feature branches target `dev`; releases promote reviewed `dev` changes to `main`
+as described in [RELEASE.md](docs/RELEASE.md). Use [ROADMAP.md](docs/ROADMAP.md) for
+product plans and [CHANGELOG.md](CHANGELOG.md) for shipped changes.

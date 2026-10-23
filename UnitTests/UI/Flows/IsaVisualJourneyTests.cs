@@ -38,7 +38,9 @@ public class IsaVisualJourneyTests : IClassFixture<LogicGateFourBitAdderExampleT
         var vm = MainViewModelTestHelper.CreateMainViewModel(logicNetworkProvider: provider, isaPlayground: playground);
         using var services = new ServiceCollection().AddSingleton(playground).AddSingleton(vm.RunProgramTour).BuildServiceProvider();
         App.OverrideServicesForTesting(services);
-        var main = new MainWindow { DataContext = vm, Width = 1280, Height = 900 };
+        var main = CAP.Avalonia.DI.MainWindowComposition.Create(services, vm);
+        main.Width = 1280;
+        main.Height = 900;
         try
         {
             main.Show();

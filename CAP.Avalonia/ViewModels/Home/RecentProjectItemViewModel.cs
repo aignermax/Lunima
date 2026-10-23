@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 

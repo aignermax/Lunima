@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using CAP_Core.Export.Processes;
 using CAP_Core.Export;
 
 namespace CAP.Avalonia.Services.OpenEblCheck;
@@ -21,11 +21,17 @@ public sealed class OpenEblPythonLocator
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(30);
 
     private readonly ProcessLaunchFactory _factory;
+    private readonly string _probeCode;
+    private readonly TimeSpan _probeTimeout;
 
     /// <summary>Initializes the locator with the shared process-launch factory.</summary>
-    public OpenEblPythonLocator(ProcessLaunchFactory factory)
+    public OpenEblPythonLocator(ProcessLaunchFactory factory) : this(factory, RequiredImports, ProbeTimeout) { }
+
+    internal OpenEblPythonLocator(ProcessLaunchFactory factory, string probeCode, TimeSpan probeTimeout)
     {
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
+        _probeCode = probeCode;
+        _probeTimeout = probeTimeout;
     }
 
     /// <summary>
@@ -48,28 +54,16 @@ public sealed class OpenEblPythonLocator
     public async Task<bool> ProbeAsync(string python, CancellationToken cancellationToken = default)
     {
         if (!_factory.TryBuild(
-                python, new[] { "-c", RequiredImports }, null, null, out var startInfo, out _))
+                python, new[] { "-c", _probeCode }, null, null, out var startInfo, out _))
             return false;
         startInfo.RedirectStandardOutput = true;
         startInfo.RedirectStandardError = true;
 
         try
         {
-            using var process = Process.Start(startInfo);
-            if (process == null)
-                return false;
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(ProbeTimeout);
-            try
-            {
-                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                TryKill(process);
-                return false;
-            }
-            return process.ExitCode == 0;
+            var result = await PythonProbeRunner.RunAsync(startInfo, _probeTimeout, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return result.ExitCode == 0;
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -93,8 +87,4 @@ public sealed class OpenEblPythonLocator
         yield return "python3";
     }
 
-    private static void TryKill(Process process)
-    {
-        try { process.Kill(entireProcessTree: true); } catch { /* best effort */ }
-    }
 }

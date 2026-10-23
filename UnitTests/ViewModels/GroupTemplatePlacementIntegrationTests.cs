@@ -35,11 +35,12 @@ public class GroupTemplatePlacementIntegrationTests : IDisposable
         _libraryViewModel = new ComponentLibraryViewModel(_libraryManager);
         _commandManager = new CommandManager();
         _canvasInteraction = new CanvasInteractionViewModel(_canvas, _commandManager, _libraryViewModel);
+        var preferences = new CAP.Avalonia.Services.UserPreferencesService();
         _leftPanel = new LeftPanelViewModel(
             _canvas,
             _libraryManager,
             new CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader(),
-            new CAP.Avalonia.Services.UserPreferencesService(),
+            preferences, preferences,
             new CAP.Avalonia.ViewModels.Hierarchy.HierarchyPanelViewModel(_canvas),
             new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
             new CAP.Avalonia.ViewModels.Library.ComponentLibraryViewModel(_libraryManager));

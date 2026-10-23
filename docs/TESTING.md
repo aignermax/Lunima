@@ -1,140 +1,70 @@
-# Testing Guide for Connect-A-PIC-Pro
+# Lunima testing guide
 
-This document explains how to run tests efficiently using xUnit v3's native CTRF JSON output.
+## Runner and SDK
 
-## Quick Start
+`UnitTests/UnitTests.csproj` targets .NET 10 and references xUnit **2.4.2**,
+`Microsoft.NET.Test.Sdk` 17.11.1 and the Visual Studio adapter. Tests run through
+**VSTest**. This is a test library, not an executable xUnit v3 project; the old
+`dotnet run --project UnitTests` and native CTRF instructions do not apply.
+`global.json` is the SDK selection authority; there is no MTP runner configuration.
+Install the SDK selected by that file and Python 3 for the checked-in helpers.
 
-### Run All Tests (Recommended)
+## Safe local entry point
+
+Run from the repository root. Use one local .NET test run at a time.
+
+```powershell
+# Windows
+py scripts/run_tests.py
+py scripts/run_tests.py ParameterSweeperTests
+```
 
 ```bash
-dotnet run --project UnitTests -- -ctrf test-results.ctrf.json
+# Linux/macOS
+python3 scripts/run_tests.py
+python3 scripts/run_tests.py ParameterSweeperTests
 ```
 
-This produces a structured JSON file with all test results.
+The helper targets `UnitTests/UnitTests.csproj`, defaults to
+`Category!=Slow&Category!=Heavy`, and sets `DOTNET_PROCESSOR_COUNT=2` for the child
+process, limits the default run to 15 minutes, and prevents overlapping helper
+runs across worktrees with a shared lock. A positional argument matches `FullyQualifiedName` by substring while
+retaining those exclusions. It writes detailed output to `TestResults/local/` and
+prints its location; inspect that log when a run fails. Test collections run
+serially as configured by `UnitTests/xunit.runner.json` because Avalonia headless
+state is process-wide. Do not start competing test hosts in the same worktree.
+Use `--timeout <seconds>` to change the overall timeout for a selected run.
 
-### Run Tests with Console Output
+Use `--filter` when you need a VSTest expression rather than a name substring.
+The helper still appends the Slow/Heavy exclusions:
 
 ```bash
-dotnet run --project UnitTests
+python3 scripts/run_tests.py --filter 'FullyQualifiedName~Routing&FullyQualifiedName!~Export'
 ```
 
-## Why CTRF JSON?
+On Windows, use `py` with the same arguments. Slow/Heavy suites normally run in CI;
+an explicitly required local investigation should select the smallest relevant
+set, add `--include-expensive`, and account for its memory and external-tool
+requirements. That option requires a specific selection and removes the default
+category exclusions. Passing the default
+local filter is not evidence that Slow/Heavy or other platforms passed.
 
-**CTRF (Common Test Report Format)** is a standardized JSON format for test results.
+The processor setting reduces concurrency; it is not a CPU or memory quota.
+`scripts/throttle.sh` can additionally use systemd resource limits where available,
+but its fallback is unthrottled, including on systems without systemd. Do not claim
+that Windows or macOS runs have a Linux cgroup memory cap.
 
-### Benefits:
+## Results and external tools
 
-- **Structured**: Easy to parse and analyze programmatically
-- **Compact**: ~400 tokens vs. ~2000 tokens for console text
-- **Complete**: Includes test names, status, duration, errors, stack traces
-- **Machine-readable**: Perfect for CI/CD, automation, and AI agents
+CI uses VSTest TRX reports and per-shard logs, uploaded as `testresults-*` artifacts.
+The local helper prints the path to its ignored `TestResults/local/` log. Report the exact selection, outcome
+and skipped prerequisites when recording verification; do not infer success from
+a build or from test discovery alone.
 
-### Example Output:
-
-```json
-{
-  "results": {
-    "summary": {
-      "tests": 998,
-      "passed": 971,
-      "failed": 7,
-      "skipped": 20
-    },
-    "tests": [
-      {
-        "name": "BuildGroupSMatrix_EmptyGroup_ReturnsNull",
-        "status": "passed",
-        "duration": 0.3651
-      },
-      {
-        "name": "BuildGroupSMatrix_SupportsMultipleWavelengths",
-        "status": "failed",
-        "duration": 6,
-        "message": "System.ArgumentOutOfRangeException: Index was out of range..."
-      }
-    ]
-  }
-}
-```
-
-## Alternative Test Output Formats
-
-xUnit v3 supports multiple output formats:
-
-### TRX XML (Visual Studio Test Results)
-
-```bash
-dotnet run --project UnitTests -- -trx test-results.trx
-```
-
-Good for Visual Studio integration and Azure DevOps.
-
-### JUnit XML
-
-```bash
-dotnet run --project UnitTests -- -jUnit test-results.xml
-```
-
-Good for Jenkins and other CI systems.
-
-### HTML Report
-
-```bash
-dotnet run --project UnitTests -- -html test-results.html
-```
-
-Good for human-readable reports.
-
-### xUnit v2 XML
-
-```bash
-dotnet run --project UnitTests -- -xml test-results.xml
-```
-
-Legacy format for xUnit v2 compatibility.
-
-## Advanced Usage
-
-### Run Specific Tests
-
-```bash
-# Run a single test by name
-dotnet run --project UnitTests -- -method "MethodName"
-
-# Run all tests in a class
-dotnet run --project UnitTests -- -class "ClassName"
-```
-
-### Parallel Execution
-
-```bash
-# Disable parallelization (useful for debugging)
-dotnet run --project UnitTests -- -parallel none
-
-# Aggressive parallelization
-dotnet run --project UnitTests -- -parallelAlgorithm aggressive
-```
-
-### Verbose Output
-
-```bash
-# Show detailed progress
-dotnet run --project UnitTests -- -reporter verbose
-
-# JSON progress messages
-dotnet run --project UnitTests -- -reporter json
-```
-
-### Multiple Output Formats
-
-You can generate multiple reports in one run:
-
-```bash
-dotnet run --project UnitTests -- \
-  -ctrf results.ctrf.json \
-  -html results.html \
-  -trx results.trx
-```
+Some integration tests need Python packages, GDS tools or solver runtimes. CI setup
+is defined in `.github/actions/setup-test-tools/`; use the relevant fixture's
+requirements locally. `LUNIMA_TEST_PYTHON3` selects the interpreter used by tests.
+Headless UI coverage does not replace native Windows/macOS/Linux desktop checks.
 
 ## CI test pipeline
 
@@ -178,109 +108,3 @@ commit) decide what runs:
 
 When in doubt the selection runs everything. Each push to `dev` runs the full suite
 including Heavy, so anything a PR run skipped is caught right after merge.
-
-## CI/CD Integration
-
-### For AI Agents (Claude Code)
-
-Use CTRF for token efficiency:
-
-```bash
-dotnet run --project UnitTests -- -ctrf test-results.ctrf.json
-```
-
-Then parse the JSON to get structured results.
-
-### For GitHub Actions
-
-```yaml
-- name: Run Tests
-  run: dotnet run --project UnitTests -- -ctrf test-results.ctrf.json -html test-report.html
-
-- name: Upload Results
-  uses: actions/upload-artifact@v3
-  with:
-    name: test-results
-    path: |
-      test-results.ctrf.json
-      test-report.html
-```
-
-### For Azure DevOps
-
-```yaml
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'run'
-    projects: 'UnitTests/UnitTests.csproj'
-    arguments: '-- -trx test-results.trx'
-
-- task: PublishTestResults@2
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/test-results.trx'
-```
-
-## Troubleshooting
-
-### CTRF Not Generated
-
-**Problem:** Running `dotnet test -- --report-ctrf` doesn't create a file.
-
-**Solution:** Use the xUnit v3 native runner instead:
-```bash
-dotnet run --project UnitTests -- -ctrf test-results.ctrf.json
-```
-
-**Why?** `dotnet test` uses VSTest/MTP v2 SDK layer, which doesn't support CTRF. The xUnit v3 runner has native CTRF support.
-
-### Tests Fail to Run
-
-**Problem:** `dotnet run --project UnitTests` fails with build errors.
-
-**Solution:** Build first, then run:
-```bash
-dotnet build
-dotnet run --project UnitTests --no-build -- -ctrf test-results.ctrf.json
-```
-
-### Output File Not Found
-
-**Problem:** Can't find the generated report file.
-
-**Check:** The file is created in the current working directory. Use absolute paths:
-```bash
-dotnet run --project UnitTests -- -ctrf /tmp/test-results.ctrf.json
-```
-
-## Technical Background
-
-### xUnit v3 vs. VSTest
-
-Connect-A-PIC-Pro uses **xUnit v3** with **Microsoft Testing Platform v2 (MTP v2)**.
-
-| Tool | Test Runner | CTRF Support |
-|------|-------------|--------------|
-| `dotnet test` | VSTest or MTP v2 SDK | ❌ No native support |
-| `dotnet run --project UnitTests` | xUnit v3 native | ✅ Full support |
-
-### Why Not dotnet-test-mcp?
-
-**dotnet-test-mcp** is an MCP (Model Context Protocol) server that wraps test execution for AI assistants. It requires:
-- .NET 10 SDK
-- Additional installation and configuration
-- MCP-aware clients
-
-**xUnit v3's native CTRF is simpler:**
-- No extra tools needed
-- Works with xUnit v3 out of the box
-- Standard JSON format
-
-Use dotnet-test-mcp only if you need advanced MCP features like test discovery and filtering via protocol messages.
-
-## References
-
-- [xUnit v3 Documentation](https://xunit.net/docs/getting-started/v3/getting-started)
-- [Microsoft Testing Platform](https://xunit.net/docs/getting-started/v3/microsoft-testing-platform)
-- [CTRF Specification](https://ctrf.io/)
-- [xUnit v3 Release Notes](https://xunit.net/releases/v3/3.0.0)

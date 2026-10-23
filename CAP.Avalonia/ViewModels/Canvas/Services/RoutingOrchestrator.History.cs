@@ -4,6 +4,23 @@ public partial class RoutingOrchestrator
 {
     private int _suspendRouting;
 
+    /// <summary>Suppresses automatic command-triggered passes while a caller assembles an atomic mutation.</summary>
+    public IDisposable SuspendAutomaticRouting()
+    {
+        _suspendRouting++;
+        return new RoutingSuspension(this);
+    }
+
+    private sealed class RoutingSuspension(RoutingOrchestrator owner) : IDisposable
+    {
+        private RoutingOrchestrator? _owner = owner;
+        public void Dispose()
+        {
+            var current = Interlocked.Exchange(ref _owner, null);
+            if (current != null) current._suspendRouting--;
+        }
+    }
+
     /// <summary>Invalidates queued canvas topology callbacks from older routing results.</summary>
     public int MutationGeneration { get; private set; }
 
@@ -14,7 +31,7 @@ public partial class RoutingOrchestrator
     public async Task<bool> ExecuteHistoryChangeAsync(Func<bool> change, Func<bool> canChange)
     {
         if (!canChange()) return false;
-        _routingCts?.Cancel();
+        if (_routingCts != null) _ = _routingCts.CancelAsync();
         await _routingSemaphore.WaitAsync();
         try
         {

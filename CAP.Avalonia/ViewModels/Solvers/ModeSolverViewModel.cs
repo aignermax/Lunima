@@ -1,4 +1,5 @@
 using CAP.Avalonia.Services.Localization;
+using CAP.Avalonia.Services.Lifetime;
 using CAP_Core.Solvers.ModeSolver;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -9,8 +10,18 @@ namespace CAP.Avalonia.ViewModels.Solvers;
 /// ViewModel for the "Compute Modes for Waveguide" dialog.
 /// Drives cross-section input fields, backend selection, and result display.
 /// </summary>
-public partial class ModeSolverViewModel : ObservableObject
+public partial class ModeSolverViewModel : ObservableObject, IAsyncDisposable
 {
+    /// <summary>Retires solve admission and awaits subprocess/install cleanup.</summary>
+    public Task StopAsync()
+    {
+        var stopping = _work.StopAsync();
+        OnPropertyChanged(nameof(CanSolve));
+        SolveCommand.NotifyCanExecuteChanged();
+        return stopping;
+    }
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private readonly ShellWorkScope _work = new();
     // ── cross-section inputs ────────────────────────────────────────────────
 
     /// <summary>Waveguide core width in µm.</summary>
@@ -72,7 +83,7 @@ public partial class ModeSolverViewModel : ObservableObject
     public IReadOnlyList<ModeSolverModeEntry> Modes { get; private set; } = Array.Empty<ModeSolverModeEntry>();
 
     /// <summary>True when a solve can be initiated.</summary>
-    public bool CanSolve => !IsSolving;
+    public bool CanSolve => !IsSolving && !_work.IsStopping;
 
     // ── available backend names for ComboBox ─────────────────────────────────
     /// <summary>Backend names exposed to the ComboBox.</summary>
@@ -100,20 +111,26 @@ public partial class ModeSolverViewModel : ObservableObject
     /// </summary>
     public ModeSolverViewModel(
         IModeSolverService service,
-        CAP_Core.Solvers.ModeProbe.CrossSectionDefaultsStore? defaultsStore = null)
+        CAP_Core.Solvers.ModeProbe.CrossSectionDefaultsStore? defaultsStore = null,
+        ApplicationWorkCoordinator? applicationWork = null)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _defaultsStore = defaultsStore;
+        _work.RegisterWith(applicationWork, StopAsync);
     }
 
     // ── commands ─────────────────────────────────────────────────────────────
 
     /// <summary>Runs the mode solver with the current cross-section inputs.</summary>
     [RelayCommand(CanExecute = nameof(CanSolve))]
-    private async Task Solve()
+    private Task Solve() => _work.RunAsync(SolveCoreAsync);
+
+    private async Task SolveCoreAsync(CancellationToken stopping)
     {
         _cts?.Cancel();
-        _cts = new CancellationTokenSource();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stopping);
+        _cts = cancellation;
+        var token = cancellation.Token;
 
         IsSolving   = true;
         HasResult   = false;
@@ -127,12 +144,16 @@ public partial class ModeSolverViewModel : ObservableObject
             // Remember the manual entry so the canvas mode probe can fall back to it
             // when the active PDK carries no geometry/material data (issue #691).
             _defaultsStore?.RecordManualEntry(Width, Height, SlabHeight, CoreIndex, CladIndex);
-            var result  = await _service.SolveAsync(request, _cts.Token);
+            var result  = await _service.SolveAsync(request, token);
+            _work.ThrowIfStopping();
+            token.ThrowIfCancellationRequested();
 
             if (!result.Success && EnsureBackendAsync != null
                 && !string.IsNullOrWhiteSpace(result.MissingBackend))
             {
-                var retried = await InstallBackendAndRetry(result, request, _cts.Token);
+                var retried = await InstallBackendAndRetry(result, request, token);
+                _work.ThrowIfStopping();
+                token.ThrowIfCancellationRequested();
                 if (retried == null) return; // install handled the status itself; don't overwrite
                 result = retried;
             }
@@ -167,6 +188,7 @@ public partial class ModeSolverViewModel : ObservableObject
         }
         finally
         {
+            if (ReferenceEquals(_cts, cancellation)) _cts = null;
             IsSolving = false;
         }
     }
@@ -181,10 +203,12 @@ public partial class ModeSolverViewModel : ObservableObject
     private async Task<ModeSolverResult?> InstallBackendAndRetry(
         ModeSolverResult failure, ModeSolverRequest request, CancellationToken ct)
     {
-        var progress = new Progress<string>(m => StatusText = m);
+        var progress = new Progress<string>(m => { if (!ct.IsCancellationRequested && !_work.IsStopping) StatusText = m; });
         StatusText = string.Format(
             LocalizationService.Instance.Translate("Solver.Installing"), failure.MissingBackend);
         var installed = await EnsureBackendAsync!(failure.MissingBackend!, progress, ct);
+        _work.ThrowIfStopping();
+        ct.ThrowIfCancellationRequested();
         if (!installed)
         {
             StatusText = string.Format(
@@ -194,6 +218,8 @@ public partial class ModeSolverViewModel : ObservableObject
 
         StatusText = LocalizationService.Instance.Translate("Solver.BackendInstalledRetrying");
         var retry = await _service.SolveAsync(request, ct);
+        _work.ThrowIfStopping();
+        ct.ThrowIfCancellationRequested();
         if (!retry.Success && retry.MissingBackend == failure.MissingBackend)
         {
             StatusText = string.Format(

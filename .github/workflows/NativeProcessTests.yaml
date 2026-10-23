@@ -1,0 +1,132 @@
+name: Native process lifetimes
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/NativeProcessTests.yaml'
+      - 'Connect-A-Pic-Core/Export/**'
+      - 'CAP.Avalonia/Services/Solvers/**'
+      - 'CAP-DataAccess/Persistence/**'
+      - 'UnitTests/Persistence/**'
+      - 'UnitTests/Solvers/**'
+      - '**/*.csproj'
+      - 'Directory.Build.*'
+      - 'global.json'
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-process-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  native-process:
+    name: Native process (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # Official runner architecture table:
+        # https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+        # Each job executes tests on that architecture; no cross-publish substitute.
+        include:
+          - runner: ubuntu-24.04
+            kernel-arch: x86_64
+            dotnet-arch: x64
+          - runner: macos-15
+            kernel-arch: arm64
+            dotnet-arch: arm64
+          - runner: macos-15-intel
+            kernel-arch: x86_64
+            dotnet-arch: x64
+    defaults:
+      run:
+        shell: bash
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_NOLOGO: true
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-python@v5
+        id: python
+        with:
+          python-version: '3.11'
+
+      - name: Verify native runtime architecture
+        env:
+          EXPECTED_KERNEL_ARCH: ${{ matrix.kernel-arch }}
+          EXPECTED_DOTNET_ARCH: ${{ matrix.dotnet-arch }}
+        run: |
+          set -euo pipefail
+          mkdir -p UnitTests/TestResults
+          test "$(uname -m)" = "$EXPECTED_KERNEL_ARCH"
+          dotnet --info | tee UnitTests/TestResults/runtime.txt
+          python - <<'PY'
+          import os, pathlib, platform, re
+          assert platform.machine() == os.environ['EXPECTED_KERNEL_ARCH'], platform.machine()
+          info = pathlib.Path('UnitTests/TestResults/runtime.txt').read_text()
+          architectures = re.findall(r'^\s*Architecture:\s*(\S+)', info, re.MULTILINE)
+          assert architectures and set(architectures) == {os.environ['EXPECTED_DOTNET_ARCH']}, architectures
+          PY
+
+      - name: Build native test host
+        run: dotnet build UnitTests/UnitTests.csproj
+
+      - name: Exercise real child processes and descendant cleanup
+        env:
+          LUNIMA_TEST_PYTHON3: ${{ steps.python.outputs.python-path }}
+          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests
+        run: |
+          set -euo pipefail
+          dotnet test UnitTests/UnitTests.csproj --no-build --filter "$PROCESS_FILTER" \
+            --blame-hang --blame-hang-timeout 2m --blame-hang-dump-type none \
+            --results-directory UnitTests/TestResults \
+            --logger 'trx;LogFileName=native-process.trx' \
+            --logger 'console;verbosity=normal' \
+            2>&1 | tee UnitTests/TestResults/native-process.log
+
+      - name: Exercise atomic native document saves
+        run: |
+          set -euo pipefail
+          dotnet test UnitTests/UnitTests.csproj --no-build \
+            --filter 'FullyQualifiedName~AtomicFileWriterTests|FullyQualifiedName~NativeDesignFileStoreTests' \
+            --results-directory UnitTests/TestResults \
+            --logger 'trx;LogFileName=native-save.trx' \
+            --logger 'console;verbosity=normal' \
+            2>&1 | tee UnitTests/TestResults/native-save.log
+
+      - name: Require execution without skipped tests
+        if: always()
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+          results = []
+          for name in ('native-process', 'native-save'):
+              root = ET.parse(f'UnitTests/TestResults/{name}.trx').getroot()
+              batch = root.findall('.//t:UnitTestResult', ns)
+              assert batch, f'The {name} filter did not execute any tests'
+              results.extend(batch)
+          unsuccessful = [(r.attrib['testName'], r.attrib['outcome']) for r in results
+                          if r.attrib['outcome'] != 'Passed']
+          assert not unsuccessful, unsuccessful
+          print(f'All {len(results)} native infrastructure tests executed and passed')
+          PY
+
+      - name: Upload native execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-process-${{ matrix.runner }}
+          path: UnitTests/TestResults/
+          if-no-files-found: warn
+          retention-days: 7

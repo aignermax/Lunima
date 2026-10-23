@@ -1,8 +1,7 @@
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services;
-using CAP.Avalonia.Services.AgentBridge.Hosting;
-using CAP.Avalonia.Services.AgentBridge.Registration;
+using CAP.Avalonia.Services.AgentBridge.Contracts;
 using CAP.Avalonia.Services.Localization;
-using ProcessLaunchFactory = CAP_Core.Export.ProcessLaunchFactory;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -21,9 +20,9 @@ public partial class AgentBridgeSettingsViewModel : ObservableObject, IDisposabl
     /// <summary>Highest TCP port.</summary>
     public const int MaxPort = 65535;
 
-    private readonly UserPreferencesService _preferences;
-    private readonly AgentBridgeHost _host;
-    private readonly ClaudeCodeConnector _connector;
+    private readonly IAgentBridgePreferences _preferences;
+    private readonly IAgentBridgeControl _host;
+    private readonly IAgentConnection _connector;
 
     [ObservableProperty] private bool _isEnabled;
     [ObservableProperty] private double _port;
@@ -41,15 +40,13 @@ public partial class AgentBridgeSettingsViewModel : ObservableObject, IDisposabl
     /// <summary>Creates the view-model and subscribes to server status changes.</summary>
     /// <param name="preferences">Persisted bridge settings.</param>
     /// <param name="host">The bridge server lifecycle.</param>
-    /// <param name="connector">The one-click Claude Code registration; a default one using
-    /// <see cref="ProcessLaunchFactory.CreateDefault"/> when null.</param>
+    /// <param name="connector">The configured client registration capability.</param>
     public AgentBridgeSettingsViewModel(
-        UserPreferencesService preferences, AgentBridgeHost host, ClaudeCodeConnector? connector = null)
+        IAgentBridgePreferences preferences, IAgentBridgeControl host, IAgentConnection connector)
     {
         _preferences = preferences;
         _host = host;
-        _connector = connector
-            ?? new ClaudeCodeConnector(preferences, host, new ClaudeCodeRegistrar(ProcessLaunchFactory.CreateDefault()));
+        _connector = connector;
         _isEnabled = preferences.GetAgentBridgeEnabled();
         _port = preferences.GetAgentBridgePort();
         _requireToken = preferences.GetAgentBridgeRequireToken();
@@ -60,10 +57,10 @@ public partial class AgentBridgeSettingsViewModel : ObservableObject, IDisposabl
 
     /// <summary>The command that registers this bridge with Claude Code (header only when a token is required).</summary>
     public string ConnectCommandText =>
-        AgentBridgeHost.ClaudeCodeConnectCommand(SelectedPort, RequireToken ? Token : null);
+        AgentBridgeAddress.ConnectCommand(SelectedPort, RequireToken ? Token : null);
 
     /// <summary>The MCP endpoint URL for the configured port.</summary>
-    public string EndpointUrl => AgentBridgeHost.EndpointUrl(SelectedPort);
+    public string EndpointUrl => AgentBridgeAddress.EndpointUrl(SelectedPort);
 
     private int SelectedPort => (int)Math.Clamp(Math.Round(Port), MinPort, MaxPort);
 
@@ -176,7 +173,7 @@ public partial class AgentBridgeSettingsViewModel : ObservableObject, IDisposabl
         IsListening = _host.IsRunning;
         if (_host.IsRunning)
             StatusText = string.Format(Translate("Settings.AgentBridge.StatusListening"),
-                AgentBridgeHost.EndpointUrl(_host.Port));
+                AgentBridgeAddress.EndpointUrl(_host.Port));
         else if (IsEnabled && _host.LastError != null)
             StatusText = string.Format(Translate("Settings.AgentBridge.StatusFailed"),
                 SelectedPort, _host.LastError);

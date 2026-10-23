@@ -77,7 +77,7 @@ public class DieAssemblyExportTests
         await File.WriteAllTextAsync(script, new SimpleNazcaExporter().Export(canvas));
         try
         {
-            var viewModel = new CAP.Avalonia.ViewModels.Export.GdsExportViewModel(service) { GenerateGdsEnabled = true };
+            var viewModel = new CAP.Avalonia.ViewModels.Export.GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService()) { GenerateGdsEnabled = true };
             var result = await viewModel.ExportScriptToGdsAsync(script);
 
             result.Success.ShouldBeTrue(result.ErrorMessage);

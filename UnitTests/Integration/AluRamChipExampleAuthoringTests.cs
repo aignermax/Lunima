@@ -214,13 +214,13 @@ public class AluRamChipExampleAuthoringTests
     /// <summary>Writes the merged design through the real save command (byte-for-byte product output).</summary>
     internal static async Task SaveThroughRealPath(DesignCanvasViewModel canvas, string examplePath)
     {
-        var saveOps = new FileOperationsViewModel(
+        var saveOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates()),
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: new ErrorConsoleService());

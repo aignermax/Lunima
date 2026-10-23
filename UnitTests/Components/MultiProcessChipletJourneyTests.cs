@@ -295,13 +295,13 @@ public partial class MultiProcessChipletJourneyTests : IDisposable
         DesignCanvasViewModel canvas, List<ComponentTemplate> templates)
     {
         var library = new ObservableCollection<ComponentTemplate>(templates);
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             library,
-            new GdsExportViewModel(new CAP_Core.Export.GdsExportService()),
+            new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(
                 new CAP_Core.Export.PhotonTorchExporter(), canvas),
             null!,

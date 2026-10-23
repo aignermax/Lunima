@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CAP_Core.Export.Contracts;
 
 namespace CAP_Core.Export.PythonEnvironmentManager;
 
@@ -8,7 +9,7 @@ namespace CAP_Core.Export.PythonEnvironmentManager;
 /// The active environment's interpreter path can be forwarded to consumers via
 /// <see cref="OnActiveEnvironmentChanged"/>.
 /// </summary>
-public class PythonEnvironmentRegistry
+public class PythonEnvironmentRegistry : IPythonEnvironmentRegistry
 {
     private static readonly string DefaultRegistryFilePath = Path.Combine(
         Helpers.AppDataFolders.LocalApplicationData,

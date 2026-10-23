@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -172,8 +173,8 @@ public class GdsFactoryExportViewModelTests
     /// auto-install path without a real Python.</summary>
     private sealed class StubMissingGdsFactoryExportService : GdsExportService
     {
-        public override Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
-            Task.FromResult(new ExportResult
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
+            Task.FromResult(new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,
@@ -186,8 +187,8 @@ public class GdsFactoryExportViewModelTests
     /// mixed-process tests stay deterministic and offline.</summary>
     private sealed class StubSuccessExportService : GdsExportService
     {
-        public override Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
-            Task.FromResult(new ExportResult { ScriptPath = scriptPath, Success = true });
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
+            Task.FromResult(new GdsExportResult { ScriptPath = scriptPath, Success = true });
     }
 
     private static DesignCanvasViewModel MixedProcessCanvas()

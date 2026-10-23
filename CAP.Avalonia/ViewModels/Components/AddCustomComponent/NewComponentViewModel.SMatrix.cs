@@ -31,28 +31,32 @@ public partial class NewComponentViewModel
     }
 
     [RelayCommand]
-    private async Task LoadSMatrixFromFile()
+    private Task LoadSMatrixFromFile() => _work.RunAsync(LoadSMatrixFromFileCoreAsync);
+
+    private async Task LoadSMatrixFromFileCoreAsync(CancellationToken stop)
     {
         if (IsBusy || PickSMatrixFile is null) return;
-        var path = await PickSMatrixFile();
-        if (path is null) return;
-
-        var ext = Path.GetExtension(path).ToLowerInvariant();
-        var importer = _sMatrixImporters.FirstOrDefault(i => i.SupportedExtensions.Contains(ext));
-        if (importer is null)
-        {
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("NewComp.UnsupportedSMatrixFileType"), ext);
-            return;
-        }
-
         IsBusy = true;
         try
         {
-            if (!await EnsurePreviewAsync() || _lastPreview is not { Success: true } preview)
+            var path = await PickSMatrixFile();
+            _work.ThrowIfStopping();
+            stop.ThrowIfCancellationRequested();
+            if (path is null) return;
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            var importer = _sMatrixImporters.FirstOrDefault(i => i.SupportedExtensions.Contains(ext));
+            if (importer is null)
+            {
+                StatusText = string.Format(
+                    LocalizationService.Instance.Translate("NewComp.UnsupportedSMatrixFileType"), ext);
+                return;
+            }
+            if (!await EnsurePreviewAsync(stop) || _lastPreview is not { Success: true } preview)
                 return;
 
             var imported = await importer.ImportAsync(path);
+            _work.ThrowIfStopping();
+            stop.ThrowIfCancellationRequested();
             var resolved = ReconcilePorts(imported, preview.Pins.Select(p => p.Name).ToList());
             if (resolved is null) return;
 
@@ -67,8 +71,10 @@ public partial class NewComponentViewModel
                 resolved.PortCount, resolved.SMatricesByWavelengthNm.Count,
                 Path.GetFileName(path), remapNote, SaveButtonLabel);
         }
+        catch (OperationCanceledException) when (_work.IsStopping || stop.IsCancellationRequested) { }
         catch (Exception ex)
         {
+            if (_work.IsStopping || stop.IsCancellationRequested) return;
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("NewComp.SMatrixImportFailed"), ex.Message);
         }

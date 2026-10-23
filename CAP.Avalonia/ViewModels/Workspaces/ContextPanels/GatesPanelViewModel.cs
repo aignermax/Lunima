@@ -15,7 +15,7 @@ namespace CAP.Avalonia.ViewModels.Workspaces.ContextPanels;
 /// drag-in / click-to-place templates, the shipped starter gate examples as "open example"
 /// entries, and "Make gate from selection". The raw component library stays one click away.
 /// </summary>
-public partial class GatesPanelViewModel : ObservableObject
+public partial class GatesPanelViewModel : ObservableObject, IDisposable
 {
     /// <summary>File names of the shipped starter gate examples, in ladder order.</summary>
     public static readonly IReadOnlyList<string> GateExampleFiles =
@@ -61,10 +61,22 @@ public partial class GatesPanelViewModel : ObservableObject
         _examples = examples ?? throw new ArgumentNullException(nameof(examples));
         _library.UserGroups.CollectionChanged += OnLibraryChanged;
         _library.PdkGroups.CollectionChanged += OnLibraryChanged;
-        _examples.CollectionChanged += (_, _) => RefreshExamples();
+        _examples.CollectionChanged += ExamplesChanged;
         RefreshSavedGates();
         RefreshExamples();
     }
+
+    public void Dispose()
+    {
+        _library.UserGroups.CollectionChanged -= OnLibraryChanged;
+        _library.PdkGroups.CollectionChanged -= OnLibraryChanged;
+        _examples.CollectionChanged -= ExamplesChanged;
+        OpenExampleRequested = null;
+        MakeGateRequested = null;
+        ShowLibraryRequested = null;
+    }
+
+    private void ExamplesChanged(object? sender, NotifyCollectionChangedEventArgs args) => RefreshExamples();
 
     /// <summary>
     /// True when <paramref name="template"/> is a gate: its group, or a group nested in it,

@@ -92,13 +92,13 @@ public class LogicAcrossTwoChipletsExampleAuthoringTests
         }
 
         var examplePath = Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), ExampleFileName);
-        var fileOps = new FileOperationsViewModel(
+        var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             design.Canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(templates),
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), design.Canvas),
             null!,
             errorConsole: new ErrorConsoleService());

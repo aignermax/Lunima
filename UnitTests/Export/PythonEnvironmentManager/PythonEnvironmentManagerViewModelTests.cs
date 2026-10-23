@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 using CAP_Core.Export;
 using CAP_Core.Export.PythonEnvironmentManager;
@@ -18,10 +19,7 @@ public class PythonEnvironmentManagerViewModelTests : IDisposable
     private PythonEnvironmentRegistry CreateRegistry() => new(_tempRegistryFile);
 
     private static PythonEnvironmentManagerViewModel CreateViewModel(PythonEnvironmentRegistry registry) =>
-        new(registry,
-            new UvBootstrapper(),
-            new NazcaPackageInstaller(),
-            new EnvironmentHealthChecker(new PythonDiscoveryService()));
+        PythonSetupTestServices.Create(registry);
 
     [Fact]
     public async Task CreateAndInstall_InvalidPythonVersion_IsRejectedWithoutSideEffects()
@@ -157,7 +155,7 @@ public class PythonEnvironmentManagerViewModelTests : IDisposable
         registry.OnActiveEnvironmentChanged = p => pushedPath = p;
 
         var vm = CreateViewModel(registry);
-        var install = new PythonDiscoveryService.PythonInstallation
+        var install = new PythonInstallation
         {
             Path = @"/usr/bin/python3.12", Source = "System",
             PythonVersion = "3.12.0", NazcaVersion = "0.6.1",

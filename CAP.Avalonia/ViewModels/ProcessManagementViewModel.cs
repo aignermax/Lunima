@@ -26,7 +26,7 @@ public partial class ProcessManagementViewModel : ObservableObject
 {
     private readonly IFileDialogService _fileDialog;
     private readonly IReadOnlyList<IProcessImporter> _importers;
-    private readonly PdkJsonSaver _pdkSaver;
+    private readonly IPdkWriter? _pdkSaver;
 
     /// <summary>Member PDK drafts of the active process, captured on open, used to persist edits.</summary>
     private IReadOnlyList<PdkDraft> _memberDrafts = new List<PdkDraft>();
@@ -100,25 +100,21 @@ public partial class ProcessManagementViewModel : ObservableObject
     /// <summary>Editable materials.</summary>
     public ObservableCollection<ProcessMaterial> Materials { get; } = new();
 
-    /// <summary>Initialises the ViewModel with the default importer set.</summary>
-    public ProcessManagementViewModel(IFileDialogService fileDialog)
-        : this(fileDialog, new IProcessImporter[]
-        {
-            new UpdkYamlProcessImporter(),
-            new NazcaCsvProcessImporter(),
-        })
+    /// <summary>Creates an in-memory editor without import or persistence adapters.</summary>
+    public ProcessManagementViewModel(IFileDialogService fileDialog, IUserPdkLibrary? userPdkStore = null)
+        : this(fileDialog, Array.Empty<IProcessImporter>(), userPdkStore: userPdkStore)
     {
     }
 
-    /// <summary>Initialises the ViewModel with a specific importer set (tests).</summary>
+    /// <summary>Creates an editor with explicitly composed import and persistence adapters.</summary>
     public ProcessManagementViewModel(
         IFileDialogService fileDialog, IReadOnlyList<IProcessImporter> importers,
-        PdkJsonSaver? pdkSaver = null, UserPdkStore? userPdkStore = null)
+        IPdkWriter? pdkSaver = null, IUserPdkLibrary? userPdkStore = null)
     {
         _fileDialog = fileDialog;
         _importers = importers;
-        _pdkSaver = pdkSaver ?? new PdkJsonSaver();
-        _userPdkStore = userPdkStore ?? UserPdkStore.CreateDefault();
+        _pdkSaver = pdkSaver;
+        _userPdkStore = userPdkStore;
     }
 
     /// <summary>Populates the editable collections from a process definition.</summary>
@@ -440,6 +436,7 @@ public partial class ProcessManagementViewModel : ObservableObject
 
         try
         {
+            var writer = _pdkSaver ?? throw new InvalidOperationException("PDK saving requires a configured writer.");
             // Preserve the fingerprint-bearing fields (thickness, foundry, angles); only the
             // user-editable stack/xsections/materials change, and update the in-memory draft so
             // the next export uses the new metal cross-section without a reload.
@@ -455,7 +452,7 @@ public partial class ProcessManagementViewModel : ObservableObject
             process.WaveguideCompanionLayers = CompanionLayersForSave();
             draft.Process = process;
 
-            _pdkSaver.SaveToFile(draft, path);
+            writer.SaveToFile(draft, path);
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("ProcessMgmt.Status.SavedToPdk"), Path.GetFileName(path));
             ProcessSaved?.Invoke(this, EventArgs.Empty);

@@ -1,3 +1,4 @@
+using CAP_DataAccess.Updates;
 using System.Net;
 using System.Net.Http;
 using CAP.Avalonia.Services;
@@ -76,7 +77,7 @@ public class UpdateCheckerTests
     {
         var release = UpdateChecker.ParseReleaseJson(SampleReleaseJson)!;
 
-        var msiAsset = UpdateChecker.FindMsiAsset(release);
+        var msiAsset = ReleaseAssetPolicy.FindMsiAsset(release);
 
         msiAsset.ShouldNotBeNull();
         msiAsset!.Name.ShouldBe("Lunima-1.5.0.msi");
@@ -94,7 +95,7 @@ public class UpdateCheckerTests
             }
         };
 
-        UpdateChecker.FindMsiAsset(release).ShouldBeNull();
+        ReleaseAssetPolicy.FindMsiAsset(release).ShouldBeNull();
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public class UpdateCheckerTests
     {
         var release = ReleaseWithAllPlatformAssets();
 
-        var asset = UpdateChecker.FindPlatformAsset(release);
+        var asset = ReleaseAssetPolicy.FindPlatformAsset(release);
 
         asset.ShouldNotBeNull();
         if (OperatingSystem.IsWindows())
@@ -122,7 +123,7 @@ public class UpdateCheckerTests
         // the app — presenting as a crash with the update never applied.
         if (OperatingSystem.IsWindows()) return;
 
-        var asset = UpdateChecker.FindPlatformAsset(ReleaseWithAllPlatformAssets());
+        var asset = ReleaseAssetPolicy.FindPlatformAsset(ReleaseWithAllPlatformAssets());
 
         asset.ShouldNotBeNull();
         asset!.Name.EndsWith(".msi").ShouldBeFalse();
@@ -145,7 +146,7 @@ public class UpdateCheckerTests
     [Fact]
     public void FindAutoUpdateAsset_PicksCurrentOsAutoUpdateArtifact()
     {
-        var asset = UpdateChecker.FindAutoUpdateAsset(ReleaseWithAutoUpdateAssets());
+        var asset = ReleaseAssetPolicy.FindAutoUpdateAsset(ReleaseWithAutoUpdateAssets());
 
         if (OperatingSystem.IsWindows())
         {
@@ -170,7 +171,7 @@ public class UpdateCheckerTests
     {
         if (!OperatingSystem.IsMacOS()) return;
 
-        var asset = UpdateChecker.FindAutoUpdateAsset(ReleaseWithAutoUpdateAssets());
+        var asset = ReleaseAssetPolicy.FindAutoUpdateAsset(ReleaseWithAutoUpdateAssets());
 
         asset.ShouldNotBeNull();
         asset!.Name.ShouldContain("osx");   // the macOS .app zip, never the Windows portable .zip
@@ -200,7 +201,7 @@ public class UpdateCheckerTests
             Assets = new List<GitHubReleaseAsset>()
         };
 
-        UpdateChecker.FindPlatformAsset(release).ShouldBeNull();
+        ReleaseAssetPolicy.FindPlatformAsset(release).ShouldBeNull();
     }
 
     [Fact]
@@ -219,9 +220,9 @@ public class UpdateCheckerTests
         };
 
         if (OperatingSystem.IsWindows())
-            UpdateChecker.FindPlatformAsset(release).ShouldNotBeNull();
+            ReleaseAssetPolicy.FindPlatformAsset(release).ShouldNotBeNull();
         else
-            UpdateChecker.FindPlatformAsset(release).ShouldBeNull();
+            ReleaseAssetPolicy.FindPlatformAsset(release).ShouldBeNull();
     }
 
     [Theory]
@@ -235,7 +236,7 @@ public class UpdateCheckerTests
         var release = new GitHubReleaseInfo { TagName = releaseTag };
         var currentVersion = SemanticVersion.Parse(currentVersionStr);
 
-        UpdateChecker.IsNewerThan(release, currentVersion).ShouldBe(expectedNewer);
+        ReleaseAssetPolicy.IsNewerThan(release, currentVersion).ShouldBe(expectedNewer);
     }
 
     [Fact]
@@ -244,7 +245,7 @@ public class UpdateCheckerTests
         var release = new GitHubReleaseInfo { TagName = "not-a-version" };
         var currentVersion = new SemanticVersion(1, 0, 0);
 
-        UpdateChecker.IsNewerThan(release, currentVersion).ShouldBeFalse();
+        ReleaseAssetPolicy.IsNewerThan(release, currentVersion).ShouldBeFalse();
     }
 
     [Fact]

@@ -25,4 +25,8 @@ public class RunSimulationTool : IAiTool
     /// <inheritdoc/>
     public Task<string> ExecuteAsync(JsonElement input) =>
         _gridService.RunSimulationAsync();
+
+    /// <inheritdoc/>
+    public Task<string> ExecuteAsync(JsonElement input, CAP_Contracts.ICommitPermission permission,
+        CancellationToken cancellationToken) => _gridService.RunSimulationAsync(cancellationToken, permission);
 }

@@ -49,6 +49,15 @@ public class FrozenWaveguidePath : ICloneable
     private AsDrawnGeometry? _asDrawnGeometry;
     private RouteShapeSignature? _asDrawnRoute;
 
+    internal (AsDrawnGeometry? Geometry, RouteShapeSignature? Signature) CaptureImportedGeometryState() =>
+        (_asDrawnGeometry, _asDrawnRoute);
+
+    internal void RestoreImportedGeometryState(AsDrawnGeometry? geometry, RouteShapeSignature? signature)
+    {
+        _asDrawnGeometry = geometry;
+        _asDrawnRoute = signature;
+    }
+
     /// <summary>
     /// The exact polygons this geometry was drawn with in an imported layout (absolute
     /// canvas coordinates), or null. Rendered and exported verbatim instead of the

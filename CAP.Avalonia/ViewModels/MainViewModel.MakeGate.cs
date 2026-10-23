@@ -20,10 +20,23 @@ public partial class MainViewModel
         makeGate.ExecuteCommand = CommandManager.ExecuteCommand;
         makeGate.SaveToLibraryRequested = SaveGateToLibrary;
         makeGate.OpenLogicRequested = OpenLogicTab;
-        makeGate.GateSaved += (_, _) => RightPanel.Logic.RefreshGateCandidates();
-        makeGate.GateDefinitionChanged += (_, _) => GateView.RequestRebuild();
+        makeGate.GateSaved += SavedGateChanged;
+        makeGate.GateDefinitionChanged += GateDefinitionChanged;
         RightPanel.TruthTable.OpenLogicRequested = OpenLogicTab;
         RightPanel.Logic.MakeGateRequested = SelectGroupAndOpenMakeGate;
+    }
+
+    private void SavedGateChanged(object? sender, EventArgs args) => RightPanel.Logic.RefreshGateCandidates();
+    private void GateDefinitionChanged(object? sender, EventArgs args) => GateView.RequestRebuild();
+
+    private void UnwireMakeGate()
+    {
+        RightPanel.MakeGate.GateSaved -= SavedGateChanged;
+        RightPanel.MakeGate.GateDefinitionChanged -= GateDefinitionChanged;
+        RightPanel.MakeGate.SaveToLibraryRequested = null;
+        RightPanel.MakeGate.OpenLogicRequested = null;
+        RightPanel.TruthTable.OpenLogicRequested = null;
+        RightPanel.Logic.MakeGateRequested = null;
     }
 
     /// <summary>
@@ -82,22 +95,4 @@ public partial class MainViewModel
         return true;
     }
 
-    /// <summary>
-    /// Starts the "Your first gate" tour on the shipped gate-kit example. The example
-    /// opens as an untitled copy; when the user cancels the unsaved-changes prompt (or
-    /// the example is not installed) the tour does not start.
-    /// </summary>
-    private async Task StartFirstGateTourAsync()
-    {
-        var navigation = _learningNavigationVersion;
-        var kitPath = Home.Examples
-            .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
-                == Onboarding.FirstStepsTutorial.FirstGateTourViewModel.GateKitExampleFileName)
-            ?.FilePath;
-        if (kitPath == null || !await FileOperations.OpenDesignAsCopyAsync(kitPath, () => navigation == _learningNavigationVersion))
-            return;
-        if (navigation != _learningNavigationVersion) return;
-
-        FirstGateTour.Start();
-    }
 }

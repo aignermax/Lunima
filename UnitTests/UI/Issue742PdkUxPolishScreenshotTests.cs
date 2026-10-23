@@ -82,7 +82,7 @@ public class Issue742PdkUxPolishScreenshotTests
         });
 
         var extractor = new ComponentGeometryExtractor(
-            Mock.Of<IComponentPreviewRenderer>(), Mock.Of<IComponentPreviewRenderer>());
+            Mock.Of<IPdkGeometryRenderer>(), Mock.Of<IPdkGeometryRenderer>());
         var vm = new NewComponentViewModel(extractor, Mock.Of<IFdtdSMatrixService>(), store,
             new List<ProcessDefinition> { process });
         vm.LoadForEdit(new ComponentTemplate

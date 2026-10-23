@@ -20,6 +20,10 @@ public partial class RunShortcutHintViewModel : ObservableObject
     private readonly Dictionary<string, int> _showCounts = new();
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
     private CancellationTokenSource? _hideCts;
+    private readonly Services.Lifetime.ShellWorkScope _work = new();
+
+    /// <summary>Retires hint admission and drains its scheduled hide.</summary>
+    public Task StopAsync() => _work.StopAsync();
 
     /// <summary>The hint text, e.g. "L — Design checks".</summary>
     [ObservableProperty]
@@ -46,6 +50,7 @@ public partial class RunShortcutHintViewModel : ObservableObject
     /// <returns>True when the hint was shown.</returns>
     public bool TryShow(string actionKey)
     {
+        if (_work.IsStopping) return false;
         ArgumentException.ThrowIfNullOrEmpty(actionKey);
         var count = _showCounts.GetValueOrDefault(actionKey);
         if (count >= MaxShowsPerAction)
@@ -55,8 +60,13 @@ public partial class RunShortcutHintViewModel : ObservableObject
         Text = string.Format(loc.Translate("Workspace.ShortcutHint"), loc.Translate(actionKey));
         IsVisible = true;
         _hideCts?.Cancel();
-        _hideCts = new CancellationTokenSource();
-        PendingHide = HideLaterAsync(_hideCts.Token);
+        PendingHide = _work.RunAsync(async stop =>
+        {
+            using var source = CancellationTokenSource.CreateLinkedTokenSource(stop);
+            _hideCts = source;
+            try { await HideLaterAsync(source.Token); }
+            finally { if (ReferenceEquals(_hideCts, source)) _hideCts = null; }
+        });
         return true;
     }
 
@@ -65,6 +75,8 @@ public partial class RunShortcutHintViewModel : ObservableObject
         try
         {
             await _delay(VisibleDuration, token);
+            _work.ThrowIfStopping();
+            token.ThrowIfCancellationRequested();
             IsVisible = false;
         }
         catch (OperationCanceledException)

@@ -24,7 +24,7 @@ public class GdsExportIntegrationTests
     public async Task ViewModel_CheckEnvironment_UpdatesStatusProperties()
     {
         // Arrange
-        var viewModel = new GdsExportViewModel(new InstantEnvironmentGdsExportService());
+        var viewModel = new GdsExportViewModel(new InstantEnvironmentGdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService());
 
         // Act
         await viewModel.CheckEnvironmentAsync();
@@ -44,7 +44,7 @@ public class GdsExportIntegrationTests
     {
         // Arrange — both environment states, deterministically (the real probe is
         // covered by GdsExportServiceTests and the end-to-end test below).
-        var viewModel = new GdsExportViewModel(new InstantEnvironmentGdsExportService(ready));
+        var viewModel = new GdsExportViewModel(new InstantEnvironmentGdsExportService(ready), new global::CAP_Core.Export.PythonDiscoveryService());
 
         // Act
         await viewModel.CheckEnvironmentAsync();
@@ -71,7 +71,7 @@ public class GdsExportIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
         viewModel.GenerateGdsEnabled = false;
 
         var tempScript = Path.GetTempFileName();
@@ -100,7 +100,7 @@ public class GdsExportIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
         viewModel.GenerateGdsEnabled = true;
 
         var tempScript = Path.GetTempFileName();
@@ -141,7 +141,7 @@ public class GdsExportIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
 
         var tempScript = Path.GetTempFileName();
         File.WriteAllText(tempScript, "# Test");
@@ -168,7 +168,7 @@ public class GdsExportIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
 
         var tempScript = Path.GetTempFileName();
         File.WriteAllText(tempScript, "# Test script\nimport nazca as nd\nnd.export_gds()");
@@ -218,7 +218,7 @@ public class GdsExportIntegrationTests
     {
         // Arrange & Act
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
 
         // Assert
         viewModel.PythonAvailable.ShouldBeFalse();

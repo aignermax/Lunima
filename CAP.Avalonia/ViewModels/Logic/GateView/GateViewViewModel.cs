@@ -23,6 +23,21 @@ public partial class GateViewViewModel : ObservableObject
     private readonly DesignCanvasViewModel _canvas;
     private readonly WorkspaceViewModel _workspace;
 
+    /// <summary>Retires graph subscriptions and awaits outstanding graph extraction.</summary>
+    public Task StopAsync()
+    {
+        if (!_work.IsStopping)
+        {
+            _workspace.PropertyChanged -= OnWorkspaceChanged;
+            _canvas.Components.CollectionChanged -= DesignCollectionChanged;
+            _canvas.Connections.CollectionChanged -= DesignCollectionChanged;
+            Levels.Changed -= RaiseChanged;
+            Levels.Dispose();
+            ShowInLayoutRequested = null;
+        }
+        return _work.StopAsync();
+    }
+
     /// <summary>True while the user wants gate symbols in the Logic workspace (reset to true on entering Logic).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsShown), nameof(IsPhysicalShown), nameof(ToggleTip))]
@@ -48,8 +63,8 @@ public partial class GateViewViewModel : ObservableObject
         Levels = new GateNetLevels(canvas.LogicGateStates, networkInputBits);
         Levels.Changed += RaiseChanged;
         _workspace.PropertyChanged += OnWorkspaceChanged;
-        _canvas.Components.CollectionChanged += (_, _) => OnDesignChanged();
-        _canvas.Connections.CollectionChanged += (_, _) => OnDesignChanged();
+        _canvas.Components.CollectionChanged += DesignCollectionChanged;
+        _canvas.Connections.CollectionChanged += DesignCollectionChanged;
     }
 
     /// <summary>Raised whenever the canvas must repaint the gate view (graph, levels, toggle).</summary>
@@ -143,5 +158,6 @@ public partial class GateViewViewModel : ObservableObject
         RaiseChanged();
     }
 
-    private void RaiseChanged() => Changed?.Invoke();
+    private void DesignCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs args) => OnDesignChanged();
+    private void RaiseChanged() { if (!_work.IsStopping) Changed?.Invoke(); }
 }

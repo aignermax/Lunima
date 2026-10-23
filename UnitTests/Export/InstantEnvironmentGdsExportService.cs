@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export;
 
 namespace UnitTests.Export;
@@ -19,7 +20,7 @@ internal sealed class InstantEnvironmentGdsExportService : GdsExportService
     public int ProbeCount { get; private set; }
 
     /// <inheritdoc />
-    protected override Task<PythonEnvironmentInfo> ProbeEnvironmentAsync()
+    protected override Task<PythonEnvironmentInfo> ProbeEnvironmentAsync(CancellationToken cancellationToken = default)
     {
         ProbeCount++;
         bool ready = Ready;

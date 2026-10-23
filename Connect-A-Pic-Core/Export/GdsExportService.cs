@@ -1,3 +1,5 @@
+using CAP_Core.Export.Processes;
+using CAP_Core.Export.Contracts;
 using System.Diagnostics;
 
 namespace CAP_Core.Export;
@@ -6,13 +8,13 @@ namespace CAP_Core.Export;
 /// Core service for GDS export functionality.
 /// Detects Python/Nazca availability and executes Python scripts to generate GDS files.
 /// </summary>
-public class GdsExportService
+public class GdsExportService : IGdsExportSession
 {
     private const string MinimumNazcaVersion = "0.5.0";
     private const string DefaultPythonCommand = "python3";
 
     private readonly ProcessLaunchFactory _launchFactory;
-    private readonly PythonDiscoveryService _pythonDiscovery;
+    private readonly IPythonDiscovery _pythonDiscovery;
     private string? _customPythonPath;
 
     /// <summary>
@@ -27,87 +29,10 @@ public class GdsExportService
     /// </summary>
     /// <param name="launchFactory">Factory used to build process start info.</param>
     /// <param name="pythonDiscovery">Service used to locate a Python interpreter with Nazca.</param>
-    public GdsExportService(ProcessLaunchFactory? launchFactory = null, PythonDiscoveryService? pythonDiscovery = null)
+    public GdsExportService(ProcessLaunchFactory? launchFactory = null, IPythonDiscovery? pythonDiscovery = null)
     {
         _launchFactory   = launchFactory   ?? ProcessLaunchFactory.CreateDefault();
         _pythonDiscovery = pythonDiscovery ?? new PythonDiscoveryService(_launchFactory);
-    }
-
-    /// <summary>
-    /// Result of a GDS export operation.
-    /// </summary>
-    public class ExportResult
-    {
-        /// <summary>
-        /// Path to the exported Python script.
-        /// </summary>
-        public string ScriptPath { get; init; } = string.Empty;
-
-        /// <summary>
-        /// Path to the generated GDS file (null if generation failed or was skipped).
-        /// </summary>
-        public string? GdsPath { get; init; }
-
-        /// <summary>
-        /// Status message describing the export outcome.
-        /// </summary>
-        public string Status { get; init; } = string.Empty;
-
-        /// <summary>
-        /// True if both script and GDS were successfully created.
-        /// </summary>
-        public bool Success { get; init; }
-
-        /// <summary>
-        /// Error message if export failed.
-        /// </summary>
-        public string? ErrorMessage { get; init; }
-    }
-
-    /// <summary>
-    /// Information about Python environment availability.
-    /// </summary>
-    public class PythonEnvironmentInfo
-    {
-        /// <summary>
-        /// True if Python executable was found.
-        /// </summary>
-        public bool PythonAvailable { get; set; }
-
-        /// <summary>
-        /// Python version string (e.g., "3.10.5").
-        /// </summary>
-        public string? PythonVersion { get; set; }
-
-        /// <summary>
-        /// True if Nazca package is installed.
-        /// </summary>
-        public bool NazcaAvailable { get; set; }
-
-        /// <summary>
-        /// Nazca version string (e.g., "0.5.10").
-        /// </summary>
-        public string? NazcaVersion { get; set; }
-
-        /// <summary>
-        /// True if both Python and Nazca are available.
-        /// </summary>
-        public bool IsReady => PythonAvailable && NazcaAvailable;
-
-        /// <summary>
-        /// Descriptive status message for UI display.
-        /// </summary>
-        public string StatusMessage
-        {
-            get
-            {
-                if (!PythonAvailable)
-                    return "Python not found";
-                if (!NazcaAvailable)
-                    return "Nazca not installed";
-                return $"Python {PythonVersion}, Nazca {NazcaVersion}";
-            }
-        }
     }
 
     /// <summary>
@@ -134,9 +59,10 @@ public class GdsExportService
     /// Uses custom Python path if configured, otherwise uses system default.
     /// </summary>
     /// <returns>Environment information including versions.</returns>
-    public async Task<PythonEnvironmentInfo> CheckPythonEnvironmentAsync()
+    public async Task<PythonEnvironmentInfo> CheckPythonEnvironmentAsync(CancellationToken cancellationToken = default)
     {
-        var result = await ProbeEnvironmentAsync();
+        var result = await ProbeEnvironmentAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         _readyEnvironment = result.IsReady ? (_customPythonPath, result) : null;
         return result;
     }
@@ -145,17 +71,17 @@ public class GdsExportService
     /// Probes the configured interpreter: its version, then whether it imports Nazca.
     /// </summary>
     /// <returns>Environment information including versions.</returns>
-    protected virtual async Task<PythonEnvironmentInfo> ProbeEnvironmentAsync()
+    protected virtual async Task<PythonEnvironmentInfo> ProbeEnvironmentAsync(CancellationToken cancellationToken = default)
     {
         var result = new PythonEnvironmentInfo();
 
-        var pythonVersion = await GetPythonVersionAsync();
+        var pythonVersion = await GetPythonVersionAsync(cancellationToken);
         if (!string.IsNullOrEmpty(pythonVersion))
         {
             result.PythonAvailable = true;
             result.PythonVersion = pythonVersion;
 
-            var nazcaVersion = await GetNazcaVersionAsync();
+            var nazcaVersion = await GetNazcaVersionAsync(cancellationToken);
             if (!string.IsNullOrEmpty(nazcaVersion))
             {
                 result.NazcaAvailable = true;
@@ -172,11 +98,11 @@ public class GdsExportService
     /// <param name="scriptPath">Path to the Python script to execute.</param>
     /// <param name="generateGds">If true, attempts to generate GDS from the script.</param>
     /// <returns>Export result with status information.</returns>
-    public virtual async Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
+    public virtual async Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
     {
         if (!File.Exists(scriptPath))
         {
-            return new ExportResult
+            return new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,
@@ -186,7 +112,7 @@ public class GdsExportService
 
         if (!generateGds)
         {
-            return new ExportResult
+            return new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = true,
@@ -199,7 +125,7 @@ public class GdsExportService
             : await CheckPythonEnvironmentAsync();
         if (!envInfo.IsReady)
         {
-            return new ExportResult
+            return new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,
@@ -215,7 +141,7 @@ public class GdsExportService
 
             if (exitCode == 0 && File.Exists(gdsPath))
             {
-                return new ExportResult
+                return new GdsExportResult
                 {
                     ScriptPath = scriptPath,
                     GdsPath = gdsPath,
@@ -225,7 +151,7 @@ public class GdsExportService
             }
 
             var errorMsg = string.IsNullOrWhiteSpace(error) ? output : error;
-            return new ExportResult
+            return new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,
@@ -235,7 +161,7 @@ public class GdsExportService
         }
         catch (Exception ex)
         {
-            return new ExportResult
+            return new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,
@@ -248,12 +174,12 @@ public class GdsExportService
     /// <summary>
     /// Resolves the Python command to use: custom path, then discovery service, then fallback.
     /// </summary>
-    private async Task<string> ResolvePythonCommandAsync()
+    private async Task<string> ResolvePythonCommandAsync(CancellationToken cancellationToken = default)
     {
         if (!string.IsNullOrEmpty(_customPythonPath))
             return _customPythonPath;
 
-        var discovered = await _pythonDiscovery.FindFirstNazcaPythonPathAsync();
+        var discovered = await _pythonDiscovery.FindFirstNazcaPythonPathAsync(cancellationToken);
         if (!string.IsNullOrEmpty(discovered))
             return discovered;
 
@@ -263,76 +189,29 @@ public class GdsExportService
     /// <summary>
     /// Gets the Python version string.
     /// </summary>
-    private async Task<string?> GetPythonVersionAsync()
+    private async Task<string?> GetPythonVersionAsync(CancellationToken cancellationToken)
+    {
+        var output = await ProbeVersionAsync(new[] { "--version" }, TimeSpan.FromSeconds(5), cancellationToken);
+        if (string.IsNullOrWhiteSpace(output)) return null;
+        var parts = output.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? parts[1] : output.Trim();
+    }
+
+    private Task<string?> GetNazcaVersionAsync(CancellationToken cancellationToken) =>
+        ProbeVersionAsync(new[] { "-c", "import nazca; print(nazca.__version__)" }, TimeSpan.FromSeconds(20), cancellationToken);
+
+    private async Task<string?> ProbeVersionAsync(string[] arguments, TimeSpan timeout, CancellationToken cancellationToken)
     {
         try
         {
-            var pythonCmd = await ResolvePythonCommandAsync();
-            var args = new[] { "--version" };
-            if (!_launchFactory.TryBuild(pythonCmd, args, null, null, out var psi, out var launchError))
-                return null;
-
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError  = true;
-            using var process = Process.Start(psi);
-            if (process == null) return null;
-
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask  = process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-            var output = await outputTask;
-            await errorTask;
-
-            if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-            {
-                // Python version output: "Python 3.10.5"
-                var parts = output.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                return parts.Length >= 2 ? parts[1] : output.Trim();
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+            var command = await ResolvePythonCommandAsync(cancellationToken);
+            if (!_launchFactory.TryBuild(command, arguments, null, null, out var startInfo, out _)) return null;
+            var result = await PythonProbeRunner.RunAsync(startInfo, timeout, cancellationToken);
+            return result.ExitCode == 0 && !string.IsNullOrWhiteSpace(result.Output) ? result.Output.Trim() : null;
         }
-        catch
-        {
-            // Python not found
-        }
-
-        return null;
+        catch (Exception) when (!cancellationToken.IsCancellationRequested) { return null; }
     }
-
-    /// <summary>
-    /// Gets the Nazca version string.
-    /// </summary>
-    private async Task<string?> GetNazcaVersionAsync()
-    {
-        try
-        {
-            var pythonCmd  = await ResolvePythonCommandAsync();
-            var checkScript = "import nazca; print(nazca.__version__)";
-            var args = new[] { "-c", checkScript };
-            if (!_launchFactory.TryBuild(pythonCmd, args, null, null, out var psi, out var launchError))
-                return null;
-
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError  = true;
-            using var process = Process.Start(psi);
-            if (process == null) return null;
-
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask  = process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-            var output = await outputTask;
-            await errorTask;
-
-            if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-                return output.Trim();
-        }
-        catch
-        {
-            // Nazca not installed
-        }
-
-        return null;
-    }
-
     /// <summary>
     /// Executes a Python script file.
     /// </summary>

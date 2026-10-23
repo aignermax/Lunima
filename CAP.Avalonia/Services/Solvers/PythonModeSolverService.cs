@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using System.Text.Json;
+using CAP_Core.Export;
 using CAP_Core.Solvers.ModeSolver;
 
 namespace CAP.Avalonia.Services.Solvers;
@@ -18,6 +18,7 @@ public class PythonModeSolverService : IModeSolverService
     private readonly Func<string> _pythonExecutableResolver;
     private readonly string _scriptPath;
     private readonly TimeSpan _timeout;
+    private readonly ProcessLaunchFactory _launchFactory;
 
     /// <summary>
     /// Initializes the service with a lazily-resolved interpreter. The resolver is
@@ -28,19 +29,24 @@ public class PythonModeSolverService : IModeSolverService
     /// <param name="pythonExecutableResolver">Returns the Python 3 executable to use for the next solve.</param>
     /// <param name="scriptPath">Absolute path to <c>mode_solve.py</c>.</param>
     /// <param name="timeout">Optional subprocess timeout.</param>
-    public PythonModeSolverService(Func<string> pythonExecutableResolver, string scriptPath, TimeSpan? timeout = null)
+    /// <param name="launchFactory">Optional platform-aware process configuration factory.</param>
+    public PythonModeSolverService(Func<string> pythonExecutableResolver, string scriptPath,
+        TimeSpan? timeout = null, ProcessLaunchFactory? launchFactory = null)
     {
         _pythonExecutableResolver = pythonExecutableResolver ?? throw new ArgumentNullException(nameof(pythonExecutableResolver));
         _scriptPath = scriptPath ?? throw new ArgumentNullException(nameof(scriptPath));
         _timeout = timeout ?? DefaultTimeout;
+        _launchFactory = launchFactory ?? ProcessLaunchFactory.CreateDefault();
     }
 
     /// <summary>Initializes the service with a fixed interpreter path.</summary>
     /// <param name="pythonExecutable">Path to the Python 3 executable.</param>
     /// <param name="scriptPath">Absolute path to <c>mode_solve.py</c>.</param>
     /// <param name="timeout">Optional subprocess timeout.</param>
-    public PythonModeSolverService(string pythonExecutable, string scriptPath, TimeSpan? timeout = null)
-        : this(Constant(pythonExecutable), scriptPath, timeout)
+    /// <param name="launchFactory">Optional platform-aware process configuration factory.</param>
+    public PythonModeSolverService(string pythonExecutable, string scriptPath,
+        TimeSpan? timeout = null, ProcessLaunchFactory? launchFactory = null)
+        : this(Constant(pythonExecutable), scriptPath, timeout, launchFactory)
     {
     }
 
@@ -61,43 +67,20 @@ public class PythonModeSolverService : IModeSolverService
 
         try
         {
-            using var process = new Process();
-            var si = new ProcessStartInfo
+            if (!_launchFactory.TryBuild(pythonExecutable, new[] { _scriptPath },
+                    null, null, out var startInfo, out var error))
+                return ModeSolverResult.Fail($"Could not start Python '{pythonExecutable}': {error}");
+
+            var run = await SubprocessJsonRunner.RunAsync(startInfo, jsonInput, _timeout, ct);
+            return run.Outcome switch
             {
-                FileName = pythonExecutable,
-                RedirectStandardInput  = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                UseShellExecute  = false,
-                CreateNoWindow   = true,
+                SubprocessJsonRunner.Outcome.StartFailed => ModeSolverResult.Fail(
+                    $"Could not start Python '{pythonExecutable}': {run.StartError}"),
+                SubprocessJsonRunner.Outcome.Cancelled => ModeSolverResult.Fail("Mode solve was cancelled."),
+                SubprocessJsonRunner.Outcome.TimedOut => ModeSolverResult.Fail(
+                    $"Mode solver timed out after {_timeout.TotalSeconds:F0} s."),
+                _ => ParseOutput(run.Stdout, run.Stderr),
             };
-            si.ArgumentList.Add(_scriptPath);
-            process.StartInfo = si;
-
-            process.Start();
-
-            await process.StandardInput.WriteAsync(jsonInput);
-            process.StandardInput.Close();
-
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
-
-            var timeoutTask = Task.Delay(_timeout, ct);
-            var completed   = await Task.WhenAny(Task.WhenAll(stdoutTask, stderrTask), timeoutTask);
-
-            if (completed == timeoutTask || ct.IsCancellationRequested)
-            {
-                TryKill(process);
-                return ct.IsCancellationRequested
-                    ? ModeSolverResult.Fail("Mode solve was cancelled.")
-                    : ModeSolverResult.Fail($"Mode solver timed out after {_timeout.TotalSeconds:F0} s.");
-            }
-
-            await process.WaitForExitAsync(ct);
-            var stdout = await stdoutTask;
-            var stderr = await stderrTask;
-
-            return ParseOutput(stdout, stderr);
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
@@ -224,9 +207,4 @@ public class PythonModeSolverService : IModeSolverService
     private static string Truncate(string s, int max)
         => s.Length <= max ? s : s[..max] + "…";
 
-    private static void TryKill(Process process)
-    {
-        try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-        catch { /* best-effort */ }
-    }
 }

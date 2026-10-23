@@ -129,13 +129,13 @@ public class PinCalibrationMigrationTests
     {
         var canvas = new DesignCanvasViewModel();
         var errorConsole = new ErrorConsoleService();
-        var vm = new FileOperationsViewModel(
+        var vm = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             _library,
-            new GdsExportViewModel(new CAP_Core.Export.GdsExportService()),
+            new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas),
             null!,
             errorConsole: errorConsole);

@@ -1,3 +1,4 @@
+using CAP_DataAccess.Updates;
 using System.IO;
 using System.Net.Http;
 using CAP.Avalonia.Commands;
@@ -49,7 +50,9 @@ public static class MainViewModelTestHelper
         UpdateViewModel? updateViewModel = null,
         GdsPreviewRenderService? previewService = null,
         CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
-        CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null)
+        CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
+        CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore? designFiles = null,
+        GdsExportViewModel? gdsExportViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -71,7 +74,7 @@ public static class MainViewModelTestHelper
         var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager);
 
         var errorConsoleService = new CAP_Core.ErrorConsoleService();
-        var gdsExportVm = new GdsExportViewModel(new GdsExportService(), errorConsoleService);
+        var gdsExportVm = gdsExportViewModel ?? new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService(), errorConsoleService);
         var updateVm = updateViewModel ?? new UpdateViewModel(
             new UpdateChecker(new HttpClient(), "aignermax", "Connect-A-PIC-Pro"),
             new UpdateDownloader(new HttpClient()),
@@ -98,11 +101,14 @@ public static class MainViewModelTestHelper
             errorConsoleService);
 
         return new MainViewModel(
+            designFiles ?? new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             simulationService,
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             commandManager,
+            preferencesService,
+            preferencesService,
             preferencesService,
             new GroupPreviewGenerator(),
             Mock.Of<IInputDialogService>(),
@@ -125,7 +131,9 @@ public static class MainViewModelTestHelper
             previewService ?? new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")),
             registryBrowser,
             gdsImportButton,
-            designScopedGdsComponents: designScope, pythonStartup: pythonStartup, isaPlayground: isaPlayground);
+            designScopedGdsComponents: designScope, pythonStartup: pythonStartup,
+            learningChapters: CAP.Avalonia.ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters.Create(
+                canvas, rightPanel, bottomPanel, commandManager, isaPlayground));
     }
 
     /// <summary>
@@ -146,20 +154,23 @@ public static class MainViewModelTestHelper
         preferencesService ??= new UserPreferencesService(
             Path.Combine(Path.GetTempPath(), $"cap-test-prefs-{Guid.NewGuid()}.json"));
 
+        var isolatedUserPdkRoot = Path.Combine(Path.GetTempPath(), $"cap-test-userpdks-{Guid.NewGuid()}");
         var leftPanel = new LeftPanelViewModel(
             canvas,
             libraryManager,
             pdkLoader,
-            preferencesService,
+            preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
-            registryBrowser: registryBrowser);
+            registryBrowser: registryBrowser,
+            userPdkLibrary: new CAP_DataAccess.Components.AddCustomComponent.UserPdkStore(
+                isolatedUserPdkRoot, new CAP_DataAccess.Components.ComponentDraftMapper.PdkJsonSaver(), pdkLoader));
 
         // Isolate from the developer's real user-PDK folder: the startup reload must scan an
         // empty temp dir, otherwise template counts/status texts become machine-dependent
         // (UiFlowTestHost already isolates this way; CI is green only because its folder is empty).
-        var isolatedUserPdkRoot = Path.Combine(Path.GetTempPath(), $"cap-test-userpdks-{Guid.NewGuid()}");
+
         Directory.CreateDirectory(isolatedUserPdkRoot);
         leftPanel.UserPdkStartupRootOverride = isolatedUserPdkRoot;
 
@@ -191,7 +202,7 @@ public static class MainViewModelTestHelper
             new CompressLayoutViewModel(),
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
-            new PdkConsistencyViewModel(),
+            new PdkConsistencyViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader()),
             new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
             new OnaSweepViewModel(),
             new CAP.Avalonia.ViewModels.Export.Netlist.NetlistViewModel(),

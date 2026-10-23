@@ -26,7 +26,7 @@ namespace UnitTests.UI.Flows;
 /// click-through user-story tests: real views, real bindings, simulated mouse/keyboard.
 /// Only the outermost seams are faked — geometry rendering (no Python in tests), the
 /// user-pdks root (temp dir instead of the developer's real folder), preferences (temp file),
-/// and <c>App.Services</c> (a minimal provider carrying just the temp <see cref="UserPdkStore"/>).
+/// and window composition (a minimal provider carrying just the temp <see cref="UserPdkStore"/>).
 /// </summary>
 internal sealed class UiFlowTestHost : IDisposable
 {
@@ -45,7 +45,8 @@ internal sealed class UiFlowTestHost : IDisposable
 
     public UiFlowTestHost(CAP.Avalonia.Controls.Canvas.ComponentPreview.GdsPreviewRenderService? previewService = null,
         CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
-        UserPreferencesService? preferences = null)
+        UserPreferencesService? preferences = null,
+        Func<Task>? retireApplicationAsync = null)
     {
         // Flow tests look up buttons/tooltips by their English literals; the process-global
         // localization singleton follows the OS display language, so pin English for the
@@ -64,7 +65,7 @@ internal sealed class UiFlowTestHost : IDisposable
         UserPdkStore = new UserPdkStore(UserPdkRoot, new PdkJsonSaver(), new PdkLoader());
 
         var leftPanel = new LeftPanelViewModel(
-            canvas, libraryManager, new PdkLoader(), prefs,
+            canvas, libraryManager, new PdkLoader(), prefs, prefs,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
             errorConsole: new ErrorConsoleService(),
@@ -87,14 +88,18 @@ internal sealed class UiFlowTestHost : IDisposable
         // right after Loaded; a pre-established Playground process makes it a no-op.
         Vm.FileOperations.SetActiveProcess(ActiveProcessSelection.Playground(), markDirty: false);
 
-        // MainWindow's code-behind resolves optional collaborators via App.Services (all
-        // null-tolerant except the flows under test, which need the UserPdkStore).
+        // Compose optional window features from an isolated provider; these flows need
+        // the UserPdkStore, while other optional dialogs remain unavailable.
         var services = new ServiceCollection();
         services.AddSingleton(UserPdkStore);
+        services.AddSingleton<IUserPdkLibrary>(UserPdkStore);
+        services.AddSingleton(new CAP.Avalonia.Views.Shell.ProcessEditorFactory(
+            new IProcessImporter[] { new UpdkYamlProcessImporter(), new NazcaCsvProcessImporter() },
+            new PdkJsonSaver(), UserPdkStore));
         _previousServices = App.Services;
         App.OverrideServicesForTesting(services.BuildServiceProvider());
 
-        Window = new MainWindow { DataContext = Vm };
+        Window = CAP.Avalonia.DI.MainWindowComposition.Create(App.Services, Vm, retireApplicationAsync);
         // Hover tooltips use overlay popup hosts in headless mode and can consume the
         // next synthetic click after a panel changes. Action flows keep tooltip text
         // available for lookup; dedicated tooltip tests use their own fixture.
@@ -117,7 +122,7 @@ internal sealed class UiFlowTestHost : IDisposable
     /// Geometry renderer stub: every render succeeds with a small 2-pin cell, so "Save changes"
     /// (which re-renders the edited code) works without a Python environment.
     /// </summary>
-    private static IComponentPreviewRenderer StubRenderer()
+    private static IPdkGeometryRenderer StubRenderer()
     {
         var ok = new NazcaPreviewResult
         {
@@ -132,7 +137,7 @@ internal sealed class UiFlowTestHost : IDisposable
                 new() { Name = "o2", X = 8, Y = 0.75, Angle = 0 },
             },
         };
-        var mock = new Mock<IComponentPreviewRenderer>();
+        var mock = new Mock<IPdkGeometryRenderer>();
         mock.Setup(r => r.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ok);
         mock.Setup(r => r.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

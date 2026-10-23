@@ -210,13 +210,13 @@ public class OpenEblEBeamFromScratchJourneyTests
     private static FileOperationsViewModel CreateFileOperations(
         DesignCanvasViewModel canvas, IReadOnlyList<ComponentTemplate> templates)
     {
-        var fileOps = new FileOperationsViewModel(
+        var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(templates),
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: new ErrorConsoleService());

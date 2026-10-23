@@ -35,13 +35,13 @@ public class FileOperationsGdsImportRoutingTests : IDisposable
         _canvas = new DesignCanvasViewModel();
         _sourceDesignPath = Path.Combine(Path.GetTempPath(), $"test-gdsrouting-source-{Guid.NewGuid():N}.lun");
 
-        _fileOps = new FileOperationsViewModel(
+        _fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             _canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(),
-            new GdsExportViewModel(new GdsExportService()),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
             new PhotonTorchExportViewModel(new PhotonTorchExporter(), _canvas),
             null!);
 

@@ -55,7 +55,7 @@ public class PrefabGateCellJourneyTests : IDisposable
 
         // ── Session 1: read the gate cell as NOT in the Truth Table panel, name the input,
         //    save the group as a prefab through the Group Library's save command. ──
-        using var session1 = NewSession();
+        await using var session1 = NewSession();
         var canvas1 = session1.GetRequiredService<DesignCanvasViewModel>();
         var loadOps = ComposeFileOperations(session1, canvas1);
         var examplePath = Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), ExampleFileName);
@@ -90,7 +90,7 @@ public class PrefabGateCellJourneyTests : IDisposable
 
         // ── Session 2: fresh manager over the same directory — place the prefab twice and
         //    chain instance 1's output into instance 2's input on the canvas. ──
-        using var session2 = NewSession();
+        await using var session2 = NewSession();
         var canvas2 = session2.GetRequiredService<DesignCanvasViewModel>();
         var manager2 = new GroupLibraryManager(_libraryDir);
         manager2.LoadTemplates();
@@ -134,7 +134,7 @@ public class PrefabGateCellJourneyTests : IDisposable
         await saveOps.SaveDesignAsCommand.ExecuteAsync(null);
         File.Exists(lunPath).ShouldBeTrue("the design must be written through the real save path");
 
-        using var session3 = NewSession();
+        await using var session3 = NewSession();
         var canvas3 = session3.GetRequiredService<DesignCanvasViewModel>();
         var reloadOps = ComposeFileOperations(session3, canvas3);
         (await reloadOps.LoadDesignFromPathAsync(lunPath)).ShouldBeTrue(
@@ -202,7 +202,7 @@ public class PrefabGateCellJourneyTests : IDisposable
     {
         var leftPanel = session.GetRequiredService<LeftPanelViewModel>();
         leftPanel.Initialize(); // production startup step: loads the bundled PDKs
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             session.GetRequiredService<CommandManager>(),
             session.GetRequiredService<SimpleNazcaExporter>(),

@@ -1,4 +1,10 @@
 <Project>
+  <!-- Temporary opt-in inventory uses each shipping project's real compiler and generators. -->
+  <ItemGroup Condition="'$(ArchitectureAudit)' == 'true' and '$(MSBuildProjectName)' != 'UnitTests' and '$(MSBuildProjectName)' != 'Lunima.ArchitectureAnalyzers'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Tools/Lunima.ArchitectureAnalyzers/Lunima.ArchitectureAnalyzers.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <EditorConfigFiles Include="$(MSBuildThisFileDirectory)Tools/Lunima.ArchitectureAnalyzers/ArchitectureAudit.globalconfig" />
+  </ItemGroup>
   <!--
     Disable the Avalonia.BuildServices build telemetry collector.
 

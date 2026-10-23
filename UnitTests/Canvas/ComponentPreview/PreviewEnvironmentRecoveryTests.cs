@@ -56,7 +56,7 @@ public sealed class PreviewEnvironmentRecoveryTests
             services.AddCanvasAndPanels();
             services.AddSingleton(backend.Object);
             services.AddSingleton(new GdsFactoryComponentPreviewService("python", "script"));
-            using var provider = services.BuildServiceProvider();
+            await using var provider = services.BuildServiceProvider();
             var previews = provider.GetRequiredService<GdsPreviewRenderService>();
             previews.InlineNazcaCodeLookup = null;
             var key = new GdsPreviewKey("test", "unique_" + Guid.NewGuid().ToString("N"), null);

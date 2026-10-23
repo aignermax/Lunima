@@ -1,5 +1,5 @@
 using CAP.Avalonia.Services.Localization;
-using CAP_Core.Export;
+using CAP_Core.Export.Contracts;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -13,7 +13,7 @@ namespace CAP.Avalonia.ViewModels.Export;
 /// </summary>
 public partial class GdsCoordExtractViewModel : ObservableObject
 {
-    private readonly GdsCoordinateExtractor _extractor;
+    private readonly IGdsCoordinateExtractor _extractor;
 
     [ObservableProperty]
     private string _gdsFilePath = string.Empty;
@@ -35,7 +35,7 @@ public partial class GdsCoordExtractViewModel : ObservableObject
 
     /// <summary>Initializes a new instance of <see cref="GdsCoordExtractViewModel"/>.</summary>
     /// <param name="extractor">Core coordinate extraction service.</param>
-    public GdsCoordExtractViewModel(GdsCoordinateExtractor extractor)
+    public GdsCoordExtractViewModel(IGdsCoordinateExtractor extractor)
     {
         _extractor = extractor;
     }

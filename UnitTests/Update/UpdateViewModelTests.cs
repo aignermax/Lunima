@@ -1,3 +1,4 @@
+using CAP_DataAccess.Updates;
 using System.Net;
 using System.Net.Http;
 using CAP.Avalonia.Services;
@@ -92,10 +93,11 @@ public class UpdateViewModelTests
 
     private static UpdateViewModel CreateViewModel(HttpMessageHandler handler, IUrlLauncher urlLauncher)
     {
-        var httpClient = new HttpClient(handler);
+        var signed = new SignedReleaseFixtureHandler(handler);
+        var httpClient = new HttpClient(signed);
         return new UpdateViewModel(
             new UpdateChecker(httpClient, "owner", "repo"),
-            new UpdateDownloader(httpClient),
+            new UpdateDownloader(httpClient, signed.Verifier),
             new UserPreferencesService(Path.GetTempFileName()),
             urlLauncher,
             new FakeInstaller());
@@ -372,7 +374,7 @@ public class UpdateViewModelTests
         // #613: after downloading, the installer is opened via the launcher and the user gets
         // actionable guidance (per-platform wording is covered by the BuildPostDownloadGuidance
         // tests below), so the update banner never dead-ends.
-        // A repeating handler is required: this exercises TWO requests (metadata + download),
+        // A repeating handler is required: this exercises release, signature and artifact requests,
         // and a single shared response can only be read once.
         var launcher = new FakeUrlLauncher();
         var vm = CreateViewModel(StubHttpMessageHandler.RepeatingOk(AllPlatformsReleaseJson), launcher);
@@ -467,6 +469,37 @@ public class UpdateViewModelTests
         vm.StatusText.ShouldContain("test launch failure");
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InstallUpdate_RechecksStagedFileAfterUnsavedChangesDialog(bool removeFile)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "lunima-update-recheck-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var installer = new FakeInstaller { CanUpdate = true };
+            var vm = CreateViewModelForDownload(AutoUpdateReleaseJson, new FakeUrlLauncher(), installer, root);
+            var closed = false;
+            vm.ShutdownAfterConfirmation = () => closed = true;
+            vm.ConfirmShutdownAsync = async () =>
+            {
+                var path = Directory.GetFiles(root, "*", SearchOption.AllDirectories).Single();
+                if (removeFile) File.Delete(path);
+                else await File.WriteAllBytesAsync(path, new byte[] { 4, 3, 2, 1 });
+                return true;
+            };
+            await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+            await vm.InstallUpdateCommand.ExecuteAsync(null);
+            installer.LaunchedArchivePath.ShouldBeNull("the file changed after its authenticated download");
+            closed.ShouldBeFalse();
+            Directory.GetFileSystemEntries(root).ShouldBeEmpty();
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
     private const string AutoUpdateReleaseJson = """
         {
           "tag_name": "v99.0.0",
@@ -499,12 +532,13 @@ public class UpdateViewModelTests
         """;
 
     private static UpdateViewModel CreateViewModelForDownload(
-        string releaseJson, IUrlLauncher urlLauncher, IInstaller? installer = null)
+        string releaseJson, IUrlLauncher urlLauncher, IInstaller? installer = null, string? stagingRoot = null)
     {
-        var httpClient = new HttpClient(StubHttpMessageHandler.ReleaseThenBinary(releaseJson));
+        var signed = new SignedReleaseFixtureHandler(StubHttpMessageHandler.ReleaseThenBinary(releaseJson));
+        var httpClient = new HttpClient(signed);
         return new UpdateViewModel(
             new UpdateChecker(httpClient, "owner", "repo"),
-            new UpdateDownloader(httpClient),
+            new UpdateDownloader(httpClient, signed.Verifier, stagingRoot),
             new UserPreferencesService(Path.GetTempFileName()),
             urlLauncher,
             installer ?? new FakeInstaller());
@@ -786,7 +820,7 @@ public class UpdateViewModelTests
         }
 
         public static StubHttpMessageHandler RepeatingOk(string body) =>
-            new(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
+            ReleaseThenBinary(body);
 
         /// <summary>The release JSON for the GitHub API call and a few bytes for any other
         /// (asset download) URL, so the download stream is readable on every call.</summary>

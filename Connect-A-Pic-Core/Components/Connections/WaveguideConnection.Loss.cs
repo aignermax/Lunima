@@ -1,5 +1,6 @@
 using System.Numerics;
 using CAP_Core.LightCalculation.BendLoss;
+using CAP_Core.Routing;
 
 namespace CAP_Core.Components.Connections
 {
@@ -63,6 +64,13 @@ namespace CAP_Core.Components.Connections
             LossBreakdown = breakdown;
             TotalLossDb = breakdown.TotalLossDb;
             TransmissionCoefficient = new Complex(breakdown.AmplitudeTransmission, 0);
+        }
+
+        /// <summary>Installs already calculated geometry/loss without executing a model or rasterizing obstacles.</summary>
+        internal void ApplyComputedRoute(RoutedPath? path, ConnectionLossBreakdown breakdown)
+        {
+            RoutedPath = path;
+            ApplyLossBreakdown(breakdown);
         }
     }
 }

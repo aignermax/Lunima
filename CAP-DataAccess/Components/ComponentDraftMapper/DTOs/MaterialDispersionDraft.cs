@@ -14,6 +14,16 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 /// </summary>
 public class MaterialDispersionDraft
 {
+    /// <summary>Copies the full dispersion definition, including tabulated loss points.</summary>
+    public MaterialDispersionDraft Copy()
+    {
+        var copy = (MaterialDispersionDraft)MemberwiseClone();
+        copy.EffectiveIndex = EffectiveIndex?.Copy();
+        copy.GroupIndex = GroupIndex?.Copy();
+        copy.PropagationLossDbPerCm = PropagationLossDbPerCm?.Copy();
+        return copy;
+    }
+
     /// <summary>
     /// Dispersion model type: <c>"polynomial"</c> or <c>"tabulated"</c>.
     /// </summary>
@@ -54,6 +64,9 @@ public class MaterialDispersionDraft
 /// </summary>
 public class EffectiveIndexDraft
 {
+    /// <summary>Copies the scalar coefficients.</summary>
+    public EffectiveIndexDraft Copy() => (EffectiveIndexDraft)MemberwiseClone();
+
     /// <summary>n_eff at the center wavelength (zeroth-order).</summary>
     [JsonPropertyName("n0")]
     public double N0 { get; set; } = 2.45;
@@ -72,6 +85,9 @@ public class EffectiveIndexDraft
 /// </summary>
 public class GroupIndexDraft
 {
+    /// <summary>Copies the scalar coefficients.</summary>
+    public GroupIndexDraft Copy() => (GroupIndexDraft)MemberwiseClone();
+
     /// <summary>Group index n_g at the center wavelength.</summary>
     [JsonPropertyName("ng0")]
     public double Ng0 { get; set; } = 4.2;
@@ -82,6 +98,14 @@ public class GroupIndexDraft
 /// </summary>
 public class LossDraft
 {
+    /// <summary>Copies the tabulated loss values as well as scalar settings.</summary>
+    public LossDraft Copy()
+    {
+        var copy = (LossDraft)MemberwiseClone();
+        copy.Points = Points?.Select(row => new List<double>(row)).ToList();
+        return copy;
+    }
+
     /// <summary>
     /// Loss model type: <c>"constant"</c> (default) or <c>"tabulated"</c>.
     /// When <c>"constant"</c>, use <see cref="ConstantDbPerCm"/>.

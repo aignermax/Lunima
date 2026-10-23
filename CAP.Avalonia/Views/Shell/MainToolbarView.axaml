@@ -1,0 +1,451 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels"
+        xmlns:vmLib="using:CAP.Avalonia.ViewModels.Library"
+        xmlns:diagnostics="using:CAP.Avalonia.ViewModels.Diagnostics"
+        xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:converters="using:CAP.Avalonia.Converters"
+        xmlns:tour="using:CAP.Avalonia.Controls.TourAnchor"
+        xmlns:views="using:CAP.Avalonia.Views"
+        xmlns:behaviors="using:CAP.Avalonia.Behaviors"
+        xmlns:panels="using:CAP.Avalonia.Views.Panels"
+        xmlns:loc="using:CAP.Avalonia.Services.Localization"
+        xmlns:ws="using:CAP.Avalonia.ViewModels.Workspaces"
+        xmlns:wsPanels="using:CAP.Avalonia.Views.Panels.WorkspaceRail"
+        x:Class="CAP.Avalonia.Views.Shell.MainToolbarView"
+        x:DataType="vm:MainViewModel" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+
+    <Border Classes="toolbar" Height="44" Padding="8,0">
+        <Grid ColumnDefinitions="*,Auto">
+            <ScrollViewer Grid.Column="0"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="MainToolbar" Orientation="Horizontal" Spacing="2"
+                            VerticalAlignment="Center">
+                    <Button Classes="toolbar" Command="{Binding ShowHomeCommand}"
+                            ToolTip.Tip="{loc:Localize Home.ToolbarTip}">
+                        <controls:Icon Data="{StaticResource Icon.House}"/>
+                    </Button>
+                    <Button x:Name="ResumeVisualGuideButton" Classes="toolbar"
+                            Command="{Binding LearningPath.RevealCommand}"
+                            AutomationProperties.Name="{loc:Localize Home.LearnTutorial}"
+                            ToolTip.Tip="{loc:Localize Home.LearnTutorial}">
+                        <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
+                    </Button>
+
+                    <Border Classes="divider"/>
+
+                    <!-- Canvas modes: one segmented group, the active mode carries .active -->
+                    <Button x:Name="SelectModeButton" Classes="toolbar" Command="{Binding SetSelectModeCommand}"
+                            Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Select}"
+                            ToolTip.Tip="{loc:Localize Toolbar.SelectModeTip}">
+                        <controls:Icon Data="{StaticResource Icon.MousePointer2}"/>
+                    </Button>
+                    <Button x:Name="ConnectModeButton" Classes="toolbar" Command="{Binding SetConnectModeCommand}"
+                            Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Connect}"
+                            ToolTip.Tip="{loc:Localize Toolbar.ConnectModeTip}">
+                        <controls:Icon Data="{StaticResource Icon.Spline}"/>
+                    </Button>
+                    <Button Classes="toolbar" Command="{Binding SetDeleteModeCommand}"
+                            Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Delete}"
+                            ToolTip.Tip="{loc:Localize Toolbar.DeleteModeTip}">
+                        <controls:Icon Data="{StaticResource Icon.Eraser}"/>
+                    </Button>
+                    <!-- Probe and Cut are primary where the workspace's profile says so (WorkspacePresentation);
+                         elsewhere they sit one click away under "More tools". Select/Connect/Delete stay everywhere. -->
+                    <Button x:Name="ProbeToolButton" Classes="toolbar" Command="{Binding SetProbeModeCommand}"
+                            IsVisible="{Binding WorkspaceSwitch.ShowsProbeTool}"
+                            Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Probe}"
+                            ToolTip.Tip="{loc:Localize Toolbar.ProbeModeTip}">
+                        <controls:Icon Data="{StaticResource Icon.ScanSearch}"/>
+                    </Button>
+                    <Button x:Name="CutToolButton" Classes="toolbar" Command="{Binding SetCutModeCommand}"
+                            IsVisible="{Binding WorkspaceSwitch.IsCutPrimary}"
+                            Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Cut}"
+                            ToolTip.Tip="{loc:Localize Toolbar.CutModeTip}">
+                        <controls:Icon Data="{StaticResource Icon.Scissors}"/>
+                    </Button>
+                    <Button x:Name="MoreToolsButton" Classes="toolbar menu"
+                            IsVisible="{Binding WorkspaceSwitch.HasOverflowTools}"
+                            ToolTip.Tip="{loc:Localize Toolbar.MoreToolsTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <controls:Icon Data="{StaticResource Icon.Ellipsis}"/>
+                            <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
+                        </StackPanel>
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem x:Name="MoreToolsProbeItem" Header="{loc:Localize Toolbar.ProbeMode}"
+                                          Command="{Binding SetProbeModeCommand}"
+                                          IsVisible="{Binding WorkspaceSwitch.IsProbeInOverflow}">
+                                    <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.ScanSearch}"/></MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem x:Name="MoreToolsCutItem" Header="{loc:Localize Toolbar.CutMode}"
+                                          Command="{Binding SetCutModeCommand}" InputGesture="X"
+                                          IsVisible="{Binding WorkspaceSwitch.IsCutInOverflow}">
+                                    <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Scissors}"/></MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{loc:Localize Toolbar.CleanUpCrossings}"
+                                          Command="{Binding Canvas.CleanUpCrossingsCommand}"
+                                          IsVisible="{Binding WorkspaceSwitch.IsCutInOverflow}">
+                                    <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Eraser}"/></MenuItem.Icon>
+                                </MenuItem>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+
+                    <Border Classes="divider"/>
+
+                    <!-- View -->
+                    <Button Classes="toolbar" Command="{Binding ZoomOutCommand}"
+                            ToolTip.Tip="{loc:Localize Toolbar.ZoomOutTip}">
+                        <controls:Icon Data="{StaticResource Icon.ZoomOut}"/>
+                    </Button>
+                    <Button Classes="toolbar" Command="{Binding ZoomInCommand}"
+                            ToolTip.Tip="{loc:Localize Toolbar.ZoomInTip}">
+                        <controls:Icon Data="{StaticResource Icon.ZoomIn}"/>
+                    </Button>
+                    <Button x:Name="ZoomToFitButton" Classes="toolbar" Click="ZoomToFitButton_Click"
+                            ToolTip.Tip="{loc:Localize Toolbar.ZoomToFitTip}">
+                        <controls:Icon Data="{StaticResource Icon.Scan}"/>
+                    </Button>
+                    <ToggleButton x:Name="GridSnapToggle" Classes="toolbar"
+                                  IsChecked="{Binding Canvas.GridSnap.IsEnabled, Mode=TwoWay}"
+                                  Click="GridSnapToggle_Click"
+                                  ToolTip.Tip="{loc:Localize Toolbar.GridSnapTip}">
+                        <controls:Icon Data="{StaticResource Icon.Grid3x3}"/>
+                    </ToggleButton>
+                    <!-- Canvas overlays: each workspace sets the defaults and remembers what the user picks here. -->
+                    <Button x:Name="OverlaysButton" Classes="toolbar menu"
+                            ToolTip.Tip="{loc:Localize Toolbar.OverlaysTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <controls:Icon Data="{StaticResource Icon.Layers}"/>
+                            <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
+                        </StackPanel>
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem x:Name="OverlayPowerFlowItem" Header="{loc:Localize Toolbar.OverlayPowerFlow}"
+                                          Command="{Binding TogglePowerOverlayCommand}" InputGesture="P">
+                                    <MenuItem.Icon>
+                                        <controls:Icon Data="{StaticResource Icon.Check}" IsVisible="{Binding Canvas.ShowPowerFlow}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem x:Name="OverlayDesignChecksItem" Header="{loc:Localize Toolbar.OverlayDesignChecks}"
+                                          Command="{Binding Canvas.ViewSettings.ToggleDesignCheckMarkersCommand}">
+                                    <MenuItem.Icon>
+                                        <controls:Icon Data="{StaticResource Icon.Check}" IsVisible="{Binding Canvas.ViewSettings.ShowDesignCheckMarkers}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+
+                    <Border Classes="divider"/>
+
+                    <!-- Workspace switch: decides what Run does and which dock tabs show (Ctrl+1..4). -->
+                    <Border x:Name="WorkspaceSwitchBar" Classes="segmented">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button x:Name="LayoutWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.Layout}"
+                                    Classes.active="{Binding WorkspaceSwitch.IsLayout}"
+                                    Command="{Binding WorkspaceSwitch.SelectCommand}"
+                                    CommandParameter="{x:Static ws:Workspace.Layout}"
+                                    ToolTip.Tip="{loc:Localize Workspace.LayoutTip}"/>
+                            <Button x:Name="OpticsWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.Optics}"
+                                    Classes.active="{Binding WorkspaceSwitch.IsOptics}"
+                                    Command="{Binding WorkspaceSwitch.SelectCommand}"
+                                    CommandParameter="{x:Static ws:Workspace.Optics}"
+                                    ToolTip.Tip="{loc:Localize Workspace.OpticsTip}"/>
+                            <Button x:Name="LogicWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.Logic}"
+                                    Classes.active="{Binding WorkspaceSwitch.IsLogic}"
+                                    Command="{Binding WorkspaceSwitch.SelectCommand}"
+                                    CommandParameter="{x:Static ws:Workspace.Logic}"
+                                    ToolTip.Tip="{loc:Localize Workspace.LogicTip}"/>
+                            <Button x:Name="SystemWorkspaceButton" Classes="toolbar segment" Content="{loc:Localize Workspace.System}"
+                                    Classes.active="{Binding WorkspaceSwitch.IsSystem}"
+                                    Command="{Binding WorkspaceSwitch.SelectCommand}"
+                                    CommandParameter="{x:Static ws:Workspace.System}"
+                                    ToolTip.Tip="{loc:Localize Workspace.SystemTip}"/>
+                        </StackPanel>
+                    </Border>
+                    <controls:HelpFlyoutButton Margin="2,0,4,0" VerticalAlignment="Center"
+                                               Title="{loc:Localize Workspace.HelpTitle}">
+                        <controls:HelpFlyoutButton.HelpContent>
+                            <panels:WorkspaceHelpFlyout/>
+                        </controls:HelpFlyoutButton.HelpContent>
+                    </controls:HelpFlyoutButton>
+
+                    <!-- Run: the one primary action; its label names what the workspace runs.
+                         In Optics/System it is a toggle: pressed (active) while the simulation is on. -->
+                    <Button x:Name="RunSimulationButton" Classes="toolbar primary wsRun"
+                            Classes.active="{Binding WorkspaceSwitch.IsRunActive}"
+                            Command="{Binding RunWorkspaceCommand}"
+                            ToolTip.Tip="{Binding WorkspaceSwitch.RunTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <controls:Icon Data="{StaticResource Icon.Play}" Size="14"
+                                           IsVisible="{Binding !WorkspaceSwitch.IsRunActive}"/>
+                            <controls:Icon Data="{StaticResource Icon.Square}" Size="14"
+                                           IsVisible="{Binding WorkspaceSwitch.IsRunActive}"/>
+                            <TextBlock Text="{Binding WorkspaceSwitch.RunLabel}" VerticalAlignment="Center"/>
+                            <Border Classes="keyHint">
+                                <TextBlock Text="L"/>
+                            </Border>
+                        </StackPanel>
+                    </Button>
+                    <!-- Brief "L — <action>" hint under Run the first few times L is pressed. -->
+                    <Popup x:Name="RunShortcutHintPopup"
+                           PlacementTarget="{Binding #RunSimulationButton}"
+                           Placement="Bottom" VerticalOffset="6"
+                           IsLightDismissEnabled="False"
+                           IsOpen="{Binding RunHint.IsVisible}">
+                        <Border Classes="runHint">
+                            <TextBlock Text="{Binding RunHint.Text}"/>
+                        </Border>
+                    </Popup>
+                    <Popup PlacementTarget="{Binding #RunSimulationButton}" Placement="Bottom"
+                           VerticalOffset="8" IsOpen="{Binding ShowLearningSuccess}"
+                           IsLightDismissEnabled="False" IsHitTestVisible="False">
+                        <Border Classes="overlay" Padding="14,8" CornerRadius="12">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="☺" FontSize="30" Foreground="{DynamicResource Brush.Success}"/>
+                                <TextBlock Text="{loc:Localize Tutorial.CompletedCue}" VerticalAlignment="Center"
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                    <!-- Logic sub-choice: gate-level view or physical design (V). -->
+                    <Border x:Name="GateViewSwitchBar" Classes="segmented" Margin="4,0,0,0"
+                            IsVisible="{Binding GateView.IsAvailable}"
+                            ToolTip.Tip="{Binding GateView.ToggleTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button x:Name="GateViewGatesButton" Classes="toolbar segment"
+                                    Content="{loc:Localize GateView.Gates}"
+                                    Classes.active="{Binding GateView.IsShown}"
+                                    Command="{Binding GateView.ShowGatesCommand}"/>
+                            <Button x:Name="GateViewPhysicalButton" Classes="toolbar segment"
+                                    Content="{loc:Localize GateView.Physical}"
+                                    Classes.active="{Binding GateView.IsPhysicalShown}"
+                                    Command="{Binding GateView.ShowPhysicalCommand}"/>
+                            <Border Classes="keyHint" VerticalAlignment="Center" Margin="2,0,4,0">
+                                <TextBlock Text="V"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                    <ComboBox Classes="toolbar" Width="104" Margin="4,0,0,0"
+                              SelectedIndex="{Binding SimulationModeIndex}"
+                              IsVisible="{Binding WorkspaceSwitch.IsOptics}"
+                              ToolTip.Tip="{loc:Localize Toolbar.SimulationModeTip}">
+                        <ComboBoxItem>CW</ComboBoxItem>
+                        <ComboBoxItem>Transient</ComboBoxItem>
+                    </ComboBox>
+
+                    <Border Classes="divider"/>
+
+                    <!-- Edit -->
+                    <Button Classes="toolbar" Command="{Binding UndoCommand}"
+                            ToolTip.Tip="{loc:Localize Toolbar.UndoTip}">
+                        <controls:Icon Data="{StaticResource Icon.Undo2}"/>
+                    </Button>
+                    <Button Classes="toolbar" Command="{Binding RedoCommand}"
+                            ToolTip.Tip="{loc:Localize Toolbar.RedoTip}">
+                        <controls:Icon Data="{StaticResource Icon.Redo2}"/>
+                    </Button>
+                    <Button x:Name="CreateGroupButton" Classes="toolbar" Command="{Binding CreateGroupCommand}"
+                            ToolTip.Tip="{loc:Localize Toolbar.CreateGroupTip}">
+                        <controls:Icon Data="{StaticResource Icon.Group}"/>
+                    </Button>
+                    <Button Classes="toolbar" Command="{Binding UngroupCommand}"
+                            ToolTip.Tip="{loc:Localize Toolbar.UngroupTip}">
+                        <controls:Icon Data="{StaticResource Icon.Ungroup}"/>
+                    </Button>
+
+                    <Border Classes="divider"/>
+
+                    <!-- File -->
+                    <Button Classes="toolbar" Command="{Binding NewProjectCommand}"
+                            ToolTip.Tip="{loc:Localize Toolbar.NewProjectTip}">
+                        <controls:Icon Data="{StaticResource Icon.FilePlus}"/>
+                    </Button>
+                    <Button Classes="toolbar" Command="{Binding LoadDesignCommand}"
+                            ToolTip.Tip="{loc:Localize Toolbar.LoadDesignTip}">
+                        <controls:Icon Data="{StaticResource Icon.FolderOpen}"/>
+                    </Button>
+                    <Button Classes="toolbar" Command="{Binding SaveDesignCommand}"
+                            ToolTip.Tip="{loc:Localize Toolbar.SaveDesignTip}">
+                        <controls:Icon Data="{StaticResource Icon.Save}"/>
+                    </Button>
+                    <Button Classes="toolbar" Command="{Binding SaveDesignAsCommand}"
+                            ToolTip.Tip="{loc:Localize Toolbar.SaveDesignAsTip}">
+                        <controls:Icon Data="{StaticResource Icon.FilePen}"/>
+                    </Button>
+
+                    <Border Classes="divider"/>
+
+                    <!-- Import / export / tools -->
+                    <Button Classes="toolbar" Command="{Binding GdsImport.OpenGdsImportDialogCommand}"
+                            ToolTip.Tip="{loc:Localize GdsImport.OpenTip}">
+                        <controls:Icon Data="{StaticResource Icon.FileInput}"/>
+                    </Button>
+                    <!-- Unified Export flyout — add formats via IExportFormat + ExportMenuViewModel, no axaml changes needed -->
+                    <Button x:Name="ExportMenuButton" Classes="toolbar menu" ToolTip.Tip="{loc:Localize Toolbar.ExportTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <controls:Icon Data="{StaticResource Icon.FileOutput}"/>
+                            <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
+                        </StackPanel>
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                <StackPanel Classes="menu" MinWidth="260">
+                                    <TextBlock Classes="label menuHeader" Text="{loc:Localize Toolbar.ChooseExportFormat}"/>
+                                    <ItemsControl ItemsSource="{Binding ExportMenu.Formats}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Classes="menuItem"
+                                                        Command="{Binding ExportCommand}"
+                                                        Click="ExportMenuItem_Click"
+                                                        ToolTip.Tip="{Binding Description}">
+                                                    <Grid ColumnDefinitions="Auto,*">
+                                                        <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.FileOutput}"/>
+                                                        <StackPanel Grid.Column="1" Spacing="2">
+                                                            <TextBlock Classes="strong" Text="{Binding Name}"/>
+                                                            <TextBlock Classes="caption" Text="{Binding Description}"
+                                                                       TextWrapping="Wrap" MaxWidth="220"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <!-- Checking precedes tapeout export, so the design checks live here too. -->
+                                    <Separator Classes="menu"/>
+                                    <Button Classes="menuItem"
+                                            Command="{Binding RunDesignChecksCommand}"
+                                            Click="CheckDesignMenuItem_Click"
+                                            ToolTip.Tip="{loc:Localize Toolbar.CheckDesignTip}">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.CircleCheck}"/>
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Classes="strong" Text="{loc:Localize Toolbar.CheckDesign}"/>
+                                                <TextBlock Classes="caption" Text="{loc:Localize Toolbar.CheckDesignDescription}"
+                                                           TextWrapping="Wrap" MaxWidth="220"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="menuItem"
+                                            Click="CheckOpenEblMenuItem_Click"
+                                            ToolTip.Tip="{loc:Localize Toolbar.CheckOpenEblTip}">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.FlaskConical}"/>
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Classes="strong" Text="{loc:Localize Toolbar.CheckOpenEbl}"/>
+                                                <TextBlock Classes="caption" Text="{loc:Localize Toolbar.CheckOpenEblDescription}"
+                                                           TextWrapping="Wrap" MaxWidth="220"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+
+                    <Button x:Name="ToolsMenuButton" Classes="toolbar menu"
+                            ToolTip.Tip="{loc:Localize Toolbar.ToolsTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <controls:Icon Data="{StaticResource Icon.Wrench}"/>
+                            <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
+                        </StackPanel>
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                <StackPanel Classes="menu" MinWidth="250">
+                                    <!-- Load PDK + format help share one row: the help opens the
+                                         PDK JSON documentation the loader expects. -->
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Button Grid.Column="0" Classes="menuItem"
+                                                Command="{Binding LoadPdkCommand}"
+                                                ToolTip.Tip="{loc:Localize Toolbar.LoadPdkTip}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Package}"/>
+                                                <TextBlock Text="{loc:Localize Toolbar.LoadPdk}"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="ghost icon" Margin="4,0,0,0"
+                                                Command="{Binding OpenPdkHelpCommand}"
+                                                ToolTip.Tip="{loc:Localize Toolbar.PdkHelpTip}">
+                                            <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
+                                        </Button>
+                                    </Grid>
+                                    <Button Classes="menuItem"
+                                            Command="{Binding OpenPdkOffsetEditorCommand}"
+                                            ToolTip.Tip="{loc:Localize Toolbar.PdkOffsetEditorTip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Ruler}"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.PdkOffsetEditor}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="menuItem" Click="OpenModeSolverDialog_Click"
+                                            ToolTip.Tip="{loc:Localize Toolbar.ComputeModesTip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Waves}"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.ComputeModes}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="menuItem" Click="OpenPdkResolutionCheckDialog_Click"
+                                            ToolTip.Tip="{loc:Localize Toolbar.CheckPdksTip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Search}"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.CheckPdks}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="menuItem" Click="OpenRegistryBrowser_Click"
+                                            ToolTip.Tip="{loc:Localize Registry.OpenTip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Globe}"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.ComponentRegistry}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="IsaPlaygroundToolButton" Classes="menuItem"
+                                            Click="OpenIsaPlayground_Click"
+                                            ToolTip.Tip="{loc:Localize Toolbar.IsaPlaygroundTip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Cpu}"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.IsaPlayground}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Separator Classes="menu"/>
+                                    <Button x:Name="CleanUpCrossingsToolButton" Classes="menuItem"
+                                            Command="{Binding Canvas.CleanUpCrossingsCommand}"
+                                            ToolTip.Tip="{loc:Localize Toolbar.CleanUpCrossingsTip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Eraser}"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.CleanUpCrossings}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="menuItem"
+                                            Command="{Binding BottomPanel.ElementLock.UnlockAllCommand}"
+                                            ToolTip.Tip="{loc:Localize Toolbar.UnlockAllTip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.LockOpen}"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.UnlockAll}"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+
+                    <Border Classes="divider"/>
+
+                    <!-- AI Design Assistant — own tool window -->
+                    <Button Classes="toolbar" Click="OpenAiAssistant_Click"
+                            ToolTip.Tip="{loc:Localize Toolbar.AiAssistantTip}">
+                        <controls:Icon Data="{StaticResource Icon.Sparkles}"/>
+                    </Button>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Button Grid.Column="1" Classes="toolbar" Margin="8,0,0,0" VerticalAlignment="Center"
+                    Command="{Binding OpenSettingsWindowCommand}"
+                    ToolTip.Tip="{loc:Localize Toolbar.SettingsTip}">
+                <controls:Icon Data="{StaticResource Icon.Settings}"/>
+            </Button>
+        </Grid>
+    </Border>
+
+</UserControl>

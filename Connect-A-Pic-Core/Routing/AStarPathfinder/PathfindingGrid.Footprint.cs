@@ -43,6 +43,9 @@ public partial class PathfindingGrid
         /// <summary>The component that blocks these cells.</summary>
         public Component Owner { get; }
 
+        internal ComponentFootprint WithOwner(Component owner) => new(owner, Padded, Body, CorridorCells,
+            _width, _height, _outlineBody, _outlinePadded);
+
         /// <summary>Padded rectangle in grid cells (inclusive, unclipped).</summary>
         public (int X1, int Y1, int X2, int Y2) Padded { get; }
 

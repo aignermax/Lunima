@@ -17,16 +17,14 @@ public sealed class CrossingUndoJournal
     private readonly DesignCanvasViewModel _canvas;
     private readonly Action<Component> _crossingRestored;
     private readonly Action<Component> _crossingDropped;
-    private readonly Dictionary<IUndoableCommand, List<CrossingChange>> _changes = new();
+    private readonly Dictionary<IUndoableCommand, List<CrossingChange>> _changes = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IUndoableCommand, PassOwner> _owners = new(ReferenceEqualityComparer.Instance);
     private readonly object _sync = new();
     // Task.Run inherits the command that started its pass. A later UI edit must not
     // steal crossing changes from the still-finishing previous routing worker.
     private readonly AsyncLocal<PassOwner?> _current = new();
     private int _historyGeneration;
     private sealed record PassOwner(IUndoableCommand Command, int Generation);
-
-    /// <summary>More history entries than the undo history keeps (100).</summary>
-    private const int MaxTrackedCommands = 128;
 
     /// <summary>Creates the journal for <paramref name="canvas"/>.</summary>
     /// <param name="canvas">The canvas whose connection manager the changes apply to.</param>
@@ -45,6 +43,7 @@ public sealed class CrossingUndoJournal
     {
         commands.Executing += OnExecuting;
         commands.Undoing += OnUndoing;
+        commands.HistoryEntryRetired += OnRetired;
         commands.HistoryCleared += Clear;
     }
 
@@ -53,7 +52,8 @@ public sealed class CrossingUndoJournal
     {
         lock (_sync)
         {
-            if (_current.Value is not { } owner || owner.Generation != _historyGeneration) return;
+            if (_current.Value is not { } owner || owner.Generation != _historyGeneration
+                || !_owners.TryGetValue(owner.Command, out var active) || !ReferenceEquals(owner, active)) return;
             var command = owner.Command;
             // Conversion snapshots include both root and group topology. Replaying these
             // changes against the currently open group's manager would target another scope.
@@ -79,13 +79,9 @@ public sealed class CrossingUndoJournal
     {
         lock (_sync)
         {
-            _current.Value = new(command, _historyGeneration);
-            // Entries of commands the history already trimmed are never undone; keep the maps bounded.
-            if (_changes.Count > MaxTrackedCommands || _orders.Count > MaxTrackedCommands)
-            {
-                _changes.Clear();
-                _orders.Clear();
-            }
+            if (!_owners.TryGetValue(command, out var owner))
+                _owners[command] = owner = new(command, _historyGeneration);
+            _current.Value = owner;
             // A merged edit keeps the order from before its first part.
             if (command is RerouteImportedRoutesStateCommand) return;
             if (!_changes.ContainsKey(command) && !_orders.ContainsKey(command))
@@ -94,7 +90,18 @@ public sealed class CrossingUndoJournal
     }
 
     /// <summary>Connection order before each edit — routing order decides results, so undo restores it.</summary>
-    private readonly Dictionary<IUndoableCommand, List<CAP_Core.Components.Connections.WaveguideConnection>> _orders = new();
+    private readonly Dictionary<IUndoableCommand, List<CAP_Core.Components.Connections.WaveguideConnection>> _orders = new(ReferenceEqualityComparer.Instance);
+
+    private void OnRetired(IUndoableCommand command)
+    {
+        lock (_sync)
+        {
+            _changes.Remove(command);
+            _orders.Remove(command);
+            _owners.Remove(command);
+            if (ReferenceEquals(_current.Value?.Command, command)) _current.Value = null;
+        }
+    }
 
     private void OnUndoing(IUndoableCommand command)
     {
@@ -103,6 +110,7 @@ public sealed class CrossingUndoJournal
         lock (_sync)
         {
             _current.Value = null;
+            _owners.Remove(command);
             _changes.Remove(command, out changes);
             _orders.Remove(command, out order);
         }
@@ -137,6 +145,7 @@ public sealed class CrossingUndoJournal
             _historyGeneration++;
             _changes.Clear();
             _orders.Clear();
+            _owners.Clear();
             _current.Value = null;
         }
     }

@@ -38,7 +38,7 @@ public class PlaygroundDrivesLogicPanelTests
     [Fact]
     public async Task PhotonicAdd_DrivesLogicPanelInputs_AndOutputsShowTheSum()
     {
-        using var container = BuildContainer();
+        await using var container = BuildContainer();
         var logicPanel = await BuildLogicPanel(container);
         var playground = container.GetRequiredService<IsaPlaygroundViewModel>();
         playground.ProgramText = AddProgram;
@@ -65,7 +65,7 @@ public class PlaygroundDrivesLogicPanelTests
     [Fact]
     public async Task GoldenAdd_LeavesLogicPanelInputsUnchanged()
     {
-        using var container = BuildContainer();
+        await using var container = BuildContainer();
         var logicPanel = await BuildLogicPanel(container);
         var playground = container.GetRequiredService<IsaPlaygroundViewModel>();
         playground.ProgramText = AddProgram;
@@ -85,7 +85,7 @@ public class PlaygroundDrivesLogicPanelTests
     [Fact]
     public async Task RunTick_WithPhotonicAddAndPanelRefresh_StaysUnderUiBudget()
     {
-        using var container = BuildContainer();
+        await using var container = BuildContainer();
         var logicPanel = await BuildLogicPanel(container);
         var playground = container.GetRequiredService<IsaPlaygroundViewModel>();
         playground.ProgramText = AddProgram;

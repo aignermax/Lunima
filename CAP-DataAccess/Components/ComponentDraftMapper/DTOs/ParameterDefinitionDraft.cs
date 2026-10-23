@@ -8,6 +8,9 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
     /// </summary>
     public class ParameterDefinitionDraft
     {
+        /// <summary>Copies the scalar definition for an independent snapshot.</summary>
+        public ParameterDefinitionDraft Copy() => (ParameterDefinitionDraft)MemberwiseClone();
+
         /// <summary>
         /// Name of the parameter (e.g., "coupling_ratio", "phase_shift").
         /// Used as the variable name in formulas.

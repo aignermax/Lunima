@@ -475,7 +475,7 @@ public class AiGridServiceTests
         var componentLibrary = new ComponentLibraryViewModel(libraryManager);
 
         return new LeftPanelViewModel(
-            canvas, libraryManager, pdkLoader, prefs,
+            canvas, libraryManager, pdkLoader, prefs, prefs,
             hierarchy, pdkManager, componentLibrary);
     }
 

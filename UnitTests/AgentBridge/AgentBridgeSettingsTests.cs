@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.AgentBridge.Hosting;
+using CAP.Avalonia.Services.AgentBridge.Registration;
 using CAP.Avalonia.Services.AgentBridge.Transport;
 using CAP.Avalonia.ViewModels.Settings.AgentBridge;
 using Shouldly;
@@ -129,7 +130,8 @@ public class AgentBridgeSettingsTests : IDisposable
     [Fact]
     public void ViewModel_RequireToken_AddsTheHeaderToTheConnectCommand()
     {
-        using var vm = new AgentBridgeSettingsViewModel(_preferences, _host);
+        using var vm = new AgentBridgeSettingsViewModel(_preferences, _host,
+            new ClaudeCodeConnector(_preferences, _host, new ClaudeCodeRegistrar(CAP_Core.Export.ProcessLaunchFactory.CreateDefault())));
         vm.ConnectCommandText.ShouldNotContain(vm.Token);
 
         vm.RequireToken = true;
@@ -142,7 +144,8 @@ public class AgentBridgeSettingsTests : IDisposable
     public async Task ViewModel_Toggle_StartsServer_AndShowsListeningStatus()
     {
         _preferences.SetAgentBridgePort(FreePort());
-        using var vm = new AgentBridgeSettingsViewModel(_preferences, _host);
+        using var vm = new AgentBridgeSettingsViewModel(_preferences, _host,
+            new ClaudeCodeConnector(_preferences, _host, new ClaudeCodeRegistrar(CAP_Core.Export.ProcessLaunchFactory.CreateDefault())));
         vm.IsListening.ShouldBeFalse();
 
         await vm.ApplyPortCommand.ExecuteAsync(null);
@@ -157,7 +160,8 @@ public class AgentBridgeSettingsTests : IDisposable
     [Fact]
     public async Task ViewModel_CopyConnectCommand_UsesClipboardHook()
     {
-        using var vm = new AgentBridgeSettingsViewModel(_preferences, _host);
+        using var vm = new AgentBridgeSettingsViewModel(_preferences, _host,
+            new ClaudeCodeConnector(_preferences, _host, new ClaudeCodeRegistrar(CAP_Core.Export.ProcessLaunchFactory.CreateDefault())));
         string? copied = null;
         vm.CopyToClipboard = text =>
         {

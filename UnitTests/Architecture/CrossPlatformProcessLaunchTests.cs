@@ -55,7 +55,6 @@ public class CrossPlatformProcessLaunchTests
         "CAP.Avalonia/Services/Update/DetachedUpdaterLauncher.cs",
         // 2. Grandfathered platform-aware launchers (pre-existing — do NOT add new entries here)
         "CAP.Avalonia/Services/PythonResolution.cs",
-        "CAP.Avalonia/Services/Solvers/PythonModeSolverService.cs",
     };
 
     [Fact]

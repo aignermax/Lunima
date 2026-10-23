@@ -27,6 +27,8 @@ public class UnroutableWireTests
         var placeholder = unroutable.RoutedPath;
         await scenario.Canvas.RecalculateRoutesAsync();
 
+        scenario.Manager.LastContentionRepairAttemptCount.ShouldBe(0,
+            "private routing must retain failed repair fingerprints rather than retrying an unchanged attempt");
         unroutable.RoutedPath.ShouldBeSameAs(placeholder, "a remembered wire is not searched again");
         unroutable.IsBlockedFallback.ShouldBeTrue("it stays visibly blocked");
         unroutable.RoutedPath!.FailureReason.ShouldBe(CAP_Core.Routing.RoutingFailureReason.Contention);

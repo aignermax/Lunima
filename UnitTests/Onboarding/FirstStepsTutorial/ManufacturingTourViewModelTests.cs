@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Onboarding.FirstStepsTutorial;
 using CAP_Core.Export;
@@ -11,7 +12,7 @@ public class ManufacturingTourViewModelTests
     public async Task ExportStep_RequiresSuccessfulGds_NotScriptOrFailure()
     {
         var service = new ControlledExportService();
-        var export = new GdsExportViewModel(service);
+        var export = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
         var tour = new ManufacturingTourViewModel(export);
         tour.Start();
         tour.Next();
@@ -19,9 +20,9 @@ public class ManufacturingTourViewModelTests
         tour.Next();
         tour.IsClosing.ShouldBeFalse();
         foreach (var result in new[] {
-            new GdsExportService.ExportResult { Success = false, Status = "Failed" },
-            new GdsExportService.ExportResult { Success = true, Status = "Script only" },
-            new GdsExportService.ExportResult { Success = false, GdsPath = "old.gds", Status = "Failed" } })
+            new GdsExportResult { Success = false, Status = "Failed" },
+            new GdsExportResult { Success = true, Status = "Script only" },
+            new GdsExportResult { Success = false, GdsPath = "old.gds", Status = "Failed" } })
         {
             service.Result = result;
             await export.ExportScriptToGdsAsync("lesson.py");
@@ -40,7 +41,7 @@ public class ManufacturingTourViewModelTests
     public async Task RestartAndSkip_DoNotCreditEarlierExports()
     {
         var service = new ControlledExportService { Result = new() { Success = true, GdsPath = "lesson.gds" } };
-        var export = new GdsExportViewModel(service);
+        var export = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
         var tour = new ManufacturingTourViewModel(export);
         await export.ExportScriptToGdsAsync("lesson.py");
         tour.Start();
@@ -60,7 +61,7 @@ public class ManufacturingTourViewModelTests
     public async Task ExportStartedBeforeCurrentExportStage_DoesNotCompleteLesson(bool restart)
     {
         var service = new PendingExportService();
-        var export = new GdsExportViewModel(service);
+        var export = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
         var tour = new ManufacturingTourViewModel(export);
         tour.Start();
         if (restart) tour.Next();
@@ -85,8 +86,8 @@ public class ManufacturingTourViewModelTests
 
     private sealed class PendingExportService : GdsExportService
     {
-        private TaskCompletionSource<ExportResult> _pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public override Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) => _pending.Task;
+        private TaskCompletionSource<GdsExportResult> _pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) => _pending.Task;
         public void Complete() => _pending.SetResult(new() { Success = true, GdsPath = "lesson.gds", Status = "Exported" });
         public void Reset() => _pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
@@ -94,7 +95,7 @@ public class ManufacturingTourViewModelTests
     public async Task ExportRequestReservedBeforeLesson_CannotBeReissuedAfterSaveDialog()
     {
         var service = new ControlledExportService { Result = new() { Success = true, GdsPath = "lesson.gds" } };
-        var export = new GdsExportViewModel(service);
+        var export = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
         // The outer command reserves its identity before showing a save dialog.
         var earlierRequest = export.BeginExportRequest();
         var tour = new ManufacturingTourViewModel(export);
@@ -109,7 +110,7 @@ public class ManufacturingTourViewModelTests
     }
     private sealed class ControlledExportService : GdsExportService
     {
-        public ExportResult Result { get; set; } = new();
-        public override Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) => Task.FromResult(Result);
+        public GdsExportResult Result { get; set; } = new();
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) => Task.FromResult(Result);
     }
 }
