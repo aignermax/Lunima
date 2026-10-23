@@ -96,10 +96,10 @@ public partial class ComponentSettingsDialogViewModel
     [RelayCommand]
     private async Task ResetToPdkOriginal()
     {
-        if (_resetToPdkOriginal == null)
+        if (!HasCurrentConfiguration || _resetToPdkOriginal == null)
             return;
         var fresh = await _resetToPdkOriginal();
-        if (fresh == null)
+        if (!HasCurrentConfiguration || fresh == null)
             return;
 
         _draftSourceNote = fresh.SourceDraft?.SMatrix?.SourceNote;

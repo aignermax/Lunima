@@ -11,7 +11,8 @@ internal sealed class ComponentSettingsWindowHost(
     Window owner, CAP.Avalonia.ViewModels.Panels.LeftPanelViewModel library,
     CAP.Avalonia.ViewModels.Panels.FileOperationsViewModel files, ITemplateSMatrixStore? userStore,
     Func<ComponentSettingsDialogFactory> createDialogFactory, Action openSolverSettings,
-    CAP_Core.Documents.DocumentSession? document = null)
+    CAP_Core.Documents.DocumentSession? document = null,
+    Func<CAP_Core.Components.Core.Component, bool>? isComponentPresent = null)
 {
     private readonly Window _owner = owner;
     private readonly CAP.Avalonia.ViewModels.Panels.LeftPanelViewModel _library = library;
@@ -177,7 +178,7 @@ internal sealed class ComponentSettingsWindowHost(
             availablePinNames: availablePinNames,
             smatrixKeyResolver: smatrixKeyResolver,
             propagateToTemplate: propagateToTemplate,
-            template: templateForDefaults, document: document);
+            template: templateForDefaults, document: document, isComponentPresent: isComponentPresent);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         _openComponentSettingsDialogs[entityKey] = dialog;

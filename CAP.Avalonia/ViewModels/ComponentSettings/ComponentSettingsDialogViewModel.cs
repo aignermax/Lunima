@@ -36,9 +36,16 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
             _propagateToTemplate = null;
             _storedSMatrices = null;
             _liveComponent = null;
+            _isComponentPresent = null;
         }
     }
     private CAP_Core.Documents.DocumentSession? _document;
+    private CAP_Core.Documents.DocumentIdentity? _documentIdentity;
+    private Func<Component, bool>? _isComponentPresent;
+
+    private bool HasCurrentConfiguration => !_work.IsStopping
+        && (_document == null || _documentIdentity is { } identity && _document.IsCurrentIdentity(identity))
+        && (_liveComponent == null || _isComponentPresent?.Invoke(_liveComponent) != false);
     private readonly IFileDialogService _fileDialogService;
     private readonly ErrorConsoleService? _errorConsole;
     private readonly IReadOnlyList<ISParameterImporter> _importers;
@@ -130,12 +137,16 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
         Func<string>? smatrixKeyResolver = null,
         Func<ComponentSMatrixData, bool>? propagateToTemplate = null,
         Library.ComponentTemplate? template = null,
-        CAP_Core.Documents.DocumentSession? document = null)
+        CAP_Core.Documents.DocumentSession? document = null,
+        Func<Component, bool>? isComponentPresent = null)
     {
         if (_work.IsStopping) return;
         if (IsComputing || IsImporting || IsAwaitingCloudConfirmation)
             throw new InvalidOperationException("A component operation must finish before replacing its target.");
+        var identity = document?.CaptureIdentity();
         _document = document;
+        _documentIdentity = identity;
+        _isComponentPresent = isComponentPresent;
         _smatrixKey = smatrixKey;
         _propagateToTemplate = propagateToTemplate;
         _displayName = displayName;
@@ -161,7 +172,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
 
     // Importing while a cloud run awaits cost confirmation would replace the stored
     // matrix underneath the pending submit — gate the button like the recompute one.
-    private bool CanRunLoadFromFile => !_work.IsStopping && !IsComputing && !IsImporting && !IsAwaitingCloudConfirmation;
+    private bool CanRunLoadFromFile => HasCurrentConfiguration && !IsComputing && !IsImporting && !IsAwaitingCloudConfirmation;
 
     [RelayCommand(CanExecute = nameof(CanRunLoadFromFile))]
     private Task LoadFromFile() => _work.RunAsync(LoadFromFileCoreAsync);
@@ -170,11 +181,12 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
     {
         if (_storedSMatrices == null || !CanRunLoadFromFile)
             return;
-        using var operation = new ComponentSettingsOperation(_work, _document, stop);
+        ComponentSettingsOperation? operation = null;
         IsImporting = true;
         string? path = null;
         try
         {
+            operation = new ComponentSettingsOperation(_work, _document, _documentIdentity, stop);
             // Native pickers/importers do not expose cancellation. Keep ownership until
             // their real task finishes, then reject obsolete results before the next step.
             path = await _fileDialogService.ShowOpenFileDialogAsync(
@@ -208,16 +220,17 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
                 RefreshEntries(notifyChanged: true);
             });
         }
-        catch (OperationCanceledException) when (!operation.CanPublish(stop)) { }
+        catch (OperationCanceledException) when (operation?.CanPublish(stop) != true) { }
         catch (Exception ex)
         {
-            if (!operation.CanPublish(stop)) return;
+            if (operation?.CanPublish(stop) != true) return;
             _errorConsole?.LogError($"S-parameter import failed for '{path}'", ex);
             StatusText = string.Format(LocalizationService.Instance.Translate("CompSettings.ImportFailed"), ex.Message)
                 + (_errorConsole != null ? LocalizationService.Instance.Translate("CompSettings.SeeErrorConsoleSuffix") : "");
         }
         finally
         {
+            operation?.Dispose();
             IsImporting = false;
         }
     }
@@ -231,6 +244,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
     [RelayCommand]
     private void DeleteEntry(SMatrixEntryViewModel entry)
     {
+        if (!HasCurrentConfiguration || IsComputing || IsImporting || IsAwaitingCloudConfirmation) return;
         if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_smatrixKey, out var data))
             return;
 

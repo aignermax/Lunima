@@ -12,7 +12,7 @@ internal sealed class ComponentSettingsOperation : IDisposable
     private readonly CancellationTokenSource _cancellation;
     private bool _disposed;
 
-    public ComponentSettingsOperation(ShellWorkScope work, DocumentSession? document,
+    public ComponentSettingsOperation(ShellWorkScope work, DocumentSession? document, DocumentIdentity? identity,
         CancellationToken owner, CancellationToken caller = default)
     {
         _work = work;
@@ -20,7 +20,7 @@ internal sealed class ComponentSettingsOperation : IDisposable
         work.ThrowIfStopping();
         // User cancellation stops a worker, but its still-current dialog may report
         // that cancellation. Only retirement/document changes revoke that context.
-        _document = document?.CaptureOperation(owner);
+        _document = document?.CaptureOperation(identity ?? throw new InvalidOperationException("No configured document identity."), owner);
         _cancellation = CancellationTokenSource.CreateLinkedTokenSource(
             _document?.CancellationToken ?? owner, caller);
     }

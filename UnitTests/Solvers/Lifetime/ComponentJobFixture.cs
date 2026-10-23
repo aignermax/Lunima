@@ -21,6 +21,8 @@ internal sealed class ComponentJobFixture
     public Mock<IFdtdSMatrixService> Solver { get; } = new();
     public Mock<IComponentPreviewRenderer> Renderer { get; } = new();
     public Mock<IUserPdkLibrary> Library { get; } = new();
+    public Mock<IFileDialogService> Files { get; } = new();
+    public CAP_Core.Components.Core.Component Target { get; } = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
     public Dictionary<string, ComponentSMatrixData> Store { get; } = new();
     public int Propagations { get; private set; }
     public int Changes { get; private set; }
@@ -58,9 +60,10 @@ internal sealed class ComponentJobFixture
     }
 
     public ComponentSettingsDialogViewModel Settings(DocumentSession? document = null,
-        INotificationService? notifications = null, ErrorConsoleService? errors = null)
+        INotificationService? notifications = null, ErrorConsoleService? errors = null,
+        Func<CAP_Core.Components.Core.Component, bool>? isComponentPresent = null)
     {
-        var model = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>(), errorConsole: errors,
+        var model = new ComponentSettingsDialogViewModel(Files.Object, errorConsole: errors,
             notificationService: notifications, fdtdService: Solver.Object,
             fdtdRequestFactory: async (_, ct) =>
             {
@@ -68,9 +71,10 @@ internal sealed class ComponentJobFixture
                 return new FdtdSMatrixRequest { Ports = [new() { Name = "in" }, new() { Name = "out" }] };
             });
         model.Configure("component", "component", "Component", Store,
-            liveComponent: TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins(),
+            liveComponent: Target,
             onChanged: () => Changes++,
-            propagateToTemplate: _ => { Propagations++; return true; }, document: document);
+            propagateToTemplate: _ => { Propagations++; return true; }, document: document,
+            isComponentPresent: isComponentPresent);
         return model;
     }
 

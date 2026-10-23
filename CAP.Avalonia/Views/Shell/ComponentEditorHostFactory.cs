@@ -22,7 +22,14 @@ internal sealed class ComponentEditorHostFactory(
         var pdks = new PdkWindowHost(owner, library, canvas, resolvePdkSource, pdkStore, errors, processEditors);
         var settings = new ComponentSettingsWindowHost(owner, library, files, overrides,
             () => createSettings?.Invoke(owner) ?? new ComponentSettingsDialogFactory(owner,
-                errors, null, null, null, null, null, null, null, null), openSolverSettings, canvas.Document);
+                errors, null, null, null, null, null, null, null, null), openSolverSettings, canvas.Document,
+            component =>
+            {
+                var hierarchy = CAP_Core.Analysis.Hierarchy.DesignHierarchy.From(
+                    canvas.Groups.RootComponents.Select(view => view.Component));
+                return hierarchy.Leaves.Any(item => ReferenceEquals(item, component))
+                    || hierarchy.Groups.Any(item => ReferenceEquals(item, component));
+            });
         return (pdks, settings, new ComponentEditorWindowHost(owner, library, settings, pdks, pdkStore, openSolverSettings));
     }
 }

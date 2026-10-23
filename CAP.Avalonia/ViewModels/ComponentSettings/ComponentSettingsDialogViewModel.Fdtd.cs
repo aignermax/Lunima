@@ -55,7 +55,7 @@ public partial class ComponentSettingsDialogViewModel
     public bool HasBackendSelection => BackendSelection != null;
 
     private bool CanRunRecalculate =>
-        !_work.IsStopping && CanRecalculate && !IsComputing && !IsImporting && !IsAwaitingCloudConfirmation
+        HasCurrentConfiguration && CanRecalculate && !IsComputing && !IsImporting && !IsAwaitingCloudConfirmation
         && BackendSelection?.IsCurrentBackendUnavailable != true;
 
     /// <summary>The solver behind the current backend selection (or the fixed fallback service).</summary>
@@ -122,6 +122,7 @@ public partial class ComponentSettingsDialogViewModel
 
     private async Task RecalculateSMatrixCoreAsync(CancellationToken stop)
     {
+        if (!HasCurrentConfiguration) return;
         var service = ActiveFdtdService;
         if (service == null || _fdtdRequestFactory == null || _liveComponent == null || _storedSMatrices == null)
         {
@@ -137,7 +138,7 @@ public partial class ComponentSettingsDialogViewModel
 
         try
         {
-            operation = new ComponentSettingsOperation(_work, _document, stop, cancellation.Token);
+            operation = new ComponentSettingsOperation(_work, _document, _documentIdentity, stop, cancellation.Token);
             // Fail fast with an actionable message if the backend isn't ready, before
             // exporting geometry / building images / contacting the cloud.
             SolverStatus = string.Format(
