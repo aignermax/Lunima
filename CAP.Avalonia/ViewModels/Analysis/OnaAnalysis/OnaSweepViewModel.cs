@@ -30,6 +30,8 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
     private readonly Services.Lifetime.ShellWorkScope _work = new();
     private Task? _retirement;
     private long _configurationVersion;
+    private CAP_Core.Documents.DocumentIdentity? _configuredDocument;
+    private Component? _configuredAnalyzer;
 
     private async Task RetireAsync()
     {
@@ -37,6 +39,8 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
         finally
         {
             _canvas = null;
+            _configuredDocument = null;
+            _configuredAnalyzer = null;
             Analyzer = null;
             FileDialogService = null;
             OpenWindowAsync = null;
@@ -102,6 +106,19 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
         _configurationVersion++;
         _sweepCts?.Cancel();
         _canvas = canvas;
+        _configuredAnalyzer = Analyzer;
+        _configuredDocument = Analyzer != null ? canvas.Document.CaptureIdentity() : null;
+    }
+
+    private bool IsConfiguredAnalyzerCurrent()
+    {
+        if (_configuredDocument is not { } identity) return Analyzer == null;
+        if (_canvas == null || !_canvas.Document.IsCurrentIdentity(identity)
+            || !ReferenceEquals(_configuredAnalyzer, Analyzer)) return false;
+        var hierarchy = CAP_Core.Analysis.Hierarchy.DesignHierarchy.From(
+            _canvas.Groups.RootComponents.Select(view => view.Component));
+        return hierarchy.Leaves.Any(component => ReferenceEquals(component, Analyzer))
+            || hierarchy.Groups.Any(component => ReferenceEquals(component, Analyzer));
     }
 
     /// <summary>Runs a wavelength sweep and updates the insertion-loss plot.</summary>
@@ -110,7 +127,7 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
 
     private async Task RunSweepCoreAsync(CancellationToken stop)
     {
-        if (_canvas == null || IsSweeping) return;
+        if (_canvas == null || IsSweeping || !IsConfiguredAnalyzerCurrent()) return;
         var canvas = _canvas;
         var configuration = _configurationVersion;
         var analyzer = Analyzer;
@@ -126,8 +143,9 @@ public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
         try
         {
             operation = new AnalysisSweepOperation(_work, canvas.Document,
-                () => configuration == _configurationVersion && ReferenceEquals(analyzer, Analyzer),
-                stop, cancellation.Token);
+                () => configuration == _configurationVersion && ReferenceEquals(analyzer, Analyzer)
+                    && IsConfiguredAnalyzerCurrent(),
+                stop, cancellation.Token, _configuredDocument);
             var config = new WavelengthSweepConfiguration(StartNm, EndNm, StepCount);
             var (gridManager, portManager) = BuildSimulationGrid();
             if (gridManager == null)

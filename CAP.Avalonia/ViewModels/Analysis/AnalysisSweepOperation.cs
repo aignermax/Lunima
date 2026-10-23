@@ -14,13 +14,16 @@ internal sealed class AnalysisSweepOperation : IDisposable
     private bool _disposed;
 
     public AnalysisSweepOperation(ShellWorkScope owner, DocumentSession document,
-        Func<bool> configurationCurrent, CancellationToken ownerToken, CancellationToken caller)
+        Func<bool> configurationCurrent, CancellationToken ownerToken, CancellationToken caller,
+        DocumentIdentity? identity = null)
     {
         _owner = owner;
         _configurationCurrent = configurationCurrent;
         _caller = caller;
         owner.ThrowIfStopping();
-        _document = document.CaptureOperation(ownerToken);
+        _document = identity is { } expected
+            ? document.CaptureOperation(expected, ownerToken)
+            : document.CaptureOperation(ownerToken);
         _linked = CancellationTokenSource.CreateLinkedTokenSource(_document.CancellationToken, caller);
     }
 

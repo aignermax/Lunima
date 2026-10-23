@@ -31,7 +31,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject, IAsyncDispo
     {
         var work = _work.StopAsync();
         Overlay.OverlayChanged -= OnOverlayChanged;
-        try { await work; }
+        try { await Task.WhenAll(work, Overlay.StopAsync()); }
         finally
         {
             _sweepGate.Dispose();

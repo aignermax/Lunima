@@ -889,11 +889,6 @@ public partial class MainWindow : Window
     /// </summary>
     private System.Threading.Tasks.Task OpenOnaAnalyzerWindow(CAP_Core.Components.Core.Component analyzer, MainViewModel vm)
     {
-        var sweepVm = new OnaSweepViewModel(vm.ErrorConsole) { Analyzer = analyzer };
-        sweepVm.Configure(vm.Canvas);
-        sweepVm.FileDialogService = vm.FileDialogService;
-        var window = new OnaAnalyzerWindow { DataContext = sweepVm };
-        window.Show(this);
-        return System.Threading.Tasks.Task.CompletedTask;
+        return _toolWindows.ShowOnaAsync(this, analyzer, vm.Canvas, vm.FileDialogService);
     }
 }

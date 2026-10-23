@@ -37,7 +37,8 @@ public static class MainWindowComposition
             () => services.GetRequiredService<SettingsWindowViewModel>(),
             owner => ModeSolverWindowComposition.ShowAsync(services, owner), () => services.GetService<IsaPlaygroundViewModel>(),
             () => services.GetService<RunProgramTourViewModel>(), () => services.GetService<PdkResolutionCheckViewModel>(),
-            () => services.GetService<OpenEblCheckViewModel>());
+            () => services.GetService<OpenEblCheckViewModel>(),
+            () => services.GetRequiredService<ViewModels.Analysis.OnaAnalysis.OnaSweepViewModel>());
         var panels = new ShellPanelDialogBindings(services.GetService<PdkImportService>(),
             services.GetService<OnaAnalyzerEditorProvider>(), services.GetService<NotificationService>());
         return new MainWindow(editors, tools, panels) { DataContext = model, RetireApplicationAsync = retire };
