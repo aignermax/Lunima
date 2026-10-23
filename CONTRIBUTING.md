@@ -43,8 +43,8 @@ serially. See [docs/TESTING.md](docs/TESTING.md) for examples and CI coverage.
 
 ## Source-size checks
 
-Prefer 250 lines or fewer for new files. Authored source has a hard ceiling of
-999 physical lines per file, including tests, AXAML, scripts and CI configuration.
+Prefer 250 lines or fewer for new files. Authored source and documentation have a hard ceiling of
+999 physical lines per file, including tests, AXAML, scripts, CI configuration, Markdown, reStructuredText and text notes.
 Separate responsibilities into focused collaborators; do not add partial-class
 fragments, minify/encode source or delete assertions to bypass the ceiling.
 Data, fixture and generated-artifact scope remains pending clarification.

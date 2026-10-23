@@ -133,7 +133,7 @@ python3 scripts/run_tests.py
 python3 scripts/run_tests.py ParameterSweeperTests
 ```
 
-Prefer new files no longer than 250 lines; authored source has a hard ceiling of
+Prefer new files no longer than 250 lines; authored source and documentation have a hard ceiling of
 999 physical lines. Extract real responsibilities instead of adding partial files,
 minifying code or dropping assertions. The source-size checker and hook setup are
 documented in [CONTRIBUTING.md](CONTRIBUTING.md). Data/fixture/generated-artifact

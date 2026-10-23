@@ -91,6 +91,15 @@ class SourceSizeTests(unittest.TestCase):
         for name in names:
             self.assertIn(name, result.stdout)
 
+    def test_checks_authored_documentation_in_the_index(self):
+        for name in ("docs/architecture.md", "docs/guide.rst", "docs/notes.txt"):
+            self.source(name, 1000)
+        self.git("add", "docs")
+        result = self.check("--staged")
+        self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+        for name in ("docs/architecture.md", "docs/guide.rst", "docs/notes.txt"):
+            self.assertIn(name, result.stdout)
+
     def test_count_is_physical_lines_not_unicode_separators(self):
         path = self.repo / "Feature.cs"
         path.write_text('// "a\u2028b"\n' * 999, encoding="utf-8")

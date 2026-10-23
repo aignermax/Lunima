@@ -23,7 +23,10 @@
     ".props",
     ".targets",
     ".csproj",
-    ".toml"
+    ".toml",
+    ".md",
+    ".rst",
+    ".txt"
   ],
   "source_names": [
     "Makefile",
