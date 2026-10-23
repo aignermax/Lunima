@@ -45,8 +45,10 @@ internal sealed record MatrixDefinitionSnapshot(ImmutableArray<Guid> FlowIds,
         return new(ids, matrix.SliderReference.ToImmutableDictionary(), numeric,
             matrix.NonLinearConnections.Select(pair => new SnapshotFormula(pair.Key.PinIdStart,
                 pair.Key.PinIdEnd, pair.Value.ConnectionsFunctionRaw)).ToImmutableArray(),
-            matrix.ParametricSnapshot?.Parameters.ToImmutableArray() ?? ImmutableArray<ParameterDefinition>.Empty,
-            matrix.ParametricSnapshot?.Connections.ToImmutableArray() ?? ImmutableArray<FormulaConnection>.Empty);
+            matrix.ParametricSnapshot?.Parameters.Select(value => ParametricDefinitionCopy.Copy(value)).ToImmutableArray()
+                ?? ImmutableArray<ParameterDefinition>.Empty,
+            matrix.ParametricSnapshot?.Connections.Select(value => ParametricDefinitionCopy.Copy(value)).ToImmutableArray()
+                ?? ImmutableArray<FormulaConnection>.Empty);
     }
 
     internal SMatrix Rebuild(ImmutableArray<SnapshotPin> pinValues, ImmutableArray<SnapshotSlider> sliderValues)

@@ -8,6 +8,45 @@ namespace UnitTests.Routing.Snapshots;
 public sealed class RoutingSnapshotGeometryTests
 {
     [Fact]
+    public void LargePrivateHierarchy_KeepsChildAndPathOrderEndpointIdentityAndCapturedBounds()
+    {
+        var children = Enumerable.Range(0, 128).Select(index =>
+        {
+            var component = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+            component.PhysicalX = index * 25;
+            component.PhysicalY = index % 3 * 40;
+            return component;
+        }).ToArray();
+        var paths = children.Zip(children.Skip(1), (first, second) => new FrozenWaveguidePath
+        {
+            StartPin = first.PhysicalPins[1], EndPin = second.PhysicalPins[0],
+            Path = RoutingSnapshotFixture.Straight(new WaveguideConnection
+                { StartPin = first.PhysicalPins[1], EndPin = second.PhysicalPins[0] })
+        }).ToArray();
+        var group = new ComponentGroup("many children");
+        group.AddChildren(children);
+        group.AddInternalPaths(paths);
+        group.PhysicalX = -13;
+        group.PhysicalY = -17;
+        group.WidthMicrometers = 4000;
+        group.HeightMicrometers = 500;
+        var router = new CAP_Core.Routing.WaveguideRouter();
+        var snapshot = RoutingInputSnapshot.Capture([group], router, new WaveguideConnectionManager(router));
+
+        var copy = snapshot.CreatePrivateGraph().Components.Single().ShouldBeOfType<ComponentGroup>();
+
+        copy.ChildComponents.Select(child => child.Id).ShouldBe(children.Select(child => child.Id));
+        copy.InternalPaths.Select(path => path.PathId).ShouldBe(paths.Select(path => path.PathId));
+        (copy.PhysicalX, copy.PhysicalY, copy.WidthMicrometers, copy.HeightMicrometers).ShouldBe((-13d, -17d, 4000d, 500d));
+        for (var index = 0; index < paths.Length; index++)
+        {
+            copy.InternalPaths[index].StartPin.ShouldBeSameAs(copy.ChildComponents[index].PhysicalPins[1]);
+            copy.InternalPaths[index].EndPin.ShouldBeSameAs(copy.ChildComponents[index + 1].PhysicalPins[0]);
+            copy.ChildComponents[index].ParentGroup.ShouldBeSameAs(copy);
+        }
+    }
+
+    [Fact]
     public void ImportedGeometry_PreservesHiddenOriginalBindingAndCopiesCallerOwnedPolygonLists()
     {
         var fixture = new RoutingSnapshotFixture();

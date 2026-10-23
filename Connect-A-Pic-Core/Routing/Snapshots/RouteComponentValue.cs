@@ -76,9 +76,9 @@ internal sealed record RouteComponentValue
         IReadOnlyDictionary<Guid, PhysicalPin> pins)
     {
         if (component is not ComponentGroup group) return;
-        // AddChild updates bounds. Restore the captured origin after all topology is attached.
-        foreach (var id in Children) group.AddChild(components[id]);
-        foreach (var path in FrozenPaths) group.AddInternalPath(path.Build(pins));
+        // Batch each collection: per-item bounds updates make large imported groups quadratic.
+        group.AddChildren(Children.Select(id => components[id]).ToArray());
+        group.AddInternalPaths(FrozenPaths.Select(path => path.Build(pins)).ToArray());
         foreach (var pin in ExternalPins) group.AddExternalPin(new GroupPin
         {
             PinId = pin.Id, Name = pin.Name, InternalPin = pins[pin.Internal], RelativeX = pin.X,

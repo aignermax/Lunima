@@ -11,23 +11,28 @@ public sealed class RoutingInputSnapshot
     private readonly ImmutableArray<Guid> _rootIds;
     private readonly ImmutableArray<RouteComponentValue> _components;
     private readonly ImmutableArray<RouteConnectionValue> _connections;
+    private readonly ImmutableArray<Guid> _connectionOrder;
     private readonly RouteRouterValue _router;
     private readonly RouteManagerValue _manager;
+    private readonly RouteCrossingValue? _crossings;
 
     private RoutingInputSnapshot(ImmutableArray<Guid> rootIds, ImmutableArray<RouteComponentValue> components,
-        ImmutableArray<RouteConnectionValue> connections, RouteRouterValue router, RouteManagerValue manager)
+        ImmutableArray<RouteConnectionValue> connections, ImmutableArray<Guid> connectionOrder,
+        RouteRouterValue router, RouteManagerValue manager, RouteCrossingValue? crossings)
     {
         _rootIds = rootIds;
         _components = components;
         _connections = connections;
+        _connectionOrder = connectionOrder;
         _router = router;
         _manager = manager;
+        _crossings = crossings;
     }
 
     /// <summary>
     /// Captures a quiescent routing graph on its owning thread. Callers must drain any earlier
     /// live routing pass before capture. Physics values use the router's existing 1550 nm loss reference.
-    /// Crossing-service isolation is a separate contract and is rejected until supplied explicitly.
+    /// Crossing prototypes are resolved once here; factories, notifications and undo callbacks never cross the boundary.
     /// </summary>
     public static RoutingInputSnapshot Capture(IReadOnlyList<Component> components,
         WaveguideRouter router, WaveguideConnectionManager manager)
@@ -35,10 +40,12 @@ public sealed class RoutingInputSnapshot
         ArgumentNullException.ThrowIfNull(components);
         ArgumentNullException.ThrowIfNull(router);
         ArgumentNullException.ThrowIfNull(manager);
-        if (manager.CrossingService != null || router.CrossingRouting != null)
-            throw new NotSupportedException("A private routing graph requires a detached crossing service contract.");
         lock (manager.SyncRoot)
         {
+            var records = manager.CrossingService?.Records;
+            var wires = manager.Connections.Concat(records?.SelectMany(record =>
+                new[] { record.OriginalA, record.OriginalB }.Concat(record.AllSubConnections))
+                ?? Enumerable.Empty<WaveguideConnection>()).DistinctBy(wire => wire.Id).ToArray();
             var originals = new Dictionary<Guid, Component>();
             var active = new HashSet<Guid>();
             void Visit(Component component)
@@ -56,7 +63,8 @@ public sealed class RoutingInputSnapshot
                 active.Remove(component.Id);
             }
             foreach (var component in components) Visit(component);
-            foreach (var connection in manager.Connections)
+            if (records != null) foreach (var record in records) Visit(record.CrossingComponent);
+            foreach (var connection in wires)
             {
                 if (connection.StartPin?.ParentComponent is { } start) Visit(start);
                 if (connection.EndPin?.ParentComponent is { } end) Visit(end);
@@ -77,8 +85,10 @@ public sealed class RoutingInputSnapshot
             }
             return new(components.Select(component => component.Id).ToImmutableArray(),
                 originals.Values.Select(RouteComponentValue.Capture).ToImmutableArray(),
-                manager.Connections.Select(connection => RouteConnectionValue.Capture(connection, router)).ToImmutableArray(),
-                RouteRouterValue.Capture(router), RouteManagerValue.Capture(manager));
+                wires.Select(connection => RouteConnectionValue.Capture(connection, router)).ToImmutableArray(),
+                manager.Connections.Select(connection => connection.Id).ToImmutableArray(),
+                RouteRouterValue.Capture(router), RouteManagerValue.Capture(manager),
+                RouteCrossingValue.Capture(manager, router, originals.Values));
         }
     }
 
@@ -91,31 +101,15 @@ public sealed class RoutingInputSnapshot
         foreach (var value in _components) value.AttachHierarchy(components[value.Id], components, pins);
         foreach (var value in _components) value.ApplyGeometry(components[value.Id]);
         var roots = _rootIds.Select(id => components[id]).ToArray();
-        var router = _router.Build(roots, components, _connections);
+        var floors = new RouteProcessFloorTable(_connections, _crossings?.Floors);
+        var router = _router.Build(roots, components, floors);
         var manager = _manager.Build(router);
-        foreach (var value in _connections) manager.AddExistingConnection(value.Build(pins));
+        var wires = _connections.ToDictionary(value => value.Id, value => value.Build(pins));
+        foreach (var id in _connectionOrder) manager.AddExistingConnection(wires[id]);
         manager.RestoreFailureState(_manager.Failures, _manager.PendingWireSetChange);
-        return new RoutingWorkGraph(roots, router, manager);
-    }
-}
-
-/// <summary>Mutable routing objects owned exclusively by one worker; never editor objects.</summary>
-public sealed class RoutingWorkGraph
-{
-    internal RoutingWorkGraph(IReadOnlyList<Component> components, WaveguideRouter router, WaveguideConnectionManager manager)
-    {
-        Components = components;
-        Router = router;
-        Manager = manager;
-    }
-    public IReadOnlyList<Component> Components { get; }
-    public WaveguideRouter Router { get; }
-    public WaveguideConnectionManager Manager { get; }
-    public void Route(CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        Manager.RecalculateAllTransmissions(cancellationToken: cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
+        var graph = new RoutingWorkGraph(roots, router, manager);
+        _crossings?.Attach(graph, components, wires, floors);
+        return graph;
     }
 }
 

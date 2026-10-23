@@ -8,7 +8,7 @@ internal sealed record RouteRouterValue(double Radius, double ProcessFloor, doub
     ImmutableArray<double> Radii, double Spacing, double CellSize, double Padding, bool Hierarchical,
     bool Direct, bool Diagonal, bool Breakouts, int Phase1, int Phase2, int CoarseFactor, int CoarseBudget,
     ImmutableArray<(double X, double Y, double Width, double Height)>? Regions, RouteGridValue? Grid,
-    RouteCostValue Cost, ImmutableArray<RouteObstacleValue> Obstacles)
+    RouteCostValue Cost, ImmutableArray<RouteObstacleValue> Obstacles, CrossingRouteSettings? Crossings)
 {
     internal static RouteRouterValue Capture(WaveguideRouter router) => new(router.MinBendRadiusMicrometers,
         router.ProcessMinBendRadiusMicrometers, router.MetalProcessMinBendRadiusMicrometers,
@@ -18,17 +18,12 @@ internal sealed record RouteRouterValue(double Radius, double ProcessFloor, doub
         router.Phase1MaxNodes, router.Phase2MaxNodes, router.CoarseRetryCellSizeFactor, router.CoarseRetryBudgetMultiplier,
         router.AllowedRoutingRegions?.ToImmutableArray(), RouteGridValue.Capture(router.PathfindingGrid),
         RouteCostValue.Capture(router.CostCalculator), router.Obstacles.Select(obstacle => new RouteObstacleValue(
-            obstacle.X, obstacle.Y, obstacle.Width, obstacle.Height, obstacle.SourceComponent?.Id)).ToImmutableArray());
+            obstacle.X, obstacle.Y, obstacle.Width, obstacle.Height, obstacle.SourceComponent?.Id)).ToImmutableArray(),
+        router.CrossingRouting);
 
     internal WaveguideRouter Build(IReadOnlyList<Component> roots, IReadOnlyDictionary<Guid, Component> components,
-        ImmutableArray<RouteConnectionValue> connections)
+        RouteProcessFloorTable floors)
     {
-        var floors = new Dictionary<(Guid, Guid), double>();
-        foreach (var wire in connections)
-        {
-            floors[(wire.Start, wire.End)] = wire.ProcessFloor;
-            floors[(wire.End, wire.Start)] = wire.ProcessFloor;
-        }
         var router = new WaveguideRouter
         {
             MinBendRadiusMicrometers = Radius, ProcessMinBendRadiusMicrometers = ProcessFloor,
@@ -39,7 +34,8 @@ internal sealed record RouteRouterValue(double Radius, double ProcessFloor, doub
             CoarseRetryCellSizeFactor = CoarseFactor, CoarseRetryBudgetMultiplier = CoarseBudget,
             AllowedRoutingRegions = Regions is { } regions ? regions.ToArray() : null,
             // This closure owns a scalar table only. The caller's provider was evaluated at capture.
-            ConnectionProcessFloorProvider = (start, end) => floors.TryGetValue((start.PinId, end.PinId), out var value) ? value : null
+            ConnectionProcessFloorProvider = floors.Resolve,
+            CrossingRouting = Crossings
         };
         foreach (var obstacle in Obstacles) router.Obstacles.Add(new RoutingObstacle
         {
