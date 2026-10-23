@@ -161,7 +161,56 @@ Files: architecture tests/checker, explicit module policy, every remaining path 
 
 ## Current acceptance status
 
+### Platform and lifetime checkpoint (still in progress)
+
+- Draft PR: https://github.com/aignermax/Lunima/pull/1574. No merge or release.
+- Native ownership is committed in `539f1ab6`. The first native CI run passed on
+  Ubuntu; macOS arm64 exposed a variadic `fcntl` ABI mismatch and macOS Intel exposed
+  Darwin's zombie-only process-group `EPERM`. Fix `3357b28a` uses the .NET PAL's
+  atomic duplicate operation and verifies that no live members remain before
+  accepting that Darwin result. The native CI rerun is pending; Windows tests pass.
+- `tests-20261023-120813-65472.log`: 113 passed, five intended REDs, one Unix-only
+  skip. Demonstrated terminal-bridge restart, native input/environment compatibility,
+  and HTTP-client header-timeout defects. Corresponding fixes subsequently passed.
+- `tests-20261023-121558-45536.log`: 154 passed, 13 intended REDs, one Unix-only
+  skip. Main/live/bridge retirement passed; REDs characterized analyzer ownership
+  noise and updater file changes during the close confirmation.
+- `tests-20261023-122120-53436.log`: 125 passed, ten intended lifecycle REDs and
+  one newly introduced namespace inventory failure. Signer interoperability and
+  staged-file revalidation passed. The explicit namespace registration was added.
+- `tests-20261023-123627-39176.log`: 297 passed, nine failures, one Unix-only skip.
+  Seven new shell/application retirement cases and existing startup/live baselines
+  passed. Five snapshot stubs and three solver boundary cases remain intentional
+  REDs. One updater test incorrectly assumed linked cancellation callbacks execute
+  synchronously; its follow-up now awaits the observed callback while retaining
+  the actual-drain assertion and awaits verification.
+- The real compiler audit, after fixture-backed ownership corrections, reports
+  1,649 dependency diagnostics and no unknown-owner noise. These are an unfinished
+  migration inventory, not accepted exceptions. The audit remains opt-in until
+  actual forbidden edges are removed and unconditional enforcement can be enabled.
+- Canonical staged-hook/C# source policy is committed in `000aed5b`; all 23 Python
+  tooling tests passed again. Signing tooling has 12 passing Python tests and two
+  passing .NET interoperability tests. Publisher key provisioning remains pending.
+
 ### Extraction checkpoint (not final acceptance)
+
+- `tests-20261023-112232-63656.log`: 42 intended RED failures and two positive
+  controls passed, no skips. Demonstrated three surviving-descendant failures,
+  three unintended startup-job/cancellation failures, missing semantic dependency
+  diagnostics, and the newly specified publisher-manifest verification contract.
+- `tests-20261023-113411-56012.log`: 91 passed, eight intended new download REDs,
+  zero skipped. Publisher signature/version/platform fixtures, semantic collector,
+  canonical file-size tests, constructor inactivity and real startup cancellation
+  passed. Manifest authentication committed as `8497cdd1`; production key setup,
+  signed release generation and updater integration are still outstanding.
+- Python tooling: all 23 tests pass after sharing `source_size_policy.json` between
+  the staged hook/CI checker and the replacement C# guard. The legacy basename
+  exemptions are removed in the current patch. The semantic analyzer is deliberately
+  not yet attached to shipping projects: repository/external ownership and directed
+  edges must be fully inventoried and violations addressed first.
+- Shell startup now has explicit activation and cancellation/draining. Retirement
+  of live simulation, old shell subscriptions, child projections and terminal MCP
+  host shutdown remains in progress; this is not yet complete application teardown.
 
 - `tests-20261023-110942-57176.log`: **700 passed, zero failed/skipped** after
   correcting all extraction/review findings, including process-warning assignment
@@ -220,23 +269,107 @@ Earlier verification checkpoints, 2026-10-23:
   in the 531-case run, but its Main/FileOperations edits cannot be committed until
   those files satisfy the mandatory staged size gate.
 
+Additional verification, 2026-10-23 afternoon:
+
+- `dc122aa1`: immutable simulation physics capture committed after the legacy-oracle
+  and isolation tests passed. UI integration and prepared visualization are verified
+  locally but still belong to the uncommitted lifetime/document integration slice.
+- `50d54b41`: explicit PDK library/reader/writer and diagnostic contracts committed;
+  consumers and mandatory architecture enforcement are not yet complete.
+- Architecture audit 3 builds with zero errors and reports 1,203 distinct forbidden
+  edges (1,201 presentation-to-infrastructure, two application-to-infrastructure).
+  This is a remediation inventory, not a passing architecture gate.
+- CI `39945959514` at `84af0862` failed only the German preview-recovery fixture's
+  temporary-directory cleanup. The local correction retires the preview producer
+  and drains its writes; it does not retry or suppress the deletion failure.
+- `tests-20261023-135148-45740.log`: 195 passed, 19 failed. Fifteen failures were
+  intended new RED cases; the remainder exposed a second native-load reset path,
+  a cancellation-fixture scheduling timeout, Undo grid work and a possible heartbeat
+  completion-timing artifact. These were not counted as a green run.
+- `tests-20261023-140125-57000.log`: 275 passed, 12 failed. Seven routing snapshot
+  cases deliberately remain RED pending implementation. Four new regressions expose
+  delayed caller-cancellation publication and native model/template loss while
+  saving a nested scope. Undo is the only failed responsiveness case (228 ms);
+  measured raster registration accounts for 197 ms. The other 21 command cases,
+  preview retirement, Python cancellation ordering and progressive document commits
+  pass. A passing Make Gate rerun alone does not close the heartbeat review finding.
+- The working-tree source inventory, including untracked additions at that checkpoint,
+  passed with 3,750 authored files and no file above 999 physical lines. All 23 Python
+  tooling tests passed again, including an actual rejected 1,000-line Git commit.
+
 | Finding | Status |
 |---|---|
 | A01 | Resolved, reviewed, 124-case combined verification |
-| A02 | Pipe/deadline and mode-solver fixes verified; orphan containment open |
+| A02 | Owned-process containment verified on Windows, Linux and macOS (native CI 39940594173); final integration review pending |
 | A03 | Bounded cache, warm lookup and PDK edit invalidation verified; final combined review pending |
-| A04 | Simulation snapshot/session work pending |
+| A04 | Detached numeric/formula snapshots, UI integration, stale-error rejection and prepared visualization verified against legacy physics; final integration review pending |
 | A05 | Export split committed; main/file/input/window extraction implemented, combined verification in progress |
-| A06 | Directed domain/application/infrastructure boundaries pending |
-| A07 | Semantic dependency enforcement pending |
+| A06 | Solver, update, MRU, PDK library/reader/writer and diagnostic ports verified; remaining actual dependency edges still require remediation |
+| A07 | Semantic collector and explicit repository/external ownership tests pass; warning inventory remains opt-in until actual forbidden edges are removed |
 | A08 | Shared runtime verified; fresh desktop publish passed before shell extraction, browser pending |
-| A09 | Whole-operation heartbeat verified; benchmark state reset pending |
+| A09 | All 22 command budgets pass at the unchanged 100 ms threshold; exact raster reuse and corrected acknowledgement timing committed as fe232861, final integration review pending |
 | A10 | Admission/draining gate verified; real commit-boundary integration pending |
-| A11 | Pinned/verified uv implemented; signed updater manifest pending |
+| A11 | Pinned uv, authenticated updater download and signed publisher tooling verified; production public-key provisioning and installer handoff review pending |
 | A12 | Checked-in runner/docs implemented; 23 tool tests pass |
 | A13 | April report removed, active docs reconciled; update as extractions land |
 | A14 | Hook/CI guard implemented; tracked source ceiling passes, new files/final legacy guard replacement pending |
-| A15 | Cache ownership partly addressed; session/temporary-resource lifecycle pending |
+| A15 | Main/window, updater, Python, solver scopes, application registry and thumbnail retirement verified; component editor/settings and other direct panel owners remain |
 | A16 | Binary/SDK cleanup verified with fresh desktop publish; final branch/platform checks pending |
 | A17 | Native DTO extraction verified; persistence workflow extraction undergoing combined regression |
-| A18 | Document/scope authority and revisioned operation ownership pending |
+| A18 | Root metadata/native I/O guards and canonical group wires verified; private routing including crossing records/prototypes passes comparison tests; actual UI worker integration, command publication and long-lived configuration admission remain in progress |
+
+Further integration checkpoints (same day):
+
+- `935bb76e`: seven private-routing capture/isolation/parity cases passed before
+  committing the immutable input boundary. It is not yet the canvas routing path.
+- `tests-20261023-142452-27232.log`: 253 passed, 19 intended new component-window
+  retirement failures. All 22 responsiveness commands, native I/O lifetime guards
+  and seven routing snapshot controls passed.
+- `tests-20261023-144438-69084.log`: 336 passed, nine failed. The 19 retirement
+  regressions and cleaned responsiveness fixtures passed. Failures were four new
+  group-document cases, four crossing snapshot stubs, and the missing exact routing
+  snapshot namespace in the architecture ownership manifest.
+- `tests-20261023-145215-47424.log`: 211 passed, 19 failed. Home/learning preference
+  ports, canonical group connection continuity, native metadata and the ownership
+  manifest passed. Ten new settings publication/configuration cases and seven new
+  crossing cases were RED; two existing group-bounds cases exposed a regression.
+- `tests-20261023-145854-3404.log`: 297 passed, 16 failed. Both group-bounds
+  regressions, all settings publication cases, and all 17 routing snapshot cases
+  (including crossing prototypes, floors and undo) passed. The remaining failures
+  were 12 newly added editor/import lifetime cases and four accepted-route-intent /
+  atomic group-publication cases. No skipped tests in these integration runs.
+- Inventory including untracked authored source: 3,784 files, none over 999 physical
+  lines. This validates the file ceiling, not completion of dependency remediation.
+- Review identified additional admission work: an old settings window must not
+  start work against a replacement document, and actual MCP tools must enforce
+  revocable commit permission after their awaits. Entry-only adapter checks do not
+  establish this guarantee. Neither finding is considered closed.
+
+### 2026-10-23 — Document admission and feature contracts
+
+- `ea1e12f0` integrates the reviewed editor/document/lifetime work; native process CI passed on all three platforms. Full xUnit CI found one obsolete localization fixture expecting constructor-started work; `a8bdbead` migrates it to explicit activation and awaited retirement, retaining weak-reference collection checks. Its next remote run is pending.
+- `a13d6bef` commits immutable crossing/prototype/parametric ownership and hierarchy batch construction. Routing UI worker integration (R3) is still incomplete; five controlled isolation tests remain RED.
+- `544b32b8` adds non-owning document identity bookmarks and atomic admission for configured features; four identity regressions pass. `a8bdbead` checks both document identity and canonical component reference membership before settings work starts; all eleven admission cases pass.
+- `3616adf8` separates GDS execution, interpreter session and discovery contracts, keeping one runtime/cache owner. Existing test assertions and data attributes were preserved. `e2fc7068` replaces concrete preference-store dependencies with ten feature-specific ports and same-instance aliases; both interface-only behavior tests and existing persistence tests pass.
+- `tests-20261023-153453-41904.log`: 394 passed, ten intended REDs, one Unix-only skip. GDS/discovery contracts, identity and real MCP load cancellation passed; REDs were five routing isolation and five obsolete settings cases.
+- `tests-20261023-154303-25480.log`: six passed and five intended REDs. Demonstrated a stopped/replaced load prompt could still enter Save, and a save picker could write a replacement document or outlive retirement without ownership.
+- `tests-20261023-155520-1236.log`: 345 passed, seven intended REDs, one existing MainWindow AI skip. Native prompt/picker fixes, settings admission, localization retirement and preference ports pass. Remaining REDs: five R3 integration cases and two newly added real MCP save cancellation cases. Prior two compilation attempts failed on missing using/fixture argument and are not verification successes.
+- Uncommitted follow-ups include revocable native-file requests covering prompts, picks, parse and actual I/O cleanup; explicit MCP save/load commit permission; asynchronous document-operation cleanup; coordinate diagnostic contracts; and sweep retirement regressions. These are not final acceptance or release evidence.
+- The source ceiling is green for 3,794 tracked authored sources at this checkpoint; new untracked additions also require the staged hook before commit. Semantic dependency enforcement remains opt-in while actual forbidden edges are being removed. No final architecture/functional-equivalence claim is made.
+
+### 2026-10-23 — Private routing and async ownership verification
+
+- `bd33f166` owns native prompts, file picks and accepted I/O through actual cleanup, with explicit MCP load/save permission at commit boundaries. `14d1a50b`, `bf2cbabd` and `df9f029c` remove coordinate, preview and Python registry implementation dependencies; shared cache identity and generation rejection remain tested.
+- `4477e890` integrates private routing into the actual canvas. Progressive frames and final topology are revision-gated; crossing undo, existing model identity and unchanged-path identity are preserved. Two integration regressions exposed missing contention-repair memory and conversion cancellation after an unrelated edit; both are corrected without weakening the original assertions.
+- `fa8edda1` and `bb71cee3` own spectrum/analyzer jobs, configured analyzer admission and measured-file work. A further review found synchronous linked-token disposal could block the UI during cancellation; two controlled regressions are still RED and await correction. Physics inputs for these additional analyses are still a separate A04 follow-up.
+- `200fd1d6` shares one document operation across MCP commands, routing and multi-step repair application. Response admission is checked after asynchronous cleanup. Actual tool tests cover cancellation, server closure, document replacement, navigation and concurrent editing. Speculative `suggest_fixes` trials still use the live document and require a private workbench; the two asynchronous assistant-adapter paths also remain under remediation.
+- `bb4b9d3d` extends the 999-line policy to authored Markdown/RST/text. Three historical July plans are indexed and split by responsibility while retaining their content. All 24 Python tooling tests pass; raw data/assets remain separately reported, not silently treated as approved exclusions from the user's broader request.
+- `tests-20261023-160901-34688.log` was aborted after a legacy test blocked a process-floor provider during synchronous snapshot capture. It is not success evidence. Eight affected fixtures now use a controlled worker seam and retain their behavioral assertions.
+- `tests-20261023-161651-50388.log`: 261 passed, 23 failed; five routing-isolation cases and actual native I/O controls passed. Twenty-one intentional REDs and two route-identity regressions remained at that checkpoint.
+- `tests-20261023-163015-71740.log`: 984 passed, two failed, no skips. The remaining failures were the two routing regressions corrected above.
+- `tests-20261023-163901-11736.log`: all 31 responsiveness/gate-view cases passed on the compiled 163015 snapshot, including all 22 command budgets at the unchanged 100 ms threshold. Remote full CI at `a8bdbead` still failed the CPU-example gate-view budget (118 ms); the next integrated remote run must confirm it.
+- `tests-20261023-164249-57952.log`: 226 passed, eleven intended REDs. Four response-after-cleanup cases and seven analyzer/overlay admission-retirement cases reproduced the targeted defects. The preceding compile attempt failed on a fixture namespace collision and is not success evidence.
+- `tests-20261023-165020-46400.log`: 470 passed, eight failed. All routing, analyzer/overlay and response-cleanup corrections passed. Five new multi-step repair cases were intentionally RED; one new control needed distinct-component moves to avoid normal history merging, and two probe fixtures needed to expect the newly enforced cancellation response.
+- `tests-20261023-165920-47532.log`: 215 passed, nine intended REDs, no skips. All MCP edit/repair/response corrections pass. Remaining REDs reproduce seven actual assistant-adapter permission gaps and two UI-blocking analysis cleanup cases.
+- A forced desktop rebuild with the real semantic analyzer (`architecture-desktop-audit-4.log`) succeeds with zero errors and finds 280 distinct forbidden dependency edges, down from 1,203 in audit 3; no unclassified ownership/project diagnostics remain. This is still an opt-in remediation inventory, not a passing mandatory architecture gate. Remaining implementation owners include Python setup/process launching, bridge registration/hosting, registry download, calibration/import and file exporters.
+- Final combined CI, desktop/browser publish, remaining lifetime/snapshot work, mandatory semantic enforcement, operational signing-key provisioning and whole-branch independent review remain outstanding. The draft PR is not ready to merge or release.
