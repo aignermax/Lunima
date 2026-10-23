@@ -51,7 +51,11 @@ public sealed class MeasuredOverlayRetirementTests
         {
             await overlay.Barrier.AwaitStartAsync(running);
             stopping = overlay.StopAsync();
-            await overlay.Barrier.AssertDrainingAsync(stopping);
+            // This reader receives the owner's token directly. CancelAsync changes
+            // its state synchronously but schedules callbacks on the thread pool;
+            // callback dispatch latency is not the lifetime contract under test.
+            overlay.ReadToken.IsCancellationRequested.ShouldBeTrue("retirement reaches the actual reader token");
+            stopping.IsCompleted.ShouldBeFalse("the accepted reader has not completed its cleanup");
         }
         finally { await overlay.Barrier.FinishAsync(running, stopping); }
         overlay.HasOverlay.ShouldBeFalse();
@@ -94,11 +98,13 @@ public sealed class MeasuredOverlayRetirementTests
     {
         public RetirementBarrier Barrier { get; } = new();
         public int Reads { get; private set; }
+        public CancellationToken ReadToken { get; private set; }
         public bool Fail { get; init; }
 
         protected override async Task<SpectrumData> ReadSpectrumAsync(string path, CancellationToken cancellationToken)
         {
             Reads++;
+            ReadToken = cancellationToken;
             await Barrier.WaitAsync(cancellationToken);
             if (Fail) throw new IOException("Late controlled read failure");
             return new SpectrumData([1500d, 1550d, 1600d], [0.1d, 0.9d, 0.1d], "controlled measurement");
