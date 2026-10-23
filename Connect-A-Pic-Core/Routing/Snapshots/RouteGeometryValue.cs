@@ -69,6 +69,21 @@ internal sealed record PolygonValue(int Layer, int DataType, ImmutableArray<Outl
     internal OutlinePolygon Build() => new() { Layer = Layer, DataType = DataType, Points = Points.ToArray() };
     internal static AsDrawnGeometry? BuildDrawn(ImmutableArray<PolygonValue> polygons) =>
         polygons.IsEmpty ? null : new AsDrawnGeometry(polygons.Select(polygon => polygon.Build()).ToArray());
+
+    // Publication runs on the UI side. Preserve the editor's imported source object only
+    // when every captured value still agrees; translated/replaced worker geometry must win.
+    internal static AsDrawnGeometry? PrepareDrawn(ImmutableArray<PolygonValue> polygons, AsDrawnGeometry? current)
+    {
+        if (current == null || polygons.Length != current.Polygons.Count) return BuildDrawn(polygons);
+        for (var index = 0; index < polygons.Length; index++)
+        {
+            var value = polygons[index];
+            var existing = current.Polygons[index];
+            if (value.Layer != existing.Layer || value.DataType != existing.DataType
+                || !value.Points.SequenceEqual(existing.Points)) return BuildDrawn(polygons);
+        }
+        return current;
+    }
 }
 
 /// <summary>Routing evaluates losses at its existing 1550 nm reference; no live model crosses the boundary.</summary>

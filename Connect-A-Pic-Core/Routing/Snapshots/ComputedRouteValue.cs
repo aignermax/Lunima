@@ -16,7 +16,7 @@ internal sealed record ComputedRouteValue(Guid Id, RouteGeometryValue? Geometry,
 
     internal PreparedRouteValue Prepare(WaveguideConnection target, bool preservePath = false) => new(target,
         preservePath ? target.RoutedPath : Geometry?.Build(), Loss, Frozen,
-        BendOverrides, Shifts, PolygonValue.BuildDrawn(Imported.Polygons), Imported.Signature,
+        BendOverrides, Shifts, PolygonValue.PrepareDrawn(Imported.Polygons, target.AsDrawnGeometry), Imported.Signature,
         Imported.OriginalPath?.Build(), Imported.Displaced);
 }
 
