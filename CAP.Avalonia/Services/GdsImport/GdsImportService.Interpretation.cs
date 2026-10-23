@@ -38,8 +38,8 @@ public sealed partial class GdsImportService
         {
             // Unmapped: exactly two optical pins keep the S-matrix null so the
             // lossless pass-through default applies — the same state the
-            // non-review import leaves. Any other optical pin count cannot
-            // default its internal routing and stays deliberately geometry-only.
+            // non-review import leaves. Any other pin set cannot default its
+            // internal routing and stays deliberately geometry-only.
             draft.ImportedModelStatus = IsPassThroughEligible(draft) ? null : "geometry-only";
             return;
         }
@@ -81,9 +81,9 @@ public sealed partial class GdsImportService
     /// <summary>
     /// True when an unmodeled reviewed draft qualifies for the lossless 2-pin
     /// pass-through default (<see cref="PdkTemplateConverter"/>): exactly two
-    /// optical pins, mirroring the pin count the default itself requires.
+    /// pins, both optical.
     /// </summary>
     private static bool IsPassThroughEligible(PdkComponentDraft draft) =>
-        draft.Pins.Count(p => PinKindHelper.TryParse(p.PinKind, out var kind)
-            && kind == MatterType.Light) == 2;
+        draft.Pins.Count == 2 && draft.Pins.All(p =>
+            PinKindHelper.TryParse(p.PinKind, out var kind) && kind == MatterType.Light);
 }

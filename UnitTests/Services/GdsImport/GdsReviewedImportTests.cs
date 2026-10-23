@@ -67,6 +67,36 @@ public class GdsReviewedImportTests
     }
 
     [Fact]
+    public async Task ReviewedTwoOpticalPlusElectricalCellWithoutModelStaysGeometryOnly()
+    {
+        using var host = new GdsDesignScopeTestHost();
+        Directory.CreateDirectory(host.GdsCacheDirectory);
+        var path = Path.Combine(host.GdsCacheDirectory, "source.gds");
+        await File.WriteAllBytesAsync(path, Fixture());
+        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var review = Review(analysis) with
+        {
+            Cells = [new()
+            {
+                CellName = "device",
+                Pins =
+                [
+                    new() { Name = "in", XUm = 0, YUm = 2 },
+                    new() { Name = "out", XUm = 10, YUm = 2 },
+                    new() { Name = "heater", XUm = 5, YUm = 0, IsElectrical = true },
+                ]
+            }]
+        };
+        await new GdsImportService(host.Scope).ImportAsync(path, "TOP",
+            preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes, interpretation: review);
+        var draft = host.Scope.Sets.Single().Drafts.Single();
+        draft.Pins.Count.ShouldBe(3);
+        draft.ImportedModelStatus.ShouldBe("geometry-only",
+            "an electrical pin means the cell is active and needs a real model");
+        draft.SMatrix.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task ModelMappingCopiesOnlyModelAndRejectsUnmappedPortsBeforeRegistration()
     {
         using var host = new GdsDesignScopeTestHost();
