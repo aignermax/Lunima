@@ -53,7 +53,7 @@ public class PdkResolutionCheckViewModelTests : IDisposable
         => new("python3", "script.py", null, null);
 
     private PdkResolutionCheckViewModel CreateViewModel(PdkFunctionResolutionService service)
-        => new(new PdkLoader(), service, () => _pdkDir);
+        => new(UnitTests.Helpers.TestBundledPdkCatalog.ForDirectory(_pdkDir), new PdkLoader(), service);
 
     [Fact]
     public async Task RunCheck_DeadReference_AppearsAsError()
@@ -246,8 +246,7 @@ public class PdkResolutionCheckViewModelTests : IDisposable
     [Fact]
     public async Task RunCheck_MissingDirectory_ReportsNoPdkDirectory()
     {
-        var vm = new PdkResolutionCheckViewModel(
-            new PdkLoader(), MockService().Object, () => null);
+        var vm = new PdkResolutionCheckViewModel(UnitTests.Helpers.TestBundledPdkCatalog.ForDirectory(null), new PdkLoader(), MockService().Object);
 
         await vm.RunCheckCommand.ExecuteAsync(null);
 

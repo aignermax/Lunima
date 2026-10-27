@@ -18,6 +18,9 @@ internal static class RepositoryTypeOwnership
         yield return new("CAP.Avalonia.Services.TemplateGeometryMatch", RepositoryModules.Domain);
         yield return new("CAP_DataAccess.Import.Gds.GdsSourceReader", RepositoryModules.Infrastructure);
         yield return new("CAP_DataAccess.Import.Gds.IGdsSourceReader", RepositoryModules.Contracts);
+        yield return new("CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog", RepositoryModules.Infrastructure);
+        yield return new("CAP_DataAccess.Components.ComponentDraftMapper.IBundledPdkCatalog", RepositoryModules.Contracts);
+        yield return new("CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkInventory", RepositoryModules.Contracts);
         // Contracts responsibilities in namespaces that also contain another layer.
         yield return new("CAP_Core.Export.PdkParseResult", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.ParsedComponentGeometry", RepositoryModules.Contracts);

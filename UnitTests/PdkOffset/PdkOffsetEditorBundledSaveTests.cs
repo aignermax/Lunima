@@ -66,7 +66,7 @@ public class PdkOffsetEditorBundledSaveTests : IDisposable
         manager.RegisterPdk("Shipped PDK", bundledPath, isBundled: true, componentCount: 1);
 
         var store = new UserPdkStore(_userPdkRoot, new PdkJsonSaver(), new PdkLoader());
-        var vm = new PdkOffsetEditorViewModel(
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             new PdkLoader(), new PdkJsonSaver(), manager,
             userPdkStore: withStore ? store : null);
         var forkEvents = new List<(string, string)>();
@@ -160,12 +160,8 @@ public class PdkOffsetEditorBundledSaveTests : IDisposable
         var earlierForkPath = store.ForkBundledPdk(bundledPath, "Shipped PDK");
         manager.RegisterPdk("Shipped PDK", earlierForkPath, isBundled: false, componentCount: 1);
 
-        var vm = new PdkOffsetEditorViewModel(
-            new PdkLoader(), new PdkJsonSaver(), manager, userPdkStore: store)
-        {
-            IsBundledPdkFilePath = path => Path.GetDirectoryName(Path.GetFullPath(path))!
-                .Equals(Path.GetFullPath(_bundledDir), StringComparison.OrdinalIgnoreCase),
-        };
+        var vm = new PdkOffsetEditorViewModel(UnitTests.Helpers.TestBundledPdkCatalog.ForDirectory(_bundledDir),
+            new PdkLoader(), new PdkJsonSaver(), manager, userPdkStore: store);
         var forkEvents = new List<(string, string)>();
         vm.BundledPdkForkSaved = (name, path) => forkEvents.Add((name, path));
 
@@ -219,7 +215,7 @@ public class PdkOffsetEditorBundledSaveTests : IDisposable
         manager.RegisterPdk("Shipped PDK", bundledPath, isBundled: false, componentCount: 1);
 
         var store = new UserPdkStore(_userPdkRoot, new PdkJsonSaver(), new PdkLoader());
-        var vm = new PdkOffsetEditorViewModel(
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             new PdkLoader(), new PdkJsonSaver(), manager, userPdkStore: store);
         var forkEvents = new List<(string, string)>();
         vm.BundledPdkForkSaved = (name, path) => forkEvents.Add((name, path));

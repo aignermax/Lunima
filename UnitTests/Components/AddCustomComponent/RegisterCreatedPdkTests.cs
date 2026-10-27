@@ -36,7 +36,7 @@ public class RegisterCreatedPdkTests : IDisposable
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
 
-        _leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService, _preferencesService,
+        _leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), canvas, groupLibrary, pdkLoader, _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(groupLibrary), userPdkLibrary: _store);
     }

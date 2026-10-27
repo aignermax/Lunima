@@ -142,7 +142,7 @@ public class NazcaComponentPreviewCalibrationTests
             WidthMicrometers = 1, HeightMicrometers = 1,
             Pins = new List<PhysicalPinDraft>()
         };
-        var vm = new PdkOffsetEditorViewModel(
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             new PdkLoader(), new PdkJsonSaver(),
             new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
             previewService: null);

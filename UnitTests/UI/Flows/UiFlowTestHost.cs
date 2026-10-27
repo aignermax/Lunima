@@ -64,7 +64,7 @@ internal sealed class UiFlowTestHost : IDisposable
         var libraryManager = new GroupLibraryManager();
         UserPdkStore = new UserPdkStore(UserPdkRoot, new PdkJsonSaver(), new PdkLoader());
 
-        var leftPanel = new LeftPanelViewModel(
+        var leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             canvas, libraryManager, new PdkLoader(), prefs, prefs,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
@@ -94,6 +94,7 @@ internal sealed class UiFlowTestHost : IDisposable
         services.AddSingleton(UserPdkStore);
         services.AddSingleton<IUserPdkLibrary>(UserPdkStore);
         services.AddSingleton(new CAP.Avalonia.Views.Shell.ProcessEditorFactory(
+            new BundledPdkCatalog(AppContext.BaseDirectory),
             new IProcessImporter[] { new UpdkYamlProcessImporter(), new NazcaCsvProcessImporter() },
             new PdkJsonSaver(), UserPdkStore));
         _previousServices = App.Services;

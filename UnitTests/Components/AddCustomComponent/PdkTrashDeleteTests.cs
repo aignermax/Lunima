@@ -50,7 +50,7 @@ public class PdkTrashDeleteTests : IDisposable
             deps = new AddCustomComponentDependencies(extractor, Fdtd: null, UserPdkStore: userPdkStore);
         }
 
-        return new LeftPanelViewModel(
+        return new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             canvas, libraryManager, pdkLoader, preferences, preferences,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),

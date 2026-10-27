@@ -13,7 +13,7 @@ public class MeasuredSpectrumOverlayViewModelTests
     private static readonly string FixturePath = Path.Combine(
         AppContext.BaseDirectory, "Analysis", "MeasuredSpectrum", "Fixtures", "synthetic_mzi_spectrum.csv");
 
-    private static MeasuredSpectrumOverlayViewModel CreateVm() => new();
+    private static MeasuredSpectrumOverlayViewModel CreateVm() => new(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource());
 
     [Fact]
     public async Task Load_ValidCsv_SetsOverlayAndResultLine()

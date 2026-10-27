@@ -10,6 +10,7 @@ internal static class RepositoryBoundaryOwnership
         // Pure release selection policy, distinct from network retrieval.
         yield return new("CAP_Core.Update.ReleaseAssetPolicy", RepositoryModules.Application);
         // Infrastructure
+        yield return new("CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Logger", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Analysis.SweepCsvExporter", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumCsvReader", RepositoryModules.Infrastructure);
@@ -30,6 +31,7 @@ internal static class RepositoryBoundaryOwnership
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.AiToolAdapter", RepositoryModules.Application);
         yield return new("CAP.Avalonia.Services.GdsFactoryExport.GdsFactoryPreviewCode", RepositoryModules.Application);
         // Contracts
+        yield return new("CAP_Core.Analysis.MeasuredSpectrum.IMeasuredSpectrumSource", RepositoryModules.Contracts);
         yield return new("CAP_Core.Components.Creation.IGroupLibrary", RepositoryModules.Contracts);
         yield return new("CAP_DataAccess.Persistence.PIR.ITemplateSMatrixStore", RepositoryModules.Contracts);
         yield return new("CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore", RepositoryModules.Contracts);

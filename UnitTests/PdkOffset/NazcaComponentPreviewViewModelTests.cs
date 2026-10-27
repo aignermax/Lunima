@@ -20,7 +20,7 @@ public class NazcaComponentPreviewViewModelTests
     [Fact]
     public void ViewModel_WithPreviewServiceNull_NazcaOverlayNotShown()
     {
-        var vm = new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel(), previewService: null);
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel(), previewService: null);
         var draft = BuildDraft();
         vm.Components.Add(new PdkComponentOffsetItemViewModel(draft, "Test"));
         vm.SelectedComponent = vm.Components[0];
@@ -33,7 +33,7 @@ public class NazcaComponentPreviewViewModelTests
     [Fact]
     public void ViewModel_WhenComponentSelected_SetsComponentDimensions()
     {
-        var vm = new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel(), previewService: null);
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel(), previewService: null);
         var draft = BuildDraft();
         vm.Components.Add(new PdkComponentOffsetItemViewModel(draft, "Test"));
         vm.SelectedComponent = vm.Components[0];
@@ -45,7 +45,7 @@ public class NazcaComponentPreviewViewModelTests
     [Fact]
     public void ViewModel_ApplyOffset_SavesWidthAndHeightToDraft()
     {
-        var vm = new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel(), previewService: null);
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel(), previewService: null);
         var draft = BuildDraft();
         vm.Components.Add(new PdkComponentOffsetItemViewModel(draft, "Test"));
         vm.SelectedComponent = vm.Components[0];
@@ -61,7 +61,7 @@ public class NazcaComponentPreviewViewModelTests
     [Fact]
     public void ViewModel_CanvasComponentLeft_IsCanvasPaddingWhenNoOverlay()
     {
-        var vm = new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel(), previewService: null);
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel(), previewService: null);
         var draft = BuildDraft();
         vm.Components.Add(new PdkComponentOffsetItemViewModel(draft, "Test"));
         vm.SelectedComponent = vm.Components[0];

@@ -11,7 +11,7 @@ public class WavelengthSpectrumViewModelTests
 {
     private static WavelengthSpectrumViewModel CreateVm()
     {
-        var vm = new WavelengthSpectrumViewModel { AutoRefreshDelay = TimeSpan.Zero };
+        var vm = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()) { AutoRefreshDelay = TimeSpan.Zero };
         vm.Configure(new DesignCanvasViewModel());
         return vm;
     }
@@ -87,7 +87,7 @@ public class WavelengthSpectrumViewModelTests
     public async Task CoherentToggle_On_SetsCanvasFlag_AndReRunsSweepAsynchronously()
     {
         var canvas = new DesignCanvasViewModel();
-        var vm = new WavelengthSpectrumViewModel { AutoRefreshDelay = TimeSpan.Zero };
+        var vm = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()) { AutoRefreshDelay = TimeSpan.Zero };
         vm.Configure(canvas);
         vm.HasResult = true; // simulate a completed first sweep
 
@@ -108,7 +108,7 @@ public class WavelengthSpectrumViewModelTests
     public void CoherentToggle_BeforeFirstSweep_SetsFlagWithoutSweeping()
     {
         var canvas = new DesignCanvasViewModel();
-        var vm = new WavelengthSpectrumViewModel { AutoRefreshDelay = TimeSpan.Zero };
+        var vm = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()) { AutoRefreshDelay = TimeSpan.Zero };
         vm.Configure(canvas);
 
         vm.IsCoherentInterference = true;
@@ -122,7 +122,7 @@ public class WavelengthSpectrumViewModelTests
     {
         var canvas = new DesignCanvasViewModel();
         canvas.ConnectionManager.EnableCoherentPropagationPhase = true;
-        var vm = new WavelengthSpectrumViewModel();
+        var vm = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource());
 
         vm.Configure(canvas);
 
@@ -135,7 +135,7 @@ public class WavelengthSpectrumViewModelTests
     public void SyncCoherentToggleFromCanvas_UpdatesToggle_WithoutSweeping()
     {
         var canvas = new DesignCanvasViewModel();
-        var vm = new WavelengthSpectrumViewModel { AutoRefreshDelay = TimeSpan.Zero };
+        var vm = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()) { AutoRefreshDelay = TimeSpan.Zero };
         vm.Configure(canvas);
         vm.HasResult = true; // a sweep result exists from before the load
 

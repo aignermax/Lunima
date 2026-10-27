@@ -94,7 +94,7 @@ public sealed class MeasuredOverlayRetirementTests
         finally { await overlay.StopAsync(); }
     }
 
-    private sealed class ControlledOverlay(ErrorConsoleService errors) : MeasuredSpectrumOverlayViewModel(errors)
+    private sealed class ControlledOverlay(ErrorConsoleService errors) : MeasuredSpectrumOverlayViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource(), errors)
     {
         public RetirementBarrier Barrier { get; } = new();
         public int Reads { get; private set; }

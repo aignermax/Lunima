@@ -43,6 +43,8 @@ internal static class CoreServicesExtensions
         });
 
         services.AddSingleton<SimulationService>();
+        services.AddSingleton(new BundledPdkCatalog(AppContext.BaseDirectory));
+        services.AddSingleton<IBundledPdkCatalog>(sp => sp.GetRequiredService<BundledPdkCatalog>());
         services.AddSingleton<PdkLoader>();
         services.AddSingleton<IPdkReader>(sp => sp.GetRequiredService<PdkLoader>());
         services.AddSingleton<PdkImportService>();
@@ -50,6 +52,7 @@ internal static class CoreServicesExtensions
         services.AddSingleton<IProcessImporter, UpdkYamlProcessImporter>();
         services.AddSingleton<IProcessImporter, NazcaCsvProcessImporter>();
         services.AddSingleton(sp => new Views.Shell.ProcessEditorFactory(
+            sp.GetRequiredService<IBundledPdkCatalog>(),
             sp.GetServices<IProcessImporter>().ToArray(), sp.GetRequiredService<IPdkWriter>(),
             sp.GetRequiredService<CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary>()));
         services.AddSingleton<Commands.CommandManager>();

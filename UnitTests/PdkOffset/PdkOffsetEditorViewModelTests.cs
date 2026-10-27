@@ -54,7 +54,7 @@ public class PdkOffsetEditorViewModelTests
         gf.Setup(s => s.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new NazcaPreviewResult { Success = true });
 
-        var vm = new PdkOffsetEditorViewModel(
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel(), nazca.Object, gf.Object);
         var draft = new PdkComponentDraft
         {
@@ -259,7 +259,7 @@ public class PdkOffsetEditorViewModelTests
 
     private static PdkOffsetEditorViewModel CreateViewModel()
     {
-        return new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel());
+        return new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel());
     }
 
     [Fact]

@@ -27,7 +27,7 @@ internal sealed class SweepLifetimeFixture : IAsyncDisposable
         Canvas.Components.Add(new ComponentViewModel(source));
         if (spectrum)
         {
-            Spectrum = new WavelengthSpectrumViewModel(Errors, Runner, application);
+            Spectrum = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource(), Errors, Runner, application);
             Spectrum.Configure(Canvas);
         }
         else

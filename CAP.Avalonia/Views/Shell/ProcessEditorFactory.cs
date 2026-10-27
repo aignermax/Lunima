@@ -7,8 +7,8 @@ namespace CAP.Avalonia.Views.Shell;
 
 /// <summary>Creates process editors with the configured PDK import formats and persistence policy.</summary>
 internal sealed class ProcessEditorFactory(
-    IReadOnlyList<IProcessImporter> importers, IPdkWriter writer, IUserPdkLibrary library)
+    IBundledPdkCatalog bundledPdks, IReadOnlyList<IProcessImporter> importers, IPdkWriter writer, IUserPdkLibrary library)
 {
     public ProcessManagementViewModel Create(IFileDialogService dialogs) =>
-        new(dialogs, importers, writer, library);
+        new(bundledPdks, dialogs, importers, writer, library);
 }

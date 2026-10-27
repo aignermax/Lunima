@@ -26,8 +26,8 @@ internal sealed class PdkWindowHost(
     private readonly IUserPdkLibrary? _store = store;
     private readonly CAP_Core.ErrorConsoleService _errors = errors;
     private ProcessManagementViewModel CreateProcessEditor() =>
-        processEditors?.Create(new FileDialogService(_owner))
-        ?? new ProcessManagementViewModel(new FileDialogService(_owner), _store);
+        (processEditors ?? throw new InvalidOperationException("Process editing requires a configured factory."))
+            .Create(new FileDialogService(_owner));
 
     private readonly Dictionary<string, ProcessManagementWindow> _openPdkEditWindows = new();
 

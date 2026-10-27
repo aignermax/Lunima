@@ -12,7 +12,7 @@ public class AnalysisDockViewModelTests
 {
     private static AnalysisDockViewModel Make() =>
         new(new TimeDomainViewModel(), new EyeDiagramViewModel(),
-            new WavelengthSpectrumViewModel(), new AnalysisOutputPanelViewModel(),
+            new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()), new AnalysisOutputPanelViewModel(),
             new MonteCarloViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.CircuitOptimization.CircuitOptimizationViewModel(
                 new CAP.Avalonia.Commands.CommandManager()));

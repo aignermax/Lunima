@@ -36,7 +36,7 @@ public class GroupTemplatePlacementIntegrationTests : IDisposable
         _commandManager = new CommandManager();
         _canvasInteraction = new CanvasInteractionViewModel(_canvas, _commandManager, _libraryViewModel);
         var preferences = new CAP.Avalonia.Services.UserPreferencesService();
-        _leftPanel = new LeftPanelViewModel(
+        _leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             _canvas,
             _libraryManager,
             new CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader(),

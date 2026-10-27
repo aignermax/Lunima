@@ -222,7 +222,7 @@ public class UiScreenshotTests
         var tempFile = Path.Combine(Path.GetTempPath(), $"lunima-ui-shot-pdk-{Guid.NewGuid():N}.json");
         File.WriteAllText(tempFile, pdkJson);
 
-        var vm = new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel())
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel())
         {
             FileDialogService = new StubFileDialogService(tempFile),
         };

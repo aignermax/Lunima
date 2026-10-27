@@ -99,12 +99,13 @@ public partial class WavelengthSpectrumViewModel : ObservableObject, IAsyncDispo
 
     /// <summary>Initializes a new instance of <see cref="WavelengthSpectrumViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
-    public WavelengthSpectrumViewModel(CAP_Core.ErrorConsoleService? errorConsole = null,
+    public WavelengthSpectrumViewModel(CAP_Core.Analysis.MeasuredSpectrum.IMeasuredSpectrumSource measuredSpectrum,
+        CAP_Core.ErrorConsoleService? errorConsole = null,
         IWavelengthSweepRunner? runner = null, Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
     {
         _errorConsole = errorConsole;
         _runner = runner ?? new WavelengthSweepRunner();
-        Overlay = new MeasuredSpectrumOverlayViewModel(errorConsole);
+        Overlay = new MeasuredSpectrumOverlayViewModel(measuredSpectrum, errorConsole);
         _work.RegisterWith(applicationWork, StopAsync);
         Overlay.OverlayChanged += OnOverlayChanged;
     }

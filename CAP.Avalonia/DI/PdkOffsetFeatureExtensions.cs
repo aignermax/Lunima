@@ -70,6 +70,7 @@ internal static class PdkOffsetFeatureExtensions
             return backend;
         });
         services.AddSingleton(sp => new PdkOffsetEditorViewModel(
+            sp.GetRequiredService<IBundledPdkCatalog>(),
             sp.GetRequiredService<IPdkReader>(),
             sp.GetRequiredService<IPdkWriter>(),
             sp.GetRequiredService<PdkManagerViewModel>(),

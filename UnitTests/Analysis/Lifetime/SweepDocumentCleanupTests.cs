@@ -27,7 +27,7 @@ public sealed class SweepDocumentCleanupTests
         source.LaserEnabled = true;
         canvas.Components.Add(new ComponentViewModel(source));
         using var runner = new CallbackSweep();
-        var wavelength = spectrum ? new WavelengthSpectrumViewModel(runner: runner) : null;
+        var wavelength = spectrum ? new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource(), runner: runner) : null;
         var ona = spectrum ? null : new OnaSweepViewModel(runner: runner);
         wavelength?.Configure(canvas);
         ona?.Configure(canvas);

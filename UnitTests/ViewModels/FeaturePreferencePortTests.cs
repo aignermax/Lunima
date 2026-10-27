@@ -35,7 +35,7 @@ public class FeaturePreferencePortTests
             var pdkPreferences = new PdkPreferences();
             var layout = new Mock<IPanelLayoutPreferences>(MockBehavior.Strict);
             layout.Setup(x => x.SetLeftPanelWidth(365));
-            var panel = new LeftPanelViewModel(canvas, library.Object, reader.Object,
+            var panel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), canvas, library.Object, reader.Object,
                 pdkPreferences, layout.Object, new HierarchyPanelViewModel(canvas),
                 new PdkManagerViewModel(), new ComponentLibraryViewModel(library.Object))
             {

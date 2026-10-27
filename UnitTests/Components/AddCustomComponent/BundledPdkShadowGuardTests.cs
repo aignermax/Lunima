@@ -99,12 +99,12 @@ public class BundledPdkShadowGuardTests : IDisposable
                 new Mock<IPdkGeometryRenderer>().Object, new Mock<IPdkGeometryRenderer>().Object),
             Fdtd: null, UserPdkStore: store);
 
-        var leftPanel = new LeftPanelViewModel(
+        var leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             canvas, libraryManager, new PdkLoader(), _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
             errorConsole: _errorConsole, addCustomComponentDeps: deps);
-        leftPanel.LoadBundledPdksFrom(_bundledDir);
+        leftPanel.LoadBundledPdkFiles(Directory.GetFiles(_bundledDir, "*.json"));
         return (leftPanel, store);
     }
 

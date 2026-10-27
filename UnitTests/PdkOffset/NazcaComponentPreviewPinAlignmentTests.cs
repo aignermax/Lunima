@@ -45,7 +45,7 @@ public class NazcaComponentPreviewPinAlignmentTests
             }
         };
 
-        var vm = new PdkOffsetEditorViewModel(
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             new PdkLoader(), new PdkJsonSaver(),
             new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
             previewService: null);
@@ -84,7 +84,7 @@ public class NazcaComponentPreviewPinAlignmentTests
             }
         };
 
-        var vm = new PdkOffsetEditorViewModel(
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             new PdkLoader(), new PdkJsonSaver(),
             new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
             previewService: null);

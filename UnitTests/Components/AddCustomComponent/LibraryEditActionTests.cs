@@ -44,7 +44,7 @@ public class LibraryEditActionTests : IDisposable
             deps = new AddCustomComponentDependencies(extractor, Fdtd: null, UserPdkStore: userPdkStore);
         }
 
-        return new LeftPanelViewModel(
+        return new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             canvas, libraryManager, pdkLoader, preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),

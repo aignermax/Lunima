@@ -108,6 +108,8 @@ internal static class CanvasAndPanelExtensions
         services.AddTransient<PdkConsistencyViewModel>();
         services.AddTransient<TimeDomainViewModel>();
         services.AddTransient<EyeDiagramViewModel>();
+        services.AddSingleton<CAP_Core.Analysis.MeasuredSpectrum.IMeasuredSpectrumSource,
+            CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource>();
         services.AddTransient<WavelengthSpectrumViewModel>();
         services.AddTransient<MonteCarloViewModel>();
         services.AddTransient<AnalysisOutputPanelViewModel>();

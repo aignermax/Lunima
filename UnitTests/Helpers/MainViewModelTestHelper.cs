@@ -120,7 +120,7 @@ public static class MainViewModelTestHelper
             rightPanel,
             bottomPanel,
             new ViewportControlViewModel(canvas),
-            new PdkOffsetEditorViewModel(pdkLoader, new PdkJsonSaver(), new PdkManagerViewModel()),
+            new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), pdkLoader, new PdkJsonSaver(), new PdkManagerViewModel()),
             photonTorchVm,
             verilogAVm,
             gdsFactoryVm,
@@ -157,7 +157,7 @@ public static class MainViewModelTestHelper
             Path.Combine(Path.GetTempPath(), $"cap-test-prefs-{Guid.NewGuid()}.json"));
 
         var isolatedUserPdkRoot = Path.Combine(Path.GetTempPath(), $"cap-test-userpdks-{Guid.NewGuid()}");
-        var leftPanel = new LeftPanelViewModel(
+        var leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             canvas,
             libraryManager,
             pdkLoader,
@@ -245,7 +245,7 @@ public static class MainViewModelTestHelper
             new AnalysisDockViewModel(
                 new TimeDomainViewModel(),
                 new EyeDiagramViewModel(),
-                new WavelengthSpectrumViewModel(),
+                new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()),
                 new AnalysisOutputPanelViewModel(),
                 new MonteCarloViewModel(),
                 new CAP.Avalonia.ViewModels.Analysis.CircuitOptimization.CircuitOptimizationViewModel(new CommandManager())));

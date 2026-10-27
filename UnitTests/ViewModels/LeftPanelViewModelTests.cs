@@ -44,7 +44,7 @@ public class LeftPanelViewModelTests : IDisposable
 
     /// <summary>Creates a LeftPanelViewModel with all required sub-VM dependencies.</summary>
     private LeftPanelViewModel CreateLeftPanelViewModel() =>
-        new(_canvas, _libraryManager, _pdkLoader, _preferencesService, _preferencesService,
+        new(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), _canvas, _libraryManager, _pdkLoader, _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(_canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(_libraryManager));
@@ -173,7 +173,7 @@ public class LeftPanelViewModelTests : IDisposable
             File.WriteAllText(Path.Combine(repoPdks, "demo.json"), "{}");
             File.WriteAllText(Path.Combine(bundledPdks, "demo.json"), "{}");
 
-            var resolved = LeftPanelViewModel.ResolveBundledPdkDirectory(baseDir);
+            var resolved = new BundledPdkCatalog(baseDir).ReadInventory()?.Directory;
 
             // Edits saved through the editor must land in the repo copy so they
             // get committed — the bundled-next-to-exe copy is a build artefact.
@@ -195,7 +195,7 @@ public class LeftPanelViewModelTests : IDisposable
             Directory.CreateDirectory(bundledPdks);
             File.WriteAllText(Path.Combine(bundledPdks, "demo.json"), "{}");
 
-            var resolved = LeftPanelViewModel.ResolveBundledPdkDirectory(baseDir);
+            var resolved = new BundledPdkCatalog(baseDir).ReadInventory()?.Directory;
 
             Path.GetFullPath(resolved!).ShouldBe(Path.GetFullPath(bundledPdks));
         }
@@ -211,7 +211,7 @@ public class LeftPanelViewModelTests : IDisposable
         {
             Directory.CreateDirectory(baseDir);
 
-            LeftPanelViewModel.ResolveBundledPdkDirectory(baseDir).ShouldBeNull();
+            (new BundledPdkCatalog(baseDir).ReadInventory()?.Directory).ShouldBeNull();
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
@@ -233,7 +233,7 @@ public class LeftPanelViewModelTests : IDisposable
             Directory.CreateDirectory(bundledPdks);
             File.WriteAllText(Path.Combine(bundledPdks, "demo.json"), "{}");
 
-            var resolved = LeftPanelViewModel.ResolveBundledPdkDirectory(baseDir);
+            var resolved = new BundledPdkCatalog(baseDir).ReadInventory()?.Directory;
 
             Path.GetFullPath(resolved!).ShouldBe(Path.GetFullPath(bundledPdks));
         }

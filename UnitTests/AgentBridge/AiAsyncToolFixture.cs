@@ -23,7 +23,7 @@ internal static class AiAsyncToolFixture
         var library = new Mock<IGroupLibrary>();
         library.SetupGet(x => x.UserTemplates).Returns(Array.Empty<GroupTemplate>());
         library.SetupGet(x => x.PdkTemplates).Returns(Array.Empty<GroupTemplate>());
-        var panel = new LeftPanelViewModel(canvas, library.Object, Mock.Of<IPdkReader>(),
+        var panel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), canvas, library.Object, Mock.Of<IPdkReader>(),
             Mock.Of<IPdkLibraryPreferences>(), Mock.Of<IPanelLayoutPreferences>(),
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(library.Object));

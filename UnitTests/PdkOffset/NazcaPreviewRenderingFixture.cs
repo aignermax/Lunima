@@ -61,7 +61,7 @@ internal static class NazcaPreviewRenderingFixture
         if (script == null) return null;
 
         var svc = new NazcaComponentPreviewService(python, script);
-        var vm = new PdkOffsetEditorViewModel(
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             new PdkLoader(), new PdkJsonSaver(),
             new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
             previewService: svc);

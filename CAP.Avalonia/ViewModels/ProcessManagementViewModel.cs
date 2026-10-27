@@ -24,6 +24,7 @@ namespace CAP.Avalonia.ViewModels;
 /// </summary>
 public partial class ProcessManagementViewModel : ObservableObject
 {
+    private readonly IBundledPdkCatalog _bundledPdks;
     private readonly IFileDialogService _fileDialog;
     private readonly IReadOnlyList<IProcessImporter> _importers;
     private readonly IPdkWriter? _pdkSaver;
@@ -101,16 +102,17 @@ public partial class ProcessManagementViewModel : ObservableObject
     public ObservableCollection<ProcessMaterial> Materials { get; } = new();
 
     /// <summary>Creates an in-memory editor without import or persistence adapters.</summary>
-    public ProcessManagementViewModel(IFileDialogService fileDialog, IUserPdkLibrary? userPdkStore = null)
-        : this(fileDialog, Array.Empty<IProcessImporter>(), userPdkStore: userPdkStore)
+    public ProcessManagementViewModel(IBundledPdkCatalog bundledPdks, IFileDialogService fileDialog, IUserPdkLibrary? userPdkStore = null)
+        : this(bundledPdks, fileDialog, Array.Empty<IProcessImporter>(), userPdkStore: userPdkStore)
     {
     }
 
     /// <summary>Creates an editor with explicitly composed import and persistence adapters.</summary>
-    public ProcessManagementViewModel(
+    public ProcessManagementViewModel(IBundledPdkCatalog bundledPdks,
         IFileDialogService fileDialog, IReadOnlyList<IProcessImporter> importers,
         IPdkWriter? pdkSaver = null, IUserPdkLibrary? userPdkStore = null)
     {
+        _bundledPdks = bundledPdks ?? throw new ArgumentNullException(nameof(bundledPdks));
         _fileDialog = fileDialog;
         _importers = importers;
         _pdkSaver = pdkSaver;
@@ -166,7 +168,7 @@ public partial class ProcessManagementViewModel : ObservableObject
         _memberDrafts = new List<PdkDraft> { draft };
         _forkedDraft = null;
         _forkPath = null;
-        var isBundledSource = draft.FilePath != null && BundledPdkPaths.IsBundledPdkFile(draft.FilePath);
+        var isBundledSource = draft.FilePath != null && _bundledPdks.IsBundledFile(draft.FilePath);
         StatusText = isBundledSource
             ? string.Format(LocalizationService.Instance.Translate("ProcessMgmt.Status.EditingBundledProcess"), draft.Name)
             : draft.Process == null
@@ -414,7 +416,7 @@ public partial class ProcessManagementViewModel : ObservableObject
         // A bundled read-only PDK must never be written — the first save implicitly forks it
         // into the user's custom copy (no explicit duplicate step) and re-scopes the editor;
         // every later save writes that fork directly.
-        if (_forkedDraft == null && BundledPdkPaths.IsBundledPdkFile(path))
+        if (_forkedDraft == null && _bundledPdks.IsBundledFile(path))
         {
             SaveAsFork(draft);
             return;

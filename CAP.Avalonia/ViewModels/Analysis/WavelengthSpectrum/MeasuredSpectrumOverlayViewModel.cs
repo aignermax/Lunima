@@ -38,6 +38,7 @@ public partial class MeasuredSpectrumOverlayViewModel : ObservableObject, IAsync
     }
 
     private readonly CAP_Core.ErrorConsoleService? _errorConsole;
+    private readonly IMeasuredSpectrumSource _source;
     private MeasuredSpectrum? _spectrum;
 
     /// <summary>Optional file-dialog service; set by the main window once the storage provider is ready.</summary>
@@ -69,8 +70,9 @@ public partial class MeasuredSpectrumOverlayViewModel : ObservableObject, IAsync
     [ObservableProperty] private double _armImbalanceUm;
 
     /// <summary>Initializes a new instance of <see cref="MeasuredSpectrumOverlayViewModel"/>.</summary>
-    public MeasuredSpectrumOverlayViewModel(CAP_Core.ErrorConsoleService? errorConsole = null)
+    public MeasuredSpectrumOverlayViewModel(IMeasuredSpectrumSource source, CAP_Core.ErrorConsoleService? errorConsole = null)
     {
+        _source = source;
         _errorConsole = errorConsole;
     }
 
@@ -144,24 +146,8 @@ public partial class MeasuredSpectrumOverlayViewModel : ObservableObject, IAsync
     }
 
     /// <summary>Reads and parses the selected measurement off the UI thread.</summary>
-    protected virtual async Task<MeasuredSpectrum> ReadSpectrumAsync(string path, CancellationToken cancellationToken)
-    {
-        var text = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
-        // Parsing has no cancellable API. Keep ownership until that CPU work actually
-        // returns; cancellation revokes publication rather than abandoning the task.
-        return await Task.Run(() => ParseSpectrum(text, path), cancellationToken).ConfigureAwait(false);
-    }
-
-    private static MeasuredSpectrum ParseSpectrum(string text, string path)
-    {
-        // Auto-detect power unit: lab dB exports contain negative values or
-        // large positive ones; linear transmission is always in [0, ~1].
-        var probe = MeasuredSpectrumCsvReader.Parse(text, PowerUnit.Linear, Path.GetFileName(path));
-        bool looksDecibel = probe.PowerLinear.Any(p => p < 0) || probe.PowerLinear.Max() > 1.5;
-        return looksDecibel
-            ? MeasuredSpectrumCsvReader.Parse(text, PowerUnit.Decibel, Path.GetFileName(path))
-            : probe;
-    }
+    protected virtual Task<MeasuredSpectrum> ReadSpectrumAsync(string path, CancellationToken cancellationToken) =>
+        _source.ReadAsync(path, cancellationToken);
 
     private void Reanalyze()
     {

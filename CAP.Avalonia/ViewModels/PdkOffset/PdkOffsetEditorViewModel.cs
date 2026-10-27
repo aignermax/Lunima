@@ -27,6 +27,7 @@ namespace CAP.Avalonia.ViewModels.PdkOffset;
 /// </summary>
 public partial class PdkOffsetEditorViewModel : ObservableObject
 {
+    private readonly IBundledPdkCatalog _bundledPdks;
     private readonly IPdkReader _pdkLoader;
     private readonly IPdkWriter _pdkSaver;
     private readonly PdkManagerViewModel _pdkManager;
@@ -239,7 +240,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     internal Func<Action, Task> UiThreadMarshaller { get; set; } =
         static async action => await Dispatcher.UIThread.InvokeAsync(action);
 
-    public PdkOffsetEditorViewModel(
+    public PdkOffsetEditorViewModel(IBundledPdkCatalog bundledPdks,
         IPdkReader pdkLoader,
         IPdkWriter pdkSaver,
         PdkManagerViewModel pdkManager,
@@ -247,6 +248,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         IPdkGeometryRenderer? gdsFactoryPreviewService = null,
         CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary? userPdkStore = null)
     {
+        _bundledPdks = bundledPdks ?? throw new ArgumentNullException(nameof(bundledPdks));
         _pdkLoader = pdkLoader;
         _pdkSaver = pdkSaver;
         _pdkManager = pdkManager;

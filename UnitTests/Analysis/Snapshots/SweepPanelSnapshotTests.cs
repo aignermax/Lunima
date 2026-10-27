@@ -23,7 +23,7 @@ public sealed class SweepPanelSnapshotTests
         var errors = new ErrorConsoleService();
         var runner = new ControlledRunner();
         await using var ona = new OnaSweepViewModel(errors, runner);
-        await using var spectrumPanel = new WavelengthSpectrumViewModel(errors, runner);
+        await using var spectrumPanel = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource(), errors, runner);
         ona.StepCount = spectrumPanel.StepCount = 3;
         ona.Configure(canvas);
         spectrumPanel.Configure(canvas);

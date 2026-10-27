@@ -20,6 +20,7 @@ namespace CAP.Avalonia.ViewModels.Panels;
 
 public partial class LeftPanelViewModel : ObservableObject
 {
+    private readonly IBundledPdkCatalog _bundledPdks;
     private readonly DesignCanvasViewModel _canvas;
     private readonly IPdkReader _pdkLoader;
     private readonly CAP_Core.Preferences.IPdkLibraryPreferences _preferencesService;
@@ -92,7 +93,7 @@ public partial class LeftPanelViewModel : ObservableObject
     public Func<string, Task<string?>>? ShowImportWizardAsync { get; set; }
 
     public Func<CAP.Avalonia.ViewModels.Components.AddCustomComponent.NewComponentViewModel, Task>? ShowNewComponentWindowAsync { get; set; }
-    public LeftPanelViewModel(
+    public LeftPanelViewModel(IBundledPdkCatalog bundledPdks,
         DesignCanvasViewModel canvas,
         IGroupLibrary libraryManager,
         IPdkReader pdkLoader,
@@ -107,6 +108,7 @@ public partial class LeftPanelViewModel : ObservableObject
         CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary? userPdkLibrary = null)
     {
         _canvas = canvas;
+        _bundledPdks = bundledPdks ?? throw new ArgumentNullException(nameof(bundledPdks));
         _pdkLoader = pdkLoader;
         _preferencesService = preferencesService;
         _panelLayoutPreferences = panelLayoutPreferences;
@@ -189,21 +191,20 @@ public partial class LeftPanelViewModel : ObservableObject
 
     private void LoadBundledPdks()
     {
-        var pdkDir = ResolveBundledPdkDirectory(AppDomain.CurrentDomain.BaseDirectory);
-        if (pdkDir == null) return;
-
-        LoadBundledPdksFrom(pdkDir);
+        var inventory = _bundledPdks.ReadInventory();
+        if (inventory is null) return;
+        LoadBundledPdkFiles(inventory.Files);
     }
 
     /// <summary>
-    /// Loads every bundled PDK JSON from <paramref name="pdkDir"/> and records each in the
+    /// Loads every bundled PDK JSON from <paramref name="files"/> and records each in the
     /// bundled-origin catalog. A user fork on disk does NOT suppress the bundled load here —
     /// the startup reload replaces (shadows) the bundled entry instead, which keeps the
     /// built-in PDK available when the fork file turns out to be unreadable.
     /// </summary>
-    internal void LoadBundledPdksFrom(string pdkDir)
+    internal void LoadBundledPdkFiles(IEnumerable<string> files)
     {
-        foreach (var pdkFile in Directory.GetFiles(pdkDir, "*.json"))
+        foreach (var pdkFile in files)
         {
             try
             {
@@ -237,14 +238,6 @@ public partial class LeftPanelViewModel : ObservableObject
             }
         }
     }
-
-    /// <summary>
-    /// Resolution moved to <see cref="CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkPaths"/>
-    /// so the data-access layer (PdkJsonSaver write guard) shares the same notion of
-    /// "bundled directory" as the library load path. Facade kept for existing callers/tests.
-    /// </summary>
-    internal static string? ResolveBundledPdkDirectory(string baseDir) =>
-        CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkPaths.ResolveBundledPdkDirectory(baseDir);
 
     /// <summary>
     /// Restricts <see cref="FilteredTemplates"/> to the templates the active workspace places

@@ -54,7 +54,7 @@ public class DialogEditorScreenshotTests : IDisposable
         if (!DialogShot.Enabled) return;
         Directory.CreateDirectory(_root);
         var vm = new CreateCustomPdkViewModel(
-            Store(), new[] { SampleProcess() }, new ProcessManagementViewModel(Mock.Of<IFileDialogService>()));
+            Store(), new[] { SampleProcess() }, new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>()));
         vm.ProcessSource = PdkProcessSource.DefineNew;
         vm.PdkName = "My PDK";
         DialogShot.Capture(new CreateCustomPdkWindow { DataContext = vm }, "create-custom-pdk");

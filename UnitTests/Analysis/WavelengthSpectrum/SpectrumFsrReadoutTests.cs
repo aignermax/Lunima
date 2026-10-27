@@ -117,7 +117,7 @@ public class SpectrumFsrReadoutTests
     [Fact]
     public void ViewModel_UpdateFsrReadouts_SyntheticCurve_ReadoutMatchesKnownFsrWithinOnePercent()
     {
-        var vm = new WavelengthSpectrumViewModel();
+        var vm = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource());
         var curve = SyntheticDipCurve();
         var pinNames = new Dictionary<Guid, string> { [curve.PinId] = "Through.port 2" };
 
@@ -135,7 +135,7 @@ public class SpectrumFsrReadoutTests
     [Fact]
     public void ViewModel_UpdateFsrReadouts_FeaturelessCurves_YieldsNoLines()
     {
-        var vm = new WavelengthSpectrumViewModel();
+        var vm = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource());
         var (wl, _) = BuildGrid(_ => 0.0);
         var flat = new TransmissionCurve(
             Guid.NewGuid(), wl, Enumerable.Repeat(0.5, PointCount).ToArray(), isAtNoiseFloor: false);
@@ -149,7 +149,7 @@ public class SpectrumFsrReadoutTests
     [Fact]
     public void ViewModel_Configure_ClearsReadouts()
     {
-        var vm = new WavelengthSpectrumViewModel();
+        var vm = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource());
         vm.UpdateFsrReadouts(new[] { SyntheticDipCurve() }, new Dictionary<Guid, string>(), inputLabel: null);
         vm.HasFsrReadouts.ShouldBeTrue();
 
