@@ -42,6 +42,11 @@ internal static class OutlineCollisionGeometry
     public static IEnumerable<OutlinePoint[]> Transform(Component component) => GetPolygons(component)
         .Select(p => Shift(p.Points, component.PhysicalX, component.PhysicalY).ToArray());
 
+    // Raster cache equality must inspect current point values even when a caller mutates
+    // an existing outline array. The placement cache's reference-only pose is insufficient here.
+    internal static IEnumerable<OutlinePoint[]> TransformFresh(Component component) => TransformUncached(component)
+        .Select(points => Shift(points, component.PhysicalX, component.PhysicalY).ToArray());
+
     internal static IReadOnlyList<OutlinePoint> Shift(OutlinePoint[] points, double x, double y) =>
         x == 0 && y == 0 ? points : new ShiftedPoints(points, x, y);
 

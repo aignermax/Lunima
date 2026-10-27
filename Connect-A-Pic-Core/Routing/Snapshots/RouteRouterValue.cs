@@ -51,15 +51,16 @@ internal sealed record RouteRouterValue(double Radius, double ProcessFloor, doub
 internal readonly record struct RouteObstacleValue(double X, double Y, double Width, double Height, Guid? Component);
 
 internal sealed record RouteGridValue(double MinX, double MinY, double MaxX, double MaxY,
-    double CellSize, double Padding, int Width, int Height, ImmutableArray<byte> Cells)
+    double CellSize, double Padding, int Width, int Height, ImmutableArray<byte> Cells,
+    ImmutableArray<OutlineRasterEntry> Rasters = default)
 {
     internal static RouteGridValue? Capture(PathfindingGrid? grid, bool preserveCells) => grid == null ? null : new(
         grid.MinX, grid.MinY, grid.MaxX, grid.MaxY, grid.CellSizeMicrometers, grid.ObstaclePaddingMicrometers,
-        grid.Width, grid.Height, preserveCells ? grid.CaptureCellStates().ToImmutableArray() : default);
+        grid.Width, grid.Height, preserveCells ? grid.CaptureCellStates().ToImmutableArray() : default, grid.CaptureOutlineRasters());
 
     internal void Initialize(WaveguideRouter router, IReadOnlyList<Component> components)
     {
-        router.InitializePathfindingGrid(MinX, MinY, MaxX, MaxY, components, CellSize);
+        router.InitializePathfindingGrid(MinX, MinY, MaxX, MaxY, components, CellSize, Rasters);
         var grid = router.PathfindingGrid!;
         if (grid.ObstaclePaddingMicrometers != Padding)
         {

@@ -98,7 +98,8 @@ public sealed class RoutingInputSnapshot
         new(_rootIds, _components, _connections, _connectionOrder, _router with
         {
             Regions = regions?.ToImmutableArray(), Padding = padding,
-            Grid = new RouteGridValue(minX, minY, maxX, maxY, _router.CellSize, padding, 0, 0, default)
+            Grid = new RouteGridValue(minX, minY, maxX, maxY, _router.CellSize, padding, 0, 0, default,
+                _router.Grid?.Rasters ?? default)
         }, _manager, _crossings);
 
     /// <summary>Creates fresh mutable routing objects; repeated calls share only immutable captured values.</summary>

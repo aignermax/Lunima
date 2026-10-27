@@ -34,6 +34,10 @@ public partial class PathfindingGrid
 
     // Cell states: 0 = free, 1 = blocked by component, 2 = blocked by waveguide, 3 = blocked by frozen path (permanent)
     private byte[,] _cells;
+    private readonly OutlineRasterCache _outlineRasters = new();
+    internal int OutlineRasterizationCount => _outlineRasters.RasterizationCount;
+    internal System.Collections.Immutable.ImmutableArray<OutlineRasterEntry> CaptureOutlineRasters() => _outlineRasters.Capture();
+    internal void SeedOutlineRasters(System.Collections.Immutable.ImmutableArray<OutlineRasterEntry> entries) => _outlineRasters.Seed(entries);
 
     // Track which components own which cells (for selective invalidation)
     private readonly Dictionary<Component, IEnumerable<(int x, int y)>> _componentCells = new();
@@ -261,8 +265,7 @@ public partial class PathfindingGrid
     /// </summary>
     private void AddSingleComponentObstacle(Component component)
     {
-        if (!component.IsRoutingObstacle)
-            return;
+        if (!component.IsRoutingObstacle) { _outlineRasters.Remove(component.Id); return; }
 
         double padding = ObstaclePaddingMicrometers;
         double x1 = component.PhysicalX - padding;
@@ -319,9 +322,8 @@ public partial class PathfindingGrid
         OutlineRasterRows? outlineBody = null, outlinePadded = null;
         if (component.OutlinePolygons is { Count: > 0 })
         {
-            var polygons = OutlineCollisionGeometry.Transform(component).ToArray();
-            outlineBody = OutlineRasterRows.Build(polygons, this, 0);
-            outlinePadded = OutlineRasterRows.Build(polygons, this, padding);
+            var polygons = OutlineCollisionGeometry.TransformFresh(component).ToArray();
+            (outlineBody, outlinePadded) = _outlineRasters.GetOrBuild(component.Id, polygons, this, padding);
             foreach (var (pin, cells) in pinCorridors)
             {
                 var (px, py) = pin.GetAbsolutePosition();
@@ -359,6 +361,7 @@ public partial class PathfindingGrid
     /// </summary>
     public void RemoveComponentObstacle(Component component)
     {
+        _outlineRasters.Remove(component);
         // Handle ComponentGroup specially - remove obstacles for all children
         if (component is ComponentGroup group)
         {
@@ -640,11 +643,9 @@ public partial class PathfindingGrid
         _componentOwnership.Clear();
         ResetBreakoutReservationBookkeeping();
         WaveguideVersion++;
-
-        foreach (var component in components)
-        {
-            AddComponentObstacle(component);
-        }
+        _outlineRasters.BeginRebuild();
+        try { foreach (var component in components) AddComponentObstacle(component); }
+        finally { _outlineRasters.EndRebuild(); }
         BlockCellsOutsideAllowedRegions();
     }
 

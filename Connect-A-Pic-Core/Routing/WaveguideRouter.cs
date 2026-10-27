@@ -176,13 +176,19 @@ public partial class WaveguideRouter
     /// </summary>
     public void InitializePathfindingGrid(double minX, double minY, double maxX, double maxY,
                                            IEnumerable<Component> components,
-                                           double? cellSize = null)
+                                           double? cellSize = null) =>
+        InitializePathfindingGrid(minX, minY, maxX, maxY, components, cellSize, default);
+
+    internal void InitializePathfindingGrid(double minX, double minY, double maxX, double maxY,
+        IEnumerable<Component> components, double? cellSize,
+        System.Collections.Immutable.ImmutableArray<OutlineRasterEntry> rasters)
     {
         double size = cellSize ?? AStarCellSize;
         PathfindingGrid = new PathfindingGrid(minX, minY, maxX, maxY, size, ObstaclePaddingMicrometers)
         {
             AllowedRegions = _allowedRoutingRegions,
         };
+        PathfindingGrid.SeedOutlineRasters(rasters);
         PathfindingGrid.RebuildFromComponents(components);
 
         CostCalculator.CellSizeMicrometers = size;
