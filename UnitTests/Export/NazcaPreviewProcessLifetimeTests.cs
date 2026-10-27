@@ -28,8 +28,7 @@ public sealed class NazcaPreviewProcessLifetimeTests
         await using var child = await ControlledSolverProcess.CreateAsync("""
             os.close(1)
             os.close(2)
-            with open("closed.txt", "w") as marker:
-                marker.write("closed")
+            publish_fixture_signal("closed.txt", "closed")
             time.sleep(20)
             """);
         using var stop = new CancellationTokenSource();
@@ -84,11 +83,9 @@ public sealed class NazcaPreviewProcessLifetimeTests
     {
         await using var child = await ControlledSolverProcess.CreateAsync("""
             code_path = sys.argv[sys.argv.index("--code-file") + 1]
-            with open("code-path.txt", "w") as marker:
-                marker.write(code_path)
+            publish_fixture_signal("code-path.txt", code_path)
             with open(code_path, encoding="utf-8", newline="") as source:
-                with open("observed-code.txt", "w", encoding="utf-8", newline="") as observed:
-                    observed.write(source.read())
+                publish_fixture_signal("observed-code.txt", source.read())
             os.close(1)
             os.close(2)
             time.sleep(20)

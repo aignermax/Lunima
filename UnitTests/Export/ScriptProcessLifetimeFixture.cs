@@ -14,8 +14,7 @@ internal static class ScriptProcessLifetimeFixture
             stdin=subprocess.DEVNULL,
             stdout={{(inheritOutput ? "None" : "subprocess.DEVNULL")}},
             stderr={{(inheritOutput ? "None" : "subprocess.DEVNULL")}})
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "descendant.pid"), "w") as marker:
-            marker.write(str(descendant.pid))
+        publish_fixture_signal(os.path.join(os.path.dirname(os.path.abspath(__file__)), "descendant.pid"), descendant.pid)
         """;
 
     internal static async Task<string> ReadMarkerAsync(ControlledSolverProcess child, string name)

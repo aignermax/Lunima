@@ -51,8 +51,7 @@ public sealed class ClaudeCliProcessLifetimeTests
                 stdin=subprocess.DEVNULL,
                 stdout={{(inheritOutput ? "None" : "subprocess.DEVNULL")}},
                 stderr={{(inheritOutput ? "None" : "subprocess.DEVNULL")}})
-            with open("descendant.pid", "w") as pid_file:
-                pid_file.write(str(descendant.pid))
+            publish_fixture_signal("descendant.pid", descendant.pid)
             print("root completed", flush=True)
             os._exit(0)
             """);

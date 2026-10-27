@@ -151,7 +151,7 @@ reported outcomes rather than treating the existence of a run as success.
   on code commit `96fbc9ef`; the local broad run excludes Slow/Heavy.
 - [Native Windows, Linux and both macOS targets](https://github.com/aignermax/Lunima/actions/runs/40526212227).
 - [Architecture checks](https://github.com/aignermax/Lunima/actions/runs/40526212253),
-  plus 28 local Python guard/tool tests and the 4,213-file authored-source inventory.
+  plus 28 local Python guard/tool tests and the 4,215-file authored-source inventory.
 - Independent final review covered export/coordinate/raster deltas and cross-cutting
   ownership/document integration. Reported material findings were fixed and verified;
   this was not an exhaustive line-by-line review of the complete 6.4 MB diff.
@@ -341,7 +341,7 @@ failures and pending work so that intermediate runs are not mistaken for accepta
 | A11 | Pinned uv, authenticated updater artifacts and signed publisher tooling verified; production signing-key provisioning is an external release prerequisite |
 | A12 | Checked-in serialized test runner, execution-result validation and matching docs; 28 Python guard/tool tests pass |
 | A13 | April assessment removed; architecture and codebase map reconciled, all 72 explicit map paths checked |
-| A14 | Staged-index hook and whole-tree CI ceiling; 4,213 authored source/documentation files at most 999 physical lines |
+| A14 | Staged-index hook and whole-tree CI ceiling; 4,215 authored source/documentation files at most 999 physical lines |
 | A15 | Application/shell/window/feature ownership, real process cleanup, repeated-load controls, analysis rebinding and export/settings/coordinate retirement verified; final 203-case run passes |
 | A16 | Duplicate binary removed, SDK/package policy aligned, fresh publish has one MathNet 5.0.0 assembly |
 | A17 | Native DTO/workflow separation and detached atomic save verified, including native symlink and Unix-mode checks |
@@ -838,3 +838,33 @@ private snapshot isolation, stale-progress rejection, and actual retirement.
   Native Computer Use is unavailable: missing native pipe after a retry and kernel
   reset. No interactive click-through is claimed. Existing headless UI regressions
   remain required; a full local non-Slow/non-Heavy run is in progress separately.
+
+- Full Heavy-inclusive CI `40526201954` completed: 11,243 passed, zero failed,
+  32 existing platform/optional-environment/empty-placeholder skips. Native matrix
+  `40526212227` passed on Windows, Linux and both macOS architectures without skips.
+- Local complete non-Slow/non-Heavy run `tests-20261027-160118-58144.log` completed:
+  10,577 passed, zero failed, ten existing platform/empty-placeholder skips.
+- A fresh docs-head CI rerun exposed two remaining issues: the GateView CPU entry
+  test spent 111 ms in two synchronous captures (100 ms budget), and Windows could
+  read a process-fixture signal while its Python writer was still open. Neither
+  failure is dismissed by retrying the suite or increasing the test budget.
+- `tests-20261027-162102-27044.log` deterministically reproduced premature PID
+  publication. Atomic close-before-publish fixed that case; the follow-up 36-case
+  run exposed the same existing race in the preview `closed.txt` marker, prompting
+  a shared fixture signal publisher for the affected producers.
+- `tests-20261027-162506-68016.log`: two expected GateView scheduling failures and
+  one passing explicit-rebuild control. Automatic requests must coalesce on their
+  owning context before capture; the explicit immediate-capture API stays intact.
+- `tests-20261027-162750-57760.log`: 105 passed, zero failed, one Unix-only skip
+  on Windows. The GateView owner-turn, snapshot, publication and CPU controls and
+  affected process fixture families pass. The CPU test retains both requests and
+  its 100 ms budget, with a full-operation dispatcher heartbeat; it warms JIT on
+  an independent fixture and measures a fresh graph/classifier, not cold-process
+  first-click latency. `tests-20261027-162910-16320.log`: all four openEBL lifecycle
+  controls pass. The Python guard/tool suite again passes all 28 tests.
+- Independent review of the final scheduling and 13-file signal-fixture delta
+  found no material issue. All readiness markers now publish only after close;
+  native CI requires both deterministic signal cases on all four platforms.
+  The next full Heavy-inclusive and native runs on this code are tracked on
+  [PR #1574](https://github.com/aignermax/Lunima/pull/1574); their actual completed
+  conclusions, not the earlier checkpoints above, govern final acceptance.

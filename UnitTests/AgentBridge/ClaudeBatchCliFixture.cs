@@ -35,11 +35,9 @@ internal sealed class ClaudeBatchCliFixture : IAsyncDisposable
         var child = await ControlledSolverProcess.CreateAsync("""
             import json
             if os.environ.get("LUNIMA_BATCH_NATIVE") != "1":
-                with open("shell.pid", "w") as marker:
-                    marker.write(str(os.getppid()))
-            with open("arguments.json", "w", encoding="utf-8") as capture:
-                json.dump({"arguments": sys.argv[1:], "cwd": os.getcwd(),
-                           "environment": os.environ.get("LUNIMA_BATCH_VALUE")}, capture)
+                publish_fixture_signal("shell.pid", os.getppid())
+            publish_fixture_signal("arguments.json", json.dumps({"arguments": sys.argv[1:], "cwd": os.getcwd(),
+                           "environment": os.environ.get("LUNIMA_BATCH_VALUE")}))
             """ + "\n" + body);
         try { return new ClaudeBatchCliFixture(child, extension, specialPath); }
         catch { await child.DisposeAsync(); throw; }

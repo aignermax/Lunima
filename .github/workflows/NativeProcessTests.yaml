@@ -23,6 +23,7 @@ on:
       - 'UnitTests/Export/PythonEnvironmentManager/UvProcessLifetimeTests.cs'
       - 'UnitTests/Export/*Process*Fixture.cs'
       - 'UnitTests/Export/OwnedToolProcessScenarios.cs'
+      - 'UnitTests/Export/OwnedToolProcessPublicationTests.cs'
       - '**/*.csproj'
       - 'Directory.Build.*'
       - 'global.json'
@@ -64,7 +65,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force UnitTests/TestResults | Out-Null
           dotnet test UnitTests/UnitTests.csproj `
-            --filter 'FullyQualifiedName~ClaudeBatchCliArgumentTests|FullyQualifiedName~ClaudeBatchCliLifetimeTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~ControlledSolverCleanupTests|FullyQualifiedName~OwnedProcessCaptureCommandTests|FullyQualifiedName~UvProcessLifetimeTests|FullyQualifiedName~PdkNazcaParserLifetimeTests|FullyQualifiedName~NazcaPreviewProcessLifetimeTests|FullyQualifiedName~GdsScriptProcessLifetimeTests|FullyQualifiedName~GdsCoordinateProcessLifetimeTests|FullyQualifiedName~GdsComparisonProcessLifetimeTests|FullyQualifiedName~GdsCoordinateInterpreterTests' `
+            --filter 'FullyQualifiedName~ClaudeBatchCliArgumentTests|FullyQualifiedName~ClaudeBatchCliLifetimeTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~ControlledSolverCleanupTests|FullyQualifiedName~OwnedProcessCaptureCommandTests|FullyQualifiedName~UvProcessLifetimeTests|FullyQualifiedName~PdkNazcaParserLifetimeTests|FullyQualifiedName~NazcaPreviewProcessLifetimeTests|FullyQualifiedName~GdsScriptProcessLifetimeTests|FullyQualifiedName~GdsCoordinateProcessLifetimeTests|FullyQualifiedName~GdsComparisonProcessLifetimeTests|FullyQualifiedName~GdsCoordinateInterpreterTests|FullyQualifiedName~OwnedToolProcessPublicationTests' `
             --blame-hang --blame-hang-timeout 2m --blame-hang-dump-type none `
             --results-directory UnitTests/TestResults `
             --logger 'trx;LogFileName=windows-batch-cli.trx' `
@@ -85,7 +86,7 @@ jobs:
           expected = {'UvProcessLifetimeTests': 4, 'PdkNazcaParserLifetimeTests': 5,
                       'NazcaPreviewProcessLifetimeTests': 7, 'GdsScriptProcessLifetimeTests': 7,
                       'GdsCoordinateProcessLifetimeTests': 6, 'GdsComparisonProcessLifetimeTests': 4,
-                      'GdsCoordinateInterpreterTests': 2,
+                      'GdsCoordinateInterpreterTests': 2, 'OwnedToolProcessPublicationTests': 2,
                       'OwnedProcessCaptureCommandTests': 4}
           for family, count in expected.items():
               actual = sum(family + '.' in r.attrib['testName'] for r in results)
@@ -166,7 +167,7 @@ jobs:
       - name: Exercise real child processes and descendant cleanup
         env:
           LUNIMA_TEST_PYTHON3: ${{ steps.python.outputs.python-path }}
-          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~PdkResolutionProcessLifetimeTests|FullyQualifiedName~UvProcessLifetimeTests|FullyQualifiedName~PdkNazcaParserLifetimeTests|FullyQualifiedName~NazcaPreviewProcessLifetimeTests|FullyQualifiedName~GdsScriptProcessLifetimeTests|FullyQualifiedName~GdsCoordinateProcessLifetimeTests|FullyQualifiedName~GdsComparisonProcessLifetimeTests|FullyQualifiedName~GdsCoordinateInterpreterTests
+          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~PdkResolutionProcessLifetimeTests|FullyQualifiedName~UvProcessLifetimeTests|FullyQualifiedName~PdkNazcaParserLifetimeTests|FullyQualifiedName~NazcaPreviewProcessLifetimeTests|FullyQualifiedName~GdsScriptProcessLifetimeTests|FullyQualifiedName~GdsCoordinateProcessLifetimeTests|FullyQualifiedName~GdsComparisonProcessLifetimeTests|FullyQualifiedName~GdsCoordinateInterpreterTests|FullyQualifiedName~OwnedToolProcessPublicationTests
         run: |
           set -euo pipefail
           dotnet test UnitTests/UnitTests.csproj --no-build --filter "$PROCESS_FILTER" \
@@ -201,7 +202,7 @@ jobs:
           expected = {'UvProcessLifetimeTests': 4, 'PdkNazcaParserLifetimeTests': 5,
                       'NazcaPreviewProcessLifetimeTests': 7, 'GdsScriptProcessLifetimeTests': 7,
                       'GdsCoordinateProcessLifetimeTests': 6, 'GdsComparisonProcessLifetimeTests': 4,
-                      'GdsCoordinateInterpreterTests': 2}
+                      'GdsCoordinateInterpreterTests': 2, 'OwnedToolProcessPublicationTests': 2}
           for family, count in expected.items():
               actual = sum(family + '.' in r.attrib['testName'] for r in results)
               assert actual == count, f'{family}: expected {count} executed cases, found {actual}'

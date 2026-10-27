@@ -44,18 +44,18 @@ public partial class GateViewViewModel
         _isStale = true;
         if (!IsShown)
             return;
-        ScheduleRebuild(debounce: !ReferenceEquals(Graph, GateViewGraph.Empty));
+        ScheduleRebuild(debounce: !ReferenceEquals(Graph, GateViewGraph.Empty), deferCapture: true);
     }
 
     /// <summary>Rebuilds immediately (no debounce) and completes when the new graph is published.</summary>
     public Task RebuildNowAsync()
     {
         if (_work.IsStopping) return Task.CompletedTask;
-        ScheduleRebuild(debounce: false);
+        ScheduleRebuild(debounce: false, deferCapture: false);
         return PendingRebuild;
     }
 
-    private void ScheduleRebuild(bool debounce)
+    private void ScheduleRebuild(bool debounce, bool deferCapture)
     {
         _isStale = true;
         var version = ++_rebuildVersion;
@@ -64,7 +64,7 @@ public partial class GateViewViewModel
         {
             await using var source = new AsyncCancellationScope(stop);
             _rebuildCancellation = source;
-            try { await RebuildAsync(source.Token, stop, version, debounce); }
+            try { await RebuildAsync(source.Token, stop, version, debounce, deferCapture); }
             finally { if (ReferenceEquals(_rebuildCancellation, source)) _rebuildCancellation = null; }
         });
     }
@@ -76,13 +76,18 @@ public partial class GateViewViewModel
             RequestRebuild();
     }
 
-    private async Task RebuildAsync(CancellationToken token, CancellationToken ownerToken, long version, bool debounce)
+    private async Task RebuildAsync(CancellationToken token, CancellationToken ownerToken, long version, bool debounce,
+        bool deferCapture)
     {
         AnalysisSweepOperation? operation = null;
         try
         {
+            // Scheduled UI requests may supersede each other in the same owner turn.
+            // Yield on that context before reading live inputs; explicit RebuildNowAsync
+            // retains its immediate capture contract. No live state moves to a worker.
             if (debounce)
                 await _delay(RebuildDebounce, token);
+            if (deferCapture) await Task.Yield();
             _work.ThrowIfStopping();
             token.ThrowIfCancellationRequested();
             if (version != _rebuildVersion) return;

@@ -61,8 +61,7 @@ public sealed class OpenEblProcessLifecycleTests
             import subprocess
             stream = None if {{(inheritPipes ? "True" : "False")}} else subprocess.DEVNULL
             descendant = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'], stdout=stream, stderr=stream)
-            with open('descendant.pid', 'w') as handle:
-                handle.write(str(descendant.pid))
+            publish_fixture_signal('descendant.pid', descendant.pid)
             print('not a checker report', flush=True)
             os._exit(0)
             """);

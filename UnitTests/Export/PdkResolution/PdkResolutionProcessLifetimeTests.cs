@@ -10,8 +10,7 @@ public sealed class PdkResolutionProcessLifetimeTests
     private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(2);
     private const string RecordInput = """
         input_path = sys.argv[sys.argv.index("--input") + 1]
-        with open("request-path.txt", "w", encoding="utf-8") as record:
-            record.write(input_path)
+        publish_fixture_signal("request-path.txt", input_path)
         """;
 
     private static readonly PdkResolutionEntry[] Entries =
@@ -47,8 +46,7 @@ public sealed class PdkResolutionProcessLifetimeTests
         await using var child = await ControlledSolverProcess.CreateAsync(RecordInput + "\n" + """
             os.close(1)
             os.close(2)
-            with open("pipes-closed.txt", "w") as marker:
-                marker.write("closed")
+            publish_fixture_signal("pipes-closed.txt", "closed")
             time.sleep(20)
             """);
         using var stop = new CancellationTokenSource();
@@ -79,8 +77,7 @@ public sealed class PdkResolutionProcessLifetimeTests
                 stdin=subprocess.DEVNULL,
                 stdout={{(inheritOutput ? "None" : "subprocess.DEVNULL")}},
                 stderr={{(inheritOutput ? "None" : "subprocess.DEVNULL")}})
-            with open("descendant.pid", "w") as marker:
-                marker.write(str(descendant.pid))
+            publish_fixture_signal("descendant.pid", descendant.pid)
             print('{"success":true,"results":[{"name":"root done","status":"ok"}]}', flush=True)
             os._exit(0)
             """);
@@ -128,8 +125,7 @@ public sealed class PdkResolutionProcessLifetimeTests
             import json
             with open(input_path, encoding="utf-8") as source:
                 entries = json.load(source)
-            with open("observed-input.json", "w", encoding="utf-8") as observed:
-                json.dump(entries, observed, ensure_ascii=False)
+            publish_fixture_signal("observed-input.json", json.dumps(entries, ensure_ascii=False))
             print("backend chatter", flush=True)
             print(json.dumps({"success": True, "results": [
                 {"name": entry["name"], "status": "ok", "kind": entry["backend"],

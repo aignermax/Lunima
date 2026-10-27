@@ -92,8 +92,7 @@ public class SubprocessJsonRunnerTests
         await using var child = await ControlledSolverProcess.CreateAsync("""
             import subprocess
             descendant = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(20)"])
-            with open("descendant.pid", "w") as pid_file:
-                pid_file.write(str(descendant.pid))
+            publish_fixture_signal("descendant.pid", descendant.pid)
             print("ready", file=sys.stderr, flush=True)
             time.sleep(60)
             """);

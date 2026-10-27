@@ -17,8 +17,8 @@ internal static class OwnedToolProcessScenarios
         descendant = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"],
             stdout={{(inheritPipes ? "None" : "subprocess.DEVNULL")}},
             stderr={{(inheritPipes ? "None" : "subprocess.DEVNULL")}})
-        with open(os.path.join(os.path.dirname(__file__), "descendant.pid"), "w") as pid_file:
-            pid_file.write(str(descendant.pid))
+        descendant_pid_path = os.path.join(os.path.dirname(__file__), "descendant.pid")
+        publish_fixture_signal(descendant_pid_path, descendant.pid)
         """;
 
     internal static async Task AwaitDescendantAsync(ControlledSolverProcess child)

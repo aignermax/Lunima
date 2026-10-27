@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using Avalonia.Headless.XUnit;
+using CAP.Avalonia.Services.Diagnostics;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Logic.GateView;
 using CAP.Avalonia.ViewModels.Panels;
@@ -91,18 +93,43 @@ public class GateViewViewModelTests
         vm.Canvas.SelectedComponent.ShouldBe(not1);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task Rebuild_OnTheCpuExample_LeavesTheCallingThreadFree()
     {
-        var vm = await LoadAsync("Logic Gate ALU + RAM + ACC.lun");
-        var stopwatch = Stopwatch.StartNew();
+        const string example = "Logic Gate ALU + RAM + ACC.lun";
+        // Warm a separate equivalent owner, retaining a cold graph/classification cache
+        // for the measured fixture. No retries or best-of timing selection.
+        await using (var warmup = await LoadAsync(example))
+        {
+            warmup.WorkspaceSwitch.Current = Workspace.Logic;
+            warmup.GateView.RequestRebuild();
+            await warmup.GateView.PendingRebuild;
+        }
 
-        vm.WorkspaceSwitch.Current = Workspace.Logic;
-        vm.GateView.RequestRebuild();
-
-        stopwatch.ElapsedMilliseconds.ShouldBeLessThan(UiBudgetMs,
-            "entering Logic only schedules the gate view; extraction runs off the UI thread");
-        await vm.GateView.PendingRebuild;
+        await using var vm = await LoadAsync(example);
+        var stalls = new List<UiStallMeasurement>();
+        const string measurement = "cpu-gate-view-entry-and-rebuild";
+        void Capture(UiStallMeasurement stall)
+        {
+            if (stall.CommandName == measurement) stalls.Add(stall);
+        }
+        UiThreadWatchdog.StallDetected += Capture;
+        try
+        {
+            await UiThreadWatchdog.MeasureAsync(measurement, async () =>
+            {
+                var stopwatch = Stopwatch.StartNew();
+                vm.WorkspaceSwitch.Current = Workspace.Logic;
+                vm.GateView.RequestRebuild();
+                stopwatch.Stop();
+                stopwatch.ElapsedMilliseconds.ShouldBeLessThan(UiBudgetMs,
+                    "adjacent scheduled requests return before owner-context snapshot capture; classification runs off-thread");
+                await vm.GateView.PendingRebuild;
+            });
+        }
+        finally { UiThreadWatchdog.StallDetected -= Capture; }
+        stalls.ShouldBeEmpty("owner capture and later publication must also meet the unchanged 100 ms budget: "
+            + string.Join("; ", stalls));
         vm.GateView.Graph.Nodes.Count.ShouldBeGreaterThan(500);
         vm.GateView.IsStale.ShouldBeFalse();
     }

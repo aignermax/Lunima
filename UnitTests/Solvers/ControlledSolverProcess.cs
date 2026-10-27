@@ -24,8 +24,13 @@ internal sealed class ControlledSolverProcess : IAsyncDisposable
         File.WriteAllText(ScriptPath, $$"""
             import os, sys, time, threading
             threading.Timer(20, lambda: os._exit(99)).start()
-            with open({{JsonSerializer.Serialize(_pidFile)}}, "w") as pid_file:
-                pid_file.write(str(os.getpid()))
+            def publish_fixture_signal(path, value):
+                # A polling reader sees only closed, complete files, including on Windows.
+                pending = path + ".pending"
+                with open(pending, "w", encoding="utf-8", newline="") as signal:
+                    signal.write(str(value))
+                os.replace(pending, path)
+            publish_fixture_signal({{JsonSerializer.Serialize(_pidFile)}}, os.getpid())
             """ + "\n" + body);
         var factory = ProcessLaunchFactory.CreateDefault();
         factory.TryBuild(python, new[] { "-u", ScriptPath }, _directory, null,
