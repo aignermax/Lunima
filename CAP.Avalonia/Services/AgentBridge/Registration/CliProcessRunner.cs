@@ -42,7 +42,9 @@ public static class CliProcessRunner
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            process = OwnedProcess.Start(startInfo);
+            var prepared = WindowsBatchCommand.Prepare(startInfo);
+            cancellationToken.ThrowIfCancellationRequested();
+            process = OwnedProcess.Start(prepared);
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {

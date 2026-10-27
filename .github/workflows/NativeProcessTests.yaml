@@ -15,6 +15,7 @@ on:
       - 'UnitTests/Persistence/**'
       - 'UnitTests/Solvers/**'
       - 'UnitTests/AgentBridge/ClaudeCliProcessLifetimeTests.cs'
+      - 'UnitTests/AgentBridge/ClaudeBatchCli*.cs'
       - 'UnitTests/Export/PdkResolution/PdkResolutionProcessLifetimeTests.cs'
       - '**/*.csproj'
       - 'Directory.Build.*'
@@ -31,6 +32,66 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  windows-batch-cli:
+    name: Windows batch CLI arguments and lifetimes
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_NOLOGO: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-python@v5
+        id: python
+        with:
+          python-version: '3.11'
+
+      - name: Exercise actual cmd and bat forwarding with owned child processes
+        env:
+          LUNIMA_TEST_PYTHON3: ${{ steps.python.outputs.python-path }}
+        run: |
+          New-Item -ItemType Directory -Force UnitTests/TestResults | Out-Null
+          dotnet test UnitTests/UnitTests.csproj `
+            --filter 'FullyQualifiedName~ClaudeBatchCliArgumentTests|FullyQualifiedName~ClaudeBatchCliLifetimeTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests' `
+            --blame-hang --blame-hang-timeout 2m --blame-hang-dump-type none `
+            --results-directory UnitTests/TestResults `
+            --logger 'trx;LogFileName=windows-batch-cli.trx' `
+            --logger 'console;verbosity=normal' `
+            2>&1 | Tee-Object UnitTests/TestResults/windows-batch-cli.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Require all Windows batch cases without skips
+        if: always()
+        run: |
+          @'
+          import xml.etree.ElementTree as ET
+          ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+          root = ET.parse('UnitTests/TestResults/windows-batch-cli.trx').getroot()
+          results = root.findall('.//t:UnitTestResult', ns)
+          batch = [r for r in results if 'ClaudeBatchCli' in r.attrib['testName']]
+          assert len(batch) == 14, f'Expected all 14 actual batch CLI cases, found {len(batch)}'
+          unsuccessful = [(r.attrib['testName'], r.attrib['outcome']) for r in results
+                          if r.attrib['outcome'] != 'Passed']
+          assert not unsuccessful, unsuccessful
+          print(f'All {len(results)} Windows CLI cases executed and passed')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload Windows CLI execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-process-windows-batch-cli
+          path: UnitTests/TestResults/
+          if-no-files-found: warn
+          retention-days: 7
+
   native-process:
     name: Native process (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
