@@ -50,10 +50,14 @@ runs:
         set -euo pipefail
         # The klayout pip wheel ships only the Python module (klayout.db); the
         # foundry-deck DRC tests probe a `klayout` executable ($KLAYOUT or PATH).
-        packages="klayout"
-        if [ "${{ inputs.simulation-tools }}" = "true" ]; then packages="$packages ngspice"; fi
-        sudo apt-get update -qq
-        sudo apt-get install -y -qq $packages > /dev/null
+        packages=(klayout)
+        if [ "${{ inputs.simulation-tools }}" = "true" ]; then packages+=(ngspice); fi
+        # A stalled mirror previously consumed 28 minutes before any tests ran.
+        # Bound network retries and retain progress so setup failures are diagnosable.
+        apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+        sudo apt-get "${apt_options[@]}" update
+        sudo env DEBIAN_FRONTEND=noninteractive apt-get "${apt_options[@]}" install \
+          -y --no-install-recommends "${packages[@]}"
         klayout -v
         if command -v ngspice > /dev/null; then ngspice --version | head -1; fi
 
