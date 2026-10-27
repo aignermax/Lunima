@@ -1,6 +1,5 @@
 using System.Globalization;
 using CAP_Core.Analysis.MonteCarloAnalysis;
-using CAP_Core.Analysis.MonteCarloAnalysis.FabricationVariance;
 using CAP_Core.Analysis.OnaAnalysis;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Process;
@@ -64,6 +63,7 @@ public partial class MonteCarloViewModel : ObservableObject, IAsyncDisposable
 
     private readonly CAP_Core.ErrorConsoleService? _errorConsole;
     private readonly IMonteCarloSpectrumRunner _spectrumRunner;
+    private readonly IMonteCarloEyeRunner _eyeRunner;
     private readonly MonteCarloRunLifetime _lifetime = new();
     private DesignCanvasViewModel? _canvas => _lifetime.Canvas;
     private Task? _retirement;
@@ -71,10 +71,12 @@ public partial class MonteCarloViewModel : ObservableObject, IAsyncDisposable
     /// <summary>Initializes a new instance of <see cref="MonteCarloViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
     public MonteCarloViewModel(CAP_Core.ErrorConsoleService? errorConsole = null,
-        IMonteCarloSpectrumRunner? spectrumRunner = null, ApplicationWorkCoordinator? application = null)
+        IMonteCarloSpectrumRunner? spectrumRunner = null, ApplicationWorkCoordinator? application = null,
+        IMonteCarloEyeRunner? eyeRunner = null)
     {
         _errorConsole = errorConsole;
         _spectrumRunner = spectrumRunner ?? new MonteCarloSpectrumRunner();
+        _eyeRunner = eyeRunner ?? new MonteCarloEyeRunner();
         _selectedMetric = Metrics[0];
         _plotModel = MonteCarloPlotBuilder.CreateEmptyModel("Monte Carlo");
         _lifetime.Register(application, StopAsync);
@@ -145,10 +147,6 @@ public partial class MonteCarloViewModel : ObservableObject, IAsyncDisposable
             operation.ThrowIfObsolete();
             SummaryText = "";
             operation.ThrowIfObsolete();
-            var varianceSource = new FabricationVarianceSource(
-                components, tolerances);
-            Func<ISystemMatrixBuilder, ISystemMatrixBuilder> decorate =
-                inner => new PerturbedSystemMatrixBuilder(inner, varianceSource);
             var progress = new Progress<MonteCarloProgress>(p =>
             {
                 if (!operation.CanPublish) return;
@@ -160,9 +158,9 @@ public partial class MonteCarloViewModel : ObservableObject, IAsyncDisposable
             });
 
             if (spectrum)
-                await RunSpectrumAnalysis(config, sweep!, varianceSource, tolerances, progress, operation);
+                await RunSpectrumAnalysis(config, sweep!, components, tolerances, progress, operation);
             else
-                await RunEyeAnalysis(config, varianceSource, tolerances, decorate, progress, operation);
+                await RunEyeAnalysis(config, components, tolerances, progress, operation);
         }
         catch (OperationCanceledException)
         {
@@ -195,12 +193,12 @@ public partial class MonteCarloViewModel : ObservableObject, IAsyncDisposable
 
     private async Task RunSpectrumAnalysis(
         MonteCarloConfiguration config, WavelengthSweepConfiguration sweepConfig,
-        FabricationVarianceSource varianceSource, ProcessTolerances tolerances,
+        IReadOnlyList<Component> components, ProcessTolerances tolerances,
         IProgress<MonteCarloProgress> progress, AnalysisSweepOperation operation)
     {
         operation.ThrowIfObsolete();
         var (sampler, error) = MonteCarloSpectrumSampler.Create(_canvas!, sweepConfig, config,
-            varianceSource.Components, tolerances);
+            components, tolerances);
         if (sampler == null)
         {
             StatusText = error ?? "";
@@ -215,31 +213,30 @@ public partial class MonteCarloViewModel : ObservableObject, IAsyncDisposable
         PlotModel = MonteCarloPlotBuilder.BuildEnvelopePlot(
             sampler.Wavelengths, result, sampler.PinName(completed.SelectedOutputPinId));
         operation.ThrowIfObsolete();
-        SummaryText = FormatSpectrumSummary(result, varianceSource.Components.Count, tolerances);
+        SummaryText = FormatSpectrumSummary(result, components.Count, tolerances);
         operation.ThrowIfObsolete();
         StatusText = string.Format(
             LocalizationService.Instance.Translate("Analysis.Mc.Complete"), config.RunCount);
     }
 
     private async Task RunEyeAnalysis(
-        MonteCarloConfiguration config, FabricationVarianceSource varianceSource, ProcessTolerances tolerances,
-        Func<ISystemMatrixBuilder, ISystemMatrixBuilder> decorate,
+        MonteCarloConfiguration config, IReadOnlyList<Component> components, ProcessTolerances tolerances,
         IProgress<MonteCarloProgress> progress, AnalysisSweepOperation operation)
     {
         operation.ThrowIfObsolete();
         var resolution = AnalysisOutputResolver.Resolve(_canvas!);
         if (ReportInvalidDesignation(resolution)) return;
 
-        var sampler = new MonteCarloEyeSampler(_canvas!, resolution, decorate);
-        var result = await new MonteCarloRunner().RunAsync(
-            config, varianceSource, sampler.SampleAsync, progress, operation.Token);
+        var captured = new MonteCarloEyeSampler(_canvas!, resolution).Capture(config, components, tolerances);
+        operation.ThrowIfObsolete();
+        var result = await _eyeRunner.RunAsync(captured, progress, operation.Token);
         operation.ThrowIfObsolete();
 
         var samples = result.GetSamplesAtIndex(0);
         var histogram = DistributionHistogram.Create(samples);
         PlotModel = MonteCarloPlotBuilder.BuildHistogramPlot(histogram, result.NominalCurve[0]);
         operation.ThrowIfObsolete();
-        SummaryText = FormatEyeSummary(result, samples, varianceSource.Components.Count, tolerances);
+        SummaryText = FormatEyeSummary(result, samples, components.Count, tolerances);
         operation.ThrowIfObsolete();
         StatusText = string.Format(
             LocalizationService.Instance.Translate("Analysis.Mc.Complete"), config.RunCount);
