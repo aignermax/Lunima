@@ -99,7 +99,7 @@ public partial class WaveguideConnectionManager
                     continue;
                 if (!PathIntersectionDetector.Crosses(routed[i].RoutedPath!, routed[j].RoutedPath!))
                     continue;
-                var target = PickReroutableSide(routed[i], routed[j]);
+                var target = CrossingRoutePolicy.PickReroutableSide(routed[i], routed[j]);
                 if (target != null)
                 {
                     target.RoutedPath!.IsBlockedFallback = true;
@@ -112,19 +112,4 @@ public partial class WaveguideConnectionManager
         }
     }
 
-    /// <summary>
-    /// Picks which side of a crossing pair to degrade: the LATER re-routable Auto route
-    /// (it was routed with the earlier one already registered), the earlier one when only
-    /// that is re-routable, or null when both shapes are forced.
-    /// </summary>
-    private static WaveguideConnection? PickReroutableSide(
-        WaveguideConnection first, WaveguideConnection second)
-    {
-        static bool IsReroutable(WaveguideConnection c) =>
-            c.Type == WaveguideType.Auto && !c.IsRouteFrozen && !IsSettledPiece(c);
-
-        if (IsReroutable(second)) return second;
-        if (IsReroutable(first)) return first;
-        return null;
-    }
 }

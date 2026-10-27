@@ -94,7 +94,7 @@ public partial class WaveguideConnectionManager
     /// settled pieces of routing-placed crossings (they keep their route until it goes stale).
     /// </summary>
     private bool IsKeptOutOfRerouting(WaveguideConnection connection) =>
-        IsKnownUnroutable(connection) || IsSettledPiece(connection);
+        IsKnownUnroutable(connection) || CrossingRoutePolicy.IsSettledPiece(connection);
 
     /// <summary>The wires the ordering cascade re-routes: all but the kept ones.</summary>
     private List<WaveguideConnection> CascadeParticipants()

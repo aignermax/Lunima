@@ -125,7 +125,7 @@ public sealed class RoutingInputSnapshot
 internal sealed record RouteManagerValue(bool Sequential, int Attempts, double WaveguideWidth, double MetalWidth,
     double DefaultPropagationLoss, double DefaultExcessLoss, BendLossModel DefaultBendLoss, bool Coherent,
     bool PendingWireSetChange, ImmutableArray<UnroutableWireMemory.SnapshotEntry> Failures,
-    ImmutableArray<WaveguideConnectionManager.ContentionFailure> ContentionFailures, TimeSpan ContentionBudget)
+    ImmutableArray<ContentionRepairService.Failure> ContentionFailures, TimeSpan ContentionBudget)
 {
     internal static RouteManagerValue Capture(WaveguideConnectionManager manager) => new(manager.UseSequentialRouting,
         manager.MaxRoutingAttempts, manager.WaveguideWidthMicrometers, manager.MetalTraceWidthMicrometers,

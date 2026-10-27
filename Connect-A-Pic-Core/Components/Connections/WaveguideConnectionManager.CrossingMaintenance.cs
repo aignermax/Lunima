@@ -34,7 +34,7 @@ public partial class WaveguideConnectionManager
         var service = CrossingService;
         if (service == null) return;
         var before = SnapshotConnections().ToHashSet();
-        service.DissolveStaleChains(this, _router, piece => IsStalePiece(piece) && !IsQueuedForRerouteInPlace(piece));
+        service.DissolveStaleChains(this, _router, piece => CrossingRoutePolicy.IsStalePiece(piece) && !IsQueuedForRerouteInPlace(piece));
         service.DissolveStaleRecords(this, _router);
         _rerouteAfterDissolution = SnapshotConnections().Where(c => !before.Contains(c)).ToHashSet();
     }
@@ -45,31 +45,6 @@ public partial class WaveguideConnectionManager
     /// where adaptive insertion is on — re-routing the whole design would only churn it.
     /// </summary>
     private HashSet<WaveguideConnection> _rerouteAfterDissolution = new();
-
-    /// <summary>
-    /// A piece of a routing-placed crossing whose route still ends at both pins: it stays as
-    /// it is (no re-route, not part of the ordering cascade) until it goes stale, at which
-    /// point its whole chain is taken out.
-    /// </summary>
-    private static bool IsSettledPiece(WaveguideConnection connection) =>
-        ChainCrossingMaintenance.DocksOnTemporaryCrossing(connection) && !IsStalePiece(connection);
-
-    /// <summary>
-    /// A piece whose route cannot stay: gone, blocked, or detached from one of its pins (a
-    /// component it ends at moved). Grid collisions are deliberately not a criterion: a piece
-    /// docks into a crossing port and often ends between the narrow pins of a gate input, so
-    /// the rasterized grid reports settled pieces as touching component cells.
-    /// </summary>
-    private static bool IsStalePiece(WaveguideConnection piece)
-    {
-        var path = piece.RoutedPath;
-        if (path == null || !piece.IsPathValid || path.IsBlockedFallback || path.Segments.Count == 0)
-            return true;
-        var (startX, startY) = piece.StartPin.GetAbsolutePosition();
-        var (endX, endY) = piece.EndPin.GetAbsolutePosition();
-        return Distance(path.Segments[0].StartPoint.X, path.Segments[0].StartPoint.Y, startX, startY) > EndpointToleranceMicrometers
-               || Distance(path.Segments[^1].EndPoint.X, path.Segments[^1].EndPoint.Y, endX, endY) > EndpointToleranceMicrometers;
-    }
 
     /// <summary>
     /// Wires a user edit asked to route again where they dock (see <see cref="RerouteInPlace"/>).

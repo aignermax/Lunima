@@ -16,6 +16,7 @@ public partial class WaveguideConnectionManager
     public WaveguideConnectionManager(WaveguideRouter router)
     {
         _router = router;
+        _contentionRepair = new(router, SnapshotConnections, ObstacleWidthFor, IsCrossingParticipant);
     }
 
     public List<WaveguideConnection> Connections { get; } = new();
@@ -560,7 +561,7 @@ public partial class WaveguideConnectionManager
     /// <summary>
     /// Tolerance for checking if path endpoints still match pin positions (in µm).
     /// </summary>
-    private const double EndpointToleranceMicrometers = 1.0;
+    private const double EndpointToleranceMicrometers = CrossingRoutePolicy.EndpointToleranceMicrometers;
 
     /// <summary>
     /// Incremental routing: preserves existing valid routes, only re-routes broken or new connections.
@@ -595,7 +596,7 @@ public partial class WaveguideConnectionManager
             // neither walls in other wires nor counts as a sibling they could cross.
             if (IsKnownUnroutable(connection))
                 continue;
-            if (IsSettledPiece(connection))
+            if (CrossingRoutePolicy.IsSettledPiece(connection))
             {
                 validConnections.Add(connection);
                 continue;
