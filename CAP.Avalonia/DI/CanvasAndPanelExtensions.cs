@@ -99,6 +99,8 @@ internal static class CanvasAndPanelExtensions
         services.AddTransient<ViewModels.Analysis.LogicAnalysis.TruthTableViewModel>();
         services.AddTransient<ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel>();
         services.AddTransient<ViewModels.Analysis.CircuitOptimization.CircuitOptimizationViewModel>();
+        services.AddSingleton<CAP_Core.Analysis.CircuitOptimization.ICircuitOptimizationRunner,
+            CAP_Core.Analysis.CircuitOptimization.CircuitOptimizationRunner>();
         services.AddTransient<OnaSweepViewModel>();
         services.AddTransient<RoutingDiagnosticsViewModel>();
         services.AddTransient<DesignValidationViewModel>();
