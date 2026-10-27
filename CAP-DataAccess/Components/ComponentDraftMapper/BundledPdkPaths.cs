@@ -70,12 +70,52 @@ public static class BundledPdkPaths
         if (string.IsNullOrEmpty(targetDir))
             return false;
 
-        foreach (var candidate in EnumerateBundledDirectoryCandidates(baseDir))
+        var candidates = new List<string>(EnumerateBundledDirectoryCandidates(baseDir));
+        foreach (var candidate in candidates)
         {
             if (PathsEqual(targetDir, candidate))
                 return true;
         }
+
+        // A save through an alias of the directory writes the same physical file.
+        // Resolve both sides: the installation's own PDK directory may itself be a link.
+        // Keep the lexical check above so absent bundled destinations stay protected.
+        var physicalTarget = ResolveDirectoryAliases(targetDir);
+        foreach (var candidate in candidates)
+        {
+            if (PathsEqual(physicalTarget, ResolveDirectoryAliases(candidate)))
+                return true;
+        }
         return false;
+    }
+
+    private static string ResolveDirectoryAliases(string path)
+    {
+        int remainingLinks = 64;
+        return Resolve(path, ref remainingLinks);
+
+        static string Resolve(string value, ref int remainingLinks)
+        {
+            var full = Path.GetFullPath(value);
+            var root = Path.GetPathRoot(full)!;
+            var resolved = root;
+            var parts = full[root.Length..].Split(
+                new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                resolved = Path.Combine(resolved, part);
+                var directory = new DirectoryInfo(resolved);
+                if (directory.LinkTarget == null) continue;
+                if (--remainingLinks < 0)
+                    throw new IOException("Too many directory links while checking bundled PDK protection.");
+                var target = directory.ResolveLinkTarget(returnFinalTarget: false)
+                             ?? throw new IOException($"Cannot resolve PDK directory alias '{resolved}'.");
+                // A target may have a linked ancestor as well as being a link itself.
+                resolved = Resolve(target.FullName, ref remainingLinks);
+            }
+            return resolved;
+        }
     }
 
     /// <summary>

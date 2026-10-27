@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using System.Text.Json;
+using CAP_Core.Export.Processes;
 
 namespace CAP_Core.Export.PdkResolution;
 
@@ -86,34 +86,38 @@ public class PdkFunctionResolutionService : IPdkFunctionResolver
 
             psi.RedirectStandardOutput = true;
             psi.RedirectStandardError = true;
-
-            using var process = Process.Start(psi);
-            if (process == null)
-                return PdkResolutionReport.Fail($"Could not start Python '{_pythonExecutable}'.");
-
+            psi.RedirectStandardInput = true;
+            using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            limit.CancelAfter(_timeout);
+            ct.ThrowIfCancellationRequested();
+            await using var process = OwnedProcess.Start(psi);
+            // Readers own the invocation's complete output, independently of caller cancellation.
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
             var stderrTask = process.StandardError.ReadToEndAsync();
-
-            var timeoutTask = Task.Delay(_timeout, ct);
-            var completed = await Task.WhenAny(Task.WhenAll(stdoutTask, stderrTask), timeoutTask);
-            if (completed == timeoutTask || ct.IsCancellationRequested)
+            var interrupted = false;
+            try
             {
-                TryKill(process);
-                if (ct.IsCancellationRequested)
-                    return PdkResolutionReport.Fail("Operation was cancelled.");
+                process.StandardInput.Close();
+                // Pipe EOF is not process completion: the same deadline also covers a silent root.
+                await process.WaitForExitAsync(limit.Token);
+            }
+            catch (OperationCanceledException) when (limit.IsCancellationRequested) { interrupted = true; }
+            finally { await RetireAsync(process, stdoutTask, stderrTask); }
 
+            ct.ThrowIfCancellationRequested();
+            if (interrupted)
+            {
                 // Surface whatever the script had emitted to stderr before hanging — a bare
                 // "timed out" is nearly undebuggable across a many-import batch (#515 review).
-                var errTail = LastLines(await DrainAsync(stderrTask), 5);
+                var errTail = LastLines(await stderrTask, 5);
                 var msg = $"Resolution script timed out after {_timeout.TotalSeconds:F0}s.";
                 return PdkResolutionReport.Fail(
                     string.IsNullOrEmpty(errTail) ? msg : $"{msg} Last output:\n{errTail}");
             }
 
-            await process.WaitForExitAsync(ct);
             return ParseOutput(await stdoutTask, await stderrTask);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             // Cancellation during WaitForExitAsync must read as cancelled, not "unexpected".
             return PdkResolutionReport.Fail("Operation was cancelled.");
@@ -128,21 +132,22 @@ public class PdkFunctionResolutionService : IPdkFunctionResolver
         }
     }
 
-    /// <summary>Awaits a stream read but gives up after a short bound so a hung/killed
-    /// process can't stall the timeout path; returns "" if it doesn't complete in time.</summary>
-    private static async Task<string> DrainAsync(Task<string> streamTask)
+    /// <summary>Retires the entire process scope before observing both redirected readers.</summary>
+    private static async Task RetireAsync(OwnedProcess process, Task<string> stdout, Task<string> stderr)
     {
-        const int drainBudgetMs = 500;
-        try
-        {
-            return await Task.WhenAny(streamTask, Task.Delay(drainBudgetMs)) == streamTask
-                ? await streamTask
-                : string.Empty;
-        }
+        try { await process.StopAsync(); }
         catch
         {
-            return string.Empty;
+            // Even failed native retirement must close its endpoints and observe pending readers.
+            try { await process.DisposeAsync(); }
+            finally
+            {
+                try { await Task.WhenAll(stdout, stderr); }
+                catch { /* Observe closure errors while preserving the native retirement failure. */ }
+            }
+            throw;
         }
+        await Task.WhenAll(stdout, stderr);
     }
 
     /// <summary>
@@ -242,9 +247,4 @@ public class PdkFunctionResolutionService : IPdkFunctionResolver
         return null;
     }
 
-    private static void TryKill(Process process)
-    {
-        try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-        catch { /* best-effort */ }
-    }
 }

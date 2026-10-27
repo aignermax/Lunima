@@ -8,9 +8,14 @@ on:
       - 'CAP.Avalonia/Services/Solvers/**'
       - 'CAP.Avalonia/Services/AgentBridge/Registration/**'
       - 'CAP-DataAccess/Persistence/**'
+      - 'CAP-DataAccess/Components/ComponentDraftMapper/BundledPdkPaths.cs'
+      - 'CAP-DataAccess/Components/ComponentDraftMapper/PdkJsonSaver.cs'
+      - 'UnitTests/Architecture/BundledPdkDirectoryAliasTests.cs'
+      - 'UnitTests/Architecture/TemporaryDirectoryJunction.cs'
       - 'UnitTests/Persistence/**'
       - 'UnitTests/Solvers/**'
       - 'UnitTests/AgentBridge/ClaudeCliProcessLifetimeTests.cs'
+      - 'UnitTests/Export/PdkResolution/PdkResolutionProcessLifetimeTests.cs'
       - '**/*.csproj'
       - 'Directory.Build.*'
       - 'global.json'
@@ -86,7 +91,7 @@ jobs:
       - name: Exercise real child processes and descendant cleanup
         env:
           LUNIMA_TEST_PYTHON3: ${{ steps.python.outputs.python-path }}
-          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests
+          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~PdkResolutionProcessLifetimeTests
         run: |
           set -euo pipefail
           dotnet test UnitTests/UnitTests.csproj --no-build --filter "$PROCESS_FILTER" \
@@ -96,11 +101,11 @@ jobs:
             --logger 'console;verbosity=normal' \
             2>&1 | tee UnitTests/TestResults/native-process.log
 
-      - name: Exercise atomic native document saves
+      - name: Exercise native document saves and bundled PDK alias protection
         run: |
           set -euo pipefail
           dotnet test UnitTests/UnitTests.csproj --no-build \
-            --filter 'FullyQualifiedName~AtomicFileWriterTests|FullyQualifiedName~NativeDesignFileStoreTests' \
+            --filter 'FullyQualifiedName~AtomicFileWriterTests|FullyQualifiedName~NativeDesignFileStoreTests|FullyQualifiedName~BundledPdkDirectoryAliasTests' \
             --results-directory UnitTests/TestResults \
             --logger 'trx;LogFileName=native-save.trx' \
             --logger 'console;verbosity=normal' \

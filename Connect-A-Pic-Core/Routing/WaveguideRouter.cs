@@ -255,7 +255,7 @@ public partial class WaveguideRouter
     public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin,
                              CancellationToken cancellationToken = default)
     {
-        LastRouteCoarseNodesExpanded = 0;
+        _coarseRetry.Reset();
         // Crossings belong to the route that planned them: a route found another way (direct,
         // coarse retry) must not inherit those of an earlier call.
         ResetPlannedCrossings();
