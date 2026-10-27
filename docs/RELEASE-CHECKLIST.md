@@ -248,6 +248,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Imported components are linked to the design scope (saved in `.lun`). `(auto: Services/GdsImport/DesignScopedGdsComponentServiceTests)`
 - [ ] Import a PDK JSON and register its components. `(auto: ViewModels/PdkImport/PdkImportWizardViewModelTests)`
 - [ ] Round-trip: export a layout, import it back, and compare geometry. `(auto: Services/GdsImport/GdsRoundTripImportTests)`
+- [ ] GDS review, Models stage: a 2-optical-pin cell without a mapped model shows the assumed lossless pass-through hint; pressing "Shape only · no simulation" removes the hint, the Summary lists the cell as shape-only, the import marks it geometry-only (simulation refuses it), and the decision survives save/load. `(auto: Services/GdsImport/GdsShapeOnlyOptOutImportTests, Services/GdsImport/GdsReviewShapeOnlyDecisionTests, Persistence/GdsImportDesignRoundTripTests)`
 
 ## 13. Export
 
