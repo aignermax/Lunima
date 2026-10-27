@@ -68,6 +68,17 @@ public sealed partial class LogicNetworkBuilder
             throw new ArgumentException("A logic network needs at least one gate group.", nameof(gates));
 
         var contexts = gates.Select(GateContext.Create).ToList();
+        var topology = CaptureTopology(contexts, connections, wavelengthNm ?? StandardWaveLengths.RedNM);
+        return topology.Build(gates.ToDictionary(gate => gate.GateId ?? gate.Group.GroupName, gate => gate.Model));
+    }
+
+    internal LogicNetworkTopology CaptureTopology(IReadOnlyList<LogicGateTopologyInput> gates,
+        IReadOnlyList<WaveguideConnection> connections, double wavelengthNm) =>
+        CaptureTopology(gates.Select(GateContext.Create).ToList(), connections, wavelengthNm);
+
+    private LogicNetworkTopology CaptureTopology(IReadOnlyList<GateContext> contexts,
+        IReadOnlyList<WaveguideConnection> connections, double wavelengthNm)
+    {
         ThrowOnDuplicateGateIds(contexts);
 
         var endpoints = new EndpointIndex(contexts);
@@ -79,7 +90,7 @@ public sealed partial class LogicNetworkBuilder
             AddConnectionDrivers(endpoints, adjacency, connection, drivers, edgeConnections);
         }
 
-        return AssembleNetwork(contexts, drivers, edgeConnections, wavelengthNm ?? StandardWaveLengths.RedNM);
+        return CaptureNetwork(contexts, drivers, edgeConnections, wavelengthNm);
     }
 
     /// <summary>
@@ -238,7 +249,7 @@ public sealed partial class LogicNetworkBuilder
     /// from its group's internal optical path length, and each inter-gate wire's
     /// delay from the connecting waveguide's routed path.
     /// </summary>
-    private LogicNetworkEvaluator AssembleNetwork(
+    private LogicNetworkTopology CaptureNetwork(
         IReadOnlyList<GateContext> contexts,
         IReadOnlyDictionary<LogicPinRef, LogicPinRef> drivers,
         IReadOnlyDictionary<LogicPinRef, IReadOnlyList<WaveguideConnection>> edgeConnections,
@@ -248,7 +259,6 @@ public sealed partial class LogicNetworkBuilder
         var inputMembers = new Dictionary<string, List<string>>();
         var wiring = new Dictionary<LogicPinRef, LogicNetDriver>();
         var outputTaps = new Dictionary<string, LogicPinRef>();
-        var models = new Dictionary<string, LogicGateModel>();
         var delays = new Dictionary<string, double>();
         var wireDelays = new Dictionary<LogicWireEdge, double>();
         var wireLinkLosses = new Dictionary<LogicWireEdge, LogicWireLinkLoss>();
@@ -265,16 +275,15 @@ public sealed partial class LogicNetworkBuilder
 
         foreach (var context in contexts)
         {
-            models[context.GateId] = context.Model;
             delays[context.GateId] = _delayCalculator.CalculatePicoseconds(context.Group, wavelengthNm);
-            foreach (var pinName in context.Model.InputPinNames)
+            foreach (var pinName in context.InputPinNames)
             {
                 var load = new LogicPinRef(context.GateId, pinName);
                 wiring[load] = drivers.TryGetValue(load, out var source)
                     ? new LogicNetDriver.GateOutput(source)
                     : new LogicNetDriver.NetworkInput(NetworkInputName(networkInputs, inputMembers, context, load));
             }
-            foreach (var pinName in context.Model.OutputPinNames)
+            foreach (var pinName in context.OutputPinNames)
             {
                 AddOutputTap(outputTaps, context, pinName);
             }
@@ -283,11 +292,11 @@ public sealed partial class LogicNetworkBuilder
         ThrowOnInputOutputNameCollision(inputMembers, outputTaps);
 
         var registerGateIds = contexts
-            .Where(context => context.Instance.Roles.IsRegister)
+            .Where(context => context.Roles.IsRegister)
             .Select(context => context.GateId)
             .ToList();
-        return new LogicNetworkEvaluator(
-            networkInputs, models, wiring, outputTaps, delays, wireDelays, registerGateIds, wireLinkLosses);
+        return new LogicNetworkTopology(
+            networkInputs, wiring, outputTaps, delays, wireDelays, registerGateIds, wireLinkLosses);
     }
 
     /// <summary>
