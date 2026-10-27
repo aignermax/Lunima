@@ -52,7 +52,8 @@ public static class MainViewModelTestHelper
         CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
         CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
         CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore? designFiles = null,
-        GdsExportViewModel? gdsExportViewModel = null)
+        GdsExportViewModel? gdsExportViewModel = null,
+        MonteCarloViewModel? monteCarloViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -71,7 +72,7 @@ public static class MainViewModelTestHelper
         // A caller-supplied LeftPanel (UI-flow tests) must share canvas/prefs with the rest of the VM.
         leftPanel ??= CreateLeftPanelViewModel(canvas, libraryManager, pdkLoader, preferencesService, commandManager, registryBrowser);
         var rightPanel = CreateRightPanelViewModel(canvas, preferencesService, logicNetworkProvider);
-        var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager);
+        var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager, monteCarloViewModel);
 
         var errorConsoleService = new CAP_Core.ErrorConsoleService();
         var gdsExportVm = gdsExportViewModel ?? new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService(), errorConsoleService);
@@ -236,7 +237,8 @@ public static class MainViewModelTestHelper
     /// </summary>
     public static BottomPanelViewModel CreateBottomPanelViewModel(
         DesignCanvasViewModel? canvas = null,
-        CommandManager? commandManager = null)
+        CommandManager? commandManager = null,
+        MonteCarloViewModel? monteCarloViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -255,7 +257,7 @@ public static class MainViewModelTestHelper
                 new EyeDiagramViewModel(),
                 new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()),
                 new AnalysisOutputPanelViewModel(),
-                new MonteCarloViewModel(),
+                monteCarloViewModel ?? new MonteCarloViewModel(),
                 new CAP.Avalonia.ViewModels.Analysis.CircuitOptimization.CircuitOptimizationViewModel(new CommandManager())));
     }
 }

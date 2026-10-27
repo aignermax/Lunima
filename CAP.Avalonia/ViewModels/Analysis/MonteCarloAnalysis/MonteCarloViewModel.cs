@@ -7,6 +7,7 @@ using CAP_Core.Components.Process;
 using CAP_Core.LightCalculation;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
+using CAP.Avalonia.Services.Lifetime;
 using CAP.Avalonia.ViewModels.Analysis.AnalysisOutput;
 using CAP.Avalonia.ViewModels.Canvas;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,7 +23,7 @@ namespace CAP.Avalonia.ViewModels.Analysis.MonteCarloAnalysis;
 /// shows either the spectral envelope over the nominal curve or the
 /// eye-openness distribution — a statistical yield view of the design.
 /// </summary>
-public partial class MonteCarloViewModel : ObservableObject
+public partial class MonteCarloViewModel : ObservableObject, IAsyncDisposable
 {
     /// <summary>Selectable per-run metrics.</summary>
     public IReadOnlyList<MonteCarloMetricOption> Metrics { get; } = new[]
@@ -62,20 +63,33 @@ public partial class MonteCarloViewModel : ObservableObject
     public Func<ActiveProcessSelection?>? ActiveProcessProvider { get; set; }
 
     private readonly CAP_Core.ErrorConsoleService? _errorConsole;
-    private DesignCanvasViewModel? _canvas;
-    private CancellationTokenSource? _runCts;
+    private readonly IMonteCarloSpectrumRunner _spectrumRunner;
+    private readonly MonteCarloRunLifetime _lifetime = new();
+    private DesignCanvasViewModel? _canvas => _lifetime.Canvas;
+    private Task? _retirement;
 
     /// <summary>Initializes a new instance of <see cref="MonteCarloViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
-    public MonteCarloViewModel(CAP_Core.ErrorConsoleService? errorConsole = null)
+    public MonteCarloViewModel(CAP_Core.ErrorConsoleService? errorConsole = null,
+        IMonteCarloSpectrumRunner? spectrumRunner = null, ApplicationWorkCoordinator? application = null)
     {
         _errorConsole = errorConsole;
+        _spectrumRunner = spectrumRunner ?? new MonteCarloSpectrumRunner();
         _selectedMetric = Metrics[0];
         _plotModel = MonteCarloPlotBuilder.CreateEmptyModel("Monte Carlo");
+        _lifetime.Register(application, StopAsync);
     }
 
     /// <summary>Provides the canvas reference needed to build the simulation circuit.</summary>
-    public void Configure(DesignCanvasViewModel canvas) => _canvas = canvas;
+    public void Configure(DesignCanvasViewModel canvas) => _lifetime.Configure(canvas);
+
+    public Task StopAsync() => _retirement ??= RetireAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private async Task RetireAsync()
+    {
+        try { await _lifetime.StopAsync(); }
+        finally { ActiveProcessProvider = null; _lifetime.Release(); }
+    }
 
     /// <summary>
     /// Reloads the sigma inputs from the active process tolerances. Call when the
@@ -83,9 +97,11 @@ public partial class MonteCarloViewModel : ObservableObject
     /// </summary>
     public void RefreshTolerancesFromProcess()
     {
+        if (_lifetime.IsStopping) return;
         var tolerances = ActiveProcessProvider?.Invoke()?.Fingerprint?.Tolerances;
-        if (tolerances == null) return;
+        if (tolerances == null || _lifetime.IsStopping) return;
         WidthSigmaNm = tolerances.WidthSigmaNm;
+        if (_lifetime.IsStopping) return;
         ThicknessSigmaNm = tolerances.ThicknessSigmaNm;
     }
 
@@ -97,114 +113,134 @@ public partial class MonteCarloViewModel : ObservableObject
 
     /// <summary>Runs the Monte-Carlo fabrication-variance analysis.</summary>
     [RelayCommand]
-    private async Task RunAnalysis()
+    private Task RunAnalysis() => _lifetime.RunAsync(RunAnalysisCoreAsync);
+
+    private async Task RunAnalysisCoreAsync(CancellationToken stop)
     {
         if (IsRunning) return;
-        if (_canvas == null || _canvas.Components.Count == 0)
-        {
-            StatusText = LocalizationService.Instance.Translate("Analysis.Common.NoCircuit");
-            return;
-        }
-
-        var components = CollectPhysicalComponents();
-        if (components.Count == 0)
-        {
-            StatusText = LocalizationService.Instance.Translate("Analysis.Mc.NoPhysicalComponents");
-            return;
-        }
-
-        IsRunning = true;
-        ProgressPercent = 0;
-        SummaryText = "";
-        _runCts?.Dispose();
-        _runCts = new CancellationTokenSource();
-
+        AnalysisSweepOperation? operation = null;
         try
         {
+            operation = _lifetime.Begin(stop);
+            if (operation == null) return;
+            operation.ThrowIfObsolete();
+            if (_canvas!.Components.Count == 0)
+            {
+                StatusText = LocalizationService.Instance.Translate("Analysis.Common.NoCircuit");
+                return;
+            }
+            var components = CollectPhysicalComponents();
+            if (components.Count == 0)
+            {
+                StatusText = LocalizationService.Instance.Translate("Analysis.Mc.NoPhysicalComponents");
+                return;
+            }
             var config = new MonteCarloConfiguration(RunCount, Seed);
+            var tolerances = new ProcessTolerances(WidthSigmaNm, ThicknessSigmaNm);
+            var spectrum = IsSpectrumMetric;
+            var sweep = spectrum ? new WavelengthSweepConfiguration(StartNm, EndNm, StepCount) : null;
+            IsRunning = true;
+            operation.ThrowIfObsolete();
+            ProgressPercent = 0;
+            operation.ThrowIfObsolete();
+            SummaryText = "";
+            operation.ThrowIfObsolete();
             var varianceSource = new FabricationVarianceSource(
-                components, new ProcessTolerances(WidthSigmaNm, ThicknessSigmaNm));
+                components, tolerances);
             Func<ISystemMatrixBuilder, ISystemMatrixBuilder> decorate =
                 inner => new PerturbedSystemMatrixBuilder(inner, varianceSource);
             var progress = new Progress<MonteCarloProgress>(p =>
             {
+                if (!operation.CanPublish) return;
                 ProgressPercent = 100.0 * p.CompletedRuns / p.TotalRuns;
+                if (!operation.CanPublish) return;
                 StatusText = string.Format(
                     LocalizationService.Instance.Translate("Analysis.Mc.Running"),
                     p.CompletedRuns, p.TotalRuns);
             });
 
-            if (IsSpectrumMetric)
-                await RunSpectrumAnalysis(config, varianceSource, decorate, progress, _runCts.Token);
+            if (spectrum)
+                await RunSpectrumAnalysis(config, sweep!, varianceSource, tolerances, progress, operation);
             else
-                await RunEyeAnalysis(config, varianceSource, decorate, progress, _runCts.Token);
+                await RunEyeAnalysis(config, varianceSource, tolerances, decorate, progress, operation);
         }
         catch (OperationCanceledException)
         {
-            StatusText = LocalizationService.Instance.Translate("Analysis.Mc.Cancelled");
-        }
-        catch (CAP_Core.LightCalculation.NonConvergentCircuitException ex)
-        {
-            _errorConsole?.LogError($"Monte-Carlo analysis blocked: {ex.Message}", ex);
-            StatusText = NonConvergentCircuitMessageFormatter.Format(ex);
+            // User cancellation publishes immediate feedback; retirement and obsolete
+            // document completions cannot write into the current panel.
         }
         catch (Exception ex)
         {
-            _errorConsole?.LogError($"Monte-Carlo analysis failed: {ex.Message}", ex);
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("Analysis.Common.Failed"), ex.Message);
+            if (operation?.CanPublish != true) return;
+            _errorConsole?.LogError(ex is NonConvergentCircuitException
+                ? $"Monte-Carlo analysis blocked: {ex.Message}" : $"Monte-Carlo analysis failed: {ex.Message}", ex);
+            if (!operation.CanPublish) return;
+            StatusText = ex is NonConvergentCircuitException physics
+                ? NonConvergentCircuitMessageFormatter.Format(physics)
+                : string.Format(LocalizationService.Instance.Translate("Analysis.Common.Failed"), ex.Message);
         }
         finally
         {
-            IsRunning = false;
-            _runCts?.Dispose();
-            _runCts = null;
+            try { if (operation != null) IsRunning = false; }
+            finally { await _lifetime.EndAsync(operation); }
         }
     }
 
     /// <summary>Cancels the running analysis after the current run finishes.</summary>
     [RelayCommand]
-    private void CancelAnalysis() => _runCts?.Cancel();
+    private void CancelAnalysis()
+    {
+        if (_lifetime.Cancel()) StatusText = LocalizationService.Instance.Translate("Analysis.Mc.Cancelled");
+    }
 
     private async Task RunSpectrumAnalysis(
-        MonteCarloConfiguration config, FabricationVarianceSource varianceSource,
-        Func<ISystemMatrixBuilder, ISystemMatrixBuilder> decorate,
-        IProgress<MonteCarloProgress> progress, CancellationToken cancellationToken)
+        MonteCarloConfiguration config, WavelengthSweepConfiguration sweepConfig,
+        FabricationVarianceSource varianceSource, ProcessTolerances tolerances,
+        IProgress<MonteCarloProgress> progress, AnalysisSweepOperation operation)
     {
-        var sweepConfig = new WavelengthSweepConfiguration(StartNm, EndNm, StepCount);
-        var (sampler, error) = MonteCarloSpectrumSampler.Create(_canvas!, sweepConfig, decorate);
+        operation.ThrowIfObsolete();
+        var (sampler, error) = MonteCarloSpectrumSampler.Create(_canvas!, sweepConfig, config,
+            varianceSource.Components, tolerances);
         if (sampler == null)
         {
             StatusText = error ?? "";
             return;
         }
 
-        var result = await new MonteCarloRunner().RunAsync(
-            config, varianceSource, sampler.SampleAsync, progress, cancellationToken);
+        operation.ThrowIfObsolete();
+        var completed = await _spectrumRunner.RunAsync(sampler.Snapshot, progress, operation.Token);
+        operation.ThrowIfObsolete();
+        var result = completed.Samples;
 
         PlotModel = MonteCarloPlotBuilder.BuildEnvelopePlot(
-            sampler.Wavelengths, result, sampler.SelectedPinName);
-        SummaryText = FormatSpectrumSummary(result, varianceSource.Components.Count);
+            sampler.Wavelengths, result, sampler.PinName(completed.SelectedOutputPinId));
+        operation.ThrowIfObsolete();
+        SummaryText = FormatSpectrumSummary(result, varianceSource.Components.Count, tolerances);
+        operation.ThrowIfObsolete();
         StatusText = string.Format(
             LocalizationService.Instance.Translate("Analysis.Mc.Complete"), config.RunCount);
     }
 
     private async Task RunEyeAnalysis(
-        MonteCarloConfiguration config, FabricationVarianceSource varianceSource,
+        MonteCarloConfiguration config, FabricationVarianceSource varianceSource, ProcessTolerances tolerances,
         Func<ISystemMatrixBuilder, ISystemMatrixBuilder> decorate,
-        IProgress<MonteCarloProgress> progress, CancellationToken cancellationToken)
+        IProgress<MonteCarloProgress> progress, AnalysisSweepOperation operation)
     {
+        operation.ThrowIfObsolete();
         var resolution = AnalysisOutputResolver.Resolve(_canvas!);
         if (ReportInvalidDesignation(resolution)) return;
 
         var sampler = new MonteCarloEyeSampler(_canvas!, resolution, decorate);
         var result = await new MonteCarloRunner().RunAsync(
-            config, varianceSource, sampler.SampleAsync, progress, cancellationToken);
+            config, varianceSource, sampler.SampleAsync, progress, operation.Token);
+        operation.ThrowIfObsolete();
 
         var samples = result.GetSamplesAtIndex(0);
         var histogram = DistributionHistogram.Create(samples);
         PlotModel = MonteCarloPlotBuilder.BuildHistogramPlot(histogram, result.NominalCurve[0]);
-        SummaryText = FormatEyeSummary(result, samples, varianceSource.Components.Count);
+        operation.ThrowIfObsolete();
+        SummaryText = FormatEyeSummary(result, samples, varianceSource.Components.Count, tolerances);
+        operation.ThrowIfObsolete();
         StatusText = string.Format(
             LocalizationService.Instance.Translate("Analysis.Mc.Complete"), config.RunCount);
     }
@@ -232,25 +268,25 @@ public partial class MonteCarloViewModel : ObservableObject
             .Where(component => !component.IsAnalysisTool)
             .ToList();
 
-    private string FormatSpectrumSummary(MonteCarloResult result, int componentCount)
+    private static string FormatSpectrumSummary(MonteCarloResult result, int componentCount, ProcessTolerances tolerances)
     {
         var inv = CultureInfo.InvariantCulture;
         double worstDip = result.GetMinCurve().Min();
         double nominalMin = result.NominalCurve.Min();
         return string.Join(Environment.NewLine,
             string.Format(inv, "Varied components:    {0}", componentCount),
-            string.Format(inv, "Wafer sigma:          Δw {0:F1} nm / Δt {1:F1} nm", WidthSigmaNm, ThicknessSigmaNm),
+            string.Format(inv, "Wafer sigma:          Δw {0:F1} nm / Δt {1:F1} nm", tolerances.WidthSigmaNm, tolerances.ThicknessSigmaNm),
             string.Format(inv, "Nominal worst IL:     {0:F2} dB", nominalMin),
             string.Format(inv, "Monte-Carlo worst IL: {0:F2} dB", worstDip));
     }
 
-    private string FormatEyeSummary(MonteCarloResult result, double[] samples, int componentCount)
+    private static string FormatEyeSummary(MonteCarloResult result, double[] samples, int componentCount, ProcessTolerances tolerances)
     {
         var inv = CultureInfo.InvariantCulture;
         double openFraction = samples.Count(s => s > 0) / (double)samples.Length;
         return string.Join(Environment.NewLine,
             string.Format(inv, "Varied components:   {0}", componentCount),
-            string.Format(inv, "Wafer sigma:         Δw {0:F1} nm / Δt {1:F1} nm", WidthSigmaNm, ThicknessSigmaNm),
+            string.Format(inv, "Wafer sigma:         Δw {0:F1} nm / Δt {1:F1} nm", tolerances.WidthSigmaNm, tolerances.ThicknessSigmaNm),
             string.Format(inv, "Nominal eye height:  {0:E3}", result.NominalCurve[0]),
             string.Format(inv, "p5 / p50 / p95:      {0:E3} / {1:E3} / {2:E3}",
                 result.GetPercentileCurve(5)[0],
