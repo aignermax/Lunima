@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
-using CAP_Core.Export;
+using ProcessLaunchFactory = CAP_Core.Export.ProcessLaunchFactory;
 using CAP.Avalonia.Services.AgentBridge.Registration;
 using Shouldly;
 using UnitTests.Solvers;

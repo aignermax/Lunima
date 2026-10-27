@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using ProcessLaunchFactory = CAP_Core.Export.ProcessLaunchFactory;
 
 namespace CAP.Avalonia.Services.AgentBridge.Registration;
 
@@ -28,23 +29,23 @@ internal static class WindowsBatchCommand
         if (arguments.Length > 8191)
             throw new InvalidOperationException("Batch command exceeds cmd.exe's 8191-character limit.");
 
-        var prepared = new ProcessStartInfo
-        {
-            FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"),
-            // Shell syntax is intentional here; CRT ArgumentList serialization would
-            // reinterpret the already escaped quotes and corrupt the shell command.
-            Arguments = arguments,
-            WorkingDirectory = source.WorkingDirectory,
-            UseShellExecute = source.UseShellExecute,
-            CreateNoWindow = source.CreateNoWindow,
-            RedirectStandardInput = source.RedirectStandardInput,
-            RedirectStandardOutput = source.RedirectStandardOutput,
-            RedirectStandardError = source.RedirectStandardError,
-            StandardInputEncoding = source.StandardInputEncoding,
-            StandardOutputEncoding = source.StandardOutputEncoding,
-            StandardErrorEncoding = source.StandardErrorEncoding,
-            UserName = source.UserName
-        };
+        var shell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe");
+        if (!ProcessLaunchFactory.CreateDefault().TryBuild(shell, Array.Empty<string>(), source.WorkingDirectory,
+                null, out var prepared, out var error))
+            throw new InvalidOperationException(error);
+        // Shell syntax is intentional here; CRT ArgumentList serialization would
+        // reinterpret the already escaped quotes and corrupt the shell command.
+        prepared.Arguments = arguments;
+        prepared.WorkingDirectory = source.WorkingDirectory;
+        prepared.UseShellExecute = source.UseShellExecute;
+        prepared.CreateNoWindow = source.CreateNoWindow;
+        prepared.RedirectStandardInput = source.RedirectStandardInput;
+        prepared.RedirectStandardOutput = source.RedirectStandardOutput;
+        prepared.RedirectStandardError = source.RedirectStandardError;
+        prepared.StandardInputEncoding = source.StandardInputEncoding;
+        prepared.StandardOutputEncoding = source.StandardOutputEncoding;
+        prepared.StandardErrorEncoding = source.StandardErrorEncoding;
+        prepared.UserName = source.UserName;
         prepared.Environment.Clear();
         foreach (var entry in source.Environment) prepared.Environment[entry.Key] = entry.Value;
         return prepared;
