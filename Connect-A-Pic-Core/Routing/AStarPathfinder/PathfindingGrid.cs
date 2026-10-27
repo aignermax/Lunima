@@ -339,7 +339,7 @@ public partial class PathfindingGrid
         {
             _componentCells[component] = footprint;
         }
-        RegisterComponentOwnership(footprint, pinCorridors);
+        _componentOwnership.Register(footprint, pinCorridors);
 
         // Mark pin reservation zones — soft penalty area around each pin.
         // Routes can pass through but A* prefers to avoid them.
@@ -384,7 +384,7 @@ public partial class PathfindingGrid
                 }
             }
         }
-        UnregisterComponentOwnership(component, cells);
+        _componentOwnership.Unregister(component);
         UnregisterPinZones(component);
         // A freed cell may have held a waveguide obstacle (state 2) that a later
         // waveguide registration claimed — invalidate derived caches regardless.
@@ -424,7 +424,7 @@ public partial class PathfindingGrid
                         }
                     }
                 }
-                UnregisterComponentOwnership(child, cells);
+                _componentOwnership.Unregister(child);
                 UnregisterPinZones(child);
             }
         }
@@ -537,11 +537,8 @@ public partial class PathfindingGrid
                 // Only clear component obstacles (1), NOT waveguide obstacles (2)
                 if (IsInBounds(gx, gy) && _cells[gx, gy] == 1)
                 {
-                    lock (_ownershipLock)
-                    {
-                        if (AnyClaim(gx, gy, (owner, body) => body && owner.OutlinePolygons is { Count: > 0 }, out _))
-                            continue;
-                    }
+                    if (_componentOwnership.HasOutlineBodyClaim(gx, gy))
+                        continue;
                     clearedCells[(gx, gy)] = _cells[gx, gy];
                     _cells[gx, gy] = 0;
                 }
@@ -640,7 +637,7 @@ public partial class PathfindingGrid
             Array.Clear(_pinZoneRefGrid);
             _componentPinZones.Clear();
         }
-        ClearOwnership();
+        _componentOwnership.Clear();
         ResetBreakoutReservationBookkeeping();
         WaveguideVersion++;
 

@@ -135,11 +135,7 @@ public partial class PathfindingGrid
         byte state = _cells[gridX, gridY];
         if (state == 3) return true;
         if (state != 1) return false;
-        lock (_ownershipLock)
-        {
-            bool foreign = AnyClaim(gridX, gridY, (owner, _) => !ownComponents.Contains(owner), out var claimed);
-            return !claimed || foreign;
-        }
+        return _componentOwnership.HasForeignClaim(gridX, gridY, ownComponents);
     }
 
     /// <summary>
