@@ -42,17 +42,20 @@ public sealed class WavelengthSweepSnapshot
     }
 
     /// <summary>Solves only captured values; simultaneous solves rebuild separate mutable matrices.</summary>
-    public async Task<WavelengthSweepResult> SolveAsync(CancellationToken cancellationToken = default)
+    public async Task<WavelengthSweepResult> SolveAsync(CancellationToken cancellationToken = default,
+        Func<ISystemMatrixBuilder, ISystemMatrixBuilder>? decorateBuilder = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var components = _circuit.RebuildComponents(cancellationToken);
+        ISystemMatrixBuilder builder = new CapturedBuilder(_circuit, components);
+        if (decorateBuilder != null) builder = decorateBuilder(builder);
         var wavelengths = _configuration.GenerateWavelengthValues();
         var points = new List<WavelengthDataPoint>(wavelengths.Length);
         List<Guid>? monitored = null;
         foreach (var wavelength in wavelengths)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var matrix = _circuit.BuildMatrix(components, wavelength);
+            var matrix = builder.GetSystemSMatrix(wavelength);
             var inputs = MathNet.Numerics.LinearAlgebra.Vector<Complex>.Build.Dense(matrix.SMat.RowCount);
             foreach (var source in _sources)
                 if (matrix.PinReference.TryGetValue(source.FlowId, out var index)) inputs[index] = source.Field;
@@ -65,5 +68,12 @@ public sealed class WavelengthSweepSnapshot
             points.Add(new WavelengthDataPoint(wavelength, fields, _inputPower));
         }
         return new(_configuration, points, monitored ?? [], _warnings.ToList());
+    }
+
+    private sealed class CapturedBuilder(OpticalCircuitSnapshot circuit,
+        IReadOnlyList<Dictionary<int, SMatrix>> components) : ISystemMatrixBuilder
+    {
+        public SMatrix GetSystemSMatrix(int wavelengthNm) => GetSystemSMatrix((double)wavelengthNm);
+        public SMatrix GetSystemSMatrix(double wavelengthNm) => circuit.BuildMatrix(components, wavelengthNm);
     }
 }
