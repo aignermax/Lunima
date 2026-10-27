@@ -94,7 +94,8 @@ internal static class AgentBridgeFeatureExtensions
         services.AddSingleton<IAgentConnection>(sp => sp.GetRequiredService<ClaudeCodeConnector>());
         services.AddTransient<AgentBridgeSettingsViewModel>();
         services.AddSingleton(sp => new ClaudeCodeConnectPromptViewModel(
-            sp.GetRequiredService<UserPreferencesService>(), sp.GetRequiredService<IAgentConnection>(), AppVersion()));
+            sp.GetRequiredService<UserPreferencesService>(), sp.GetRequiredService<IAgentConnection>(), AppVersion(),
+            sp.GetRequiredService<Services.Lifetime.ApplicationWorkCoordinator>()));
 
         return services;
     }
