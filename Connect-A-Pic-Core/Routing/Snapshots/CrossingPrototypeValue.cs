@@ -34,7 +34,7 @@ internal sealed record CrossingPrototypeValue(RouteComponentValue Geometry, Comp
     internal Component Build(RouteProcessFloorTable floors, bool preserveIdentity = false)
     {
         var ids = Physics.Pins.SelectMany(pin => new[] { pin.In, pin.Out })
-            .Concat(Physics.Matrices.Values.SelectMany(matrix => matrix.FlowIds)).Distinct()
+            .Concat(Physics.Matrices.SelectMany(pair => pair.Value.FlowIds)).Distinct()
             .ToDictionary(id => id, id => preserveIdentity ? id : Guid.NewGuid());
         var sliderIds = Physics.Sliders.Select(slider => slider.Id).Distinct()
             .ToDictionary(id => id, id => preserveIdentity ? id : Guid.NewGuid());
@@ -87,8 +87,10 @@ internal sealed record CrossingPrototypeValue(RouteComponentValue Geometry, Comp
         var definition = original with
         {
             FlowIds = original.FlowIds.Select(id => pins[id]).ToImmutableArray(),
-            SliderValues = original.SliderValues.ToImmutableDictionary(pair => sliders[pair.Key], pair => pair.Value),
-            Numeric = original.Numeric.Select(value => value with { From = pins[value.From], To = pins[value.To] }).ToImmutableArray(),
+            SliderValues = original.SliderValues.Select(pair =>
+                new KeyValuePair<Guid, double>(sliders[pair.Key], pair.Value)).ToImmutableArray(),
+            // Numeric entries address matrix positions. The remapped FlowIds above gives every
+            // rebuilt transfer its fresh identity while the immutable numeric storage stays shared.
             Formulas = original.Formulas.Select(value => value with { From = pins[value.From], To = pins[value.To] }).ToImmutableArray()
         };
         var matrix = definition.Rebuild(pinValues, sliderValues);

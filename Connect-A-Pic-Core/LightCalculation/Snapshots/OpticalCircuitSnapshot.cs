@@ -43,6 +43,16 @@ internal sealed class OpticalCircuitSnapshot
             grid.ExternalPortManager.GetUsedExternalInputs().Select(input => input.AttachedComponentPinId).ToImmutableArray());
     }
 
+    /// <summary>Captures an isolated truth-table gate without constructing routing/grid/source owners.</summary>
+    internal static OpticalCircuitSnapshot CaptureIsolatedGroup(ComponentGroup group, ImmutableArray<Guid> sourceIds)
+    {
+        var components = ImmutableArray.CreateBuilder<ComponentMatrixSnapshot>();
+        var connections = ImmutableArray.CreateBuilder<OpticalConnectionSnapshot>();
+        Visit(group, components, connections, physical: true, coherent: false);
+        return new(components.ToImmutable(), connections.ToImmutable(),
+            ImmutableArray<KeyValuePair<(Guid, Guid), Complex>>.Empty, sourceIds);
+    }
+
     private static void Visit(Component component, ImmutableArray<ComponentMatrixSnapshot>.Builder components,
         ImmutableArray<OpticalConnectionSnapshot>.Builder connections, bool physical, bool coherent)
     {
@@ -86,5 +96,17 @@ internal sealed class OpticalCircuitSnapshot
         wires.SetValues(transfers);
         matrices.Add(wires);
         return SMatrix.CreateSystemSMatrix(matrices);
+    }
+
+    /// <summary>Hashes captured definitions and exact connection transfer at the requested sample, on the worker.</summary>
+    internal void WriteIdentity(SnapshotPhysicsIdentity identity, double wavelengthNm)
+    {
+        identity.Write(_components.Length);
+        foreach (var component in _components) identity.Component(component);
+        var transfers = _tileTransfers.ToDictionary(pair => pair.Key, pair => pair.Value);
+        foreach (var connection in _connections) connection.AddTransfers(transfers, wavelengthNm);
+        identity.Transfers(transfers);
+        identity.Write(_sourceIds.Length);
+        foreach (var source in _sourceIds) identity.Id(source);
     }
 }

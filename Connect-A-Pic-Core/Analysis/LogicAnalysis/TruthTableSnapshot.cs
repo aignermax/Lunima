@@ -1,12 +1,9 @@
 using System.Collections.Immutable;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using CAP_Core.Components.Core;
-using CAP_Core.Components.Connections;
-using CAP_Core.ExternalPorts;
-using CAP_Core.Grid;
 using CAP_Core.LightCalculation;
 using CAP_Core.LightCalculation.Snapshots;
-using CAP_Core.Routing;
 
 namespace CAP_Core.Analysis.LogicAnalysis;
 
@@ -35,34 +32,49 @@ public sealed class TruthTableSnapshot
 
     /// <summary>Copies compact physics and pin values synchronously; it does not compute a group closure or any truth-table row.</summary>
     public static TruthTableSnapshot Capture(ComponentGroup group, IReadOnlyList<string> inputs,
-        IReadOnlyList<string> outputs, IReadOnlyList<string> biases, double threshold, int wavelength)
+        IReadOnlyList<string> outputs, IReadOnlyList<string> biases, double threshold, int wavelength) =>
+        CaptureCore(group, inputs, outputs, biases, threshold, wavelength, materializeGroupPins: true);
+
+    internal static TruthTableSnapshot CaptureForClassification(ComponentGroup group, IReadOnlyList<string> inputs,
+        IReadOnlyList<string> outputs, IReadOnlyList<string> biases, double threshold, int wavelength) =>
+        CaptureCore(group, inputs, outputs, biases, threshold, wavelength, materializeGroupPins: false);
+
+    private static TruthTableSnapshot CaptureCore(ComponentGroup group, IReadOnlyList<string> inputs,
+        IReadOnlyList<string> outputs, IReadOnlyList<string> biases, double threshold, int wavelength,
+        bool materializeGroupPins)
     {
         ArgumentNullException.ThrowIfNull(group);
         TruthTableInputValidation.ValidateArguments(inputs, outputs, biases, threshold, wavelength);
-        static ImmutableArray<PinValue> Pins(ComponentGroup group, IReadOnlyList<string> names, string parameter) =>
-            TruthTableInputValidation.ResolvePins(group, names, parameter)
-                .Select(pin => new PinValue(pin.Name, pin.InternalPin.LogicalPin!.IDInFlow,
-                    pin.InternalPin.LogicalPin.IDOutFlow)).ToImmutableArray();
+        static ImmutableArray<PinValue> Pins(ComponentGroup group, IReadOnlyList<string> names, string parameter)
+        {
+            var resolved = TruthTableInputValidation.ResolvePins(group, names, parameter);
+            var values = new PinValue[resolved.Count];
+            for (var index = 0; index < values.Length; index++)
+            {
+                var pin = resolved[index];
+                values[index] = new(pin.Name, pin.InternalPin.LogicalPin!.IDInFlow, pin.InternalPin.LogicalPin.IDOutFlow);
+            }
+            return ImmutableCollectionsMarshal.AsImmutableArray(values);
+        }
         var inputValues = Pins(group, inputs, "inputPinNames");
         var outputValues = Pins(group, outputs, "outputPinNames");
         var biasValues = Pins(group, biases, "biasPins");
         // Extraction historically materialized the group's connectable pins via ComputeSMatrix.
         // Preserve that caller-thread effect without evaluating a transitive group matrix, and
         // retain existing physical-pin identities when connections already reference them.
-        if (group.PhysicalPins.Count != group.ExternalPins.Count
+        if (materializeGroupPins && (group.PhysicalPins.Count != group.ExternalPins.Count
             || group.PhysicalPins.Where((pin, index) => pin.Name != group.ExternalPins[index].Name
-                || !ReferenceEquals(pin.LogicalPin, group.ExternalPins[index].InternalPin.LogicalPin)).Any())
+                || !ReferenceEquals(pin.LogicalPin, group.ExternalPins[index].InternalPin.LogicalPin)).Any()))
             group.SyncPhysicalPinsFromExternalPins();
-        var components = new ComponentListTileManager();
-        components.AddComponent(group);
-        var sources = new PhysicalExternalPortManager();
-        foreach (var pin in inputValues.Concat(biasValues))
-            sources.AddLightSource(new ExternalInput(pin.Name, new LaserType(LightColor.Red, wavelength),
-                0, Complex.One, true), pin.In);
         // Like the legacy isolated extraction: frozen path loss is retained, propagation phase is off.
-        var grid = GridManager.CreateForSimulation(components, new WaveguideConnectionManager(new WaveguideRouter()), sources);
+        // PhysicalExternalPortManager previously added these IDs to a single-thread ConcurrentBag,
+        // whose enumeration reverses insertion order. Preserve that order and duplicate endpoints.
+        var sourceIds = new Guid[inputValues.Length + biasValues.Length];
+        var sourceIndex = sourceIds.Length;
+        foreach (var pin in inputValues) sourceIds[--sourceIndex] = pin.In;
+        foreach (var pin in biasValues) sourceIds[--sourceIndex] = pin.In;
         return new(group.GroupName, inputValues, outputValues, biasValues, threshold, wavelength,
-            OpticalCircuitSnapshot.Capture(grid));
+            OpticalCircuitSnapshot.CaptureIsolatedGroup(group, ImmutableCollectionsMarshal.AsImmutableArray(sourceIds)));
     }
 
     /// <summary>Builds private evaluation matrices and solves every binary input pattern.</summary>
@@ -102,5 +114,20 @@ public sealed class TruthTableSnapshot
         }
         return new TruthTable(_name, _inputs.Select(pin => pin.Name).ToArray(), _outputs.Select(pin => pin.Name).ToArray(),
             _biases.Select(pin => pin.Name).ToArray(), _threshold, _wavelength, rows);
+    }
+
+    /// <summary>Complete captured classification input, independent of instance GUIDs and display names.</summary>
+    internal string ClassificationIdentity()
+    {
+        using var identity = new SnapshotPhysicsIdentity();
+        identity.Write(_wavelength);
+        identity.Write(_threshold);
+        _circuit.WriteIdentity(identity, _wavelength);
+        foreach (var pins in new[] { _inputs, _outputs, _biases })
+        {
+            identity.Write(pins.Length);
+            foreach (var pin in pins) { identity.Id(pin.In); identity.Id(pin.Out); }
+        }
+        return identity.Finish();
     }
 }

@@ -54,12 +54,14 @@ public partial class GateViewViewModel : ObservableObject
         WorkspaceViewModel workspace,
         Func<int> wavelengthNm,
         Func<IReadOnlyDictionary<string, bool>>? networkInputBits = null,
-        Func<TimeSpan, CancellationToken, Task>? delay = null)
+        Func<TimeSpan, CancellationToken, Task>? delay = null,
+        GateFunctionClassifier? classifier = null)
     {
         _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
         _workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
         _wavelengthNm = wavelengthNm ?? throw new ArgumentNullException(nameof(wavelengthNm));
         _delay = delay ?? Task.Delay;
+        _classifier = classifier ?? new GateFunctionClassifier();
         Levels = new GateNetLevels(canvas.LogicGateStates, networkInputBits);
         Levels.Changed += RaiseChanged;
         _workspace.PropertyChanged += OnWorkspaceChanged;

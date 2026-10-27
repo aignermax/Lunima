@@ -16,7 +16,7 @@ public sealed class ParametricDefinitionOwnershipTests
         var formula = new EditorFormula(new object());
         source.WaveLengthToSMatrixMap[1550].ParametricSnapshot = new([parameter], [formula]);
 
-        var snapshot = ComponentMatrixSnapshot.Capture(source).Matrices[1550];
+        var snapshot = ComponentMatrixSnapshot.Capture(source).Matrices.Single(pair => pair.Key == 1550).Value;
 
         snapshot.Parameters.Single().GetType().ShouldBe(typeof(ParameterDefinition));
         snapshot.Parameters.Single().ShouldNotBeSameAs(parameter);
