@@ -32,9 +32,13 @@ public sealed class TransientCircuitSnapshot
     }
 
     /// <summary>Creates a simulator with an explicitly supplied, run-owned warning receiver.</summary>
-    public TimeDomainSimulator CreateSimulator(Action<PassivityWarning>? warningSink = null)
-        => new(new CapturedMatrixBuilder(_circuit),
-            _context is null ? null : _context with { PassivityWarningSink = warningSink });
+    public TimeDomainSimulator CreateSimulator(Action<PassivityWarning>? warningSink = null,
+        Func<ISystemMatrixBuilder, ISystemMatrixBuilder>? decorateBuilder = null)
+    {
+        ISystemMatrixBuilder builder = new CapturedMatrixBuilder(_circuit);
+        if (decorateBuilder != null) builder = decorateBuilder(builder);
+        return new(builder, _context is null ? null : _context with { PassivityWarningSink = warningSink });
+    }
 
     // Mutable interpolation/formula evaluation belongs to this simulator alone. The captured
     // circuit can therefore construct multiple simulators without sharing evaluation state.

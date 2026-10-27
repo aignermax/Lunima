@@ -72,8 +72,9 @@ public class TimeDomainSimulator : ILightCalculator
         double centerWavelengthNm = DefaultCenterWavelengthNm,
         double spanNm = DefaultSpanNm,
         int nFreqPoints = DefaultNPoints,
-        PhaseNoiseSettings? phaseNoise = null)
+        PhaseNoiseSettings? phaseNoise = null, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (inputSignals == null) throw new ArgumentNullException(nameof(inputSignals));
         if (timeDef == null) throw new ArgumentNullException(nameof(timeDef));
 
@@ -81,12 +82,13 @@ public class TimeDomainSimulator : ILightCalculator
         // inputs restrict the multi-hop closure to the reachable subgraph — exactly the
         // (source → output) pairs convolved below.
         var impulseResponses = _irBuilder.Build(
-            centerWavelengthNm, spanNm, nFreqPoints, inputSignals.Keys, _circuitContext);
+            centerWavelengthNm, spanNm, nFreqPoints, inputSignals.Keys, _circuitContext, cancellationToken);
 
         var outputTraces = phaseNoise?.HasAnyNoise == true
-            ? ConvolveCoherent(impulseResponses, inputSignals, timeDef, phaseNoise)
-            : ConvolveIncoherent(impulseResponses, inputSignals, timeDef);
+            ? ConvolveCoherent(impulseResponses, inputSignals, timeDef, phaseNoise, cancellationToken)
+            : ConvolveIncoherent(impulseResponses, inputSignals, timeDef, cancellationToken);
 
+        cancellationToken.ThrowIfCancellationRequested();
         return new TimeDomainResult(timeDef.TimeAxis, outputTraces);
     }
 
@@ -97,14 +99,16 @@ public class TimeDomainSimulator : ILightCalculator
     private static Dictionary<Guid, double[]> ConvolveIncoherent(
         IReadOnlyList<ImpulseResponse> impulseResponses,
         Dictionary<Guid, double[]> inputSignals,
-        TimeSignalDefinition timeDef)
+        TimeSignalDefinition timeDef, CancellationToken cancellationToken)
     {
         var outputTraces = new Dictionary<Guid, double[]>();
         foreach (var outputPin in impulseResponses.Select(ir => ir.OutputPinId).Distinct())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             double[]? combinedIntensity = null;
             foreach (var ir in impulseResponses.Where(r => r.OutputPinId == outputPin))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!inputSignals.TryGetValue(ir.InputPinId, out var inputSignal))
                     continue;
 
@@ -131,15 +135,17 @@ public class TimeDomainSimulator : ILightCalculator
         IReadOnlyList<ImpulseResponse> impulseResponses,
         Dictionary<Guid, double[]> inputSignals,
         TimeSignalDefinition timeDef,
-        PhaseNoiseSettings phaseNoise)
+        PhaseNoiseSettings phaseNoise, CancellationToken cancellationToken)
     {
-        var noisyInputs = BuildNoisyInputs(inputSignals, timeDef, phaseNoise);
+        var noisyInputs = BuildNoisyInputs(inputSignals, timeDef, phaseNoise, cancellationToken);
         var outputTraces = new Dictionary<Guid, double[]>();
         foreach (var outputPin in impulseResponses.Select(ir => ir.OutputPinId).Distinct())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             Complex[]? combinedField = null;
             foreach (var ir in impulseResponses.Where(r => r.OutputPinId == outputPin))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!noisyInputs.TryGetValue(ir.InputPinId, out var inputField))
                     continue;
 
@@ -160,18 +166,22 @@ public class TimeDomainSimulator : ILightCalculator
     private static Dictionary<Guid, Complex[]> BuildNoisyInputs(
         Dictionary<Guid, double[]> inputSignals,
         TimeSignalDefinition timeDef,
-        PhaseNoiseSettings phaseNoise)
+        PhaseNoiseSettings phaseNoise, CancellationToken cancellationToken)
     {
         var phaseFactors = phaseNoise.BuildPhaseFactors(timeDef.TimeStepSeconds, timeDef.NSamples);
         var noisyInputs = new Dictionary<Guid, Complex[]>();
         foreach (var (pinId, signal) in inputSignals)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var field = new Complex[signal.Length];
             var factors = phaseFactors.TryGetValue(pinId, out var f) ? f : null;
             for (int n = 0; n < signal.Length; n++)
+            {
+                if ((n & 4095) == 0) cancellationToken.ThrowIfCancellationRequested();
                 field[n] = factors != null && n < factors.Length
                     ? signal[n] * factors[n]
                     : new Complex(signal[n], 0);
+            }
             noisyInputs[pinId] = field;
         }
         return noisyInputs;
