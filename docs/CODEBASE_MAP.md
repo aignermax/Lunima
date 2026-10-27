@@ -37,12 +37,16 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | Main window | `CAP.Avalonia/Views/MainWindow.axaml` |
 | Canvas viewmodel | `CAP.Avalonia/ViewModels/Canvas/DesignCanvasViewModel.cs` |
 | Document identity, revision and operations | `Connect-A-Pic-Core/Documents/` |
-| Immutable main simulation input | `Connect-A-Pic-Core/LightCalculation/Snapshots/` |
+| Immutable main/spectral simulation inputs | `Connect-A-Pic-Core/LightCalculation/Snapshots/` |
 | Private routing input and results | `Connect-A-Pic-Core/Routing/Snapshots/` |
 | Application and feature retirement | `CAP.Avalonia/Services/Lifetime/` |
 | Native document workflow | `CAP.Avalonia/ViewModels/Panels/NativeDesign/` |
 | Registry read capability | `Connect-A-Pic-Core/ComponentRegistry/RegistryClient/IRegistryCatalog.cs` |
 | Registry adoption capability | `CAP.Avalonia/Services/ComponentRegistry/IRegistryAdoption.cs` |
+| Bundled PDK inventory and write classification | `CAP-DataAccess/Components/ComponentDraftMapper/IBundledPdkCatalog.cs` |
+| Measured spectrum loading | `Connect-A-Pic-Core/Analysis/MeasuredSpectrum/IMeasuredSpectrumSource.cs` |
+| openEBL submission checking | `Connect-A-Pic-Core/Export/OpenEbl/` via `Export/Contracts/IOpenEblSubmissionChecker.cs` |
+| GDS file reading and parsing | `CAP-DataAccess/Import/Gds/IGdsSourceReader.cs` |
 | Python/export capabilities | `Connect-A-Pic-Core/Export/Contracts/` |
 | Canvas bounds | `CAP.Avalonia/ViewModels/Canvas/BoundingBoxCalculator.cs` |
 | Parameter sweep viewmodel | `CAP.Avalonia/ViewModels/Analysis/ParameterSweepViewModel.cs` |

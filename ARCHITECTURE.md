@@ -72,8 +72,8 @@ with separate capture, component/group mapping, loading and post-load services.
 pickers, accepted I/O and cleanup under one owner. The unused alternate UI
 workflow (`ProjectPersistenceViewModel`/`ProjectPersistenceService`) was retired.
 `GridPersistenceWithGroupsManager` remains a separately tested low-level grid
-serializer; it is not the application's native-document workflow. Capture isolation
-and cross-platform atomic file publication have additional verification in progress.
+serializer; it is not the application's native-document workflow. Native capture isolation and atomic replacement are regression-tested, including
+symlinks and Unix modes on the Linux/macOS CI matrix; final integration remains open.
 Preserve serialized names, IDs, geometry, models and process data.
 
 `CAP.Avalonia/Commands/CommandManager` owns undo/redo history and entry-scoped side
@@ -95,9 +95,9 @@ and orientations; routing must account for component translation and rotation.
 simulation. The main simulation captures immutable matrices, sources and transfers
 under `LightCalculation/Snapshots/` before worker execution. Routing captures a
 private hierarchy, graph, constraints and crossing physics under `Routing/Snapshots/`;
-progress and final results are admitted against the document revision. Additional
-analysis pipelines, including some sweeps and logic extraction, still need detached
-physics inputs. A cancellation token alone is not snapshot isolation.
+progress and final results are admitted against the document revision. Wavelength analyzer/spectrum runs also capture matrices, sources, material
+models, propagation and facet coupling before scheduling. Parameter/Monte Carlo
+analysis, time-domain paths and logic extraction still need detached physics inputs. A cancellation token alone is not snapshot isolation.
 
 PDK JSON files are bundled under `CAP-DataAccess/PDKs/`; the schema is documented in
 [PDK_JSON_FORMAT.md](docs/PDK_JSON_FORMAT.md). Process policies constrain compatible
@@ -134,8 +134,9 @@ The operation gate tracks accepted tool work through actual cleanup. Mutations
 check revocable commit permission at the mutation itself, including post-await
 routing and assistant-adapter publication; responses are checked after cleanup.
 Transport retirement drains accepted connections before restart. Speculative repair
-trials are being verified on private graphs with separate history, including group
-scope and all repair families.
+trials use private graphs and separate history, including nested group scope and
+all five repair families. Graph construction runs off the UI thread; derived grid
+work retains its owning operation until cleanup and rechecks captured revisions.
 
 ## Feature lifetimes
 

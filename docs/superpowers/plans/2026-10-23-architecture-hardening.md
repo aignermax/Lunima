@@ -302,20 +302,20 @@ Additional verification, 2026-10-23 afternoon:
 | A01 | Resolved, reviewed, 124-case combined verification |
 | A02 | Owned-process containment verified on Windows, Linux and macOS (native CI 39940594173); final integration review pending |
 | A03 | Bounded cache, warm lookup and PDK edit invalidation verified; final combined review pending |
-| A04 | Detached numeric/formula snapshots, UI integration, stale-error rejection and prepared visualization verified against legacy physics; final integration review pending |
+| A04 | Main simulation and wavelength sweeps detached and verified; parameter/Monte Carlo, time-domain and logic extraction inputs remain |
 | A05 | Export split committed; main/file/input/window extraction implemented, combined verification in progress |
 | A06 | Solver, update, MRU, PDK library/reader/writer and diagnostic ports verified; remaining actual dependency edges still require remediation |
 | A07 | Semantic collector and explicit repository/external ownership tests pass; warning inventory remains opt-in until actual forbidden edges are removed |
 | A08 | Shared runtime verified; fresh desktop publish passed before shell extraction, browser pending |
 | A09 | All 22 command budgets pass at the unchanged 100 ms threshold; exact raster reuse and corrected acknowledgement timing committed as fe232861, final integration review pending |
-| A10 | Admission/draining gate verified; real commit-boundary integration pending |
+| A10 | Actual MCP/assistant mutation admission, post-cleanup response gating and isolated repair trials verified; final integrated review pending |
 | A11 | Pinned uv, authenticated updater download and signed publisher tooling verified; production public-key provisioning and installer handoff review pending |
-| A12 | Checked-in runner/docs implemented; 23 tool tests pass |
+| A12 | Checked-in runner/docs implemented; all 24 tooling tests pass, including actual 1,000-line commit rejection |
 | A13 | April report removed, active docs reconciled; update as extractions land |
-| A14 | Hook/CI guard implemented; tracked source ceiling passes, new files/final legacy guard replacement pending |
+| A14 | Hook/CI guard active; 4,037 tracked authored files pass the 999-line ceiling; final fresh inventory and aggregate responsibility review remain |
 | A15 | Main/window, updater, Python, solver scopes, application registry and thumbnail retirement verified; component editor/settings and other direct panel owners remain |
 | A16 | Binary/SDK cleanup verified with fresh desktop publish; final branch/platform checks pending |
-| A17 | Native DTO extraction verified; persistence workflow extraction undergoing combined regression |
+| A17 | Native DTO/workflow separation and detached atomic save verified, including actual Linux/macOS symlink/mode checks; final integrated review pending |
 | A18 | Root metadata/native I/O guards and canonical group wires verified; private routing including crossing records/prototypes passes comparison tests; actual UI worker integration, command publication and long-lived configuration admission remain in progress |
 
 Further integration checkpoints (same day):
@@ -464,3 +464,78 @@ Further integration checkpoints (same day):
 - Source tooling: 3,994 tracked authored source/documentation files satisfy the
   999-line ceiling; all 24 Python guardrail tests pass. Non-source data inventory
   remains separately reported rather than silently included in this claim.
+
+
+### 2026-10-23 — Detached analysis, real process checks and dependency audit 6
+
+- `tests-20261023-183350-47536.log`: 299 passed, four intentional failures,
+  no skips. New bridge page retirement and borrowed-grid early disposal/rebased
+  input cases exposed lifecycle gaps; PDK and GDS capability cuts passed.
+- `tests-20261023-184203-19516.log`: 724 passed, one intentional grid callback
+  failure, no skips. Sixteen detached spectral controls, GDS boundaries and
+  existing physics/import/persistence regressions pass. The remaining test
+  demonstrates synchronous callback cleanup blocking the dispatcher.
+- `tests-20261023-184749-69348.log`: 121 passed, five failures, no skips.
+  Grid/routing callback cleanup, owned undo, private construction/scope and
+  openEBL pass. Four new bridge-configuration cases reproduce stale registration
+  feedback; an existing Rung5 journey exposes stale logic evaluator publication.
+- `a09d51f9` captures wavelength analysis physics before worker scheduling;
+  `3a5cf960` drains cancellation callbacks asynchronously. `ec48b111` owns
+  private repair trials and derived grid work through actual retirement.
+  `974804d0` moves openEBL execution behind its configured submission-check port.
+  Each slice has focused regression evidence and review; none is whole-branch
+  acceptance on its own.
+- Forced desktop rebuild `architecture-desktop-audit-6.log`: zero errors,
+  70 distinct LUN001 violations, down from 197; no LUN002/003. Required semantic
+  enforcement remains pending until those actual dependencies are removed.
+- Native-process/atomic-save CI 39987873122 at `89a2d54d` passed on Ubuntu 24.04,
+  macOS 15 ARM and macOS 15 Intel, with zero skips. Symlink and Unix-mode save
+  behavior now has actual platform execution evidence. Architecture and signing
+  checks also passed. Full xUnit 39987873098 failed only fast-integration: five
+  synchronous container-disposal errors after LogicPanel acquired async lifetime.
+  The other eight test shards passed. Five fixture sites now use `await using`;
+  a fresh complete CI run is still required, including the newly found Rung5 issue.
+- `tests-20261023-185924-46240.log`: 33 passed, 24 failed, no skips. Four bridge
+  configuration-generation corrections pass. New REDs comprise eleven actual CLI
+  admission/process controls, eight bundled-PDK capability controls, two logic
+  publication controls and one shell cancellation callback case. Existing Rung5
+  still fails; one close-page fixture incorrectly asserted callback scheduling
+  immediately and now waits for the actual cancellation signal. Fixes and fresh
+  verification are in progress; no merge or release readiness claim.
+
+
+### 2026-10-27 — Resumed verification and reviewed capability cuts
+
+- `tests-20261027-094726-54388.log`: 543 passed, three failures, zero skips.
+  Actual CLI lifecycle/admission, logic publication and all Rung5 journeys pass.
+  Remaining failures: the intended measurement-source boundary RED, a new
+  library fixture returning null instead of its non-null preferences collection,
+  and the older import scanner rejecting shared process infrastructure. The
+  fixture now supplies valid empty collections without changing its assertions;
+  the scanner receives a narrow infrastructure allowance and eight controls.
+- `tests-20261027-095353-45820.log`: 166 passed, four intentional review REDs,
+  zero skips. Catalog, measurement, CLI and scanner changes pass. The remaining
+  cases prove reentrant shell activation, skipped child cleanup after another
+  child fails, and stale settings feedback from synchronous toggle observers.
+- `ebf12466` versions logic handoffs and corrects asynchronous container disposal.
+  `4be0251b` injects configured PDK catalog and measurement-source capabilities;
+  independent reviews found no migration regressions. `16401a58` owns actual
+  CLI process drainage and original-token admission. Real CLI cases are also
+  added to the Linux/macOS native matrix; new remote execution is pending.
+- Independent reviews additionally record two inherited issues requiring bounded
+  follow-up: bundled-PDK write protection compares lexical paths and can miss
+  a directory symlink alias; Windows npm `claude.cmd` discovery is advertised but
+  direct executable launch does not support batch shims. Neither behavior is
+  claimed fixed by the capability or CLI lifetime commits.
+- `check_source_size.py` passes for 4,037 tracked authored files; all 24 Python
+  tooling tests pass. This count excludes untracked additions until staged and
+  the separately inventoried data artifacts. Overall goal remains open.
+
+- `tests-20261027-095638-25544.log`: all 66 targeted shell/startup/settings,
+  Python-startup and connection controls pass, zero failures/skips. Reentrant
+  activation now joins a preinstalled task; all startup children drain even when
+  one retirement fails. Settings recheck ownership after toggle observers run.
+- Forced desktop rebuild `architecture-desktop-audit-7.log`: zero errors,
+  57 distinct LUN001 diagnostics (70 previously), no LUN002/003. Remaining
+  dependencies and exact ownership classification are still being remediated;
+  semantic enforcement is not yet a required passing gate.
