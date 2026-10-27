@@ -71,39 +71,4 @@ public partial class ComponentSettingsDialogViewModel
             portInfo, fileName, applyResult.Applied, replacedNote);
     }
 
-    private ISParameterImporter? FindImporter(string path)
-    {
-        var ext = Path.GetExtension(path).ToLowerInvariant();
-        if (ext == ".txt")
-            return LooksLikeLumericalTxt(path) ? _importers.First(i => i is LumericalSParameterImporter) : null;
-        return _importers.FirstOrDefault(i => i.SupportedExtensions.Contains(ext));
-    }
-
-    private bool LooksLikeLumericalTxt(string path)
-    {
-        try
-        {
-            foreach (var line in File.ReadLines(path))
-            {
-                var trimmed = line.TrimStart();
-                if (trimmed.Length == 0 || trimmed.StartsWith('#') || trimmed.StartsWith('!'))
-                    continue;
-                if (trimmed.StartsWith('('))
-                    return true;
-                var tokens = trimmed.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                return tokens.Length >= 9 &&
-                       double.TryParse(tokens[0], System.Globalization.NumberStyles.Float,
-                                       System.Globalization.CultureInfo.InvariantCulture, out _);
-            }
-        }
-        catch (IOException ex)
-        {
-            _errorConsole?.LogWarning($"Could not probe '{path}' for Lumerical .txt format: {ex.Message}");
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            _errorConsole?.LogWarning($"Could not probe '{path}' for Lumerical .txt format: {ex.Message}");
-        }
-        return false;
-    }
 }

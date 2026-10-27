@@ -7,7 +7,7 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 /// that file instead of accumulating namespaces. Old untagged entries are ignored by
 /// environment-aware consumers. Direct callers retain the original untagged API.
 /// </summary>
-public sealed class GdsPreviewDiskCache
+public sealed class GdsPreviewDiskCache : IGdsPreviewCache
 {
     private const string EmptyMarker = "__EMPTY__";
     private readonly string _directory;

@@ -69,14 +69,14 @@ public partial class GdsFactoryExportViewModel : ObservableObject
     /// <param name="urlLauncher">Launcher used to open the generated GDS.</param>
     /// <param name="errorConsole">Optional error logging.</param>
     public GdsFactoryExportViewModel(
+        IUrlLauncher urlLauncher,
         DesignCanvasViewModel canvas,
         IGdsScriptRunner exportService,
-        IUrlLauncher? urlLauncher = null,
         ErrorConsoleService? errorConsole = null)
     {
         _canvas = canvas;
         _exportService = exportService;
-        _urlLauncher = urlLauncher ?? PlatformShellLauncher.CreateDefault();
+        _urlLauncher = urlLauncher;
         _errorConsole = errorConsole;
     }
 

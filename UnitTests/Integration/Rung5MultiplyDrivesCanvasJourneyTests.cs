@@ -51,7 +51,7 @@ public class Rung5MultiplyDrivesCanvasJourneyTests
         var playground = container.GetRequiredService<IsaPlaygroundViewModel>();
         var canvas = new DesignCanvasViewModel();
         var fileOps = LogicGateHalfAdderExampleTests.CreateFileOperations(canvas);
-        var examples = new ExampleDesignsService().GetExamples();
+        var examples = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples();
         (await fileOps.OpenDesignAsCopyAsync(ExamplePath(examples, FourBitAdderFileName))).ShouldBeTrue();
         await fileOps.PostLoadRouting;
 
@@ -113,7 +113,7 @@ public class Rung5MultiplyDrivesCanvasJourneyTests
         var playground = container.GetRequiredService<IsaPlaygroundViewModel>();
         var canvas = new DesignCanvasViewModel();
         var fileOps = LogicGateHalfAdderExampleTests.CreateFileOperations(canvas);
-        var examples = new ExampleDesignsService().GetExamples();
+        var examples = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples();
         (await fileOps.OpenDesignAsCopyAsync(ExamplePath(examples, FourBitAdderFileName))).ShouldBeTrue();
         await fileOps.PostLoadRouting;
         var logicPanel = container.GetRequiredService<LogicPanelViewModel>();

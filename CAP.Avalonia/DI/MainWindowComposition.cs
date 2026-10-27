@@ -26,7 +26,8 @@ public static class MainWindowComposition
 {
     public static MainWindow Create(IServiceProvider services, MainViewModel model, Func<Task>? retire = null)
     {
-        var editors = new ComponentEditorHostFactory(owner => new ComponentSettingsDialogFactory(owner,
+        var editors = new ComponentEditorHostFactory((owner, _) => new ComponentSettingsDialogFactory(
+            services.GetRequiredService<CAP_DataAccess.Import.ISParameterImportCatalog>(), owner,
             services.GetService<ErrorConsoleService>(), services.GetService<IPortMappingDialogService>(),
             services.GetService<IFdtdSMatrixService>(), services.GetService<NazcaComponentPreviewService>(),
             services.GetService<GdsFactoryComponentPreviewService>(), services.GetService<IDockerSetupDialogService>(),

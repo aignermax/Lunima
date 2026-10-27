@@ -26,7 +26,7 @@ public sealed class PrivateRepairScopeTests
             var input = RoutingInputSnapshot.Capture(fixture.Canvas.Components.Select(view => view.Component).ToArray(),
                 fixture.Canvas.Router, fixture.Canvas.ConnectionManager);
             await using var permission = new RepairTrialPermission(fixture.Session, null);
-            await using var trial = await RepairWorkbench.CreateAsync(input, null, permission, null, (0, 0, 500, 300), group.Id);
+            await using var trial = await RepairWorkbench.CreateAsync(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()), input, null, permission, null, (0, 0, 500, 300), group.Id);
             var canvas = trial.Session.Canvas;
             var privateGroup = canvas.Groups.CurrentEditGroup.ShouldNotBeNull();
             privateGroup.Id.ShouldBe(group.Id);

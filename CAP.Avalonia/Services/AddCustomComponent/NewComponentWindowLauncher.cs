@@ -16,7 +16,7 @@ public static class NewComponentWindowLauncher
         Action<string, string>? removeMigratedTemplate = null)
     {
         var processes = loadedPdks.Where(d => d.Process != null).Select(d => d.Process!).ToList();
-        var vm = new NewComponentViewModel(deps.Extractor, deps.Fdtd, deps.UserPdkStore, processes,
+        var vm = new NewComponentViewModel(deps.SParameterImports, deps.Extractor, deps.Fdtd, deps.UserPdkStore, processes,
             deps.ErrorConsole, deps.BackendRegistry, deps.UrlLauncher, deps.ApplicationWork);
         vm.Saved += (_, _) => OnSaved(vm, pdkLoader, register, removeMigratedTemplate);
         // Probe the selected backend upfront so a known-bad state (Docker down, no

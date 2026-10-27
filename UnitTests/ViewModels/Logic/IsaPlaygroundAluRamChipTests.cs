@@ -91,7 +91,7 @@ public class IsaPlaygroundAluRamChipTests : IClassFixture<AluRamChipExampleTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        return new IsaPlaygroundViewModel(provider);
+        return new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
     }
 
     /// <summary>The golden model's per-step trace of the same program, formatted as the VM renders it.</summary>

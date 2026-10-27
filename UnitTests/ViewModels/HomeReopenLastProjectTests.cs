@@ -47,7 +47,7 @@ public class HomeReopenLastProjectTests : IDisposable
 
     // Hermetic: examples rooted in an empty temp dir (see HomeViewModelTests).
     private HomeViewModel CreateHomeViewModel() =>
-        new(_recentProjects, _preferences, new ExampleDesignsService(_emptyExamplesBase));
+        new(_recentProjects, _preferences, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_emptyExamplesBase)));
 
     [Fact]
     public void ReopenLastProjectOnStartup_DefaultsToFalse()
@@ -62,7 +62,7 @@ public class HomeReopenLastProjectTests : IDisposable
 
         var reloadedPreferences = new UserPreferencesService(_testPreferencesPath);
         var reloadedHome = new HomeViewModel(
-            new RecentProjectsService(reloadedPreferences), reloadedPreferences);
+            new RecentProjectsService(reloadedPreferences), reloadedPreferences,new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         reloadedHome.ReopenLastProjectOnStartup.ShouldBeTrue();
     }

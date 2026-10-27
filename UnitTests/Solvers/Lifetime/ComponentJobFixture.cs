@@ -55,7 +55,7 @@ internal sealed class ComponentJobFixture
     {
         var process = new ProcessDefinition { Name = "fixture" };
         Library.Setup(store => store.ListCustomPdks()).Returns(new[] { new UserPdkInfo("fixture", "fixture.json", process) });
-        return new NewComponentViewModel(new ComponentGeometryExtractor(Renderer.Object, Renderer.Object),
+        return new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), new ComponentGeometryExtractor(Renderer.Object, Renderer.Object),
             Solver.Object, Library.Object, new[] { process }) { ComponentName = "Component" };
     }
 
@@ -63,7 +63,7 @@ internal sealed class ComponentJobFixture
         INotificationService? notifications = null, ErrorConsoleService? errors = null,
         Func<CAP_Core.Components.Core.Component, bool>? isComponentPresent = null)
     {
-        var model = new ComponentSettingsDialogViewModel(Files.Object, errorConsole: errors,
+        var model = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), Files.Object, errorConsole: errors,
             notificationService: notifications, fdtdService: Solver.Object,
             fdtdRequestFactory: async (_, ct) =>
             {

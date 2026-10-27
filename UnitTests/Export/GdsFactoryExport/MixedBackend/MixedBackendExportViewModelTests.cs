@@ -83,7 +83,7 @@ public class MixedBackendExportViewModelTests
         try
         {
             var service = new RecordingExportService();
-            var vm = new GdsFactoryExportViewModel(MixedBackendCanvas(), service)
+            var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), MixedBackendCanvas(), service)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -119,7 +119,10 @@ public class MixedBackendExportViewModelTests
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var service = new RecordingExportService(succeeds: _ => false);
             var vm = new GdsFactoryExportViewModel(
-                MixedBackendCanvas(), service, errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                MixedBackendCanvas(),
+                service,
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -207,7 +210,10 @@ public class MixedBackendExportViewModelTests
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var service = new RecordingExportService(succeeds: _ => false);
             var vm = new GdsFactoryExportViewModel(
-                MixedBackendCanvasWithSkippedConnection(), service, errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                MixedBackendCanvasWithSkippedConnection(),
+                service,
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -246,7 +252,10 @@ public class MixedBackendExportViewModelTests
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var service = new RecordingExportService();
             var vm = new GdsFactoryExportViewModel(
-                MixedBackendCanvasWithRawCodeComponent(), service, errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                MixedBackendCanvasWithRawCodeComponent(),
+                service,
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
                 TemplateLibraryProvider = () => new[] { RawCodeTemplate(missingGds) },
@@ -340,7 +349,7 @@ public class MixedBackendExportViewModelTests
             gf.GdsFactoryFunction = "cspdk.sin300.mmi1x2";
             canvas.AddComponent(gf, "SiN MMI");
             var service = new RecordingExportService();
-            var vm = new GdsFactoryExportViewModel(canvas, service)
+            var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), canvas, service)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };

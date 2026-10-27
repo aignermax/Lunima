@@ -48,7 +48,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
         && (_liveComponent == null || _isComponentPresent?.Invoke(_liveComponent) != false);
     private readonly IFileDialogService _fileDialogService;
     private readonly ErrorConsoleService? _errorConsole;
-    private readonly IReadOnlyList<ISParameterImporter> _importers;
+    private readonly ISParameterImportCatalog _importCatalog;
     private readonly IPortMappingDialogService? _portMappingDialog;
     private readonly INotificationService? _notificationService;
 
@@ -94,9 +94,9 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
     /// reads it and never unsubscribes its registry/localization handlers.
     /// </param>
     public ComponentSettingsDialogViewModel(
+        ISParameterImportCatalog importCatalog,
         IFileDialogService fileDialogService,
         ErrorConsoleService? errorConsole = null,
-        IReadOnlyList<ISParameterImporter>? importers = null,
         IPortMappingDialogService? portMappingDialog = null,
         IFdtdSMatrixService? fdtdService = null,
         Func<Component, CancellationToken, Task<FdtdSMatrixRequest?>>? fdtdRequestFactory = null,
@@ -116,11 +116,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
         _resetToPdkOriginal = resetToPdkOriginal;
         _work.RegisterWith(applicationWork, StopAsync);
         SetBackendSelection(backendSelection);
-        _importers = importers ?? new ISParameterImporter[]
-        {
-            new LumericalSParameterImporter(),
-            new TouchstoneImporter()
-        };
+        _importCatalog = importCatalog ?? throw new ArgumentNullException(nameof(importCatalog));
     }
 
     public void Configure(
@@ -194,7 +190,9 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
                 "S-Parameter Files|*.sparam;*.dat;*.txt;*.s1p;*.s2p;*.s3p;*.s4p;*.sNp|All Files|*.*");
             operation.ThrowIfObsolete(stop);
             if (path == null) return;
-            var importer = FindImporter(path);
+            var importer = await _importCatalog.FindAsync(path,
+                SParameterImportDetection.VerifyAmbiguousText, stop);
+            operation.ThrowIfObsolete(stop);
             if (importer == null)
             {
                 StatusText = string.Format(
@@ -204,6 +202,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject, IAsync
             StatusText = LocalizationService.Instance.Translate("CompSettings.Importing");
             var imported = await importer.ImportAsync(path);
             operation.ThrowIfObsolete(stop);
+            imported = imported.Copy();
             var resolved = await ReconcilePortNamesAsync(imported, operation, stop);
             operation.ThrowIfObsolete(stop);
             if (resolved == null)

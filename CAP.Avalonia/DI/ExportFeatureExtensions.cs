@@ -61,9 +61,9 @@ internal static class ExportFeatureExtensions
         services.AddSingleton<GdsFactoryExportViewModel>(sp =>
         {
             var vm = new GdsFactoryExportViewModel(
+                sp.GetRequiredService<IUrlLauncher>(),
                 sp.GetRequiredService<CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel>(),
                 sp.GetRequiredService<IGdsScriptRunner>(),
-                sp.GetService<IUrlLauncher>(),
                 sp.GetService<CAP_Core.ErrorConsoleService>());
             // Auto-install gdsfactory on export (env-manager slice resolved lazily so the
             // export slice never imports it directly).
@@ -80,6 +80,7 @@ internal static class ExportFeatureExtensions
 
         services.AddSingleton<VerilogAExporter>();
         services.AddSingleton<VerilogAFileWriter>();
+        services.AddSingleton<IVerilogAExportWriter>(sp => sp.GetRequiredService<VerilogAFileWriter>());
         services.AddSingleton<VerilogAExportViewModel>();
 
         services.AddSingleton<SaxExporter>();

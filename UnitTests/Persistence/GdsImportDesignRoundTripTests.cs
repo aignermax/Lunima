@@ -410,14 +410,14 @@ public class GdsImportDesignRoundTripTests : IDisposable
         out ErrorConsoleService errorConsole)
     {
         errorConsole = new ErrorConsoleService();
-        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+        return new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             host.Templates,
             new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: errorConsole)
         {

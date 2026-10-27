@@ -212,14 +212,14 @@ public class SkippedRouteConnectionPersistenceTests
     {
         var canvas = new DesignCanvasViewModel();
         var errorConsole = new ErrorConsoleService();
-        var vm = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+        var vm = new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             _library,
             new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: errorConsole);
         return (vm, canvas, errorConsole);

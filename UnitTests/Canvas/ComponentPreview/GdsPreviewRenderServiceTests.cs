@@ -234,7 +234,7 @@ public sealed class GdsPreviewRenderServiceTests
     public void TryGetPreview_ComponentWithoutNazcaFunction_ReturnsNull()
     {
         var service = new GdsPreviewRenderService(
-            new NazcaComponentPreviewService("python3", "/nonexistent/script.py"));
+            new NazcaComponentPreviewService("python3", "/nonexistent/script.py"), new GdsPreviewDiskCache());
 
         var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "");
 
@@ -246,7 +246,7 @@ public sealed class GdsPreviewRenderServiceTests
     public void TryGetPreview_FirstCallWithNazcaFunction_ReturnsNullWhileFetching()
     {
         var service = new GdsPreviewRenderService(
-            new NazcaComponentPreviewService("python3", "/nonexistent/script.py"));
+            new NazcaComponentPreviewService("python3", "/nonexistent/script.py"), new GdsPreviewDiskCache());
 
         var comp = TestComponentFactory.CreateComponentViewModel(
             nazcaFunctionName: "demo.mmi1x2_sh");
@@ -267,7 +267,7 @@ public sealed class GdsPreviewRenderServiceTests
         var mock = new Mock<NazcaComponentPreviewService>("py", "s.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
         mock.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(NazcaPreviewResult.Fail("unknown function"));
-        var svc = new GdsPreviewRenderService(mock.Object);
+        var svc = new GdsPreviewRenderService(mock.Object, new GdsPreviewDiskCache());
         var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "nazca_imported_cell");
 
         svc.TryGetPreview(comp.Component).ShouldBeNull();
@@ -288,7 +288,7 @@ public sealed class GdsPreviewRenderServiceTests
         var mock = new Mock<NazcaComponentPreviewService>("py", "s.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
         mock.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(NazcaPreviewResult.Fail("unknown function"));
-        var svc = new GdsPreviewRenderService(mock.Object);
+        var svc = new GdsPreviewRenderService(mock.Object, new GdsPreviewDiskCache());
         var first = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "nazca_cell_first");
 
         svc.TryGetPreview(first.Component);
@@ -317,7 +317,7 @@ public sealed class GdsPreviewRenderServiceTests
                 lock (tracker) { active--; }
                 return NazcaPreviewResult.Fail("blocked");
             });
-        var svc = new GdsPreviewRenderService(mock.Object);
+        var svc = new GdsPreviewRenderService(mock.Object, new GdsPreviewDiskCache());
 
         for (int i = 0; i < 10; i++)
             svc.TryGetPreview(TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: $"nazca_gate_{i}").Component);

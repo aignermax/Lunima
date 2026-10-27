@@ -24,7 +24,7 @@ public sealed class IsaProgramEditorTests
     [AvaloniaFact]
     public void Editor_SyncsProgramTextBothWays()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var window = new IsaPlaygroundWindow { DataContext = vm };
         window.Show();
         try
@@ -51,7 +51,7 @@ public sealed class IsaProgramEditorTests
     [AvaloniaFact]
     public void Stepping_MovesTheHighlightInTheEditor()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var window = new IsaPlaygroundWindow { DataContext = vm };
         window.Show();
         try

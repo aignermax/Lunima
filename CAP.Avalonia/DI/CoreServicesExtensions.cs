@@ -35,6 +35,11 @@ internal static class CoreServicesExtensions
         services.AddSingleton<CAP_Core.Export.ProcessLaunchFactory>();
         services.AddSingleton<CAP_Core.ErrorConsoleService>();
         services.AddSingleton<CAP_Contracts.Logger.IDiagnosticSink>(sp => sp.GetRequiredService<CAP_Core.ErrorConsoleService>());
+        services.AddSingleton<CAP_DataAccess.Import.ISParameterImporter, CAP_DataAccess.Import.LumericalSParameterImporter>();
+        services.AddSingleton<CAP_DataAccess.Import.ISParameterImporter, CAP_DataAccess.Import.TouchstoneImporter>();
+        services.AddSingleton<CAP_DataAccess.Import.SParameterImportCatalog>();
+        services.AddSingleton<CAP_DataAccess.Import.ISParameterImportCatalog>(sp =>
+            sp.GetRequiredService<CAP_DataAccess.Import.SParameterImportCatalog>());
         // Exporter reads the global interconnect settings (width/radius/layer, issue #574)
         // lazily at export time so Settings-window changes apply without restart.
         services.AddSingleton(sp => new SimpleNazcaExporter

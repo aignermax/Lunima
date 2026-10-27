@@ -20,8 +20,9 @@ internal static class IsaPlaygroundFeatureExtensions
     /// </summary>
     public static IServiceCollection AddIsaPlaygroundFeature(this IServiceCollection services)
     {
+        services.AddExampleCatalog();
         services.AddSingleton<BuiltLogicNetworkProvider>();
-        services.AddSingleton(sp => new IsaPlaygroundViewModel(sp.GetRequiredService<BuiltLogicNetworkProvider>()));
+        services.AddSingleton(sp => new IsaPlaygroundViewModel(sp.GetRequiredService<ExampleDesignsService>(), sp.GetRequiredService<BuiltLogicNetworkProvider>()));
         return services;
     }
 }

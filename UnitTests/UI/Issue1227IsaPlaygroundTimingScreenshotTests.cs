@@ -57,7 +57,7 @@ public class Issue1227IsaPlaygroundTimingScreenshotTests
 
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
         vm.ToggleRunCommand.Execute(null);
         for (int i = 0; i < TicksBeforeRunningCapture; i++)
         {

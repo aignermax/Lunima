@@ -21,7 +21,15 @@ internal static class RepositoryTypeOwnership
         yield return new("CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog", RepositoryModules.Infrastructure);
         yield return new("CAP_DataAccess.Components.ComponentDraftMapper.IBundledPdkCatalog", RepositoryModules.Contracts);
         yield return new("CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkInventory", RepositoryModules.Contracts);
+        yield return new("CAP_Core.Export.IVerilogAExportWriter", RepositoryModules.Contracts);
+        yield return new("CAP_Core.Export.PdkResolution.IPdkFunctionResolver", RepositoryModules.Contracts);
         // Contracts responsibilities in namespaces that also contain another layer.
+        yield return new("CAP.Avalonia.Services.IExampleFileCatalog", RepositoryModules.Contracts);
+        yield return new("CAP.Avalonia.Services.ExampleFileEntry", RepositoryModules.Contracts);
+        yield return new("CAP_DataAccess.Import.ISParameterImportCatalog", RepositoryModules.Contracts);
+        yield return new("CAP_DataAccess.Import.SParameterImportDetection", RepositoryModules.Contracts);
+        yield return new("CAP.Avalonia.Controls.Canvas.ComponentPreview.IGdsPreviewCache", RepositoryModules.Contracts);
+        yield return new("CAP.Avalonia.Controls.Canvas.ComponentPreview.GdsPreviewKey", RepositoryModules.Domain);
         yield return new("CAP_Core.Export.PdkParseResult", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.ParsedComponentGeometry", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.ParsedPinGeometry", RepositoryModules.Contracts);
@@ -51,6 +59,8 @@ internal static class RepositoryTypeOwnership
         yield return new("CAP_Core.ComponentRegistry.RegistryClient.RegistryCache", RepositoryModules.Infrastructure);
         yield return new("CAP.Avalonia.Services.ExamplesManifestEntry", RepositoryModules.Contracts);
         // Infrastructure responsibilities in namespaces that also contain another layer.
+        yield return new("CAP.Avalonia.Services.FileExampleCatalog", RepositoryModules.Infrastructure);
+        yield return new("CAP.Avalonia.Controls.Canvas.ComponentPreview.GdsPreviewDiskCache", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Helpers.FileDataAccessor", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Helpers.AppDataFolders", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Components.Creation.GroupLibraryManager", RepositoryModules.Infrastructure);
@@ -60,13 +70,11 @@ internal static class RepositoryTypeOwnership
         yield return new("CAP_Core.Export.GdsExportService", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Export.GdsFactoryComponentPreviewService", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Export.NazcaComponentPreviewService", RepositoryModules.Infrastructure);
-        yield return new("CAP_Core.Export.NazcaReferenceGenerator", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Export.PdkNazcaParserService", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Export.PreviewEnvironmentIdentity", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Export.ProcessLaunchFactory", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Export.PythonDiscoveryService", RepositoryModules.Infrastructure);
         yield return new("CAP_Core.Export.PythonInstallPathScanner", RepositoryModules.Infrastructure);
-        yield return new("CAP_Core.Export.PythonModuleShadowing", RepositoryModules.Infrastructure);
         yield return new("CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkPaths", RepositoryModules.Infrastructure);
         yield return new("CAP_DataAccess.Components.ComponentDraftMapper.NazcaCsvProcessImporter", RepositoryModules.Infrastructure);
         yield return new("CAP_DataAccess.Components.ComponentDraftMapper.PdkJsonSaver", RepositoryModules.Infrastructure);
@@ -82,6 +90,11 @@ internal static class RepositoryTypeOwnership
         yield return new("CAP.Avalonia.Services.VerilogAFileWriter", RepositoryModules.Infrastructure);
         yield return new("CAP.Avalonia.Services.AgentBridge.Contracts.AgentBridgeAddress", RepositoryModules.Application);
         // Application responsibilities in namespaces that also contain another layer.
+        yield return new("CAP.Avalonia.Controls.Canvas.ComponentPreview.NazcaPreviewResultDto", RepositoryModules.Application);
+        yield return new("CAP.Avalonia.Controls.Canvas.ComponentPreview.NazcaPreviewResultDto.PolygonDto", RepositoryModules.Application);
+        // Name validation and environment values are pure policy; process launching remains infrastructure.
+        yield return new("CAP_Core.Export.PythonModuleShadowing", RepositoryModules.Application);
+        yield return new("CAP_Core.Analysis.SweepCsvFormatter", RepositoryModules.Application);
         yield return new("CAP_DataAccess.Persistence.NativeDesign.NativeComponentStateMapper", RepositoryModules.Application);
         yield return new("CAP_DataAccess.Persistence.NativeDesign.NativeEndpointMapper", RepositoryModules.Application);
         yield return new("CAP_DataAccess.Persistence.NativeDesign.NativeGroupOrder", RepositoryModules.Application);

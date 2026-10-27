@@ -92,7 +92,7 @@ public class BundledPdkRevertRobustnessTests : IDisposable
         var canvas = new DesignCanvasViewModel();
         var libraryManager = new GroupLibraryManager();
         var store = new UserPdkStore(_userPdkRoot, new PdkJsonSaver(), new PdkLoader());
-        var deps = new AddCustomComponentDependencies(
+        var deps = new AddCustomComponentDependencies(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             new ComponentGeometryExtractor(
                 new Mock<IPdkGeometryRenderer>().Object, new Mock<IPdkGeometryRenderer>().Object),
             Fdtd: null, UserPdkStore: store);

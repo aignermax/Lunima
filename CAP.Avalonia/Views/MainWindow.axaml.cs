@@ -79,7 +79,7 @@ public partial class MainWindow : Window
         if (_pdkWindows != null) await _pdkWindows.CreateAsync(this);
     }
 
-    public MainWindow() : this(new(), new(), new()) { }
+    public MainWindow() : this(DI.DefaultMainWindowComposition.CreateEditorHosts(), new(), new()) { }
 
     internal MainWindow(Shell.ComponentEditorHostFactory editorHosts, Shell.ShellToolWindowFactory toolWindows,
         Shell.ShellPanelDialogBindings panelDialogs)

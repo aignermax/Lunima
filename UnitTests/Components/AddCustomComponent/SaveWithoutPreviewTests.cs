@@ -46,7 +46,7 @@ public class SaveWithoutPreviewTests : IDisposable
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
         var process = new ProcessDefinition { Name = "P" };
         store.SaveToNamedPdk("My PDK", process, SeedComponent("seed"), "gdsfactory", null);
-        var vm = new NewComponentViewModel(extractor, fdtd: null, store, new List<ProcessDefinition> { process });
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd: null, store, new List<ProcessDefinition> { process });
         vm.ComponentName = "My Comp";
         vm.SelectedBackend = GeometryBackend.GdsFactory;
         vm.Code = "import gdsfactory as gf\ncomponent = gf.components.coupler()";
@@ -79,7 +79,7 @@ public class SaveWithoutPreviewTests : IDisposable
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
         var process = new ProcessDefinition { Name = "P" };
         store.SaveToNamedPdk("My PDK", process, SeedComponent("seed"), "gdsfactory", null);
-        var vm = new NewComponentViewModel(extractor, fdtd: null, store, new List<ProcessDefinition> { process });
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd: null, store, new List<ProcessDefinition> { process });
         vm.ComponentName = "My Comp";
         vm.SelectedBackend = GeometryBackend.GdsFactory;
         vm.Code = "def broken(:\n    pass";

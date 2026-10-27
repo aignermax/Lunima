@@ -122,7 +122,7 @@ public class BundledPdkForkSemanticsTests : IDisposable
         var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(PreviewOk());
-        var deps = new AddCustomComponentDependencies(
+        var deps = new AddCustomComponentDependencies(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             new ComponentGeometryExtractor(nazca.Object, gds.Object), Fdtd: null, UserPdkStore: store);
 
         var leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),

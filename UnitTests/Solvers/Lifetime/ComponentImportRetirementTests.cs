@@ -40,7 +40,7 @@ public sealed class ComponentImportRetirementTests
         var store = new Dictionary<string, ComponentSMatrixData>();
         var document = new DocumentSession();
         var changes = 0;
-        var model = new ComponentSettingsDialogViewModel(files.Object, importers: [importer.Object], portMappingDialog: mapping.Object);
+        var model = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create([importer.Object]), files.Object, portMappingDialog: mapping.Object);
         model.Configure("component", "component", "Component", store,
             availablePinNames: ["in", "out"], document: document, onChanged: () => changes++);
         var running = model.LoadFromFileCommand.ExecuteAsync(null);
@@ -70,7 +70,7 @@ public sealed class ComponentImportRetirementTests
     public async Task RetiredSettings_DoNotOpenAnotherPicker()
     {
         var files = new Mock<IFileDialogService>();
-        var model = new ComponentSettingsDialogViewModel(files.Object);
+        var model = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), files.Object);
         model.Configure("component", "component", "Component", new());
         await model.StopAsync();
         await model.LoadFromFileCommand.ExecuteAsync(null);

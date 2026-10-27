@@ -8,10 +8,10 @@ namespace Lunima.ArchitectureAnalyzers;
 internal sealed class ArchitectureOperationWalker : OperationWalker
 {
     private readonly ArchitectureDependencyCollector _collector;
-    private readonly INamedTypeSymbol _source;
+    private readonly ISymbol _source;
     private readonly Action<Diagnostic> _report;
 
-    public ArchitectureOperationWalker(ArchitectureDependencyCollector collector, INamedTypeSymbol source,
+    public ArchitectureOperationWalker(ArchitectureDependencyCollector collector, ISymbol source,
         Action<Diagnostic> report) => (_collector, _source, _report) = (collector, source, report);
 
     public override void Visit(IOperation? operation)

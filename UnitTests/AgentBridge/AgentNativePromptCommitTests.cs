@@ -35,7 +35,7 @@ public sealed class AgentNativePromptCommitTests
             .Returns(() => { entered.TrySetResult(); return answer.Task; });
         main.FileOperations.MessageBoxService = messages.Object;
         main.FileOperations.HasUnsavedChanges = true;
-        var examples = new ExampleDesignsService();
+        var examples = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog());
         var example = examples.GetExamples().First();
         var session = new AgentDesignSession(main.Canvas, new CommandManager(), () => main.FileOperations, examples);
         var tool = new LoadExampleTool(session);

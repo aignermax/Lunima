@@ -50,15 +50,15 @@ public partial class AiAssistantViewModel : ObservableObject
     /// Initializes the ViewModel, loads persisted API key, and shows a welcome message.
     /// </summary>
     public AiAssistantViewModel(
+        IUrlLauncher urlLauncher,
         IAiService aiService,
         IAiPreferences preferencesService,
-        IAiToolRegistry? toolRegistry = null,
-        IUrlLauncher? urlLauncher = null)
+        IAiToolRegistry? toolRegistry = null)
     {
         _aiService = aiService;
         _preferencesService = preferencesService;
         _toolRegistry = toolRegistry;
-        _urlLauncher = urlLauncher ?? PlatformShellLauncher.CreateDefault();
+        _urlLauncher = urlLauncher;
 
         var savedKey = _preferencesService.GetAiApiKey();
         if (!string.IsNullOrEmpty(savedKey))

@@ -30,7 +30,7 @@ internal sealed class RepairParityScene(AgentDesignSession session, Action? disp
         scene.West.RestoreCachedPath(blocked);
         var commands = new CommandManager();
         canvas.CommandManager = commands;
-        return new(new AgentDesignSession(canvas, commands, () => null, new ExampleDesignsService()));
+        return new(new AgentDesignSession(canvas, commands, () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog())));
     }
 
     public async ValueTask DisposeAsync()

@@ -157,7 +157,7 @@ public sealed class AgentUndoDerivedWorkTests
         var originalGrid = canvas.Router.PathfindingGrid.ShouldNotBeNull();
         var routingPasses = worker.RoutingPasses;
         worker.Hold = true;
-        var session = new AgentDesignSession(canvas, commands, () => null, new ExampleDesignsService());
+        var session = new AgentDesignSession(canvas, commands, () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var tool = new UndoTool(session);
         var catalog = new AgentToolCatalog([tool], new AiToolRegistry([]), new InlineUiDispatcher());
         var running = catalog.InvokeAsync(tool.Name, JsonSerializer.SerializeToElement(new { }));

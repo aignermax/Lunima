@@ -214,14 +214,14 @@ public class AluRamChipExampleAuthoringTests
     /// <summary>Writes the merged design through the real save command (byte-for-byte product output).</summary>
     internal static async Task SaveThroughRealPath(DesignCanvasViewModel canvas, string examplePath)
     {
-        var saveOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+        var saveOps = new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates()),
             new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: new ErrorConsoleService());
         var dialog = new Mock<IFileDialogService>();

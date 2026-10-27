@@ -53,7 +53,7 @@ public class Issue1080TutorialWalkthroughTests
             var home = new HomeViewModel(
                 new RecentProjectsService(preferences),
                 preferences,
-                new ExampleDesignsService());
+                new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
             var window = new Window
             {

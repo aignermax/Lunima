@@ -37,7 +37,7 @@ public class AgentBridgeRepairToolsTests
         var vm = _canvas.ConnectPins(a.Component.PhysicalPins.Single(p => p.Name == "out"),
             b.Component.PhysicalPins.Single(p => p.Name == "in"));
         _wireId = vm!.Connection.Id.ToString();
-        _session = new AgentDesignSession(_canvas, new CommandManager(), () => null, new ExampleDesignsService());
+        _session = new AgentDesignSession(_canvas, new CommandManager(), () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
     }
 
     private ComponentViewModel AddWaveguide(string id, double x, double y)

@@ -53,7 +53,7 @@ public class ComponentSettingsDialogEffectiveDisplayTests
     [Fact]
     public void Configure_NoEffectiveData_HidesSection()
     {
-        var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), Mock.Of<IFileDialogService>());
         vm.Configure("comp_1", "comp_1", "MyComp", new Dictionary<string, ComponentSMatrixData>());
 
         vm.HasEffectiveEntries.ShouldBeFalse();
@@ -68,7 +68,7 @@ public class ComponentSettingsDialogEffectiveDisplayTests
         var (sm, pins) = BuildSimple2PortCoupling(transmission: 0.7);
         var effective = new Dictionary<int, SMatrix> { [1550] = sm };
 
-        var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), Mock.Of<IFileDialogService>());
         vm.Configure(
             "comp_1",
             "comp_1",
@@ -113,7 +113,7 @@ public class ComponentSettingsDialogEffectiveDisplayTests
             }
         };
 
-        var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), Mock.Of<IFileDialogService>());
         vm.Configure(
             "comp_1",
             "comp_1",
@@ -155,7 +155,7 @@ public class ComponentSettingsDialogEffectiveDisplayTests
             }
         };
 
-        var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), Mock.Of<IFileDialogService>());
         vm.Configure(
             "comp_1",
             "comp_1",

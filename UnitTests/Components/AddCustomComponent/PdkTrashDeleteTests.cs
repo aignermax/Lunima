@@ -47,7 +47,7 @@ public class PdkTrashDeleteTests : IDisposable
             var nazca = new Mock<IPdkGeometryRenderer>();
             var gds = new Mock<IPdkGeometryRenderer>();
             var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
-            deps = new AddCustomComponentDependencies(extractor, Fdtd: null, UserPdkStore: userPdkStore);
+            deps = new AddCustomComponentDependencies(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, Fdtd: null, UserPdkStore: userPdkStore);
         }
 
         return new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),

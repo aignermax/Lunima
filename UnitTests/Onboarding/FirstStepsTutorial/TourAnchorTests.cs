@@ -150,7 +150,7 @@ public class TourAnchorTests
     {
         var logic = new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
             new FakeLogicRunClock());
-        var playground = new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel();
+        var playground = new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var tour = new RunProgramTourViewModel(logic, MakeDock(), playground);
         tour.Start();
 
@@ -214,7 +214,7 @@ public class TourAnchorTests
     {
         var logic = new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
             new FakeLogicRunClock());
-        var playground = new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel();
+        var playground = new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         return new RunProgramTourViewModel(logic, MakeDock(), playground).Steps;
     }
 

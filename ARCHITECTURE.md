@@ -1,6 +1,6 @@
 # Lunima architecture
 
-This guide describes the architecture-hardening branch as of October 23, 2026.
+This guide describes the architecture-hardening branch as of October 27, 2026.
 Several ownership and dependency boundaries are implemented and regression-tested;
 the remaining work is explicitly called out below. This is not a release-readiness
 or whole-application equivalence claim. Follow
@@ -28,8 +28,9 @@ The target direction is presentation → application/session → domain/contract
 with infrastructure implementing narrow boundary contracts. Feature contracts now
 cover preferences, Python setup/registry, GDS execution, previews, native file I/O
 and the component registry. The semantic analyzer has an explicit namespace/type
-ownership inventory; eliminating the remaining forbidden edges and making its
-strict mode mandatory are still tracked work.
+ownership inventory and runs as an error-producing analyzer in every shipping
+project's normal build. It checks resolved symbols, including aliases, base types,
+interfaces and implicit operations. Tests and the analyzer project are tooling.
 
 ## Composition and presentation
 
@@ -38,6 +39,12 @@ strict mode mandatory are still tracked work.
 an Avalonia-provided DI container. `CoreServicesExtensions` registers simulation,
 PDK loading, undo history, preferences and persistence services; other extensions
 own export, AI, MCP, Python environments, canvas/panels and feature-specific wiring.
+Examples, URL launching, S-parameter import, preview caching and export file writes
+are supplied through configured capabilities. Feature registration preserves shared
+owners; presentation constructors do not silently create replacement infrastructure.
+The public parameterless `MainWindow` compatibility constructor is an explicit
+composition entry point, identified by its exact Roslyn member ID. Its other
+members remain subject to presentation restrictions.
 `MainViewModel` is the root presentation coordinator. Existing `App.Services`
 access in UI code is implementation debt, not a pattern to extend into domain code.
 
@@ -96,8 +103,10 @@ simulation. The main simulation captures immutable matrices, sources and transfe
 under `LightCalculation/Snapshots/` before worker execution. Routing captures a
 private hierarchy, graph, constraints and crossing physics under `Routing/Snapshots/`;
 progress and final results are admitted against the document revision. Wavelength analyzer/spectrum runs also capture matrices, sources, material
-models, propagation and facet coupling before scheduling. Parameter/Monte Carlo
-analysis, time-domain paths and logic extraction still need detached physics inputs. A cancellation token alone is not snapshot isolation.
+models, propagation and facet coupling before scheduling. Truth-table and logic
+network extraction also use captured physics. Gate-view capture performance,
+parameter/Monte Carlo analysis and time-domain paths remain under verification.
+A cancellation token alone is not snapshot isolation.
 
 PDK JSON files are bundled under `CAP-DataAccess/PDKs/`; the schema is documented in
 [PDK_JSON_FORMAT.md](docs/PDK_JSON_FORMAT.md). Process policies constrain compatible
@@ -173,6 +182,12 @@ Prefer new files no longer than 250 lines; authored source and documentation hav
 minifying code or dropping assertions. The source-size checker and hook setup are
 documented in [CONTRIBUTING.md](CONTRIBUTING.md). Data/fixture/generated-artifact
 scope remains an open hardening decision and is not a blanket source exemption.
+
+`Directory.Build.targets` includes the architecture analyzer in ordinary desktop
+and browser builds. `LUN001` reports forbidden dependencies, `LUN002` unknown
+ownership and `LUN003` uncovered projects. Fix the dependency or define justified
+ownership; do not downgrade these diagnostics to warnings. The architecture CI
+workflow builds both hosts as well as checking source size and guard tooling.
 
 Feature branches target `dev`; releases promote reviewed `dev` changes to `main`
 as described in [RELEASE.md](docs/RELEASE.md). Use [ROADMAP.md](docs/ROADMAP.md) for

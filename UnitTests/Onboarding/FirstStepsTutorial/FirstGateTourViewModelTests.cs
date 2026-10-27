@@ -208,7 +208,7 @@ public class FirstGateTourViewModelTests
             var home = new HomeViewModel(
                 new RecentProjectsService(new UserPreferencesService(preferencesPath)),
                 new UserPreferencesService(preferencesPath),
-                new ExampleDesignsService(examplesBase));
+                new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(examplesBase)));
             var invoked = 0;
             home.FirstGateTourRequested = () => { invoked++; return Task.CompletedTask; };
 

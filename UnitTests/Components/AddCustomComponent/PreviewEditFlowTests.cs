@@ -44,7 +44,7 @@ public class PreviewEditFlowTests : IDisposable
         var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(OkWithPolygon());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
-        return new NewComponentViewModel(extractor, fdtd: null, store, processes);
+        return new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd: null, store, processes);
     }
 
     [Fact]

@@ -36,7 +36,7 @@ public class IsaPlaygroundLogicUnitTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider);
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
 
         vm.IsPhotonicAndAvailable.ShouldBeTrue("the Logic Unit chip exposes A0–A3, B0–B3 and Y0–Y3");
         vm.IsPhotonicNotAvailable.ShouldBeTrue(
@@ -117,7 +117,7 @@ public class IsaPlaygroundLogicUnitTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
         vm.IsAnyPhotonicAvailable.ShouldBeTrue();
 
         provider.Clear();
@@ -132,7 +132,7 @@ public class IsaPlaygroundLogicUnitTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
         vm.PhotonicAndAlu.ShouldNotBeNull("the fixture network must run AND photonically");
         vm.PhotonicNotAlu.ShouldNotBeNull("the fixture network must run NOT photonically");
         return vm;

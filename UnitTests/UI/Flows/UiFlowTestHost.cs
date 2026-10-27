@@ -69,7 +69,7 @@ internal sealed class UiFlowTestHost : IDisposable
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
             errorConsole: new ErrorConsoleService(),
-            addCustomComponentDeps: new AddCustomComponentDependencies(
+            addCustomComponentDeps: new AddCustomComponentDependencies(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
                 new ComponentGeometryExtractor(StubRenderer(), StubRenderer()),
                 Fdtd: null, UserPdkStore))
         {
@@ -93,6 +93,8 @@ internal sealed class UiFlowTestHost : IDisposable
         var services = new ServiceCollection();
         services.AddSingleton(UserPdkStore);
         services.AddSingleton<IUserPdkLibrary>(UserPdkStore);
+        services.AddSingleton<CAP_DataAccess.Import.ISParameterImportCatalog>(
+            global::UnitTests.Helpers.SParameterImportTestCatalog.Create());
         services.AddSingleton(new CAP.Avalonia.Views.Shell.ProcessEditorFactory(
             new BundledPdkCatalog(AppContext.BaseDirectory),
             new IProcessImporter[] { new UpdkYamlProcessImporter(), new NazcaCsvProcessImporter() },

@@ -35,7 +35,7 @@ public class StoreNumberTourJourneyTests
         var home = new HomeViewModel(
             new RecentProjectsService(preferences),
             preferences,
-            new ExampleDesignsService());
+            new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         var entry = home.TourEntries.FirstOrDefault(
             e => ReferenceEquals(e.Command, home.StoreNumberTourCommand));

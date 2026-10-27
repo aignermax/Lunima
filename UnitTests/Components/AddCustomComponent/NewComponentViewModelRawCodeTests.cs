@@ -45,7 +45,7 @@ public class NewComponentViewModelRawCodeTests : IDisposable
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
         var process = new ProcessDefinition { Name = "P" };
         store.SaveToNamedPdk("My PDK", process, SeedComponent("seed"), "gdsfactory", null);
-        var vm = new NewComponentViewModel(extractor, fdtd: null, store,
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd: null, store,
             new List<ProcessDefinition> { process });
         vm.ComponentName = "My Raw Comp";
         return vm;

@@ -38,6 +38,7 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | Canvas viewmodel | `CAP.Avalonia/ViewModels/Canvas/DesignCanvasViewModel.cs` |
 | Document identity, revision and operations | `Connect-A-Pic-Core/Documents/` |
 | Immutable main/spectral simulation inputs | `Connect-A-Pic-Core/LightCalculation/Snapshots/` |
+| Truth-table and logic network input capture | `Connect-A-Pic-Core/Analysis/LogicAnalysis/TruthTableSnapshot.cs` |
 | Private routing input and results | `Connect-A-Pic-Core/Routing/Snapshots/` |
 | Application and feature retirement | `CAP.Avalonia/Services/Lifetime/` |
 | Native document workflow | `CAP.Avalonia/ViewModels/Panels/NativeDesign/` |
@@ -48,6 +49,10 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | openEBL submission checking | `Connect-A-Pic-Core/Export/OpenEbl/` via `Export/Contracts/IOpenEblSubmissionChecker.cs` |
 | GDS file reading and parsing | `CAP-DataAccess/Import/Gds/IGdsSourceReader.cs` |
 | Python/export capabilities | `Connect-A-Pic-Core/Export/Contracts/` |
+| Example file inventory and localized projection | `CAP.Avalonia/Services/IExampleFileCatalog.cs`, `FileExampleCatalog.cs`, `ExampleDesignsService.cs` |
+| S-parameter import detection | `CAP-DataAccess/Import/ISParameterImportCatalog.cs`, `SParameterImportCatalog.cs` |
+| Configured preview disk cache | `CAP.Avalonia/Controls/Canvas/ComponentPreview/IGdsPreviewCache.cs` |
+| Mandatory dependency policy | `Tools/Lunima.ArchitectureAnalyzers/` and `Directory.Build.targets` |
 | Canvas bounds | `CAP.Avalonia/ViewModels/Canvas/BoundingBoxCalculator.cs` |
 | Parameter sweep viewmodel | `CAP.Avalonia/ViewModels/Analysis/ParameterSweepViewModel.cs` |
 | Parameter sweep calculation | `Connect-A-Pic-Core/Analysis/ParameterSweeper.cs` |

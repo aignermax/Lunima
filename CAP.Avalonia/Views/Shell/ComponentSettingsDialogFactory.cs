@@ -9,6 +9,7 @@ namespace CAP.Avalonia.Views.Shell;
 
 /// <summary>Builds settings dialogs with the optional solver and backend-picker capabilities.</summary>
 internal sealed class ComponentSettingsDialogFactory(
+    CAP_DataAccess.Import.ISParameterImportCatalog importCatalog,
     Window owner, CAP_Core.ErrorConsoleService? errorConsole, IPortMappingDialogService? portMappingDialog,
     CAP_Core.Solvers.Fdtd.IFdtdSMatrixService? fdtdService,
     CAP_Core.Export.IPdkGeometryRenderer? previewService,
@@ -48,9 +49,9 @@ internal sealed class ComponentSettingsDialogFactory(
         }
 
         var dialogVm = new ComponentSettingsDialogViewModel(
+            importCatalog,
             new FileDialogService(owner),
             errorConsole,
-            importers: null,
             portMappingDialog: portMappingDialog,
             fdtdService: fdtdService,
             fdtdRequestFactory: fdtdRequestFactory,

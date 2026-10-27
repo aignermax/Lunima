@@ -48,7 +48,7 @@ public sealed class PrivateRepairOwnershipTests
             var input = RoutingInputSnapshot.Capture(live.Components.Select(view => view.Component).ToArray(),
                 live.Router, live.ConnectionManager);
             await using var permission = new RepairTrialPermission(fixture.Session, null);
-            await using var workbench = await RepairWorkbench.CreateAsync(input, null, permission, null, (-15, -20, 345, 210));
+            await using var workbench = await RepairWorkbench.CreateAsync(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()), input, null, permission, null, (-15, -20, 345, 210));
             var trial = workbench.Session.Canvas;
             trial.Router.ShouldNotBeSameAs(live.Router);
             trial.ConnectionManager.ShouldNotBeSameAs(live.ConnectionManager);

@@ -65,7 +65,7 @@ public class CanvasSnapshotRendererTests
     public async Task ScreenshotTool_ReturnsImageContent_FramingTheDesign()
     {
         var canvas = CanvasWithOneComponent();
-        var session = new AgentDesignSession(canvas, new CommandManager(), () => null, new ExampleDesignsService());
+        var session = new AgentDesignSession(canvas, new CommandManager(), () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var tool = new ScreenshotTool(session, new CanvasSnapshotRenderer(() => null));
 
         var result = await tool.ExecuteAsync(JsonDocument.Parse("""{"width_px":300}""").RootElement);

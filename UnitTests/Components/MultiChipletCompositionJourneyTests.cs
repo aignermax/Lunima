@@ -438,14 +438,14 @@ public class MultiChipletCompositionJourneyTests : IDisposable
     private FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas)
     {
         var library = new ObservableCollection<ComponentTemplate> { _couplerTemplate, _waveguideTemplate };
-        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+        return new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             library,
             new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
-            new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(
+            new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
                 new CAP_Core.Export.PhotonTorchExporter(), canvas),
             null!,
             errorConsole: new CAP_Core.ErrorConsoleService());

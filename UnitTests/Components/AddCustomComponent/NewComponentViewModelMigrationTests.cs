@@ -59,7 +59,7 @@ public class NewComponentViewModelMigrationTests : IDisposable
             Pins = new() { new PhysicalPinDraft { Name = "o1" }, new PhysicalPinDraft { Name = "o2" } }
         }, "gdsfactory", null);
 
-        var vm = new NewComponentViewModel(extractor, fdtd: null, store,
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd: null, store,
             new List<ProcessDefinition> { procA, procB });
         return (vm, store);
     }

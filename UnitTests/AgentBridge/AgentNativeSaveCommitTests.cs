@@ -26,7 +26,7 @@ public sealed class AgentNativeSaveCommitTests
             .Returns(() => { entered.TrySetResult(); return release.Task; });
         await using var main = MainViewModelTestHelper.CreateMainViewModel(designFiles: store.Object);
         main.FileOperations.HasUnsavedChanges = true;
-        var session = new AgentDesignSession(main.Canvas, new CommandManager(), () => main.FileOperations, new ExampleDesignsService());
+        var session = new AgentDesignSession(main.Canvas, new CommandManager(), () => main.FileOperations, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var tool = new SaveDesignTool(session);
         var catalog = new AgentToolCatalog([tool], new AiToolRegistry([]), new InlineUiDispatcher());
         using var caller = new CancellationTokenSource();

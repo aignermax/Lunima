@@ -48,7 +48,7 @@ public class Issue776MixedBackendScreenshotTests
         {
             // State 1: export started on a mixed design, save dialog cancelled — the
             // automatic merge notice is already visible in the dialog status.
-            var vm = new GdsFactoryExportViewModel(MixedBackendCanvas(), new StubSuccessExportService())
+            var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), MixedBackendCanvas(), new StubSuccessExportService())
             {
                 FileDialogService = new StubFileDialog(null),
             };

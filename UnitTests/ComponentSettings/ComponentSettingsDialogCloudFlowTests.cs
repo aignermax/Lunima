@@ -76,7 +76,7 @@ public class ComponentSettingsDialogCloudFlowTests : IDisposable
         NewDialog(IFdtdSMatrixService service, FdtdBackendSelectionViewModel? backendSelection = null)
     {
         var store = new Dictionary<string, ComponentSMatrixData>();
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service,
             fdtdRequestFactory: FakeFactory(),
@@ -267,7 +267,7 @@ public class ComponentSettingsDialogCloudFlowTests : IDisposable
             .ReturnsAsync(true);
         var selection = NewSelection(meep.Object, ReadyCloudService().Object);
         var store = new Dictionary<string, ComponentSMatrixData>();
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: meep.Object,
             fdtdRequestFactory: FakeFactory(),

@@ -62,10 +62,9 @@ public class PortMappingDialogIntegrationTests : IDisposable
             .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(_tempSparamPath);
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             fileDialog.Object,
             errorConsole: null,
-            importers: null,
             portMappingDialog: dialogService.Object);
 
         var store = new Dictionary<string, ComponentSMatrixData>();
@@ -105,10 +104,9 @@ public class PortMappingDialogIntegrationTests : IDisposable
             .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(_tempSparamPath);
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             fileDialog.Object,
             errorConsole: null,
-            importers: null,
             portMappingDialog: dialogService.Object);
 
         var store = new Dictionary<string, ComponentSMatrixData>();
@@ -149,10 +147,9 @@ public class PortMappingDialogIntegrationTests : IDisposable
             .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(_tempSparamPath);
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             fileDialog.Object,
             errorConsole: null,
-            importers: null,
             portMappingDialog: dialogService.Object);
 
         var store = new Dictionary<string, ComponentSMatrixData>();
@@ -179,10 +176,9 @@ public class PortMappingDialogIntegrationTests : IDisposable
             .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(_tempSparamPath);
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             fileDialog.Object,
             errorConsole: null,
-            importers: null,
             portMappingDialog: dialogService.Object);
 
         var store = new Dictionary<string, ComponentSMatrixData>();

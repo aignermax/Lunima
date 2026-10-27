@@ -65,18 +65,17 @@ public partial class PhotonTorchExportViewModel : ObservableObject
     /// <param name="canvas">Design canvas providing components and connections.</param>
     /// <param name="errorConsole">Optional service for surfacing best-effort failures (e.g. auto-open folder)
     /// to the bottom-panel error console without overwriting the user-facing status message.</param>
-    /// <param name="urlLauncher">Optional launcher for opening URLs and file-system paths; defaults to
-    /// <see cref="PlatformShellLauncher.CreateDefault"/> when not supplied.</param>
+    /// <param name="urlLauncher">Configured launcher for URLs and file-system paths.</param>
     public PhotonTorchExportViewModel(
+        IUrlLauncher urlLauncher,
         PhotonTorchExporter exporter,
         DesignCanvasViewModel canvas,
-        ErrorConsoleService? errorConsole = null,
-        IUrlLauncher? urlLauncher = null)
+        ErrorConsoleService? errorConsole = null)
     {
         _exporter = exporter;
         _canvas = canvas;
         _errorConsole = errorConsole;
-        _urlLauncher = urlLauncher ?? PlatformShellLauncher.CreateDefault();
+        _urlLauncher = urlLauncher;
     }
 
     /// <summary>

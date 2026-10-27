@@ -162,7 +162,7 @@ public class OpenEblDialogEndToEndTests
     /// </summary>
     private static FileOperationsViewModel ComposeFileOperations(
         ServiceProvider provider, DesignCanvasViewModel canvas, LeftPanelViewModel leftPanel) =>
-        new(provider.GetRequiredService<CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore>(),
+        new(provider.GetRequiredService<CAP.Avalonia.Services.IUrlLauncher>(), provider.GetRequiredService<CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore>(),
             canvas,
             provider.GetRequiredService<CommandManager>(),
             provider.GetRequiredService<SimpleNazcaExporter>(),

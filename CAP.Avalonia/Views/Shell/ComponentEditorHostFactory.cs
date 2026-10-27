@@ -11,7 +11,7 @@ namespace CAP.Avalonia.Views.Shell;
 
 /// <summary>Creates the related PDK, instance-settings and component-editor window hosts.</summary>
 internal sealed class ComponentEditorHostFactory(
-    Func<Window, ComponentSettingsDialogFactory>? createSettings = null,
+    Func<Window, ErrorConsoleService, ComponentSettingsDialogFactory>? createSettings = null,
     IUserPdkLibrary? pdkStore = null, ITemplateSMatrixStore? overrides = null,
     ProcessEditorFactory? processEditors = null)
 {
@@ -21,8 +21,8 @@ internal sealed class ComponentEditorHostFactory(
     {
         var pdks = new PdkWindowHost(owner, library, canvas, resolvePdkSource, pdkStore, errors, processEditors);
         var settings = new ComponentSettingsWindowHost(owner, library, files, overrides,
-            () => createSettings?.Invoke(owner) ?? new ComponentSettingsDialogFactory(owner,
-                errors, null, null, null, null, null, null, null, null), openSolverSettings, canvas.Document,
+            () => createSettings?.Invoke(owner, errors) ?? throw new InvalidOperationException(
+                "Component settings require a configured dialog factory."), openSolverSettings, canvas.Document,
             component =>
             {
                 var hierarchy = CAP_Core.Analysis.Hierarchy.DesignHierarchy.From(

@@ -64,7 +64,7 @@ public class EditComponentModeTests : IDisposable
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Ok());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
         var fdtd = new Mock<IFdtdSMatrixService>();
-        var vm = new NewComponentViewModel(extractor, fdtd.Object, store, processes);
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd.Object, store, processes);
         return (vm, fdtd);
     }
 
@@ -517,7 +517,7 @@ public class EditComponentModeTests : IDisposable
            .ReturnsAsync(NazcaPreviewResult.Fail("No module named 'cspdk'"));
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
         var errorConsole = new CAP_Core.ErrorConsoleService();
-        var vm = new NewComponentViewModel(extractor, fdtd: null, store,
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd: null, store,
             new List<ProcessDefinition> { process }, errorConsole);
         vm.Code = "import cspdk.sin300\ncomponent = gf.get_component('coupler_straight')";
 
@@ -543,7 +543,7 @@ public class EditComponentModeTests : IDisposable
            .ReturnsAsync(NazcaPreviewResult.Fail(
                "module 'siepic_ebeam_pdk' has no attribute 'ebeam_adiabatic_te1550'"));
         var errorConsole = new CAP_Core.ErrorConsoleService();
-        var vm = new NewComponentViewModel(
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             new ComponentGeometryExtractor(nazca.Object, gds.Object), fdtd: null, store,
             new List<ProcessDefinition> { process }, errorConsole);
         vm.Code = "component = gf.get_component('ebeam_adiabatic_te1550')";
@@ -569,7 +569,7 @@ public class EditComponentModeTests : IDisposable
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
            .ReturnsAsync(NazcaPreviewResult.Fail("SyntaxError: invalid syntax (line 3)"));
         var errorConsole = new CAP_Core.ErrorConsoleService();
-        var vm = new NewComponentViewModel(
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             new ComponentGeometryExtractor(nazca.Object, gds.Object), fdtd: null, store,
             new List<ProcessDefinition> { process }, errorConsole);
         vm.Code = "def component(:";

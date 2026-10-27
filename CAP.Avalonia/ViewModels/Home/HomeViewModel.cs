@@ -143,11 +143,11 @@ public partial class HomeViewModel : ObservableObject
     public HomeViewModel(
         RecentProjectsService recentProjectsService,
         IHomePreferences preferences,
-        ExampleDesignsService? exampleDesigns = null)
+        ExampleDesignsService exampleDesigns)
     {
         _recentProjectsService = recentProjectsService;
         _preferences = preferences;
-        _exampleDesigns = exampleDesigns ?? new ExampleDesignsService();
+        _exampleDesigns = exampleDesigns;
         _reopenLastProjectOnStartup = preferences.GetReopenLastProjectOnStartup();
         RefreshRecentProjects();
         RefreshExamples();

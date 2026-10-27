@@ -54,6 +54,9 @@ internal static class CanvasAndPanelExtensions
         });
         services.AddSingleton<ViewportControlViewModel>();
 
+        services.AddSingleton<GdsPreviewDiskCache>();
+        services.AddSingleton<IGdsPreviewCache>(sp => sp.GetRequiredService<GdsPreviewDiskCache>());
+
         // GDS preview render service — shared by the canvas overlay and the
         // component-library thumbnails. Uses the Nazca backend for Nazca components and the
         // gdsfactory backend for gdsfactory-native components (CornerStone SiN etc., #570).
@@ -61,6 +64,7 @@ internal static class CanvasAndPanelExtensions
         {
             var previews = new GdsPreviewRenderService(
                 sp.GetRequiredService<NazcaComponentPreviewService>(),
+                sp.GetRequiredService<IGdsPreviewCache>(),
                 sp.GetRequiredService<GdsFactoryComponentPreviewService>(),
                 sp.GetService<Services.Lifetime.ApplicationWorkCoordinator>());
             previews.OwnEnvironmentBindings(new PreviewEnvironmentBindings(previews,

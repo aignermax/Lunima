@@ -11,8 +11,8 @@ public class IsaPlaygroundExampleActionTests
     [InlineData(false)]
     public async Task OpenExample_OnlyOffersBuildAfterSuccessfulOpen(bool opened)
     {
-        var vm = new IsaPlaygroundViewModel();
-        var examples = new ExampleDesignsService().GetExamples();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
+        var examples = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples();
         var expected = examples.Single(e => Path.GetFileName(e.FilePath) == "Logic Gate ALU + RAM + ACC.lun");
         string? path = null;
         int builds = 0;
@@ -34,8 +34,8 @@ public class IsaPlaygroundExampleActionTests
     [Fact]
     public async Task MissingCombinedExample_FallsBackToShippedAdder_AndBuildFailureCanRetry()
     {
-        var adder = new ExampleDesignsService().GetExamples().Single(e => Path.GetFileName(e.FilePath) == "Logic Gate 4-Bit Adder.lun");
-        var vm = new IsaPlaygroundViewModel { FindExamples = () => new[] { adder } };
+        var adder = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples().Single(e => Path.GetFileName(e.FilePath) == "Logic Gate 4-Bit Adder.lun");
+        var vm = new IsaPlaygroundViewModel(new ExampleDesignsService(new FileExampleCatalog())) { FindExamples = () => new[] { adder } };
         vm.OpenExampleRequested = p => { p.ShouldBe(adder.FilePath); return Task.FromResult(true); };
         vm.BuildLogicNetworkRequested = () => Task.FromResult(false);
         await vm.OpenSuitableExampleCommand.ExecuteAsync(null);
@@ -48,7 +48,7 @@ public class IsaPlaygroundExampleActionTests
     [Fact]
     public async Task MissingExamples_DoesNotOpenOrOfferBuild()
     {
-        var vm = new IsaPlaygroundViewModel { FindExamples = () => Array.Empty<ExampleDesign>() };
+        var vm = new IsaPlaygroundViewModel(new ExampleDesignsService(new FileExampleCatalog())) { FindExamples = () => Array.Empty<ExampleDesign>() };
         vm.OpenExampleRequested = _ => throw new InvalidOperationException("must not open");
         await vm.OpenSuitableExampleCommand.ExecuteAsync(null);
         vm.HasOpenedSuitableExample.ShouldBeFalse();

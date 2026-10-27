@@ -235,6 +235,7 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
 
     /// <summary>Initializes a new instance of <see cref="FileOperationsViewModel"/>.</summary>
     public FileOperationsViewModel(
+        IUrlLauncher urlLauncher,
         INativeDesignFileStore designFiles,
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
@@ -246,7 +247,6 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         VerilogAExportViewModel verilogAExport,
         ErrorConsoleService? errorConsole = null,
         ITemplateSMatrixStore? userSMatrixOverrideStore = null,
-        IUrlLauncher? urlLauncher = null,
         RecentProjectsService? recentProjects = null)
     {
         _nativeIo = new NativeDesignIoCoordinator(canvas.Document, designFiles);
@@ -256,7 +256,7 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         PhotonTorchExport = photonTorchExport;
         VerilogAExport = verilogAExport;
         _errorConsole = errorConsole;
-        var launcher = urlLauncher ?? PlatformShellLauncher.CreateDefault();
+        var launcher = urlLauncher;
         _nazcaWorkflow = new NazcaExportWorkflow(nazcaExporter, canvas, componentLibrary, gdsExport, errorConsole, launcher);
         _saxWorkflow = new SaxExportWorkflow(canvas, saxExporter, errorConsole);
         _dieWorkflow = new DieExportWorkflow(canvas, nazcaExporter, componentLibrary, gdsExport, errorConsole, _nazcaWorkflow);

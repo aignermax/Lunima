@@ -42,14 +42,14 @@ public class FileOperationsOpenAsCopyTests : IDisposable
             .Returns((string path, CancellationToken token) => disk.ReadAsync(path, token));
         _designFiles.Setup(store => store.WriteAsync(It.IsAny<string>(), It.IsAny<DesignFileData>(), It.IsAny<CancellationToken>()))
             .Returns((string path, DesignFileData data, CancellationToken token) => disk.WriteAsync(path, data, token));
-        _fileOps = new FileOperationsViewModel(_designFiles.Object,
+        _fileOps = new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),_designFiles.Object,
             _canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(),
             new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), _canvas),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), _canvas),
             null!,
             recentProjects: _recentProjects);
 

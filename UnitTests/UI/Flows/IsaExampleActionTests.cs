@@ -25,8 +25,8 @@ public class IsaExampleActionTests
         var prompt = new Mock<IMessageBoxService>();
         prompt.Setup(p => p.ShowSavePromptAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(SavePromptResult.DontSave);
         host.Vm.FileOperations.MessageBoxService = prompt.Object;
-        var adder = new ExampleDesignsService().GetExamples().Single(e => Path.GetFileName(e.FilePath) == "Logic Gate 4-Bit Adder.lun");
-        var vm = new IsaPlaygroundViewModel { FindExamples = () => new[] { adder } };
+        var adder = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples().Single(e => Path.GetFileName(e.FilePath) == "Logic Gate 4-Bit Adder.lun");
+        var vm = new IsaPlaygroundViewModel(new ExampleDesignsService(new FileExampleCatalog())) { FindExamples = () => new[] { adder } };
         IsaPlaygroundNavigation.Attach(vm, host.Vm);
         await vm.OpenSuitableExampleCommand.ExecuteAsync(null);
         prompt.Verify(p => p.ShowSavePromptAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
@@ -51,7 +51,7 @@ public class IsaExampleActionTests
         var prompt = new Mock<IMessageBoxService>();
         prompt.Setup(p => p.ShowSavePromptAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(SavePromptResult.Cancel);
         host.Vm.FileOperations.MessageBoxService = prompt.Object;
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         IsaPlaygroundNavigation.Attach(vm, host.Vm);
         await vm.OpenSuitableExampleCommand.ExecuteAsync(null);
         prompt.Verify(p => p.ShowSavePromptAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
@@ -67,7 +67,7 @@ public class IsaExampleActionTests
     {
         using var host = new UiFlowTestHost();
         LocalizationService.Instance.SetLanguage(language);
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         int opens = 0, builds = 0;
         vm.OpenExampleRequested = _ => { opens++; return Task.FromResult(true); };
         vm.BuildLogicNetworkRequested = () => { builds++; return Task.FromResult(false); };
@@ -111,7 +111,7 @@ public class IsaExampleActionTests
     public void UnbuiltNetwork_OffersExampleActionBesideHint()
     {
         using var host = new UiFlowTestHost();
-        var window = new IsaPlaygroundWindow { DataContext = new IsaPlaygroundViewModel() };
+        var window = new IsaPlaygroundWindow { DataContext = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog())) };
         window.Show();
         try
         {

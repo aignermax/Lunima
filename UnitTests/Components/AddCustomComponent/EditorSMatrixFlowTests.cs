@@ -93,7 +93,7 @@ public class EditorSMatrixFlowTests : IDisposable
             store.SaveToNamedPdk("Lib2", new ProcessDefinition { Name = "P" }, SeedComponent("other"), "gdsfactory", null);
         }
 
-        var vm = new NewComponentViewModel(extractor, fdtd.Object, store, new List<ProcessDefinition> { process })
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd.Object, store, new List<ProcessDefinition> { process })
         {
             ComponentName = "My Comp",
             SelectedBackend = GeometryBackend.GdsFactory,

@@ -96,6 +96,7 @@ public partial class NewComponentViewModel : ObservableObject, IDisposable, IAsy
     public Func<string, string, Task<bool>>? ConfirmOverwrite { get; set; }
 
     public NewComponentViewModel(
+        CAP_DataAccess.Import.ISParameterImportCatalog importCatalog,
         ComponentGeometryExtractor extractor,
         IFdtdSMatrixService? fdtd,
         IUserPdkLibrary store,
@@ -105,6 +106,7 @@ public partial class NewComponentViewModel : ObservableObject, IDisposable, IAsy
         Services.IUrlLauncher? urlLauncher = null,
         Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
     {
+        _sMatrixImporters = importCatalog ?? throw new ArgumentNullException(nameof(importCatalog));
         _extractor = extractor;
         _fdtd = fdtd;
         _store = store;

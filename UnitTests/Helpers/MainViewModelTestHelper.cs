@@ -81,9 +81,9 @@ public static class MainViewModelTestHelper
             preferencesService,
             Mock.Of<IUrlLauncher>(),
             Mock.Of<IInstaller>());
-        var photonTorchVm = new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas);
-        var verilogAVm = new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas);
-        var gdsFactoryVm = new GdsFactoryExportViewModel(canvas, new GdsExportService(), errorConsole: errorConsoleService);
+        var photonTorchVm = new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new PhotonTorchExporter(), canvas);
+        var verilogAVm = new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas, Mock.Of<IUrlLauncher>());
+        var gdsFactoryVm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), canvas, new GdsExportService(), errorConsole: errorConsoleService);
         // Test-isolated design-scoped GDS components (#830): registers imported
         // sets on the LeftPanel and caches .gds bytes in a unique temp dir so a
         // UI-flow import never touches the developer's real cache or PDKs.
@@ -101,14 +101,22 @@ public static class MainViewModelTestHelper
                 canvas, commandManager, () => capturedLeftPanel.AllTemplates.ToList()),
             errorConsoleService);
 
+        var examples = new ExampleDesignsService(new FileExampleCatalog());
+        var recentProjects = new RecentProjectsService(preferencesService);
+        isaPlayground ??= new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel(examples);
+        var home = new CAP.Avalonia.ViewModels.Home.HomeViewModel(recentProjects, preferencesService, examples);
+
         return new MainViewModel(
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            home,
+            CAP.Avalonia.ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters.Create(
+                canvas, rightPanel, bottomPanel, commandManager, isaPlayground),
             designFiles ?? new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             simulationService,
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             commandManager,
-            preferencesService,
             preferencesService,
             preferencesService,
             new GroupPreviewGenerator(),
@@ -129,13 +137,13 @@ public static class MainViewModelTestHelper
             // tests don't contaminate each other or the developer's real file.
             new CAP.Avalonia.Services.UserSMatrixOverrideStore(
                 Path.Combine(Path.GetTempPath(), $"sparam-overrides-test-{Guid.NewGuid()}.json")),
-            previewService ?? new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")),
+            previewService ?? new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py"), new GdsPreviewDiskCache()),
             registryBrowser,
             gdsImportButton,
-            designScopedGdsComponents: designScope, pythonStartup: pythonStartup,
+            designScopedGdsComponents: designScope,
+            pythonStartup: pythonStartup,
             hierarchyExpansion: new CAP.Avalonia.Services.GdsImport.GdsHierarchyExpansionService(gdsSource, designScope),
-            learningChapters: CAP.Avalonia.ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters.Create(
-                canvas, rightPanel, bottomPanel, commandManager, isaPlayground));
+            recentProjectsService: recentProjects);
     }
 
     /// <summary>
@@ -205,7 +213,7 @@ public static class MainViewModelTestHelper
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader()),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
+            new AiAssistantViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), Mock.Of<IAiService>(), preferencesService),
             new OnaSweepViewModel(),
             new CAP.Avalonia.ViewModels.Export.Netlist.NetlistViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel(),

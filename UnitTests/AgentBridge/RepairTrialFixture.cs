@@ -66,7 +66,7 @@ internal sealed class RepairTrialFixture
         _redo = Commands.RedoCount;
         _undo.ShouldBe(1);
         _redo.ShouldBe(1);
-        Session = new AgentDesignSession(Canvas, Commands, () => null, new ExampleDesignsService());
+        Session = new AgentDesignSession(Canvas, Commands, () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         Catalog = new AgentToolCatalog([new SuggestFixesTool(Session, factory, graphBuilder)], new AiToolRegistry([]), new InlineUiDispatcher());
     }
 

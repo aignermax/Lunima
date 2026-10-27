@@ -38,7 +38,7 @@ public sealed class AgentEditRoutingOwnershipTests
         canvas.Connections.Add(new(wire));
         canvas.InitializeAStarRouting(-40, -40, 300, 100);
         var commands = new CommandManager();
-        var session = new AgentDesignSession(canvas, commands, () => null, new ExampleDesignsService());
+        var session = new AgentDesignSession(canvas, commands, () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var tool = new MoveComponentTool(session);
         var catalog = new AgentToolCatalog([tool], new AiToolRegistry([]), new InlineUiDispatcher());
         using var caller = new CancellationTokenSource();

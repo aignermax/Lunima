@@ -68,7 +68,7 @@ public class Issue1267RunProgramTourScreenshotTests
             var preferences = new UserPreferencesService(
                 Path.Combine(Path.GetTempPath(), $"home-shot-prefs-{Guid.NewGuid():N}.json"));
             var home = new CAP.Avalonia.ViewModels.Home.HomeViewModel(
-                new RecentProjectsService(preferences), preferences, new ExampleDesignsService());
+                new RecentProjectsService(preferences), preferences, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
             var window = new Window { Width = 900, Height = 720, Content = new HomeView { DataContext = home } };
             window.Show();
             try
@@ -144,7 +144,7 @@ public class Issue1267RunProgramTourScreenshotTests
 
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var playground = new IsaPlaygroundViewModel(provider);
+        var playground = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
         playground.SelectedSample = playground.Samples.Single(
             s => s.FileName == RunProgramTourViewModel.MultiplySampleFileName);
         playground.IsAssembled.ShouldBeTrue(playground.ErrorText);
@@ -185,7 +185,9 @@ public class Issue1267RunProgramTourScreenshotTests
         }
 
         WriteManifest();
-        Directory.GetFiles(_outputDir, "*.png").Length.ShouldBeGreaterThanOrEqualTo(3);
+        // This case owns two frames; the Home/Build cases may run later or be filtered out.
+        foreach (var name in new[] { "step4-photonic-toggle.png", "step5-photonic-stepping.png" })
+            new FileInfo(Path.Combine(_outputDir, name)).Length.ShouldBeGreaterThan(0);
     }
 
     /// <summary>Steps the playground until <paramref name="count"/> photonic ADDs were reported.</summary>

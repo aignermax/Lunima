@@ -280,6 +280,9 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
     public ViewModels.GdsImport.LayerVisibility.GdsLayerVisibilityViewModel LayerVisibility { get; }
 
     public MainViewModel(
+        Services.IUrlLauncher urlLauncher,
+        HomeViewModel homeViewModel,
+        ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters learningChapters,
         CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore designFiles,
         DesignCanvasViewModel canvas,
         SimulationService simulationService,
@@ -287,7 +290,6 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         SaxExporter saxExporter,
         Commands.CommandManager commandManager,
         IRecentProjectPreferences recentProjectPreferences,
-        IHomePreferences homePreferences,
         ILearningPreferences learningPreferences,
         Services.GroupPreviewGenerator previewGenerator,
         Services.IInputDialogService inputDialogService,
@@ -307,20 +309,17 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         GdsPreviewRenderService gdsPreviewRenderService,
         ViewModels.ComponentRegistry.RegistryBrowser.RegistryBrowserViewModel registryBrowser,
         ViewModels.GdsImport.GdsImportButtonViewModel gdsImportButton,
-        Services.IUrlLauncher? urlLauncher = null,
         Services.IAiGridService? aiGridService = null,
         Services.RecentProjectsService? recentProjectsService = null,
-        HomeViewModel? homeViewModel = null,
         ViewModels.Canvas.CrossingInsertion.CrossingInsertionCanvasBinder? crossingInsertionBinder = null,
         ViewModels.Solvers.ModeProbe.ModeProbeViewModel? modeProbe = null,
         Services.GdsImport.DesignScope.DesignScopedGdsComponentService? designScopedGdsComponents = null,
         ViewModels.GdsImport.LayerVisibility.GdsLayerVisibilityViewModel? layerVisibility = null,
-        ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters? learningChapters = null,
         ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? claudeConnectPrompt = null,
         ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
         Services.GdsImport.GdsHierarchyExpansionService? hierarchyExpansion = null)
     {
-        _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
+        _urlLauncher = urlLauncher;
         // Injected for activation: constructing the binder wires the adaptive
         // crossing-insertion service (Issue #553) into the canvas' connection manager.
         CrossingInsertionBinder = crossingInsertionBinder;
@@ -347,7 +346,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService, errorConsoleService);
 
         var recentProjects = recentProjectsService ?? new Services.RecentProjectsService(recentProjectPreferences);
-        FileOperations = new FileOperationsViewModel(designFiles, _canvas, commandManager, nazcaExporter, saxExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchExport, verilogAExport, errorConsoleService, userSMatrixOverrideStore, recentProjects: recentProjects);
+        FileOperations = new FileOperationsViewModel(_urlLauncher, designFiles, _canvas, commandManager, nazcaExporter, saxExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchExport, verilogAExport, errorConsoleService, userSMatrixOverrideStore, recentProjects: recentProjects);
         var files = FileOperations;
         _processContext = new Shell.ProcessRoutingContext(Canvas, LeftPanel, () => files.ActiveProcess);
         // Design-scoped GDS imports (#830): save embeds them in the .lun, load
@@ -368,7 +367,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
 
         // Home screen: shown at startup; delegates project I/O to FileOperations
         // and dismisses itself once a project is opened or created.
-        Home = homeViewModel ?? new HomeViewModel(recentProjects, homePreferences);
+        Home = homeViewModel;
         _bindings.Bind(() => Home.NewProjectRequested, value => Home.NewProjectRequested = value,
             async () => await FileOperations.NewProjectCommand.ExecuteAsync(null));
         _bindings.Bind(() => Home.OpenProjectRequested, value => Home.OpenProjectRequested = value,
@@ -381,8 +380,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         InitializeGateView();
         InitializeRunHint();
         InitializeWorkspaceToolSets();
-        var chapters = learningChapters ?? Onboarding.LearningJourneys.LearningJourneyChapters.Create(
-            Canvas, RightPanel, BottomPanel, CommandManager);
+        var chapters = learningChapters;
         chapters.Attach(CanvasInteraction, LeftPanel, WorkspaceSwitch, LeftRail, BottomPanel, SelectGroupAndOpenMakeGate);
         _learning = new Onboarding.LearningJourneys.LearningJourneysCoordinator(chapters, Canvas, FileOperations,
             Home, _processContext, WorkspaceSwitch, ViewportControl, LeftRail, learningPreferences);

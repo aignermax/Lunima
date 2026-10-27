@@ -84,7 +84,7 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     private readonly GdsPreviewCache _cache = new();
 
     /// <summary>Persistent on-disk cache for resolution-independent geometry.</summary>
-    private readonly GdsPreviewDiskCache _diskCache;
+    private readonly IGdsPreviewCache _diskCache;
 
     /// <summary>Throttles concurrent Python renders so the library can't spawn a flood.</summary>
     private readonly SemaphoreSlim _renderGate = new(3, 3);
@@ -195,24 +195,12 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     private readonly Dictionary<(string?, string?), GdsPreviewLayerRoles> _layerRolesByFunction = new();
 
     /// <summary>
-    /// Initializes the service with the shared Nazca preview back-end and a
-    /// default disk cache.
-    /// </summary>
-    public GdsPreviewRenderService(
-        IPdkPreviewBackend previewService,
-        IPdkPreviewBackend? gdsFactoryPreviewService = null,
-        ApplicationWorkCoordinator? applicationWork = null)
-        : this(previewService, new GdsPreviewDiskCache(), gdsFactoryPreviewService, applicationWork)
-    {
-    }
-
-    /// <summary>
     /// Initializes the service with the shared Nazca preview back-end, an explicit disk cache
     /// (used by tests to redirect cache files), and an optional gdsfactory preview back-end
     /// for gdsfactory-native components (#570).
     /// </summary>
     public GdsPreviewRenderService(
-        IPdkPreviewBackend previewService, GdsPreviewDiskCache diskCache,
+        IPdkPreviewBackend previewService, IGdsPreviewCache diskCache,
         IPdkPreviewBackend? gdsFactoryPreviewService = null,
         ApplicationWorkCoordinator? applicationWork = null)
     {

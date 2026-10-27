@@ -42,7 +42,7 @@ public class HomeExamplesTests : IDisposable
     }
 
     private HomeViewModel CreateHomeViewModel() =>
-        new(_recentProjects, _preferences, new ExampleDesignsService(_examplesRoot));
+        new(_recentProjects, _preferences, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_examplesRoot)));
 
     [Fact]
     public void Constructor_DiscoversShippedExamples()
@@ -98,7 +98,7 @@ public class HomeExamplesTests : IDisposable
         Directory.CreateDirectory(emptyRoot);
         try
         {
-            var home = new HomeViewModel(_recentProjects, _preferences, new ExampleDesignsService(emptyRoot));
+            var home = new HomeViewModel(_recentProjects, _preferences, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(emptyRoot)));
 
             home.HasExamples.ShouldBeFalse();
             home.Examples.ShouldBeEmpty();

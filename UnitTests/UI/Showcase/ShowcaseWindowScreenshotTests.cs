@@ -131,7 +131,7 @@ public class ShowcaseWindowScreenshotTests
 
         var extractor = new ComponentGeometryExtractor(
             ShowcaseProcess.MmiPreviewRenderer(), ShowcaseProcess.MmiPreviewRenderer());
-        var vm = new NewComponentViewModel(extractor, Mock.Of<IFdtdSMatrixService>(), store,
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, Mock.Of<IFdtdSMatrixService>(), store,
             new List<ProcessDefinition> { process });
         vm.LoadForEdit(new ComponentTemplate
         {

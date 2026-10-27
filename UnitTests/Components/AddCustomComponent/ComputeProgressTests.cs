@@ -66,7 +66,7 @@ public class ComputeProgressTests : IDisposable
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
         var process = new ProcessDefinition { Name = "P" };
         store.SaveToNamedPdk("My PDK", process, SeedComponent("seed"), "gdsfactory", null);
-        var vm = new NewComponentViewModel(extractor, fdtd.Object, store, new List<ProcessDefinition> { process });
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd.Object, store, new List<ProcessDefinition> { process });
         vm.ComponentName = "My Comp";
         vm.SelectedBackend = GeometryBackend.GdsFactory;
         vm.Code = "import gdsfactory as gf\ncomponent = gf.components.coupler()";

@@ -31,7 +31,7 @@ public class ButtonAccessibleNameTests
             var preferences = new UserPreferencesService(preferencesPath);
             var recent = new RecentProjectsService(preferences);
             recent.RecordProject(Path.Combine(Path.GetTempPath(), "a11y-sample.lun"));
-            var home = new HomeViewModel(recent, preferences, new ExampleDesignsService());
+            var home = new HomeViewModel(recent, preferences, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
             var window = new Window { Width = 900, Height = 720, Content = new HomeView { DataContext = home } };
             window.Show();
             Dispatcher.UIThread.RunJobs();

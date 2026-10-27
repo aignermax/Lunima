@@ -36,7 +36,7 @@ public class HomePrimaryActionsFitCardTests
         try
         {
             var preferences = new UserPreferencesService(preferencesPath);
-            var home = new HomeViewModel(new RecentProjectsService(preferences), preferences, new ExampleDesignsService());
+            var home = new HomeViewModel(new RecentProjectsService(preferences), preferences, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
             var window = new Window { Width = WindowWidth, Height = WindowHeight, Content = new HomeView { DataContext = home } };
             window.Show();
             Dispatcher.UIThread.RunJobs();

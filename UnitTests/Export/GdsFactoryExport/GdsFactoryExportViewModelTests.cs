@@ -59,7 +59,7 @@ public class GdsFactoryExportViewModelTests
     [Fact]
     public async Task Export_EmptyCanvas_ExplainsAndWritesNothing()
     {
-        var vm = new GdsFactoryExportViewModel(new DesignCanvasViewModel(), new GdsExportService())
+        var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new DesignCanvasViewModel(), new GdsExportService())
         {
             FileDialogService = new FixedPathFileDialog("unused.py"),
         };
@@ -73,7 +73,7 @@ public class GdsFactoryExportViewModelTests
     public async Task Export_ShadowingFileName_IsRefused()
     {
         var scriptPath = Path.Combine(Path.GetTempPath(), "re.py");
-        var vm = new GdsFactoryExportViewModel(CanvasWithComponent("ebeam_y_1550"), new GdsExportService())
+        var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), CanvasWithComponent("ebeam_y_1550"), new GdsExportService())
         {
             FileDialogService = new FixedPathFileDialog(scriptPath),
         };
@@ -95,7 +95,7 @@ public class GdsFactoryExportViewModelTests
             .MixedBackendGdsOrchestrator.PartialScriptPathFor(scriptPath);
         try
         {
-            var vm = new GdsFactoryExportViewModel(CanvasWithComponent("ebeam_y_1550"), new GdsExportService())
+            var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), CanvasWithComponent("ebeam_y_1550"), new GdsExportService())
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -151,6 +151,7 @@ public class GdsFactoryExportViewModelTests
             // here we only assert the delegate is invoked, so a stub export service that always
             // reports the missing-module error drives the path deterministically.
             var vm = new GdsFactoryExportViewModel(
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
                 CanvasWithGdsFactoryComponent("cspdk.sin300.mmi1x2"),
                 new StubMissingGdsFactoryExportService())
             {
@@ -221,7 +222,10 @@ public class GdsFactoryExportViewModelTests
         {
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var vm = new GdsFactoryExportViewModel(
-                MixedProcessCanvas(), new StubSuccessExportService(), errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                MixedProcessCanvas(),
+                new StubSuccessExportService(),
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -271,7 +275,10 @@ public class GdsFactoryExportViewModelTests
         {
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var vm = new GdsFactoryExportViewModel(
-                canvas, new StubSuccessExportService(), errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                canvas,
+                new StubSuccessExportService(),
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -308,7 +315,7 @@ public class GdsFactoryExportViewModelTests
         bare.NazcaFunctionName = "my_custom_cell";
         canvas.AddComponent(bare, "Custom");
 
-        var vm = new GdsFactoryExportViewModel(canvas, new StubSuccessExportService());
+        var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), canvas, new StubSuccessExportService());
         vm.RefreshUnmappedComponents();
 
         vm.UnmappedComponents.ShouldNotContain("demo.mmi2x2_dp");
@@ -340,7 +347,10 @@ public class GdsFactoryExportViewModelTests
         {
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var vm = new GdsFactoryExportViewModel(
-                canvas, new StubSuccessExportService(), errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                canvas,
+                new StubSuccessExportService(),
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -370,7 +380,9 @@ public class GdsFactoryExportViewModelTests
         {
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var vm = new GdsFactoryExportViewModel(
-                CanvasWithComponent("ebeam_y_1550"), new StubSuccessExportService(),
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                CanvasWithComponent("ebeam_y_1550"),
+                new StubSuccessExportService(),
                 errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
@@ -392,7 +404,7 @@ public class GdsFactoryExportViewModelTests
     [Fact]
     public void RefreshUnmappedComponents_ListsOnlyUnmapped()
     {
-        var vm = new GdsFactoryExportViewModel(CanvasWithComponent("ebeam_dc_te1550"), new GdsExportService());
+        var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), CanvasWithComponent("ebeam_dc_te1550"), new GdsExportService());
 
         vm.RefreshUnmappedComponents();
 
@@ -437,7 +449,10 @@ public class GdsFactoryExportViewModelTests
         {
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var vm = new GdsFactoryExportViewModel(
-                CanvasWithPlaceholderConnection(), new StubSuccessExportService(), errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                CanvasWithPlaceholderConnection(),
+                new StubSuccessExportService(),
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -473,7 +488,10 @@ public class GdsFactoryExportViewModelTests
         {
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var vm = new GdsFactoryExportViewModel(
-                canvas, new StubSuccessExportService(), errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                canvas,
+                new StubSuccessExportService(),
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -496,7 +514,10 @@ public class GdsFactoryExportViewModelTests
         // must not be computed/logged for a design snapshot that was never exported.
         var errorConsole = new CAP_Core.ErrorConsoleService();
         var vm = new GdsFactoryExportViewModel(
-            CanvasWithPlaceholderConnection(), new StubSuccessExportService(), errorConsole: errorConsole)
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            CanvasWithPlaceholderConnection(),
+            new StubSuccessExportService(),
+            errorConsole: errorConsole)
         {
             FileDialogService = new FixedPathFileDialog(null),
         };

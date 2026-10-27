@@ -58,8 +58,11 @@ public sealed class ArchitectureBoundaryAnalyzer : DiagnosticAnalyzer
                 // An unused import has no semantic dependency; actual uses bind through its alias/global scope.
                 if (node.Node.AncestorsAndSelf().Any(n => n is UsingDirectiveSyntax)) return;
                 var enclosing = node.SemanticModel.GetEnclosingSymbol(node.Node.SpanStart, node.CancellationToken);
-                var source = enclosing as INamedTypeSymbol ?? enclosing?.ContainingType;
-                if (source == null && node.Node.Ancestors().OfType<BaseTypeDeclarationSyntax>().FirstOrDefault() is { } declaration)
+                var source = enclosing;
+                // Base lists and type attributes can have a namespace as their enclosing symbol.
+                // Retain authored member ownership where present, otherwise resolve the declared type.
+                if (source is not INamedTypeSymbol && source?.ContainingType == null
+                    && node.Node.Ancestors().OfType<BaseTypeDeclarationSyntax>().FirstOrDefault() is { } declaration)
                     source = node.SemanticModel.GetDeclaredSymbol(declaration, node.CancellationToken) as INamedTypeSymbol;
                 if (source == null) return;
                 var target = node.SemanticModel.GetSymbolInfo(node.Node, node.CancellationToken).Symbol;
@@ -67,8 +70,8 @@ public sealed class ArchitectureBoundaryAnalyzer : DiagnosticAnalyzer
             }, SyntaxKind.IdentifierName, SyntaxKind.GenericName, SyntaxKind.Attribute);
             start.RegisterOperationBlockAction(block =>
             {
-                var source = block.OwningSymbol as INamedTypeSymbol ?? block.OwningSymbol.ContainingType;
-                if (source == null) return;
+                var source = block.OwningSymbol;
+                if (source is not INamedTypeSymbol && source.ContainingType == null) return;
                 var walker = new ArchitectureOperationWalker(collector, source, block.ReportDiagnostic);
                 foreach (var operation in block.OperationBlocks) walker.Visit(operation);
             });

@@ -67,9 +67,20 @@ public class ComponentSizePersistenceTests
         var nazcaExporter  = new SimpleNazcaExporter();
         var gdsExportVm    = new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService());
         var photonTorchVm = new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(
-            new CAP_Core.Export.PhotonTorchExporter(), canvas);
-        var fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
-            canvas, commandManager, nazcaExporter, new CAP_Core.Export.SaxExporter(), templates, gdsExportVm, photonTorchVm, null!);
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            new CAP_Core.Export.PhotonTorchExporter(),
+            canvas);
+        var fileOps = new FileOperationsViewModel(
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+            canvas,
+            commandManager,
+            nazcaExporter,
+            new CAP_Core.Export.SaxExporter(),
+            templates,
+            gdsExportVm,
+            photonTorchVm,
+            null!);
 
         var tempFile = Path.Combine(Path.GetTempPath(), $"cap_test_{Guid.NewGuid():N}.lun");
         return (fileOps, canvas, templates, tempFile);

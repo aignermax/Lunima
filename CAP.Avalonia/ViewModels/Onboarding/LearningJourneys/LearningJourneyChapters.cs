@@ -27,10 +27,10 @@ public sealed class LearningJourneyChapters(
     public StoreNumberTourViewModel Memory { get; } = memory;
 
     public static LearningJourneyChapters Create(DesignCanvasViewModel canvas, RightPanelViewModel right,
-        BottomPanelViewModel bottom, CommandManager commands, IsaPlaygroundViewModel? isa = null) => new(
+        BottomPanelViewModel bottom, CommandManager commands, IsaPlaygroundViewModel isa) => new(
             new TutorialViewModel(canvas), new WatchComputeTourViewModel(right.Logic, bottom.Analysis),
             new FirstGateTourViewModel(canvas, right.MakeGate, right.Logic, commands),
-            new RunProgramTourViewModel(right.Logic, bottom.Analysis, isa ?? new IsaPlaygroundViewModel()),
+            new RunProgramTourViewModel(right.Logic, bottom.Analysis, isa),
             new ConnectChipletsTourViewModel(canvas, right.DesignValidation, bottom.Analysis, commands),
             new StoreNumberTourViewModel(right.Logic, bottom.Analysis));
 

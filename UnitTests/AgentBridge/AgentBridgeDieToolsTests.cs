@@ -28,7 +28,7 @@ public class AgentBridgeDieToolsTests
     public AgentBridgeDieToolsTests()
     {
         _canvas.SetRootChipSize(2000, 2000);
-        _session = new AgentDesignSession(_canvas, _commands, () => null, new ExampleDesignsService(),
+        _session = new AgentDesignSession(_canvas, _commands, () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),
             processes: () => new[] { SiN });
     }
 

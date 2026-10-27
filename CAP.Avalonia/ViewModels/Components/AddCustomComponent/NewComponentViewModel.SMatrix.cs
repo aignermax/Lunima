@@ -9,8 +9,7 @@ namespace CAP.Avalonia.ViewModels.Components.AddCustomComponent;
 
 public partial class NewComponentViewModel
 {
-    private static readonly IReadOnlyList<ISParameterImporter> _sMatrixImporters =
-        new ISParameterImporter[] { new LumericalSParameterImporter(), new TouchstoneImporter() };
+    private readonly ISParameterImportCatalog _sMatrixImporters;
 
     public Func<Task<string?>>? PickSMatrixFile { get; set; }
 
@@ -44,7 +43,9 @@ public partial class NewComponentViewModel
             stop.ThrowIfCancellationRequested();
             if (path is null) return;
             var ext = Path.GetExtension(path).ToLowerInvariant();
-            var importer = _sMatrixImporters.FirstOrDefault(i => i.SupportedExtensions.Contains(ext));
+            var importer = await _sMatrixImporters.FindAsync(path, SParameterImportDetection.ExtensionOnly, stop);
+            _work.ThrowIfStopping();
+            stop.ThrowIfCancellationRequested();
             if (importer is null)
             {
                 StatusText = string.Format(
@@ -57,6 +58,7 @@ public partial class NewComponentViewModel
             var imported = await importer.ImportAsync(path);
             _work.ThrowIfStopping();
             stop.ThrowIfCancellationRequested();
+            imported = imported.Copy();
             var resolved = ReconcilePorts(imported, preview.Pins.Select(p => p.Name).ToList());
             if (resolved is null) return;
 

@@ -38,7 +38,7 @@ public sealed class AgentRepairOwnershipTests
         canvas.Connections.Add(new(wire));
         canvas.InitializeAStarRouting(-40, -40, 300, 100);
         var commands = new CommandManager();
-        var session = new AgentDesignSession(canvas, commands, () => null, new ExampleDesignsService());
+        var session = new AgentDesignSession(canvas, commands, () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var candidate = new RepairCandidate("controlled_two_step", "two admitted moves", 30, new { },
             new TwoStepRepair(new NudgeRepair(start.Id, 20, 0), new NudgeRepair(end.Id, 20, 0)));
         session.Suggestions = new RepairSuggestionSet(wire.Id.ToString(), RepairSuggestionSet.ComputeStamp(session),

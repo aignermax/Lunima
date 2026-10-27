@@ -31,10 +31,11 @@ internal static class PdkResolutionFeatureExtensions
             return new PdkFunctionResolutionService(
                 python, script, launchFactory: sp.GetRequiredService<ProcessLaunchFactory>());
         });
+        services.AddSingleton<IPdkFunctionResolver>(sp => sp.GetRequiredService<PdkFunctionResolutionService>());
         services.AddTransient(sp => new PdkResolutionCheckViewModel(
             sp.GetRequiredService<IBundledPdkCatalog>(),
             sp.GetRequiredService<IPdkReader>(),
-            sp.GetRequiredService<PdkFunctionResolutionService>()));
+            sp.GetRequiredService<IPdkFunctionResolver>()));
         return services;
     }
 }

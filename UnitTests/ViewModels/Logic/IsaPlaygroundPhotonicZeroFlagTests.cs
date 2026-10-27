@@ -105,7 +105,7 @@ public class IsaPlaygroundPhotonicZeroFlagTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_logicUnitFixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider);
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
 
         vm.IsPhotonicZeroFlagAvailable.ShouldBeFalse("the Logic Unit chip has no Z tap");
         vm.IsPhotonicAndAvailable.ShouldBeTrue("the Logic Unit regression: AND still offered");
@@ -125,7 +125,7 @@ public class IsaPlaygroundPhotonicZeroFlagTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
         vm.IsPhotonicZeroFlagAvailable.ShouldBeTrue();
 
         provider.Clear();
@@ -141,7 +141,7 @@ public class IsaPlaygroundPhotonicZeroFlagTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        return new IsaPlaygroundViewModel(provider);
+        return new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
     }
 
     /// <summary>The golden model's per-step trace of the same program, formatted as the VM renders it.</summary>

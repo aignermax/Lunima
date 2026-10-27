@@ -35,14 +35,14 @@ public class TemplateSaveInstanceRefreshTests : IDisposable
         UserSMatrixOverrideStore? userStore = null,
         ErrorConsoleService? errorConsole = null)
     {
-        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+        return new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             library,
             new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas),
             null!, // verilogAExport — not exercised here
             errorConsole: errorConsole,
             userSMatrixOverrideStore: userStore);

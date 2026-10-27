@@ -19,14 +19,16 @@ internal sealed class ArchitectureDependencyCollector
         if (Module(type) == null) Unknown(type, location, report);
     }
 
-    public void CheckReference(INamedTypeSymbol source, ISymbol? dependency, Location location, Action<Diagnostic> report)
+    public void CheckReference(ISymbol source, ISymbol? dependency, Location location, Action<Diagnostic> report)
     {
         if (dependency is IAliasSymbol alias) dependency = alias.Target;
         if (dependency == null || dependency is INamespaceSymbol) return;
-        var sourceModule = Module(source);
+        var sourceType = source as INamedTypeSymbol ?? source.ContainingType;
+        if (sourceType == null) return;
+        var sourceModule = SourceModule(source) ?? Module(sourceType);
         if (sourceModule == null)
         {
-            Unknown(source, source.Locations.FirstOrDefault(l => l.IsInSource) ?? location, report);
+            Unknown(sourceType, sourceType.Locations.FirstOrDefault(l => l.IsInSource) ?? location, report);
             return;
         }
         var visited = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
@@ -53,6 +55,21 @@ internal sealed class ArchitectureDependencyCollector
                 case ILocalSymbol local: Type(local.Type); break;
             }
         }
+    }
+
+    private string? SourceModule(ISymbol source)
+    {
+        // Local functions and lambdas belong to their authored member. They must use the
+        // same source owner in syntax analysis and when walked inside that member's operation block.
+        while (source is IMethodSymbol method &&
+               method.MethodKind is MethodKind.AnonymousFunction or MethodKind.LocalFunction)
+            source = source.ContainingSymbol;
+
+        // No type, namespace, overload-prefix or implicit-constructor inheritance. In particular,
+        // field initializers retain their field/type owner even when lowered into a reviewed ctor.
+        if (source.IsImplicitlyDeclared || source is INamedTypeSymbol) return null;
+        var id = source.GetDocumentationCommentId();
+        return id != null && _policy.MemberModules.TryGetValue(id, out var module) ? module : null;
     }
 
     private void CheckType(string sourceModule, ITypeSymbol? type, Location location,

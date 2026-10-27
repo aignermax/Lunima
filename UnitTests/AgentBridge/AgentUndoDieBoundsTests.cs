@@ -37,7 +37,7 @@ public sealed class AgentUndoDieBoundsTests
         await canvas.Dies.PendingGridRebuild.WaitAsync(TimeSpan.FromSeconds(15));
         var movedBottom = canvas.Router.PathfindingGrid.ShouldNotBeNull().MaxY;
 
-        var session = new AgentDesignSession(canvas, vm.CommandManager, () => vm.FileOperations, new ExampleDesignsService());
+        var session = new AgentDesignSession(canvas, vm.CommandManager, () => vm.FileOperations, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var tool = new UndoTool(session);
         var catalog = new AgentToolCatalog([tool], new AiToolRegistry([]), new InlineUiDispatcher());
         try

@@ -54,7 +54,7 @@ public partial class RoutingOrchestratorProgressTests
         binder.Service.ComponentAdded!(crossing);
         var commands = new CAP.Avalonia.Commands.CommandManager();
         var session = new CAP.Avalonia.Services.AgentBridge.Tools.AgentDesignSession(
-            canvas, commands, () => null, new CAP.Avalonia.Services.ExampleDesignsService());
+            canvas, commands, () => null, new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var result = await new CAP.Avalonia.Services.AgentBridge.Tools.Edit.UndoTool(session)
             .ExecuteAsync(System.Text.Json.JsonDocument.Parse("{}").RootElement);
         result.IsError.ShouldBeTrue();

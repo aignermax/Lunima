@@ -9,6 +9,7 @@ namespace CAP.Avalonia.Services.AgentBridge.Tools.Repair.Suggest;
 public sealed class RepairSandbox
 {
     private readonly RoutingInputSnapshot _input;
+    private readonly ExampleDesignsService _examples;
     private readonly RepairCrossingTemplate? _crossing;
     private readonly RepairTrialPermission _permission;
     private readonly CanvasRoutingFactory? _routingFactory;
@@ -21,6 +22,7 @@ public sealed class RepairSandbox
         RepairTrialPermission permission, CanvasRoutingFactory? trialRoutingFactory, RepairGraphBuilder? graphBuilder = null)
     {
         _permission = permission;
+        _examples = session.Examples;
         _routingFactory = trialRoutingFactory;
         _graphBuilder = graphBuilder;
         _target = target.Id;
@@ -38,7 +40,7 @@ public sealed class RepairSandbox
     {
         _permission.EnsureCurrent();
         var clock = Stopwatch.StartNew();
-        await using var workbench = await RepairWorkbench.CreateAsync(_input, _crossing, _permission, _routingFactory, _bounds, _scope, _graphBuilder);
+        await using var workbench = await RepairWorkbench.CreateAsync(_examples, _input, _crossing, _permission, _routingFactory, _bounds, _scope, _graphBuilder);
         var session = workbench.Session;
         var target = session.FindConnection(_target.ToString())!.Connection;
         var (plan, error) = candidate.Build(session);

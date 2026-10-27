@@ -37,7 +37,7 @@ public class NewPdkReopenGuardTests : IDisposable
         var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Ok());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
-        var vm = new NewComponentViewModel(extractor, fdtd: null, store,
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd: null, store,
             new List<ProcessDefinition> { new() { Name = "P" } });
         vm.ComponentName = "My Comp";
         vm.Code = "import gdsfactory as gf\ncomponent = gf.components.coupler()";

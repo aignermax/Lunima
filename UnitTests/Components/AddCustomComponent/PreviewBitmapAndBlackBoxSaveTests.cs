@@ -51,7 +51,7 @@ public class PreviewBitmapAndBlackBoxSaveTests : IDisposable
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
         var process = new ProcessDefinition { Name = "P" };
         store.SaveToNamedPdk("My PDK", process, SeedComponent("seed"), "gdsfactory", null);
-        var vm = new NewComponentViewModel(extractor, withFdtd ? fdtd.Object : null, store,
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, withFdtd ? fdtd.Object : null, store,
             new List<ProcessDefinition> { process });
         vm.ComponentName = "My Comp";
         vm.SelectedBackend = GeometryBackend.GdsFactory;
@@ -89,7 +89,7 @@ public class PreviewBitmapAndBlackBoxSaveTests : IDisposable
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
         var process = new ProcessDefinition { Name = "P" };
         store.SaveToNamedPdk("My PDK", process, SeedComponent("seed"), "gdsfactory", null);
-        var vm = new NewComponentViewModel(extractor, null, store, new List<ProcessDefinition> { process });
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, null, store, new List<ProcessDefinition> { process });
         vm.Code = "import gdsfactory as gf\ncomponent = gf.components.coupler()";
 
         await vm.RunPreviewCommand.ExecuteAsync(null);

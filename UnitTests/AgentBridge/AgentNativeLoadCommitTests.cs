@@ -23,7 +23,7 @@ public sealed class AgentNativeLoadCommitTests
         var original = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         main.Canvas.AddComponent(original);
         main.FileOperations.HasUnsavedChanges = false;
-        var examples = new ExampleDesignsService();
+        var examples = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog());
         var example = examples.GetExamples().First();
         var session = new AgentDesignSession(main.Canvas, new CommandManager(), () => main.FileOperations, examples);
         var tool = new LoadExampleTool(session);

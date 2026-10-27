@@ -31,9 +31,9 @@ public class DieFilesExportWorkflowTests
             var service = new BatchService(ready);
             var export = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService()) { GenerateGdsEnabled = true };
             var dialogs = new Dialogs(Path.Combine(directory, "chip.py"));
-            var operations = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),canvas, new CommandManager(),
+            var operations = new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),canvas, new CommandManager(),
                 new SimpleNazcaExporter(), new SaxExporter(), new ObservableCollection<ComponentTemplate>(),
-                export, new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas), null!);
+                export, new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas), null!);
             operations.FileDialogService = dialogs;
             operations.MessageBoxService = dialogs;
             string status = "";

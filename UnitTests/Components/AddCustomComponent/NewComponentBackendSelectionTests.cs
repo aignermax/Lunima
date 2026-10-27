@@ -109,7 +109,7 @@ public class NewComponentBackendSelectionTests : IDisposable
                 [FdtdBackendType.Tidy3D] = tidy3d,
             },
             new UserPreferencesService(_prefsPath));
-        var vm = new NewComponentViewModel(
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             extractor, meep, store, new List<ProcessDefinition> { process },
             errorConsole, fdtdBackendRegistry: registry);
         vm.ComponentName = "My Comp";

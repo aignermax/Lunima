@@ -202,7 +202,9 @@ public class PrefabGateCellJourneyTests : IDisposable
     {
         var leftPanel = session.GetRequiredService<LeftPanelViewModel>();
         leftPanel.Initialize(); // production startup step: loads the bundled PDKs
-        return new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+        return new FileOperationsViewModel(
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             session.GetRequiredService<CommandManager>(),
             session.GetRequiredService<SimpleNazcaExporter>(),

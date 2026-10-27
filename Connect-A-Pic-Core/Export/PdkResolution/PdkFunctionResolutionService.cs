@@ -8,7 +8,7 @@ namespace CAP_Core.Export.PdkResolution;
 /// <c>nazcaFunction</c> strings resolve against the installed Python packages
 /// (issue #515). Never throws — returns a failure report instead.
 /// </summary>
-public class PdkFunctionResolutionService
+public class PdkFunctionResolutionService : IPdkFunctionResolver
 {
     /// <summary>Default subprocess timeout — a batch touches many imports, allow generous time.</summary>
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(120);

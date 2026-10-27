@@ -25,7 +25,7 @@ public class BackendCodeAutoloadTests : IDisposable
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
         var fdtd = new Mock<IFdtdSMatrixService>();
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
-        return new NewComponentViewModel(extractor, fdtd.Object, store,
+        return new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd.Object, store,
             new List<ProcessDefinition> { new() { Name = "P" } });
     }
 

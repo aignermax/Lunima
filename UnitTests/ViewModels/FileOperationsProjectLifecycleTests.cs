@@ -34,8 +34,10 @@ public class FileOperationsProjectLifecycleTests : IDisposable
         _tempDesignPath = Path.Combine(Path.GetTempPath(), $"test-lifecycle-design-{Guid.NewGuid():N}.lun");
         _recentProjects = new RecentProjectsService(new UserPreferencesService(_testPreferencesPath));
 
-        var photonTorchVm = new PhotonTorchExportViewModel(new PhotonTorchExporter(), _canvas);
-        _fileOps = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+        var photonTorchVm = new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new PhotonTorchExporter(), _canvas);
+        _fileOps = new FileOperationsViewModel(
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             _canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),

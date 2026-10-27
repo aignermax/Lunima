@@ -243,11 +243,22 @@ public class FileOperationsActiveProcessTests
         var nazcaExporter = new SimpleNazcaExporter();
         var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService());
         var photonTorchExport = new PhotonTorchExportViewModel(
-            new CAP_Core.Export.PhotonTorchExporter(), canvas);
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            new CAP_Core.Export.PhotonTorchExporter(),
+            canvas);
 
-        var vm = new FileOperationsViewModel(new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
-            canvas, commandManager, nazcaExporter, new CAP_Core.Export.SaxExporter(), _library,
-            gdsExport, photonTorchExport, null!, errorConsole);
+        var vm = new FileOperationsViewModel(
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+            canvas,
+            commandManager,
+            nazcaExporter,
+            new CAP_Core.Export.SaxExporter(),
+            _library,
+            gdsExport,
+            photonTorchExport,
+            null!,
+            errorConsole);
 
         return (vm, canvas);
     }

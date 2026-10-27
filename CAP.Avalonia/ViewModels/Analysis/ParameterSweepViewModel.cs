@@ -152,7 +152,7 @@ public partial class ParameterSweepViewModel : ObservableObject
 
         try
         {
-            var csv = SweepCsvExporter.GenerateCsvContent(_lastResult);
+            var csv = SweepCsvFormatter.GenerateCsvContent(_lastResult);
 
             string? path = null;
             if (FileDialogService != null)

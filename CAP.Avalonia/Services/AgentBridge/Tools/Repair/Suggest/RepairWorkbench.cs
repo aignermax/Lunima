@@ -18,7 +18,7 @@ internal sealed class RepairWorkbench : IAsyncDisposable
     private readonly CancellationTokenSource _stop;
     private readonly List<Task> _derivedWork = new();
 
-    internal static async Task<RepairWorkbench> CreateAsync(RoutingInputSnapshot input, RepairCrossingTemplate? crossing,
+    internal static async Task<RepairWorkbench> CreateAsync(ExampleDesignsService examples, RoutingInputSnapshot input, RepairCrossingTemplate? crossing,
         RepairTrialPermission permission, CanvasRoutingFactory? routingFactory,
         (double MinX, double MinY, double MaxX, double MaxY) bounds, Guid? scopeId = null, RepairGraphBuilder? graphBuilder = null)
     {
@@ -28,11 +28,11 @@ internal sealed class RepairWorkbench : IAsyncDisposable
         // An accepted construction is always drained, even after its live owner is revoked.
         var graph = await Task.Run(() => builder.Build(input));
         RepairWorkbench? workbench = null;
-        permission.Commit(() => workbench = new RepairWorkbench(graph, crossing, permission, routingFactory, bounds, scopeId));
+        permission.Commit(() => workbench = new RepairWorkbench(examples, graph, crossing, permission, routingFactory, bounds, scopeId));
         return workbench!;
     }
 
-    private RepairWorkbench(RoutingWorkGraph graph, RepairCrossingTemplate? crossing,
+    private RepairWorkbench(ExampleDesignsService examples, RoutingWorkGraph graph, RepairCrossingTemplate? crossing,
         RepairTrialPermission permission, CanvasRoutingFactory? routingFactory,
         (double MinX, double MinY, double MaxX, double MaxY) bounds, Guid? scopeId)
     {
@@ -81,7 +81,7 @@ internal sealed class RepairWorkbench : IAsyncDisposable
                 canvas.Groups.AdoptCapturedScope(scope);
             }
             IReadOnlyList<ComponentTemplate> templates = crossing == null ? [] : [crossing.Bind(graph)];
-            Session = new AgentDesignSession(canvas, commands, () => null, new ExampleDesignsService(), () => templates);
+            Session = new AgentDesignSession(canvas, commands, () => null, examples, () => templates);
             _operation = canvas.Document.CaptureOperation(_stop.Token);
         }
         catch

@@ -58,8 +58,8 @@ public partial class IsaPlaygroundViewModel : ObservableObject
     private string _machineStatusText = string.Empty;
 
     /// <summary>Creates the playground with the samples discovered next to the app (or the repo).</summary>
-    public IsaPlaygroundViewModel()
-        : this(IsaSampleProgramCatalog.LoadDefault(), networkProvider: null)
+    public IsaPlaygroundViewModel(ExampleDesignsService examples)
+        : this(examples, IsaSampleProgramCatalog.LoadDefault(), networkProvider: null)
     {
     }
 
@@ -67,20 +67,21 @@ public partial class IsaPlaygroundViewModel : ObservableObject
     /// Creates the playground wired to the shared <see cref="BuiltLogicNetworkProvider"/>,
     /// so the photonic toggle sees the Logic tab's network.
     /// </summary>
-    public IsaPlaygroundViewModel(BuiltLogicNetworkProvider networkProvider)
-        : this(IsaSampleProgramCatalog.LoadDefault(), networkProvider)
+    public IsaPlaygroundViewModel(ExampleDesignsService examples, BuiltLogicNetworkProvider networkProvider)
+        : this(examples, IsaSampleProgramCatalog.LoadDefault(), networkProvider)
     {
     }
 
     /// <summary>Creates the playground with an explicit sample catalog (test seam).</summary>
-    internal IsaPlaygroundViewModel(IsaSampleProgramCatalog catalog)
-        : this(catalog, networkProvider: null)
+    internal IsaPlaygroundViewModel(ExampleDesignsService examples, IsaSampleProgramCatalog catalog)
+        : this(examples, catalog, networkProvider: null)
     {
     }
 
     /// <summary>Creates the playground with an explicit catalog and network provider (test seam).</summary>
-    internal IsaPlaygroundViewModel(IsaSampleProgramCatalog catalog, BuiltLogicNetworkProvider? networkProvider)
+    internal IsaPlaygroundViewModel(ExampleDesignsService examples, IsaSampleProgramCatalog catalog, BuiltLogicNetworkProvider? networkProvider)
     {
+        FindExamples = examples.GetExamples;
         _builtNetworkProvider = networkProvider;
         if (_builtNetworkProvider != null)
         {

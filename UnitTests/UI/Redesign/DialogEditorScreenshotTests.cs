@@ -67,7 +67,7 @@ public class DialogEditorScreenshotTests : IDisposable
         Directory.CreateDirectory(_root);
         var extractor = new ComponentGeometryExtractor(
             Mock.Of<IPdkGeometryRenderer>(), Mock.Of<IPdkGeometryRenderer>());
-        var vm = new NewComponentViewModel(
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             extractor, Mock.Of<IFdtdSMatrixService>(), Store(), new List<ProcessDefinition> { SampleProcess() })
         {
             ComponentName = "My coupler",

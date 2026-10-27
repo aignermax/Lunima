@@ -27,7 +27,7 @@ public sealed class PrivateRepairCrossingTests
             var allowProvider = true;
             fixture.Canvas.Router.ConnectionProcessFloorProvider = (_, _) => allowProvider
                 ? 37 : throw new InvalidOperationException("Live process rules were read after capture.");
-            var session = new AgentDesignSession(fixture.Canvas, fixture.Commands, () => null, new ExampleDesignsService(), () => [template]);
+            var session = new AgentDesignSession(fixture.Canvas, fixture.Commands, () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()), () => [template]);
             var captured = RepairCrossingTemplate.Capture(session).ShouldNotBeNull();
             var input = RoutingInputSnapshot.Capture(fixture.Canvas.Components.Select(view => view.Component).ToArray(),
                 fixture.Canvas.Router, fixture.Canvas.ConnectionManager);
@@ -39,8 +39,8 @@ public sealed class PrivateRepairCrossingTests
             template.CreateWavelengthSMatrixMap = _ => throw new InvalidOperationException("Live wavelength factory.");
             await Task.Yield();
             await using var permission = new RepairTrialPermission(session, null);
-            await using var first = await RepairWorkbench.CreateAsync(input, captured, permission, null, (0, 0, 500, 300));
-            await using var second = await RepairWorkbench.CreateAsync(input, captured, permission, null, (0, 0, 500, 300));
+            await using var first = await RepairWorkbench.CreateAsync(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()), input, captured, permission, null, (0, 0, 500, 300));
+            await using var second = await RepairWorkbench.CreateAsync(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()), input, captured, permission, null, (0, 0, 500, 300));
             var one = CrossingComponentInstance.CreateFromTemplates(first.Session.Templates).ShouldNotBeNull();
             var two = CrossingComponentInstance.CreateFromTemplates(second.Session.Templates).ShouldNotBeNull();
             one.TemplateName.ShouldBe(name);

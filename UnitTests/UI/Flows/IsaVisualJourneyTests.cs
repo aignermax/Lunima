@@ -34,7 +34,7 @@ public class IsaVisualJourneyTests : IClassFixture<LogicGateFourBitAdderExampleT
         LocalizationService.Instance.SetLanguage(language);
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var playground = new IsaPlaygroundViewModel(provider);
+        var playground = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
         var vm = MainViewModelTestHelper.CreateMainViewModel(logicNetworkProvider: provider, isaPlayground: playground);
         using var services = new ServiceCollection().AddSingleton(playground).AddSingleton(vm.RunProgramTour).BuildServiceProvider();
         App.OverrideServicesForTesting(services);
@@ -112,7 +112,7 @@ public class IsaVisualJourneyTests : IClassFixture<LogicGateFourBitAdderExampleT
     [AvaloniaFact]
     public void ClosedWindow_DoesNotRestartPlaybackTimerWhenSharedViewModelRunsAgain()
     {
-        var playground = new IsaPlaygroundViewModel();
+        var playground = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var window = new IsaPlaygroundWindow { DataContext = playground };
         window.Show();
         Pump();

@@ -27,6 +27,7 @@ internal static class AddCustomComponentFeature
             sp.GetRequiredService<NazcaComponentPreviewService>(),
             sp.GetRequiredService<GdsFactoryComponentPreviewService>()));
         services.AddSingleton(sp => new AddCustomComponentDependencies(
+            sp.GetRequiredService<CAP_DataAccess.Import.ISParameterImportCatalog>(),
             sp.GetRequiredService<ComponentGeometryExtractor>(),
             sp.GetRequiredService<IFdtdSMatrixService>(),
             sp.GetRequiredService<IUserPdkLibrary>(),

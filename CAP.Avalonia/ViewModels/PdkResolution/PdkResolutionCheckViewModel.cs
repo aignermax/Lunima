@@ -24,7 +24,7 @@ public partial class PdkResolutionCheckViewModel : ObservableObject
     private const string NazcaRawCodeBackend = "nazca";
 
     private readonly IPdkReader _pdkLoader;
-    private readonly PdkFunctionResolutionService _resolutionService;
+    private readonly IPdkFunctionResolver _resolutionService;
 
     /// <summary>Set by the dialog code-behind to the Avalonia clipboard bridge.</summary>
     public Func<string, Task>? CopyToClipboard { get; set; }
@@ -51,11 +51,11 @@ public partial class PdkResolutionCheckViewModel : ObservableObject
     /// <param name="resolutionService">Python-backed nazcaFunction resolver.</param>
     public PdkResolutionCheckViewModel(IBundledPdkCatalog bundledPdks,
         IPdkReader pdkLoader,
-        PdkFunctionResolutionService resolutionService)
+        IPdkFunctionResolver resolutionService)
     {
         _bundledPdks = bundledPdks ?? throw new ArgumentNullException(nameof(bundledPdks));
         _pdkLoader = pdkLoader;
-        _resolutionService = resolutionService;
+        _resolutionService = resolutionService ?? throw new ArgumentNullException(nameof(resolutionService));
     }
 
     /// <summary>Runs the consistency check over every PDK JSON in the bundled directory.</summary>
