@@ -285,7 +285,7 @@ public class NandGameJourneyFixture : IAsyncLifetime
     private static async Task<TruthTableViewModel> ExtractViaPanelVm(
         ComponentGroup group, DesignCanvasViewModel canvas)
     {
-        var component = new ComponentViewModel(group);
+        var component = canvas.Components.Single(item => ReferenceEquals(item.Component, group));
         canvas.Selection.SelectSingle(component);
         var vm = new TruthTableViewModel();
         vm.ConfigureForSelection(component, canvas);
