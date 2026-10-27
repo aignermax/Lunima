@@ -113,7 +113,18 @@ internal sealed class ControlledSolverProcess : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await TerminateChildrenAsync();
-        Directory.Delete(_directory, recursive: true);
+        var elapsed = Stopwatch.StartNew();
+        while (true)
+        {
+            try { Directory.Delete(_directory, recursive: true); return; }
+            catch (IOException error) when (OperatingSystem.IsWindows()
+                && (error.HResult & 0xffff) is 32 or 33 && elapsed.Elapsed < GuardTimeout)
+            {
+                // Exited children are verified separately. Windows readers can briefly
+                // retain a sharing lock; retry only that condition, with a bounded deadline.
+                await Task.Delay(25);
+            }
+        }
     }
 
     internal async Task TerminateChildrenAsync()

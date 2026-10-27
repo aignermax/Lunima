@@ -58,7 +58,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force UnitTests/TestResults | Out-Null
           dotnet test UnitTests/UnitTests.csproj `
-            --filter 'FullyQualifiedName~ClaudeBatchCliArgumentTests|FullyQualifiedName~ClaudeBatchCliLifetimeTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests' `
+            --filter 'FullyQualifiedName~ClaudeBatchCliArgumentTests|FullyQualifiedName~ClaudeBatchCliLifetimeTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~ControlledSolverCleanupTests' `
             --blame-hang --blame-hang-timeout 2m --blame-hang-dump-type none `
             --results-directory UnitTests/TestResults `
             --logger 'trx;LogFileName=windows-batch-cli.trx' `
