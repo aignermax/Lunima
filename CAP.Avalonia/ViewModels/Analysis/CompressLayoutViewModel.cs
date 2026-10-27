@@ -12,7 +12,7 @@ namespace CAP.Avalonia.ViewModels.Analysis;
 /// ViewModel for the layout compression feature.
 /// Automatically rearranges components to minimize chip area while maintaining connectivity.
 /// </summary>
-public partial class CompressLayoutViewModel : ObservableObject
+public partial class CompressLayoutViewModel : ObservableObject, IAsyncDisposable
 {
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CompressLayoutCommand))]
@@ -33,12 +33,30 @@ public partial class CompressLayoutViewModel : ObservableObject
     private readonly ErrorConsoleService? _errorConsole;
     private DesignCanvasViewModel? _canvas;
     private readonly LayoutCompressor _compressor = new();
+    private readonly ILayoutCompressionRunner _runner;
+    private readonly Services.Lifetime.ShellWorkScope _work = new();
+    private AnalysisSweepOperation? _activeRun;
+    private CAP_Core.Documents.DocumentIdentity? _configuredDocument;
+    private long _version;
+    private Task? _retirement;
+
+    public Task StopAsync() => _retirement ??= RetireAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+
+    private async Task RetireAsync()
+    {
+        try { await _work.StopAsync(); }
+        finally { _canvas = null; _configuredDocument = null; }
+    }
 
     /// <summary>Initializes a new instance of <see cref="CompressLayoutViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
-    public CompressLayoutViewModel(ErrorConsoleService? errorConsole = null)
+    public CompressLayoutViewModel(ErrorConsoleService? errorConsole = null,
+        ILayoutCompressionRunner? runner = null, Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
     {
         _errorConsole = errorConsole;
+        _runner = runner ?? new LayoutCompressionRunner();
+        _work.RegisterWith(applicationWork, StopAsync);
     }
 
     /// <summary>
@@ -46,9 +64,15 @@ public partial class CompressLayoutViewModel : ObservableObject
     /// </summary>
     public void Configure(DesignCanvasViewModel canvas)
     {
+        if (_work.IsStopping) return;
+        var version = ++_version;
+        _activeRun?.Cancel();
         _canvas = canvas;
+        _configuredDocument = canvas.Document.CaptureIdentity();
         StatusText = "";
+        if (_work.IsStopping || version != _version) return;
         ResultText = "";
+        if (_work.IsStopping || version != _version) return;
         CompressLayoutCommand.NotifyCanExecuteChanged();
     }
 
@@ -56,101 +80,137 @@ public partial class CompressLayoutViewModel : ObservableObject
     /// Runs the layout compression algorithm.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanCompressLayout))]
-    private async Task CompressLayout()
+    private Task CompressLayout() => _work.RunAsync(CompressLayoutCoreAsync);
+
+    private async Task CompressLayoutCoreAsync(CancellationToken stop)
     {
         if (_canvas == null || _canvas.Components.Count == 0)
         {
             StatusText = LocalizationService.Instance.Translate("Analysis.Compress.NoComponents");
             return;
         }
-
         if (IsCompressing) return;
-        IsCompressing = true;
-        StatusText = LocalizationService.Instance.Translate("Analysis.Compress.Running");
-        ResultText = "";
-
+        var canvas = _canvas;
+        var version = _version;
+        var targets = canvas.Components.ToArray();
+        var components = targets.Select(c => c.Component).ToList();
+        AnalysisSweepOperation? operation = null;
+        var acceptProgress = true;
+        var geometryCommitted = false;
+        var routesSettled = false;
+        Action markCommitted = () => geometryCommitted = true;
         try
         {
-            // Calculate original bounding box
-            var originalBounds = _compressor.CalculateBoundingBox(
-                _canvas.Components.Select(c => c.Component).ToList());
-
-            // Store original positions for undo
-            var originalPositions = _canvas.Components
-                .ToDictionary(c => c, c => (c.X, c.Y));
-
-            // Reset progress
+            operation = new AnalysisSweepOperation(_work, canvas.Document,
+                () => version == _version && ReferenceEquals(canvas, _canvas)
+                    && targets.All(canvas.Components.Contains), stop, stop, _configuredDocument);
+            _activeRun = operation;
+            operation.ThrowIfObsolete();
+            var snapshot = LayoutCompressionSnapshot.Capture(components,
+                canvas.Connections.Select(c => c.Connection).ToArray());
+            var originalBounds = _compressor.CalculateBoundingBox(components);
+            IsCompressing = true;
+            operation.ThrowIfObsolete();
+            StatusText = LocalizationService.Instance.Translate("Analysis.Compress.Running");
+            operation.ThrowIfObsolete();
+            ResultText = "";
+            operation.ThrowIfObsolete();
             CurrentIteration = 0;
+            operation.ThrowIfObsolete();
 
-            // Run compression with progress updates
-            await Task.Run(() =>
+            var progress = new Progress<LayoutCompressionFrame>(frame =>
             {
-                var components = _canvas.Components
-                    .Select(c => c.Component)
-                    .ToList();
-
-                var connections = _canvas.Connections
-                    .Select(c => c.Connection)
-                    .ToList();
-
-                _compressor.CompressLayout(components, connections, (iteration, positions) =>
+                if (!acceptProgress || !operation.CanPublish) return;
+                try
                 {
-                    // Update UI on the UI thread every 5 iterations
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        CurrentIteration = iteration;
-                        StatusText = string.Format(
-                            LocalizationService.Instance.Translate("Analysis.Compress.RunningIteration"),
-                            iteration, MaxIterations);
-
-                        // Update component positions for animation
-                        foreach (var compVm in _canvas.Components)
-                        {
-                            compVm.X = compVm.Component.PhysicalX;
-                            compVm.Y = compVm.Component.PhysicalY;
-                        }
-                    });
-                });
+                    ApplyFrame(canvas, targets, frame, operation, markCommitted);
+                    operation.ThrowIfObsolete();
+                    CurrentIteration = frame.Iteration;
+                    operation.ThrowIfObsolete();
+                    StatusText = string.Format(LocalizationService.Instance.Translate("Analysis.Compress.RunningIteration"),
+                        frame.Iteration, MaxIterations);
+                }
+                catch (OperationCanceledException) { }
             });
+            var result = await _runner.RunAsync(snapshot, operation.Token, progress);
+            acceptProgress = false;
+            operation.ThrowIfObsolete();
+            ApplyFrame(canvas, targets, result, operation, markCommitted);
+            operation.ThrowIfObsolete();
+            await canvas.Routing.RecalculateRoutesAsync(operation.DocumentLease, operation, operation.Token);
+            operation.ThrowIfObsolete();
+            routesSettled = true;
 
-            // Final UI update
-            foreach (var compVm in _canvas.Components)
-            {
-                compVm.X = compVm.Component.PhysicalX;
-                compVm.Y = compVm.Component.PhysicalY;
-            }
-
-            // Recalculate waveguide routes
-            await _canvas.RecalculateRoutesAsync();
-
-            // Calculate new bounding box
-            var newBounds = _compressor.CalculateBoundingBox(
-                _canvas.Components.Select(c => c.Component).ToList());
-
-            // Format results
-            double areaReduction = ((originalBounds.area - newBounds.area) / originalBounds.area) * 100;
-
+            var newBounds = _compressor.CalculateBoundingBox(canvas.Components.Select(c => c.Component).ToList());
+            double areaReduction = originalBounds.area == 0 ? 0
+                : ((originalBounds.area - newBounds.area) / originalBounds.area) * 100;
             ResultText = $"Layout compressed successfully:\n" +
                 $"Original: {originalBounds.width:F0} × {originalBounds.height:F0} µm " +
                 $"({originalBounds.area / 1_000_000:F2} mm²)\n" +
                 $"New: {newBounds.width:F0} × {newBounds.height:F0} µm " +
                 $"({newBounds.area / 1_000_000:F2} mm²)\n" +
                 $"Area reduction: {areaReduction:F1}%";
-
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("Analysis.Compress.Complete"), areaReduction);
+            operation.ThrowIfObsolete();
+            StatusText = string.Format(LocalizationService.Instance.Translate("Analysis.Compress.Complete"), areaReduction);
+            operation.ThrowIfObsolete();
             CurrentIteration = MaxIterations;
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+            if (operation?.CanPublish != true) return;
             _errorConsole?.LogError($"Layout compression failed: {ex.Message}", ex);
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("Analysis.Compress.Failed"), ex.Message);
-            ResultText = "";
+            if (!operation.CanPublish) return;
+            StatusText = string.Format(LocalizationService.Instance.Translate("Analysis.Compress.Failed"), ex.Message);
+            if (operation.CanPublish) ResultText = "";
         }
         finally
         {
-            IsCompressing = false;
+            acceptProgress = false;
+            if (ReferenceEquals(_activeRun, operation)) _activeRun = null;
+            try
+            {
+                if (geometryCommitted && !routesSettled && operation != null)
+                    await operation.CompleteDocumentChangesAsync((lease, token) =>
+                        canvas.Routing.RecalculateRoutesAsync(lease, cancellationToken: token));
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception error)
+            {
+                if (operation?.CanPublish == true)
+                    _errorConsole?.LogError($"Layout compression route cleanup failed: {error.Message}", error);
+            }
+            finally
+            {
+                try { IsCompressing = false; }
+                finally { if (operation != null) await operation.DisposeAsync(); }
+            }
+        }
+    }
+
+    private static void ApplyFrame(DesignCanvasViewModel canvas, ComponentViewModel[] targets,
+        LayoutCompressionFrame frame, AnalysisSweepOperation operation, Action markCommitted)
+    {
+        Dispatcher.UIThread.VerifyAccess();
+        using var suspended = canvas.Routing.SuspendAutomaticRouting();
+        for (var i = 0; i < targets.Length; i++)
+        {
+            var target = targets[i];
+            var position = frame.Positions[i];
+            if (target.Component.PhysicalX != position.X || target.X != position.X)
+                operation.CommitAndAdvance(() =>
+                {
+                    markCommitted();
+                    target.Component.PhysicalX = position.X;
+                    target.X = position.X;
+                });
+            if (target.Component.PhysicalY != position.Y || target.Y != position.Y)
+                operation.CommitAndAdvance(() =>
+                {
+                    markCommitted();
+                    target.Component.PhysicalY = position.Y;
+                    target.Y = position.Y;
+                });
         }
     }
 
@@ -159,7 +219,7 @@ public partial class CompressLayoutViewModel : ObservableObject
     /// </summary>
     private bool CanCompressLayout()
     {
-        return _canvas != null &&
+        return !_work.IsStopping && _canvas != null &&
                _canvas.Components.Count > 0 &&
                !IsCompressing;
     }

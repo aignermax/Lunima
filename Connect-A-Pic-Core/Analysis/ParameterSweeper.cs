@@ -43,7 +43,7 @@ namespace CAP_Core.Analysis
 
                     slider.Value = value;
 
-                    var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     var fieldResults = await _calculator.CalculateFieldPropagationAsync(
                         cts, configuration.WavelengthNm);
 

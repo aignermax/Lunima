@@ -4,7 +4,7 @@ using CAP_Core.Documents;
 namespace CAP.Avalonia.ViewModels.Analysis;
 
 /// <summary>Publication permission for one sweep, separate from its user-cancel feedback.</summary>
-internal sealed class AnalysisSweepOperation : IAsyncDisposable
+internal sealed class AnalysisSweepOperation : IAsyncDisposable, CAP_Contracts.ICommitPermission
 {
     private readonly object _gate = new();
     private readonly ShellWorkScope _owner;
@@ -39,6 +39,33 @@ internal sealed class AnalysisSweepOperation : IAsyncDisposable
     }
 
     public CancellationToken Token => _cancellation.Token;
+    CancellationToken CAP_Contracts.ICommitPermission.CancellationToken => Token;
+
+    /// <summary>Borrowed only for derived work awaited before this owner retires; never dispose separately.</summary>
+    internal DocumentOperation DocumentLease { get { ThrowIfObsolete(); return _document; } }
+
+    public void Commit(Action change)
+    {
+        ThrowIfObsolete();
+        change();
+    }
+
+    internal void CommitAndAdvance(Action change)
+    {
+        ThrowIfObsolete();
+        if (!_document.TryCommitAndAdvance(change))
+            throw new OperationCanceledException("The analysis no longer owns the document revision.");
+    }
+
+    /// <summary>
+    /// Finishes derived state for edits already accepted by this lease, even after the panel
+    /// is reconfigured. Document edits, navigation and shutdown still revoke this cleanup.
+    /// </summary>
+    internal Task CompleteDocumentChangesAsync(Func<DocumentOperation, CancellationToken, Task> complete)
+    {
+        if (_disposed || _owner.IsStopping || !_document.IsCurrent) return Task.CompletedTask;
+        return complete(_document, _document.CancellationToken);
+    }
     public bool IsContextCurrent => !_disposed && !_owner.IsStopping && _configurationCurrent() && _document.IsCurrent;
     public bool CanPublish => IsContextCurrent && !_caller.IsCancellationRequested && !_cancellationRequested;
 
