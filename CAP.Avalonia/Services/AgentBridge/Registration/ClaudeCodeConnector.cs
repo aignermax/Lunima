@@ -36,9 +36,14 @@ public sealed class ClaudeCodeConnector : IAgentConnection
     /// <summary>Enables and starts the bridge, then registers it with Claude Code.</summary>
     public async Task<ClaudeRegistrationResult> ConnectAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         _preferences.SetAgentBridgeEnabled(true);
+        cancellationToken.ThrowIfCancellationRequested();
         await _host.ApplySettingsAsync();
-        return await Registrar.RegisterAsync(
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await Registrar.RegisterAsync(
             _preferences.GetAgentBridgePort(), _preferences.GetRequiredAgentBridgeToken(), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
     }
 }

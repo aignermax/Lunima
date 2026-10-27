@@ -6,9 +6,11 @@ on:
       - '.github/workflows/NativeProcessTests.yaml'
       - 'Connect-A-Pic-Core/Export/**'
       - 'CAP.Avalonia/Services/Solvers/**'
+      - 'CAP.Avalonia/Services/AgentBridge/Registration/**'
       - 'CAP-DataAccess/Persistence/**'
       - 'UnitTests/Persistence/**'
       - 'UnitTests/Solvers/**'
+      - 'UnitTests/AgentBridge/ClaudeCliProcessLifetimeTests.cs'
       - '**/*.csproj'
       - 'Directory.Build.*'
       - 'global.json'
@@ -84,7 +86,7 @@ jobs:
       - name: Exercise real child processes and descendant cleanup
         env:
           LUNIMA_TEST_PYTHON3: ${{ steps.python.outputs.python-path }}
-          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests
+          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests
         run: |
           set -euo pipefail
           dotnet test UnitTests/UnitTests.csproj --no-build --filter "$PROCESS_FILTER" \

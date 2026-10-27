@@ -44,7 +44,9 @@ public sealed class ClaudeCodeRegistrar
     /// </summary>
     public async Task<ClaudeRegistrationResult> RegisterAsync(int port, string? token, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var cli = FindCli();
+        cancellationToken.ThrowIfCancellationRequested();
         if (cli == null)
             return NotFound();
 
@@ -56,7 +58,9 @@ public sealed class ClaudeCodeRegistrar
     /// <summary>Removes the <c>lunima</c> registration for the current user (best effort).</summary>
     public async Task<ClaudeRegistrationResult> UnregisterAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var cli = FindCli();
+        cancellationToken.ThrowIfCancellationRequested();
         if (cli == null)
             return NotFound();
 
@@ -67,7 +71,9 @@ public sealed class ClaudeCodeRegistrar
     /// <summary>Whether Claude Code already knows <c>lunima</c>; null when the CLI is missing.</summary>
     public async Task<bool?> IsRegisteredAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var cli = FindCli();
+        cancellationToken.ThrowIfCancellationRequested();
         if (cli == null)
             return null;
         var result = await RunAsync(cli, new[] { "mcp", "get", AgentBridgeHost.McpServerName }, cancellationToken);
@@ -82,9 +88,15 @@ public sealed class ClaudeCodeRegistrar
 
     private async Task<CliRunResult> RunAsync(string cli, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
-        if (!_launchFactory.TryBuild(cli, arguments, HomeDirectory(), HomeEnvironment(), out var startInfo, out var error))
+        cancellationToken.ThrowIfCancellationRequested();
+        var prepared = _launchFactory.TryBuild(cli, arguments, HomeDirectory(), HomeEnvironment(), out var startInfo, out var error);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!prepared)
             return new CliRunResult(CliProcessRunner.StartFailedExitCode, error ?? "Could not build the process.");
-        return await _run(startInfo, CallTimeout, cancellationToken);
+        var result = await _run(startInfo, CallTimeout, cancellationToken);
+        // In particular, a canceled remove must never admit the following add process.
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
     }
 
     private static string? HomeDirectory()
