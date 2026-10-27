@@ -31,6 +31,9 @@ public partial class MainViewModel
     /// </summary>
     private void OnProjectOpened()
     {
+        if (_disposed || _work.IsStopping) return;
+        _analysisDocumentBinding.ProjectOpened();
+        if (_disposed || _work.IsStopping) return;
         var cameFromHome = Home.IsHomeVisible;
         Home.OnProjectOpened();
         ResetWorkspacePresentationForNewDesign();

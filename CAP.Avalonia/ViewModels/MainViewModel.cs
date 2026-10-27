@@ -39,6 +39,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
     private readonly Shell.DesignCheckInteractionCoordinator _designCheckInteraction;
     private readonly Onboarding.LearningJourneys.LearningJourneysCoordinator _learning;
     private readonly Shell.ProjectProcessCoordinator _projectProcess;
+    private readonly Shell.PersistentAnalysisDocumentBinding _analysisDocumentBinding;
     private readonly Shell.ShellActivationCoordinator _activation;
     private readonly Shell.ShellStateCoordinator _shellState;
     private IDisposable? _localizationSubscription;
@@ -102,7 +103,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         Canvas.Document.RetireAsync(), ModeProbe?.StopAsync() ?? Task.CompletedTask,
         _designChecks.StopAsync(), GateView.StopAsync(), RunHint.StopAsync(), Update.StopAsync(),
         RightPanel.OnaAnalysis.StopAsync(), BottomPanel.Analysis.Spectrum.StopAsync(), RightPanel.Logic.StopAsync(),
-        RightPanel.Sweep.StopAsync(), RightPanel.MakeGate.StopAsync(), RightPanel.CompressLayout.StopAsync(),
+        RightPanel.TruthTable.StopAsync(), RightPanel.Sweep.StopAsync(), RightPanel.MakeGate.StopAsync(), RightPanel.CompressLayout.StopAsync(),
         BottomPanel.Analysis.Transient.StopAsync(), BottomPanel.Analysis.Eye.StopAsync(),
         BottomPanel.Analysis.Optimization.StopAsync(), BottomPanel.Analysis.MonteCarlo.StopAsync());
     public async ValueTask DisposeAsync() { try { await StopAsync(); } finally { Dispose(); } }
@@ -342,6 +343,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         LeftPanel = leftPanel;
         RightPanel = rightPanel;
         BottomPanel = bottomPanel;
+        _analysisDocumentBinding = new Shell.PersistentAnalysisDocumentBinding(
+            canvas, bottomPanel.Analysis, rightPanel.CompressLayout);
         Registry = registryBrowser;
 
         GdsImport = gdsImportButton;

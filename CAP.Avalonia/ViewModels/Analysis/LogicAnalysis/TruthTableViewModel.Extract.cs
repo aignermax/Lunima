@@ -14,11 +14,13 @@ public partial class TruthTableViewModel
 {
     /// <summary>Extracts the truth table for the current pin assignment.</summary>
     [RelayCommand]
-    private async Task Extract()
-    {
-        if (IsProcessing || _group == null)
-            return;
+    private Task Extract() => _work.RunAsync(ExtractOwnedAsync);
 
+    private async Task ExtractOwnedAsync(CancellationToken ownerToken)
+    {
+        if (IsProcessing || !IsGroupSelected || _group == null || !_work.IsConfiguredCurrent) return;
+        var group = _group;
+        var canvas = _canvas;
         var inputs = InputPins.Where(p => p.IsChecked).Select(p => p.PinName).ToArray();
         var outputs = OutputPins.Where(p => p.IsChecked).Select(p => p.PinName).ToArray();
         var biases = BiasPins.Where(p => p.IsChecked).Select(p => p.PinName).ToArray();
@@ -28,97 +30,97 @@ public partial class TruthTableViewModel
             return;
         }
 
-        _extractCts = new CancellationTokenSource();
-        IsProcessing = true;
-        StatusText = Translate("Analysis.TruthTable.Running");
+        AnalysisSweepOperation? operation;
+        try { operation = _work.Begin(ownerToken); }
+        catch (OperationCanceledException) { return; }
+        if (operation == null) return;
+        var threshold = Threshold;
+        var wavelength = ResolveWavelengthNm();
+        var previous = group.TruthTablePinAssignment;
+        var assignment = new TruthTablePinAssignment
+        {
+            InputPinNames = inputs.ToList(), OutputPinNames = outputs.ToList(), BiasPinNames = biases.ToList(),
+            Threshold = threshold, IsRegister = IsRegister,
+            InputSignalNames = PreservedSignalNames(previous?.InputSignalNames, inputs),
+            OutputSignalNames = PreservedSignalNames(previous?.OutputSignalNames, outputs)
+        };
         try
         {
-            var table = await _extractor.ExtractAsync(
-                _group, inputs, outputs, biases, Threshold, ResolveWavelengthNm(), _extractCts.Token);
-            ShowTable(table);
-            SuggestThreshold(table);
-            // Persist the winning assignment on the group (issue #981) so the next
-            // save → load round trip prefills the panel — a cancelled or failed
-            // extraction must not overwrite the last good one. Signal names (#1025,
-            // #1046) ride along for pins that keep their role: re-extracting must not
-            // silently drop the signal identity a design carries. The register
-            // designation (#1086) comes from the panel's toggle: it mirrors the
-            // previous assignment after the selection prefill, and a toggle made
-            // before the first extraction persists here for the first time (#1098).
-            var previous = _group.TruthTablePinAssignment;
-            _group.TruthTablePinAssignment = new TruthTablePinAssignment
+            await _publication.PublishAsync(() =>
             {
-                InputPinNames = inputs.ToList(),
-                OutputPinNames = outputs.ToList(),
-                BiasPinNames = biases.ToList(),
-                Threshold = Threshold,
-                InputSignalNames = PreservedSignalNames(previous?.InputSignalNames, inputs),
-                OutputSignalNames = PreservedSignalNames(previous?.OutputSignalNames, outputs),
-                IsRegister = IsRegister,
-            };
-            // The canvas register marker reads the persisted flag: an extraction can
-            // create or replace it, so the marker must be offered a repaint either way.
-            _canvas?.RepaintRequested?.Invoke();
-            SignalNamesVisible = true;
-            StatusText = string.Format(Translate("Analysis.TruthTable.Complete"), table.Rows.Count);
+                PublishStep(operation, () => IsProcessing = true);
+                PublishStep(operation, () => StatusText = Translate("Analysis.TruthTable.Running"));
+            });
+            operation.ThrowIfObsolete();
+            // ExtractAsync synchronously captures the detached optical snapshot before its first await.
+            var table = await _extractor.ExtractAsync(group, inputs, outputs, biases, threshold, wavelength, operation.Token);
+            await _publication.PublishAsync(() =>
+            {
+                operation.ThrowIfObsolete();
+                ShowTable(table, operation);
+                SuggestThreshold(table, operation);
+                operation.CommitAndAdvance(() => group.TruthTablePinAssignment = assignment);
+                PublishStep(operation, () => canvas?.RepaintRequested?.Invoke());
+                PublishStep(operation, () => SignalNamesVisible = true);
+                PublishStep(operation, () => StatusText = string.Format(
+                    Translate("Analysis.TruthTable.Complete"), table.Rows.Count));
+            });
         }
         catch (OperationCanceledException)
         {
-            HasResult = false;
-            Rows.Clear();
-            StatusText = Translate("Analysis.TruthTable.Cancelled");
+            await PublishFailureAsync(operation, Translate("Analysis.TruthTable.Cancelled"));
         }
-        catch (ArgumentException ex)
+        catch (Exception error)
         {
-            // Extractor validation (unknown pin, pin both in/out, threshold outside
-            // (0,1)…) becomes a readable message instead of a crash.
-            HasResult = false;
-            Rows.Clear();
-            StatusText = string.Format(Translate("Analysis.TruthTable.Failed"), ex.Message);
-        }
-        catch (Exception ex)
-        {
-            // Unexpected simulation failure: never escape the async command and leave
-            // a stale "Extracting…" status behind.
-            HasResult = false;
-            Rows.Clear();
-            StatusText = string.Format(Translate("Analysis.TruthTable.Failed"), ex.Message);
+            // Validation and solver failures remain readable; a replaced selection owns its own display.
+            await PublishFailureAsync(operation, string.Format(Translate("Analysis.TruthTable.Failed"), error.Message));
         }
         finally
         {
-            IsProcessing = false;
-            _extractCts?.Dispose();
-            _extractCts = null;
+            try { await _publication.PublishAsync(() => IsProcessing = false); }
+            finally { await _work.CompleteAsync(operation); }
         }
     }
 
-    /// <summary>Cancels the running extraction.</summary>
+    private Task PublishFailureAsync(AnalysisSweepOperation operation, string message) =>
+        _publication.PublishAsync(() =>
+        {
+            // User cancellation retains context for feedback; document/selection changes do not.
+            if (!operation.IsContextCurrent) return;
+            HasResult = false;
+            if (!operation.IsContextCurrent) return;
+            Rows.Clear();
+            if (operation.IsContextCurrent) StatusText = message;
+        });
+
+    /// <summary>Cancels the running extraction while its owner continues to drain it.</summary>
     [RelayCommand]
-    private void Cancel() => _extractCts?.Cancel();
+    private void Cancel() => _work.Cancel();
 
-    private void ShowTable(TruthTable table)
+    private static void PublishStep(AnalysisSweepOperation operation, Action publish)
     {
-        Rows.Clear();
-        InputHeaders.Clear();
-        OutputHeaders.Clear();
-        foreach (var name in table.InputPinNames)
-            InputHeaders.Add(name);
-        foreach (var name in table.OutputPinNames)
-            OutputHeaders.Add(name);
+        if (!operation.TryPublish(publish)) throw new OperationCanceledException();
+        operation.ThrowIfObsolete();
+    }
 
+    private void ShowTable(TruthTable table, AnalysisSweepOperation operation)
+    {
+        PublishStep(operation, Rows.Clear);
+        PublishStep(operation, InputHeaders.Clear);
+        PublishStep(operation, OutputHeaders.Clear);
+        foreach (var name in table.InputPinNames)
+            PublishStep(operation, () => InputHeaders.Add(name));
+        foreach (var name in table.OutputPinNames)
+            PublishStep(operation, () => OutputHeaders.Add(name));
         foreach (var row in table.Rows)
         {
             var inputBits = table.InputPinNames.Select(name => row.InputBits[name] ? "1" : "0");
-            var cells = table.OutputPinNames
-                .Select(name => ToCell(row.Outputs[name]))
-                .ToArray();
-            Rows.Add(new TruthTableRowViewModel(string.Join(" ", inputBits), cells));
+            var cells = table.OutputPinNames.Select(name => ToCell(row.Outputs[name])).ToArray();
+            PublishStep(operation, () => Rows.Add(new TruthTableRowViewModel(string.Join(" ", inputBits), cells)));
         }
-
-        BiasSummaryText = table.BiasPinNames.Count > 0
-            ? string.Format(Translate("TruthTable.BiasSummary"), string.Join(", ", table.BiasPinNames))
-            : "";
-        HasResult = true;
+        PublishStep(operation, () => BiasSummaryText = table.BiasPinNames.Count > 0
+            ? string.Format(Translate("TruthTable.BiasSummary"), string.Join(", ", table.BiasPinNames)) : "");
+        PublishStep(operation, () => HasResult = true);
     }
 
     private static TruthTableOutputCellViewModel ToCell(LogicOutputValue value) =>

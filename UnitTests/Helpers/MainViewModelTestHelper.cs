@@ -53,7 +53,10 @@ public static class MainViewModelTestHelper
         CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
         CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore? designFiles = null,
         GdsExportViewModel? gdsExportViewModel = null,
-        MonteCarloViewModel? monteCarloViewModel = null)
+        MonteCarloViewModel? monteCarloViewModel = null,
+        TimeDomainViewModel? transientViewModel = null,
+        EyeDiagramViewModel? eyeViewModel = null,
+        CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel? truthTableViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -71,8 +74,8 @@ public static class MainViewModelTestHelper
             new UnitTests.ComponentRegistry.RegistryClient.RegistryTestHarness().CreateClient());
         // A caller-supplied LeftPanel (UI-flow tests) must share canvas/prefs with the rest of the VM.
         leftPanel ??= CreateLeftPanelViewModel(canvas, libraryManager, pdkLoader, preferencesService, commandManager, registryBrowser);
-        var rightPanel = CreateRightPanelViewModel(canvas, preferencesService, logicNetworkProvider);
-        var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager, monteCarloViewModel);
+        var rightPanel = CreateRightPanelViewModel(canvas, preferencesService, logicNetworkProvider, truthTableViewModel);
+        var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager, monteCarloViewModel, transientViewModel, eyeViewModel);
 
         var errorConsoleService = new CAP_Core.ErrorConsoleService();
         var gdsExportVm = gdsExportViewModel ?? new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService(), errorConsoleService);
@@ -194,7 +197,8 @@ public static class MainViewModelTestHelper
     public static RightPanelViewModel CreateRightPanelViewModel(
         DesignCanvasViewModel? canvas = null,
         UserPreferencesService? preferencesService = null,
-        CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null)
+        CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null,
+        CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel? truthTableViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         preferencesService ??= new UserPreferencesService(
@@ -217,7 +221,7 @@ public static class MainViewModelTestHelper
             new AiAssistantViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), Mock.Of<IAiService>(), preferencesService),
             new OnaSweepViewModel(),
             new CAP.Avalonia.ViewModels.Export.Netlist.NetlistViewModel(),
-            new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel(),
+            truthTableViewModel ?? new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
                 builtNetworkProvider: logicNetworkProvider),
             // Production provider order (CanvasAndPanelExtensions): most specific
@@ -238,7 +242,9 @@ public static class MainViewModelTestHelper
     public static BottomPanelViewModel CreateBottomPanelViewModel(
         DesignCanvasViewModel? canvas = null,
         CommandManager? commandManager = null,
-        MonteCarloViewModel? monteCarloViewModel = null)
+        MonteCarloViewModel? monteCarloViewModel = null,
+        TimeDomainViewModel? transientViewModel = null,
+        EyeDiagramViewModel? eyeViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -253,8 +259,8 @@ public static class MainViewModelTestHelper
             new ElementLockViewModel(),
             new ErrorConsoleViewModel(errorConsoleService),
             new AnalysisDockViewModel(
-                new TimeDomainViewModel(),
-                new EyeDiagramViewModel(),
+                transientViewModel ?? new TimeDomainViewModel(),
+                eyeViewModel ?? new EyeDiagramViewModel(),
                 new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()),
                 new AnalysisOutputPanelViewModel(),
                 monteCarloViewModel ?? new MonteCarloViewModel(),
