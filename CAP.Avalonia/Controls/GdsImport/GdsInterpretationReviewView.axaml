@@ -238,6 +238,9 @@
             <TextBlock x:Name="GdsReviewPassThroughHint" Classes="caption success" TextWrapping="Wrap"
                        Text="{loc:Localize GdsReview.PassThroughAssumed}"
                        IsVisible="{Binding SelectedCell.IsPassThroughAssumed}"/>
+            <TextBlock x:Name="GdsReviewShapeOnlyHint" Classes="caption secondary" TextWrapping="Wrap"
+                       Text="{loc:Localize GdsReview.GeometryOnly}"
+                       IsVisible="{Binding SelectedCell.IsShapeOnly}"/>
             <TextBlock Classes="strong" Text="{loc:Localize GdsReview.PinMapping}" IsVisible="{Binding HasSelectedModel}"/>
             <ItemsControl ItemsSource="{Binding SelectedCell.Ports}" IsVisible="{Binding HasSelectedModel}">
               <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GdsPortReviewRow">
@@ -256,11 +259,15 @@
             <TextBlock Text="{Binding ConnectionReadiness}" TextWrapping="Wrap" Classes="caption"/>
             <TextBlock Text="{Binding RouteReadiness}" TextWrapping="Wrap" Classes="caption"/>
             <ItemsControl x:Name="GdsReviewPassThroughSummary" ItemsSource="{Binding ActiveCells}"
-                          IsVisible="{Binding HasPassThroughCells}">
+                          IsVisible="{Binding HasModelDecisionRows}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:GdsCellReviewRow">
-                  <TextBlock Classes="caption success" Text="{Binding PassThroughSummaryText}" TextWrapping="Wrap"
-                             IsVisible="{Binding IsPassThroughAssumed}"/>
+                  <StackPanel>
+                    <TextBlock Classes="caption success" Text="{Binding PassThroughSummaryText}" TextWrapping="Wrap"
+                               IsVisible="{Binding IsPassThroughAssumed}"/>
+                    <TextBlock Classes="caption secondary" Text="{Binding GeometryOnlySummaryText}" TextWrapping="Wrap"
+                               IsVisible="{Binding IsShapeOnly}"/>
+                  </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

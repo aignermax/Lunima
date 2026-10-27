@@ -10,6 +10,7 @@ using CAP_Core;
 using CAP_Core.Components.Core;
 using CAP_Core.Export;
 using CAP_DataAccess.Import.Gds;
+using CAP_DataAccess.Import.Gds.Interpretation;
 using Moq;
 using Shouldly;
 using UnitTests.Import.Gds;
@@ -211,6 +212,46 @@ public class GdsImportDesignRoundTripTests : IDisposable
         var frozen = group.InternalPaths.ShouldHaveSingleItem();
         frozen.StartPin.ShouldBeNull();
         frozen.EndPin.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ImportPlaceSaveLoad_ShapeOnlyDecision_RoundTripsInTheInterpretation()
+    {
+        // Issue #1572: the explicit "Shape only · no simulation" decision on a
+        // 2-optical-pin cell must ride the .lun save/load inside the persisted
+        // interpretation — and keep the imported draft geometry-only after reload.
+        var gdsPath = WriteGds();
+        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        using var saveHost = new GdsDesignScopeTestHost();
+        var service = saveHost.CreateService(() => Array.Empty<ComponentTemplate>());
+        var review = new GdsImportInterpretation
+        {
+            TopCellName = "TOP",
+            SourceSha256 = analysis.SourceSha256,
+            Layers = [new(1, 0, GdsLayerRole.OpticalCore), new(1, 10, GdsLayerRole.PortLabel)],
+            Cells = [new() { CellName = "wgA", GeometryOnly = true }]
+        };
+        var outcome = await service.ImportAsync(gdsPath, "TOP",
+            preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes, interpretation: review);
+        saveHost.Scope.Sets.Single().Drafts.Single(d => d.Name == "wgA")
+            .ImportedModelStatus.ShouldBe("geometry-only");
+        saveHost.Scope.Sets.Single().Drafts.Single(d => d.Name == "wgB")
+            .ImportedModelStatus.ShouldBeNull("the untouched sibling keeps the pass-through default");
+
+        var saveCanvas = new DesignCanvasViewModel();
+        await new GdsPlacementExecutor(saveCanvas, null, () => saveHost.Templates.ToList())
+            .ExecuteAsync(GdsPlacementPlan.FromOutcome(outcome));
+        var savePath = Path.Combine(_root, "circuit-shapeonly.lun");
+        await SaveToFile(CreateFileOperations(saveCanvas, saveHost, out _), savePath);
+
+        using var loadHost = new GdsDesignScopeTestHost();
+        var loadCanvas = new DesignCanvasViewModel();
+        await LoadFromFile(CreateFileOperations(loadCanvas, loadHost, out _), savePath);
+
+        var set = loadHost.Scope.Sets.ShouldHaveSingleItem();
+        set.Interpretation.ShouldNotBeNull().Cells.Single(c => c.CellName == "wgA")
+            .GeometryOnly.ShouldBeTrue("the shape-only decision survives the .lun round trip");
+        set.Drafts.Single(d => d.Name == "wgA").ImportedModelStatus.ShouldBe("geometry-only");
     }
 
     /// <summary>

@@ -108,18 +108,32 @@ public sealed partial class GdsCellReviewRow : ObservableObject
     public ObservableCollection<GdsPortReviewRow> Ports { get; } = new();
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PassThroughSummaryText))]
+    [NotifyPropertyChangedFor(nameof(GeometryOnlySummaryText))]
     private string _displayName;
     [ObservableProperty] private bool _expandChildren;
     [ObservableProperty] private bool _includeInGroup;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPassThroughAssumed))]
     [NotifyPropertyChangedFor(nameof(PassThroughSummaryText))]
+    [NotifyPropertyChangedFor(nameof(IsShapeOnly))]
+    [NotifyPropertyChangedFor(nameof(GeometryOnlySummaryText))]
     private GdsModelCandidate? _selectedModel;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPassThroughAssumed))]
+    [NotifyPropertyChangedFor(nameof(PassThroughSummaryText))]
+    [NotifyPropertyChangedFor(nameof(IsShapeOnly))]
+    [NotifyPropertyChangedFor(nameof(GeometryOnlySummaryText))]
+    private bool _geometryOnly;
     [ObservableProperty] private bool _detectionLimited;
     public bool PortsEdited { get; set; }
     public GdsCellReviewRow(string name, bool canExpand, GdsLayerGeometryScene scene)
     {
         CellName = name; _displayName = name; CanExpand = canExpand; Scene = scene; Bounds = scene.Bounds;
+    }
+    /// <summary>Choosing a model retracts the explicit shape-only decision — the model wins.</summary>
+    partial void OnSelectedModelChanged(GdsModelCandidate? value)
+    {
+        if (value != null) GeometryOnly = false;
     }
     /// <summary>
     /// True when this cell keeps no mapped model and its ports qualify for the
@@ -128,19 +142,28 @@ public sealed partial class GdsCellReviewRow : ObservableObject
     /// (<see cref="GdsImportService.IsPassThroughEligible(IEnumerable{string?})"/>)
     /// through the same review→draft conversion (<see cref="GdsPortReviewRow.ToPin"/>)
     /// that <c>BuildInterpretation</c> persists, so hint and import can never drift.
+    /// An explicit shape-only decision (<see cref="GeometryOnly"/>) opts out.
     /// </summary>
-    public bool IsPassThroughAssumed => SelectedModel == null &&
+    public bool IsPassThroughAssumed => !GeometryOnly && SelectedModel == null &&
         GdsImportService.IsPassThroughEligible(Ports.Select(p =>
             p.ToPin().IsElectrical == true ? PinKindHelper.ElectricalKindName : (string?)null));
+    /// <summary>True when the reviewer explicitly declined every model, pass-through included.</summary>
+    public bool IsShapeOnly => GeometryOnly && SelectedModel == null;
     /// <summary>Summary-stage line naming this cell's assumed pass-through model; empty when mapped or ineligible.</summary>
     public string PassThroughSummaryText => IsPassThroughAssumed
         ? string.Format(LocalizationService.Instance.Translate("GdsReview.PassThroughSummaryRow"), DisplayName)
         : "";
-    /// <summary>Re-raises the pass-through hint after port edits; collection and kind changes don't notify the row.</summary>
+    /// <summary>Summary-stage line naming this cell's explicit shape-only decision; empty otherwise.</summary>
+    public string GeometryOnlySummaryText => IsShapeOnly
+        ? $"{DisplayName}: {LocalizationService.Instance.Translate("GdsReview.GeometryOnly")}"
+        : "";
+    /// <summary>Re-raises the model-decision hints after port edits; collection and kind changes don't notify the row.</summary>
     public void NotifyPassThroughChanged()
     {
         OnPropertyChanged(nameof(IsPassThroughAssumed));
         OnPropertyChanged(nameof(PassThroughSummaryText));
+        OnPropertyChanged(nameof(IsShapeOnly));
+        OnPropertyChanged(nameof(GeometryOnlySummaryText));
     }
     public override string ToString() => CellName;
 }
