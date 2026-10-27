@@ -28,6 +28,9 @@
 - Save/export/undo with an open nested group while the root changes: phases 3–4 tests preserve scope, IDs and full document state.
 - Large selected imported scenes and repeated project replacement: phases 2/5 tests measure full-operation heartbeat and release old owners, without sacrificing exact saved geometry.
 
+The phase 1–4 lists below describe the original implementation sequence.
+The A01–A18 status matrix and dated execution records track actual completion.
+
 ## Phase 1 — Correctness and trustworthy constraints
 
 ### Task 1: History-owned crossing metadata (A01)
@@ -36,10 +39,10 @@ Files: `CAP.Avalonia/Commands/CommandManager.cs`, `CAP.Avalonia/ViewModels/Canva
 
 Interface: add a history-entry retirement notification carrying `IUndoableCommand`; trimming the oldest entry, dropping redo, canceling an uncommitted reservation and clearing history must have defined ownership semantics. Journal removes only retired entry metadata; generation still rejects late worker changes.
 
-- [x] Add regression for 130 nonmergeable commands with crossing metadata; undo retained entries and compare exact topology/order.
-- [x] Coordinator runs focused wrapper test and observes expected failure.
-- [x] Implement precise retirement; test undo/redo/merged/pending/reset cases.
-- [x] Run related routing/history regressions, review diff, fix findings, commit.
+- Add regression for 130 nonmergeable commands with crossing metadata; undo retained entries and compare exact topology/order.
+- Coordinator runs focused wrapper test and observes expected failure.
+- Implement precise retirement; test undo/redo/merged/pending/reset cases.
+- Run related routing/history regressions, review diff, fix findings, commit.
 
 ### Task 2: Bounded subprocess lifecycle (A02)
 
@@ -47,9 +50,9 @@ Files: `CAP.Avalonia/Services/Solvers/SubprocessJsonRunner.cs`, tests under `Uni
 
 Preserve `RunAsync(ProcessStartInfo, string, TimeSpan, CancellationToken, Action<string>?)` and its result contract. Start readers before writing; linked cancellation covers writing, stream collection and process exit; kill/reap on failure or cancellation.
 
-- [ ] Add controlled child-process tests for blocked input, early pipe closure and cancellation.
-- [ ] Observe failing baseline through coordinator, implement, run solver/process tests.
-- [ ] Independently review platform and resource behavior, commit.
+- Add controlled child-process tests for blocked input, early pipe closure and cancellation.
+- Observe failing baseline through coordinator, implement, run solver/process tests.
+- Independently review platform and resource behavior, commit.
 
 ### Task 3: Enforced source ceiling and current documentation (A12–A14)
 
@@ -57,11 +60,11 @@ Files: new `scripts/check_source_size.py`, `.githooks/pre-commit`, hook setup sc
 
 Interface: size checker supports whole-tree and `--staged`; nonzero exit lists path and count for >=1000 lines. Read staged blobs using git, never unstaged content. During migration the whole-tree check reports unresolved inventory; final gate has no legacy exemption.
 
-- [ ] Inventory all tracked over-limit sources and separately report non-source data.
-- [ ] Test 999/1000 boundary, index/worktree mismatch, deleted/renamed files and spaces.
-- [ ] Implement hook/checker and documented opt-in installation preserving existing hooks.
-- [ ] Add safe serial test entry point with Slow/Heavy exclusions; verify docs commands against real runner.
-- [ ] Correct docs and delete requested obsolete assessment; review and commit.
+- Inventory all tracked over-limit sources and separately report non-source data.
+- Test 999/1000 boundary, index/worktree mismatch, deleted/renamed files and spaces.
+- Implement hook/checker and documented opt-in installation preserving existing hooks.
+- Add safe serial test entry point with Slow/Heavy exclusions; verify docs commands against real runner.
+- Correct docs and delete requested obsolete assessment; review and commit.
 
 ## Phase 2 — Resource ownership and reliable verification
 
@@ -69,29 +72,29 @@ Interface: size checker supports whole-tree and `--staged`; nonzero exit lists p
 
 Files: `Connect-A-Pic-Core/Export/NazcaComponentPreviewService.cs`, `CAP.Avalonia/Controls/Canvas/ComponentPreview/`, `CAP.Avalonia/DI/PdkOffsetFeatureExtensions.cs`, preview tests.
 
-- [ ] Specify one bounded geometry cache owner and environment-generation identity; preserve existing public render APIs through adapters.
-- [ ] Test retained capacity and environment change during in-flight rendering; observe failing baseline.
-- [ ] Implement and test exact existing preview/PDK behavior and repeated variants; review, commit.
+- Specify one bounded geometry cache owner and environment-generation identity; preserve existing public render APIs through adapters.
+- Test retained capacity and environment change during in-flight rendering; observe failing baseline.
+- Implement and test exact existing preview/PDK behavior and repeated variants; review, commit.
 
 ### Task 5: Runtime and performance test integrity (A08, A09, A15)
 
 Files: package/project properties, `UnitTests/UnitTests.csproj`, `UiThreadWatchdog.cs`, responsiveness/repeated-load/lifetime tests.
 
-- [ ] Centralize matching Avalonia package versions and verify resolved dependency graph.
-- [ ] Add a yielding-then-blocking UI command probe that fails prefix-only measurement.
-- [ ] Measure dispatcher heartbeat across completion; separate warm-up and fresh equivalent measured states.
-- [ ] Add old-session weak-reference and pending-job retention coverage; build/test/review.
+- Centralize matching Avalonia package versions and verify resolved dependency graph.
+- Add a yielding-then-blocking UI command probe that fails prefix-only measurement.
+- Measure dispatcher heartbeat across completion; separate warm-up and fresh equivalent measured states.
+- Add old-session weak-reference and pending-job retention coverage; build/test/review.
 
 ### Task 6: MCP lifecycle and verified external artifacts (A10, A11, A15, A16)
 
 Files: AgentBridge transport/dispatcher/catalog/tool interfaces and implementations; update downloader/installer/checker; `UvBootstrapper`; their tests and release workflow.
 
-- [ ] Thread cancellation through tool invocation; track/drain accepted work and serialize mutation admission.
-- [ ] Regression proves Stop prevents late design mutation and handles concurrent request cancellation.
-- [ ] Define and test authenticated artifact metadata/verification policy; pin and verify bootstrap bytes; preserve upgrade compatibility and rollback.
-- [ ] Clean owned temp files on failure/declined install; verify platform paths and quoting.
-- [ ] Remove duplicate MathNet binary only after build/publish output comparison; align SDK/roadmap docs.
-- [ ] Independent lifecycle/security review; commit verified changes separately.
+- Thread cancellation through tool invocation; track/drain accepted work and serialize mutation admission.
+- Regression proves Stop prevents late design mutation and handles concurrent request cancellation.
+- Define and test authenticated artifact metadata/verification policy; pin and verify bootstrap bytes; preserve upgrade compatibility and rollback.
+- Clean owned temp files on failure/declined install; verify platform paths and quoting.
+- Remove duplicate MathNet binary only after build/publish output comparison; align SDK/roadmap docs.
+- Independent lifecycle/security review; commit verified changes separately.
 
 ## Phase 3 — UI-independent document and persistence
 
@@ -99,21 +102,21 @@ Files: AgentBridge transport/dispatcher/catalog/tool interfaces and implementati
 
 Files: DTOs currently in `MainViewModel.cs`, `FileOperationsViewModel.cs`, persistence services and tests. New contract/mapping files live with persistence/application responsibilities rather than presentation.
 
-- [ ] Characterize roundtrips for root/nested groups, routes/crossings, process/material/model state, unknown legacy fields and IDs.
-- [ ] Move DTO ownership without changing JSON names; extract serialization and validation from dialog/UI orchestration.
-- [ ] Classify and retire/adapt the older persistence path with explicit compatibility tests.
-- [ ] Reduce FileOperations to focused presentation/use-case dispatch; no partial-only decomposition.
-- [ ] Run example/load/save/GDS regressions and review public format behavior before commit.
+- Characterize roundtrips for root/nested groups, routes/crossings, process/material/model state, unknown legacy fields and IDs.
+- Move DTO ownership without changing JSON names; extract serialization and validation from dialog/UI orchestration.
+- Classify and retire/adapt the older persistence path with explicit compatibility tests.
+- Reduce FileOperations to focused presentation/use-case dispatch; no partial-only decomposition.
+- Run example/load/save/GDS regressions and review public format behavior before commit.
 
 ### Task 8: Stable session/scope and simulation snapshots (A04, A06, A18)
 
 Files: `DesignCanvasViewModel`, `GroupEditService`, `ConnectionSync`, `SimulationService`, core connection/state APIs and focused new session/snapshot services.
 
-- [ ] Introduce one explicit root/scope accessor and revisioned operation ownership while preserving bindings.
-- [ ] Capture worker input independently of live VM/component/manager mutation; apply only matching-revision results.
-- [ ] Test edit/load/group-switch during paused simulation and routing; stale work cannot mutate a replacement design.
-- [ ] Move authoritative writes behind session operations; view collections become projections with a single synchronization owner.
-- [ ] Run selection/group/undo/export/simulation roundtrips, review and commit.
+- Introduce one explicit root/scope accessor and revisioned operation ownership while preserving bindings.
+- Capture worker input independently of live VM/component/manager mutation; apply only matching-revision results.
+- Test edit/load/group-switch during paused simulation and routing; stale work cannot mutate a replacement design.
+- Move authoritative writes behind session operations; view collections become projections with a single synchronization owner.
+- Run selection/group/undo/export/simulation roundtrips, review and commit.
 
 ## Phase 4 — Genuine decomposition and architectural gates
 
@@ -121,20 +124,20 @@ Files: `DesignCanvasViewModel`, `GroupEditService`, `ConnectionSync`, `Simulatio
 
 Files: `MainViewModel.cs`, `CanvasInteractionViewModel.cs`, `MainWindow.axaml.cs`, `SimpleNazcaExporter.cs` and newly focused responsibilities; existing partial type families reviewed as aggregates.
 
-- [ ] Use the tracked inventory to extract one responsibility at a time with behavior tests.
-- [ ] Move shell composition into feature coordinators with explicit lifecycle, not a giant constructor bag.
-- [ ] Split UI code-behind by actual view/control ownership, input by gesture/use-case, export by intermediate model/emission/process boundary.
-- [ ] Preserve public commands/bindings or migrate callers with equivalence tests; verify all remaining authored source types below ceiling.
-- [ ] Review aggregate type coupling and independently testable responsibility boundaries.
+- Use the tracked inventory to extract one responsibility at a time with behavior tests.
+- Move shell composition into feature coordinators with explicit lifecycle, not a giant constructor bag.
+- Split UI code-behind by actual view/control ownership, input by gesture/use-case, export by intermediate model/emission/process boundary.
+- Preserve public commands/bindings or migrate callers with equivalence tests; verify all remaining authored source types below ceiling.
+- Review aggregate type coupling and independently testable responsibility boundaries.
 
 ### Task 10: Semantic restrictions and remaining oversized tests/scripts (A07, A14)
 
 Files: architecture tests/checker, explicit module policy, every remaining path in the source inventory.
 
-- [ ] Test forbidden alias/static/global/fully-qualified dependencies and unregistered feature handling.
-- [ ] Implement semantic dependency validation with explicit current module coverage and narrow justified shared contracts.
-- [ ] Split oversized tests by behavior with shared fixtures; split scripts by independently meaningful modules, preserving entrypoints.
-- [ ] Require zero whole-tree size violations; no final baselines/exemptions masking authored source.
+- Test forbidden alias/static/global/fully-qualified dependencies and unregistered feature handling.
+- Implement semantic dependency validation with explicit current module coverage and narrow justified shared contracts.
+- Split oversized tests by behavior with shared fixtures; split scripts by independently meaningful modules, preserving entrypoints.
+- Require zero whole-tree size violations; no final baselines/exemptions masking authored source.
 
 ## Phase 5 — Combined verification and final review
 
@@ -159,7 +162,10 @@ Files: architecture tests/checker, explicit module policy, every remaining path 
 - 2026-10-23: A10 transport/call-admission RED confirmed: queued work executes after Stop, Stop returns before accepted work drains, and tools interleave across awaits. Gate1 adds explicit revocable context and drain/serialization; validation pending. Real post-await tool/routing/simulation commits remain Gate2 and depend on A04/A18; compatibility token plumbing alone is not a complete fix.
 - 2026-10-23: A17 boundary RED confirmed ten native-format types lived in presentation. Moved these contracts to CAP-DataAccess/Persistence/NativeDesign with unchanged serialized properties and updated consumers. Verification pending. MainViewModel is still oversized; no claim that the namespace move alone completes decoupling.
 
-## Current acceptance status
+## October 23 verification checkpoints (historical)
+
+These records preserve the evidence and open work at each checkpoint. The current
+A01–A18 matrix below supersedes their provisional status statements.
 
 ### Platform and lifetime checkpoint (still in progress)
 
@@ -297,26 +303,28 @@ Additional verification, 2026-10-23 afternoon:
   passed with 3,750 authored files and no file above 999 physical lines. All 23 Python
   tooling tests passed again, including an actual rejected 1,000-line Git commit.
 
+## Current audit resolution — October 27
+
 | Finding | Status |
 |---|---|
 | A01 | Resolved, reviewed, 124-case combined verification |
-| A02 | Owned-process containment verified on Windows, Linux and macOS (native CI 39940594173); final integration review pending |
+| A02 | Shared containment verified on Windows, Linux and both macOS targets; final inventory found additional preview/export/setup/parser paths needing migration and real-child verification |
 | A03 | Bounded cache, warm lookup and PDK edit invalidation verified; final combined review pending |
-| A04 | Main simulation and wavelength sweeps detached and verified; parameter/Monte Carlo, time-domain and logic extraction inputs remain |
-| A05 | Export split committed; main/file/input/window extraction implemented, combined verification in progress |
-| A06 | Solver, update, MRU, PDK library/reader/writer and diagnostic ports verified; remaining actual dependency edges still require remediation |
-| A07 | Semantic collector and explicit repository/external ownership tests pass; warning inventory remains opt-in until actual forbidden edges are removed |
-| A08 | Shared runtime verified; fresh desktop publish passed before shell extraction, browser pending |
+| A04 | Main, routing, wavelength, logic, parameter, compression, optimization and transient inputs detached and verified; Monte Carlo spectrum verified, Monte Carlo eye input/numerical isolation verified in `ba148c04`; final aggregate verification pending |
+| A05 | Export, shell/file/input/window and routing decomposition committed with behavior controls; final aggregate review pending |
+| A06 | Configured capability boundaries enforced; desktop/browser rebuilds have zero dependency diagnostics (`abe363e8`); final-head verification pending |
+| A07 | Semantic analyzer mandatory as errors in all shipping projects; negative and ownership coverage tests pass, no opt-in warning baseline remains |
+| A08 | Shared runtime verified; desktop/browser rebuilds pass; fresh final-head publish comparison pending |
 | A09 | All 22 command budgets pass at the unchanged 100 ms threshold; exact raster reuse and corrected acknowledgement timing committed as fe232861, final integration review pending |
 | A10 | Actual MCP/assistant mutation admission, post-cleanup response gating and isolated repair trials verified; final integrated review pending |
-| A11 | Pinned uv, authenticated updater download and signed publisher tooling verified; production public-key provisioning and installer handoff review pending |
-| A12 | Checked-in runner/docs implemented; all 24 tooling tests pass, including actual 1,000-line commit rejection |
-| A13 | April report removed, active docs reconciled; update as extractions land |
-| A14 | Hook/CI guard active; 4,037 tracked authored files pass the 999-line ceiling; final fresh inventory and aggregate responsibility review remain |
-| A15 | Main/window, updater, Python, solver scopes, application registry and thumbnail retirement verified; component editor/settings and other direct panel owners remain |
+| A11 | Pinned uv, authenticated updater download, installer handoff and signed publisher tooling verified; operational publisher key/secret provisioning remains external to this unreleased PR |
+| A12 | Checked-in runner/docs implemented; all 24 tooling tests pass, including actual 1,000-line commit rejection; four APT fallback controls additionally pass |
+| A13 | April report removed; architecture/map and this matrix updated for implemented boundaries; final documentation review pending |
+| A14 | Hook/CI guard active; 4,185 tracked authored files pass the 999-line ceiling; final inventory and aggregate review remain |
+| A15 | Main/window, updater, Python, solver, registry, thumbnail, editor/settings and analysis owners verified; shared shell analysis shutdown committed in `190a76d2`; truth-table ownership and shell New/Load rebinding verified in `86830706`; four direct Python process lifetime gaps remain |
 | A16 | Binary/SDK cleanup verified with fresh desktop publish; final branch/platform checks pending |
 | A17 | Native DTO/workflow separation and detached atomic save verified, including actual Linux/macOS symlink/mode checks; final integrated review pending |
-| A18 | Root metadata/native I/O guards and canonical group wires verified; private routing including crossing records/prototypes passes comparison tests; actual UI worker integration, command publication and long-lived configuration admission remain in progress |
+| A18 | Canonical root/scope, native capture, actual UI routing/grid publication, undo and configured-document admission verified; remaining analysis work tracked under A04/A15 |
 
 Further integration checkpoints (same day):
 
@@ -539,3 +547,187 @@ Further integration checkpoints (same day):
   57 distinct LUN001 diagnostics (70 previously), no LUN002/003. Remaining
   dependencies and exact ownership classification are still being remediated;
   semantic enforcement is not yet a required passing gate.
+
+
+### 2026-10-27 — Mandatory dependency gates and continued runtime verification
+
+- `abe363e8` replaces remaining presentation-owned filesystem/process/catalog
+  construction with configured capabilities. Exact-member ownership allows only
+  the default MainWindow compatibility constructor to compose its default ports.
+  Desktop and browser clean rebuilds pass with the semantic analyzer enabled as
+  errors by default; no opt-in warning configuration remains.
+- `tests-20261027-121332-56952.log`: 166 passed, one GateView responsiveness failure
+  (142 ms versus the unchanged 100 ms limit). A previous pass was insufficient
+  evidence of stable performance. Compact matrix capture is being measured and
+  verified against existing numeric, formula, routing and clone-ID behavior.
+- `tests-20261027-121803-23924.log`: 19 passed, four intentional PDK process REDs.
+  Closed pipes bypassed the deadline, cancellation returned before root reaping,
+  and both descendant-output variants escaped correct cleanup. Coarse retry
+  callback/budget/counter controls pass before extraction.
+- `tests-20261027-122250-18964.log`: 892 passed, one GateView responsiveness failure
+  (107 ms), one external PhotonTorch skip. PDK process retirement and extracted
+  coarse retry controls pass. These are scoped results, not whole-branch acceptance.
+- Full PR CI on `0408129f`: eight test shards passed; slow-export was canceled
+  before tests because apt setup took 27 minutes 47 seconds. `14e1e9df` retains
+  install progress and bounds individual network retries/timeouts; actual fresh
+  CI remains necessary. Native process CI passed Ubuntu and both macOS targets.
+- Source checker: 4,088 tracked authored files below 1,000 lines; 24 Python
+  guard-tool tests passed. Untracked additions require staging and a new check.
+
+Implemented in `76347951` — original parameter-sweep scope: parameter sweeps must capture the selected slider,
+range, source fields and optical circuit before scheduling; trials update private
+matrices only. Keep the legacy ParameterSweeper API/semantics for its direct
+callers. The panel owns accepted work through cleanup, guards result/status and
+CSV publication against document/selection replacement, and joins shell shutdown.
+Existing CSV formatting, source detection, 1550 nm sample behavior and pin display
+names remain compatible. Tests first reproduce live trial-slider writes and
+reentrant selection replacement, then hold a real detached solve across edits,
+replacement, cancellation and retirement. No other panel is implicitly covered.
+
+
+Implemented in `76347951` — original layout-compression scope: reproduce reconfiguration during running
+feedback, then detach force calculation from live editor components. Retain one
+force algorithm and its existing iteration, ordering, spacing, locked-component
+and centering rules; the compatibility facade continues applying positions for
+direct callers. The panel captures values and the original target array before
+feedback, owns actual worker and routing cleanup, and applies immutable progress
+frames only on the dispatcher under a revision lease. Reconfiguration or shutdown
+revokes further commits, including queued progress and derived routing results.
+No new layout algorithm or UI flow is introduced. Verify legacy numeric controls,
+private snapshot isolation, stale-progress rejection, and actual retirement.
+
+### 2026-10-27 — Review-driven runtime isolation and concurrent retirement
+
+- `tests-20261027-130633-67676.log`: 143 passed, 16 intentional regression
+  failures, zero skips. Windows CMD arguments/lifetime and parameter sweep
+  corrections pass. New failures prove seven MakeGate callback/retention defects,
+  five shell admission/retirement races, three transient live-state leaks, and
+  replacement-canvas compression during preparation.
+- `tests-20261027-131310-58672.log`: all 303 selected tests pass with zero skips,
+  including the above fixes, existing transient physics, MakeGate commands,
+  selection controls and compression snapshot/retirement controls. This is a
+  scoped checkpoint, not final acceptance. Further callback and already-applied
+  compression-progress cleanup controls are being added after review.
+- `3a000ac5` captures transient circuit physics and diagnostic ownership.
+  `c77aa3a9` preserves real Windows batch-forwarder arguments and adds a Windows
+  native CI job requiring all 14 batch cases with zero skips. `cfde323c`
+  synchronizes shell admission, completion and retirement; independent review
+  found no material issue. The corrected Windows diagnosis is argument parsing,
+  not unsupported batch process admission: direct dispatch worked on the tested OS.
+- Full PR CI at `e042c785` completed: all shards except fast-rest passed. The
+  latter exposed concurrent HashSet mutation in ShellWorkScope from selection
+  rebuild completion; five local regressions reproduce it before `cfde323c`.
+  Native Linux/macOS jobs passed. New `cfde323c` CI is running; architecture
+  guardrails and release-signing tooling have passed.
+- Python guard tooling: 24 tests pass. Size checker passes for 4,108 tracked
+  authored files. New untracked analysis additions still require final staging
+  and a repeated whole-tree check.
+
+### 2026-10-27 — Analysis parity and adversarial UI publication
+
+- `tests-20261027-134112-7008.log`: 770 passed, one failure, zero skips.
+  Snapshot parity, source-size/dependency guards, actual Windows batch argv,
+  analysis retirement and accepted compression-progress routing cleanup passed.
+  The failure was an old reflection fixture calling a changed private plot method;
+  it now drives the real transient command and retains its original zoom/buffer
+  assertions. That replacement passed the following run.
+- `tests-20261027-134903-46224.log`: 55 passed, 25 intentional review failures,
+  zero skips. The failures cover Monte Carlo publication/retirement (13), nested
+  observable collection rebuilds and stale collection senders (5), cleanup after
+  a throwing completion observer (4), and three corrupted legacy error strings;
+  the collection total includes the MakeGate case and overlaps no other category.
+  Corrections are in progress; no whole-branch acceptance is claimed.
+- Native CI on `cfde323c` passed Windows, Linux and both macOS targets. On
+  `a435b3c7`, all 14 Windows batch controls still pass, but one additional native
+  CLI test fails deleting its temporary directory after process-exit assertions.
+  A real Windows sharing-lock cleanup regression is being added. Linux/macOS,
+  semantic architecture checks and signing tooling pass on that head.
+- `tests-20261027-140223-28004.log`: 812 passed, two intentional regressions,
+  zero skips. All 25 preceding review failures now pass. New failures reproduce
+  the gate editor's lease leak after a throwing completion observer and Windows
+  fixture cleanup under a held sharing lock.
+- `tests-20261027-140721-23484.log`: 114 passed, five intentional regressions,
+  zero skips. Both previous fixes pass, including every Windows CLI case. New
+  failures demonstrate deferred transient plot publication outliving its lease
+  and four Monte Carlo eye live-input leaks. Three legacy eye metric controls
+  pass, including fixed receiver RIN versus the eye panel's different policy.
+- Verified commits: `76347951` isolates parameter sweeps/layout compression;
+  `eedfe2c1` captures fabrication spectrum trials; `a4655899` owns Monte Carlo
+  panel work; `2c8e9ba5` sequences display notifications; `cb2e112e` isolates
+  circuit optimization; `dba4f663` bounds Windows fixture sharing-lock cleanup;
+  `9906939c` owns gate editor work. Shared shell shutdown integration awaits the
+  transient slice commit. These commits have not yet received final full CI.
+- `tests-20261027-141244-46852.log`: 299 passed, zero failed/skipped. Awaited
+  transient display publication fixes the immediate nested-run regression;
+  existing transient/eye physics, trace visibility and shell retirement controls
+  remain green. `190a76d2` commits the transient slice and shared shell shutdown.
+- Whole-tree source check now covers 4,168 tracked authored files below 1,000
+  lines. All 24 Python guard-tool tests pass. The branch through `190a76d2` is
+  pushed for fresh CI; the uncommitted Monte Carlo eye regressions remain open.
+- `tests-20261027-141534-58280.log`: seven Monte Carlo eye failures and three
+  passing legacy-policy controls, zero skips. Further inspection is required for
+  the output-removal fixture's sensitivity assertion; it must not be counted as
+  demonstrated production isolation solely from the failure count.
+- Final integration review found persistent shell panels were not rebound after
+  accepted New/Load, and the separate visible TruthTable panel lacked owned
+  extraction/publication. Both are required functionality gaps, not optional
+  architecture enhancements. Their public-command regressions are now included.
+- `tests-20261027-142328-44288.log`: 161 passed, 12 failed, zero skips. Four real
+  shell replacement regressions and seven truth-table ownership regressions fail
+  as intended. Rejected replacement controls and legacy truth-table behavior pass.
+  Monte Carlo eye numeric and panel controls pass except the output-removal
+  sensitivity fixture, which still reports no changed live metric and needs repair.
+- Native CI on `190a76d2` passes Windows, Linux and both macOS targets; architecture
+  and signing-tool checks also pass. Full PR CI is still running. The previous
+  superseded run spent 26 minutes downloading packages from the Azure Ubuntu
+  mirror; `8d655f69` bounds download-only preparation and retries the canonical
+  mirror without interrupting dpkg. Extracted Bash syntax validation passes;
+  actual final-head workflow verification remains required.
+
+- `tests-20261027-143606-38816.log`: 391 passed, three failed, zero skips.
+  Primary project-replacement and truth-table fixes pass. Two additional coordinator
+  regressions expose retirement during rebinding and an observer error stranding
+  other panels; the remaining Monte Carlo failure is fixture sensitivity.
+- `tests-20261027-144407-29008.log`: 474 passed, one failed, zero skips.
+  Both coordinator regressions now pass. `86830706` commits reviewed truth-table
+  ownership and persistent-panel rebinding, including accepted/rejected New/Load.
+  The Monte Carlo output-removal fixture now distinguishes upstream/downstream
+  traces, but its severe attenuation closes the eye and needs a realistic level.
+  An earlier compile attempt failed on an IReadOnlyDictionary assertion overload;
+  this was corrected without changing its assertion.
+- CI `40512905887` on `8d655f69`: seven xUnit shards passed; fast-rest exhausted
+  package preparation because a file-based apt mirror list escaped the fallback.
+  Slow-integration passed 229 tests and exceeded the unchanged six-second imported
+  routing budget at 6.314 seconds. Both are under investigation. Native process
+  CI passes all four OS targets; architecture and signing-tool checks pass.
+
+- `tests-20261027-144956-33636.log`: all 109 selected Monte Carlo and production
+  routing tests pass, zero skips. Output-policy fixture uses moderate attenuation
+  and zero-delay routes, preserving positive eye and changed-live sensitivity.
+  `ba148c04` commits the captured Monte Carlo eye metric and lifetime controls.
+- Production routing phase measurement: total 3.006 s locally, of which private
+  router/grid reconstruction is 2.649 s; manager work is 221 ms and capture/apply
+  phases each below 35 ms. Imported routes remain frozen. Temporary diagnostics
+  are uncommitted; the unchanged six-second CI budget remains under remediation.
+- `99dacab2` handles the runner's actual file-based APT mirror list. All 28 Python
+  guard/tool tests pass; the four new tests exercise the action's embedded fallback
+  and preserve unrelated repository URLs. Bash syntax checks pass. Branch through
+  `ba148c04` is pushed; 4,185 tracked authored files satisfy the 999-line ceiling.
+- Final process inventory found real A02/A15 gaps in preview, GDS script execution,
+  uv setup and Nazca PDK parsing: deadlines omit some pipe/exit phases or cancellation
+  returns without actual process cleanup. Controlled-child regressions and fixes
+  are required before closing these findings; standalone updater/shell launches
+  intentionally have independent ownership and are not these workflows.
+
+- `tests-20261027-145714-56692.log`: 46 passed, 15 expected lifetime regression
+  failures, zero skips. Failures demonstrate preview/export, uv and parser root or
+  descendant survival, inherited-pipe hangs, cancelled admission and missing exit
+  deadlines. Existing parser/uv/export controls pass. One raw-code fixture failure
+  still needs classification before being counted as a production defect.
+  The preceding attempt failed compilation because temporary domain profiling
+  referenced an application namespace; the probe was corrected without relaxing
+  the mandatory dependency analyzer.
+- Fine routing timings confirm outline scan conversion dominates: 2,908 ms,
+  versus 128 ms transformation, 248 ms stamping, 11 ms clearing and <1 ms allocation;
+  total 3.812 s, frozen-route assertions pass. Reusing immutable exact raster rows
+  is being evaluated with invalidation/parity controls, not by skipping validation.

@@ -46,8 +46,9 @@ models, processes, undo semantics, UI commands and supported platforms.
 
 1. All A01–A18 findings have a committed resolution and verification record; invalid
    premises discovered during implementation are documented with evidence instead.
-2. Authored source including C#, tests, AXAML, Python, shell, JS/TS, HTML/CSS and CI
-   configuration has at most 999 physical lines per file. No added partial splits,
+2. Authored source and documentation, including C#, tests, AXAML, Python, shell,
+   JS/TS, HTML/CSS, CI configuration and Markdown/RST/text documentation, have at
+   most 999 physical lines per file. No added partial splits,
    minification, encoded source or deleted assertions to evade the rule. Existing
    generator-required partial declarations may remain, but new responsibilities
    must be separate collaborators. Data/fixtures/generated-artifact scope is pending

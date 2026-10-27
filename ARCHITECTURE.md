@@ -104,8 +104,14 @@ under `LightCalculation/Snapshots/` before worker execution. Routing captures a
 private hierarchy, graph, constraints and crossing physics under `Routing/Snapshots/`;
 progress and final results are admitted against the document revision. Wavelength analyzer/spectrum runs also capture matrices, sources, material
 models, propagation and facet coupling before scheduling. Truth-table and logic
-network extraction also use captured physics. Gate-view capture performance,
-parameter/Monte Carlo analysis and time-domain paths remain under verification.
+network extraction also use captured physics. Parameter trials and circuit
+optimization run against private matrices; layout compression uses captured bodies
+and publishes positions through a revision lease. Their compatibility facades and
+new workers share the same numerical kernels. Transient simulations capture the
+circuit, excitation and output metadata. Fabrication spectrum and eye sampling
+capture participants, excitation and metric inputs while preserving the legacy
+random draw order and eye-noise policy. These analysis slices have numerical and
+lifetime regression coverage; combined final verification remains open.
 A cancellation token alone is not snapshot isolation.
 
 PDK JSON files are bundled under `CAP-DataAccess/PDKs/`; the schema is documented in
@@ -122,9 +128,11 @@ paths, crossing geometry, assembly cells and the Python script envelope. Complet
 script regression fixtures protect emission order and coordinate conventions.
 
 External tools use `CAP_Core.Export.ProcessLaunchFactory`; opening URLs and files
-uses `IUrlLauncher`. Solver, Python-probe and openEBL owned process sessions drain
-stdout/stderr, exit and descendant cleanup. Other preview/export process call sites
-still need migration; the shared launcher alone does not provide this ownership.
+uses `IUrlLauncher`. Solver, Python-probe, openEBL, PDK-resolution and bridge-registration sessions use
+`Export/Processes/OwnedProcess` through stream drain, exit and descendant cleanup.
+Final review still found incomplete deadline/cancellation/drain paths in preview,
+GDS execution, uv setup and Nazca PDK parsing; these are being remediated under
+A02/A15. The shared launcher alone does not provide this ownership.
 Python setup, registry activation and preview caches have separate capability
 contracts and effective-environment identity; shared DI aliases preserve one cache
 owner. Update manifests are authenticated, while operational release-signing secret
@@ -151,11 +159,27 @@ work retains its owning operation until cleanup and rechecks captured revisions.
 
 `Services/Lifetime/ApplicationWorkCoordinator` drains registered feature owners
 before application disposal. `ShellWorkScope` closes admission and waits for actual
-jobs and asynchronous cancellation callbacks. Analyzer/spectrum, Python, solver,
-editor and registry workflows have adopted this ownership in verified slices;
-remaining panels are tracked in the hardening plan. Async-only owners require
+jobs and asynchronous cancellation callbacks. Shell-owned spectrum/ONA, logic and
+truth-table extraction, GateView/MakeGate, parameter sweep, compression, optimization,
+transient/eye and Monte Carlo jobs are drained by `MainViewModel.StopAsync`.
+Python, solver, editor and registry feature owners also participate in retirement;
+the remaining subprocess gaps are described above. Async-only owners require
 `await using` or `DisposeAsync`, including in test containers. Synchronous disposal
 must not block the UI to hide unfinished work.
+
+Analysis panels retain their document lease through worker completion and any
+accepted routing cleanup. Changing the configured document immediately revokes
+old publication permission. `ObservablePublicationQueue` sequences complete
+display updates when a collection notification triggers a nested configuration
+change: all subscribers finish receiving the old event before the replacement
+collection is rebuilt. Its asynchronous entry point also keeps the operation
+alive until a deferred display action has actually completed.
+`PersistentAnalysisDocumentBinding` reconnects the shell-owned analysis panels after
+an accepted New/Load; cancelled replacements preserve their current operation.
+Independent panel configurations complete even if another notification observer
+throws, and shell retirement prevents further presentation changes. The selection
+truth-table panel owns extraction and publishes only to the captured, still-current
+group; shell shutdown also drains that work.
 
 ## Build, tests and contribution rules
 

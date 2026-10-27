@@ -38,7 +38,7 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | Canvas viewmodel | `CAP.Avalonia/ViewModels/Canvas/DesignCanvasViewModel.cs` |
 | Document identity, revision and operations | `Connect-A-Pic-Core/Documents/` |
 | Immutable main/spectral simulation inputs | `Connect-A-Pic-Core/LightCalculation/Snapshots/` |
-| Truth-table and logic network input capture | `Connect-A-Pic-Core/Analysis/LogicAnalysis/TruthTableSnapshot.cs` |
+| Truth-table and logic network input capture | `Connect-A-Pic-Core/Analysis/LogicAnalysis/TruthTableSnapshot.cs`, `LogicNetworkSnapshot.cs` |
 | Private routing input and results | `Connect-A-Pic-Core/Routing/Snapshots/` |
 | Application and feature retirement | `CAP.Avalonia/Services/Lifetime/` |
 | Native document workflow | `CAP.Avalonia/ViewModels/Panels/NativeDesign/` |
@@ -48,6 +48,9 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | Measured spectrum loading | `Connect-A-Pic-Core/Analysis/MeasuredSpectrum/IMeasuredSpectrumSource.cs` |
 | openEBL submission checking | `Connect-A-Pic-Core/Export/OpenEbl/` via `Export/Contracts/IOpenEblSubmissionChecker.cs` |
 | GDS file reading and parsing | `CAP-DataAccess/Import/Gds/IGdsSourceReader.cs` |
+| Redirected subprocess ownership | `Connect-A-Pic-Core/Export/Processes/OwnedProcess.cs` |
+| Bridge CLI execution and Windows batch adaptation | `CAP.Avalonia/Services/AgentBridge/Registration/CliProcessRunner.cs`, `WindowsBatchCommand.cs` |
+| Explicit shell startup | `CAP.Avalonia/ViewModels/Shell/ShellActivationCoordinator.cs` |
 | Python/export capabilities | `Connect-A-Pic-Core/Export/Contracts/` |
 | Example file inventory and localized projection | `CAP.Avalonia/Services/IExampleFileCatalog.cs`, `FileExampleCatalog.cs`, `ExampleDesignsService.cs` |
 | S-parameter import detection | `CAP-DataAccess/Import/ISParameterImportCatalog.cs`, `SParameterImportCatalog.cs` |
@@ -56,6 +59,16 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | Canvas bounds | `CAP.Avalonia/ViewModels/Canvas/BoundingBoxCalculator.cs` |
 | Parameter sweep viewmodel | `CAP.Avalonia/ViewModels/Analysis/ParameterSweepViewModel.cs` |
 | Parameter sweep calculation | `Connect-A-Pic-Core/Analysis/ParameterSweeper.cs` |
+| Detached parameter trials | `Connect-A-Pic-Core/Analysis/ParameterSweepSnapshot.cs` |
+| Detached layout compression and shared force solver | `Connect-A-Pic-Core/Analysis/LayoutCompressionSnapshot.cs`, `LayoutCompressionSolver.cs` |
+| Detached circuit optimization and shared seeded search | `Connect-A-Pic-Core/Analysis/CircuitOptimization/CircuitOptimizationSnapshot.cs`, `OptimizationSearch.cs` |
+| Captured transient circuit and excitation | `Connect-A-Pic-Core/LightCalculation/TimeDomainSimulation/TransientCircuitSnapshot.cs`, `TransientExcitationSnapshot.cs` |
+| Captured fabrication variations and spectrum | `Connect-A-Pic-Core/Analysis/MonteCarloAnalysis/MonteCarloSpectrumSnapshot.cs`, `FabricationVariance/FabricationSnapshot.cs` |
+| Analysis document lease and accepted routing cleanup | `CAP.Avalonia/ViewModels/Analysis/AnalysisSweepOperation.cs` |
+| Persistent analysis rebinding after accepted New/Load | `CAP.Avalonia/ViewModels/Shell/PersistentAnalysisDocumentBinding.cs` |
+| Truth-table extraction and publication ownership | `CAP.Avalonia/ViewModels/Analysis/LogicAnalysis/TruthTableWorkSession.cs` |
+| Captured Monte Carlo eye metric and fabrication trials | `Connect-A-Pic-Core/Analysis/MonteCarloAnalysis/MonteCarloEyeSnapshot.cs`, `MonteCarloEyeMetric.cs` |
+| Reentrant display notification sequencing | `CAP.Avalonia/ViewModels/ObservablePublicationQueue.cs` |
 | Component groups | `Connect-A-Pic-Core/Components/Core/ComponentGroup.cs` |
 | Nazca export orchestration | `CAP.Avalonia/Services/SimpleNazcaExporter.cs` |
 | Nazca script writers | `CAP.Avalonia/Services/NazcaExport/` (components, connections, dies, geometry, script envelope) |
