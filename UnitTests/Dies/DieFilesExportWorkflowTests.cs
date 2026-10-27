@@ -62,6 +62,9 @@ public class DieFilesExportWorkflowTests
         private int _exports;
         protected override Task<PythonEnvironmentInfo> ProbeEnvironmentAsync(CancellationToken cancellationToken = default) => Task.FromResult(
             new PythonEnvironmentInfo { PythonAvailable = ready, NazcaAvailable = ready });
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+        { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
         public override async Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
         {
             if (++_exports == 2) return new GdsExportResult { Success = false, ErrorMessage = "fixture failure" };

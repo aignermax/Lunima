@@ -12,7 +12,7 @@ public sealed class GdsExportContractFlowTests
     {
         var session = new Session();
         var discovery = new Discovery();
-        var model = new GdsExportViewModel(session, discovery);
+        await using var model = new GdsExportViewModel(session, discovery);
         string? savedPath = null;
         model.OnPythonPathChanged = path => savedPath = path;
         using var cancellation = new CancellationTokenSource();
@@ -20,8 +20,8 @@ public sealed class GdsExportContractFlowTests
         await model.SearchForPythonAsync(cancellation.Token);
         var result = await model.ExportScriptToGdsAsync("design.py");
 
-        discovery.Token.ShouldBe(cancellation.Token);
-        session.ProbeToken.ShouldBe(cancellation.Token);
+        discovery.Token.CanBeCanceled.ShouldBeTrue();
+        session.ProbeToken.ShouldBe(discovery.Token, "nested discovery and probing share one owned operation");
         model.AvailablePythons.ShouldHaveSingleItem().ShouldBeSameAs(discovery.Installation);
         savedPath.ShouldBe("fixture-python");
         model.IsEnvironmentReady.ShouldBeTrue();
@@ -65,6 +65,11 @@ public sealed class GdsExportContractFlowTests
         {
             ExportedWith = _path;
             return Task.FromResult(new GdsExportResult { ScriptPath = scriptPath, GdsPath = "design.gds", Success = true });
+        }
+        public Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ExportToGdsAsync(scriptPath, generateGds);
         }
     }
 }

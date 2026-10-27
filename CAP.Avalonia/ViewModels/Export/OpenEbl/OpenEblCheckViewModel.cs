@@ -4,6 +4,7 @@ using System.Globalization;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.Services.OpenEblCheck;
+using CAP.Avalonia.Services.Lifetime;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core;
 using CAP_Core.Export;
@@ -21,8 +22,28 @@ namespace CAP.Avalonia.ViewModels.Export.OpenEbl;
 /// every failure mode — export error, missing toolchain, crashed script — lands as a typed
 /// result state, never as an exception escaping the command.
 /// </summary>
-public partial class OpenEblCheckViewModel : ObservableObject
+public partial class OpenEblCheckViewModel : ObservableObject, IAsyncDisposable
 {
+    private readonly ShellWorkScope _work = new();
+    private bool _cancelRequested;
+    private Task? _activeRun;
+    private Task? _windowRetirement;
+    /// <summary>Retires accepted export and checking workflows.</summary>
+    public Task StopAsync() => _work.StopAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private void CheckCurrent(CancellationToken token = default)
+    {
+        _work.ThrowIfStopping();
+        if (_cancelRequested || _windowRetirement != null)
+            throw new OperationCanceledException(new CancellationToken(true));
+        token.ThrowIfCancellationRequested();
+    }
+    private void Publish(Action action, CancellationToken token = default)
+    {
+        CheckCurrent(token);
+        action();
+        CheckCurrent(token);
+    }
     private const string GdsExtension = ".gds";
     private const string PassColor = "#7ee787";
     private const string FailColor = "#ff8888";
@@ -37,7 +58,7 @@ public partial class OpenEblCheckViewModel : ObservableObject
     private readonly IOpenEblSubmissionChecker _checker;
     private readonly ErrorConsoleService? _errorConsole;
 
-    private CancellationTokenSource? _runCts;
+    private AsyncCancellationScope? _runCts;
     private bool _fileNameEdited;
     private bool _suppressFileNameTracking;
 
@@ -107,7 +128,8 @@ public partial class OpenEblCheckViewModel : ObservableObject
         SimpleNazcaExporter nazcaExporter,
         CAP_Core.Export.Contracts.IGdsScriptRunner gdsExport,
         IOpenEblSubmissionChecker checker,
-        ErrorConsoleService? errorConsole = null)
+        ErrorConsoleService? errorConsole = null,
+        ApplicationWorkCoordinator? applicationWork = null)
     {
         _canvas = canvas;
         _nazcaExporter = nazcaExporter;
@@ -115,6 +137,7 @@ public partial class OpenEblCheckViewModel : ObservableObject
         _checker = checker;
         _errorConsole = errorConsole;
         ReproposeFileName();
+        _work.RegisterWith(applicationWork, StopAsync);
     }
 
     /// <summary>The pip command installing the check toolchain; the copy button puts this on the clipboard.</summary>
@@ -136,12 +159,20 @@ public partial class OpenEblCheckViewModel : ObservableObject
     /// <param name="currentDesignName">Name of the currently open design file, if any.</param>
     public void PrepareForOpen(string? currentDesignName)
     {
-        if (DesignName.Length == 0 && !string.IsNullOrWhiteSpace(currentDesignName))
-            DesignName = currentDesignName;
-        ReproposeFileName();
-        ResetResult();
-        ClearPreflight();
-        StatusText = string.Empty;
+        if (_work.IsStopping || _activeRun != null || _windowRetirement is { IsCompleted: false }) return;
+        _windowRetirement = null;
+        _cancelRequested = false;
+        try
+        {
+            if (DesignName.Length == 0 && !string.IsNullOrWhiteSpace(currentDesignName))
+                Publish(() => DesignName = currentDesignName);
+            ReproposeFileName();
+            CheckCurrent();
+            ResetResult();
+            ClearPreflight();
+            Publish(() => StatusText = string.Empty);
+        }
+        catch (OperationCanceledException) when (_work.IsStopping || _windowRetirement != null) { }
     }
 
     /// <summary>Exports the design to a temp GDS and runs the openEBL checks on it.</summary>
@@ -155,9 +186,47 @@ public partial class OpenEblCheckViewModel : ObservableObject
     [RelayCommand]
     private Task CheckAnywayAsync() => RunExportAndCheckAsync(skipPreflight: true);
 
-    private async Task RunExportAndCheckAsync(bool skipPreflight)
+    private Task RunExportAndCheckAsync(bool skipPreflight)
     {
-        if (IsChecking)
+        if (_work.IsStopping || _windowRetirement != null || _activeRun != null) return Task.CompletedTask;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _activeRun = completion.Task;
+        _ = CompleteRunAsync(skipPreflight, completion);
+        return completion.Task;
+    }
+
+    private async Task CompleteRunAsync(bool skipPreflight, TaskCompletionSource completion)
+    {
+        Exception? failure = null;
+        try { await _work.RunAsync(token => RunExportAndCheckCoreAsync(skipPreflight, token)); }
+        catch (Exception error) { failure = error; }
+        finally { _activeRun = null; }
+        if (failure is OperationCanceledException canceled) completion.TrySetCanceled(canceled.CancellationToken);
+        else if (failure != null) completion.TrySetException(failure);
+        else completion.TrySetResult();
+    }
+
+    /// <summary>Seals this window session and awaits its accepted work; PrepareForOpen admits a later session.</summary>
+    public Task CancelAndDrainAsync()
+    {
+        if (_windowRetirement != null) return _windowRetirement;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _windowRetirement = completion.Task;
+        Cancel();
+        _ = DrainWindowAsync(_activeRun ?? Task.CompletedTask, completion);
+        return completion.Task;
+    }
+
+    private static async Task DrainWindowAsync(Task running, TaskCompletionSource completion)
+    {
+        try { await running; completion.TrySetResult(); }
+        catch (OperationCanceledException) { completion.TrySetResult(); }
+        catch (Exception error) { completion.TrySetException(error); }
+    }
+
+    private async Task RunExportAndCheckCoreAsync(bool skipPreflight, CancellationToken stop)
+    {
+        if (IsChecking || _runCts != null || _work.IsStopping)
             return;
         if (_canvas.Components.Count == 0)
         {
@@ -171,50 +240,65 @@ public partial class OpenEblCheckViewModel : ObservableObject
             return;
         }
 
-        IsChecking = true;
-        _runCts = new CancellationTokenSource();
-        var cancellationToken = _runCts.Token;
+        var operation = new AsyncCancellationScope(stop);
+        _runCts = operation;
+        _cancelRequested = false;
+        var cancellationToken = operation.Token;
         try
         {
-            if (!skipPreflight && !await RunPreflightAsync())
+            Publish(() => IsChecking = true, cancellationToken);
+            if (!skipPreflight && !await RunPreflightAsync(cancellationToken))
                 return;   // pre-flight errors hold the run until "Check anyway"
 
+            CheckCurrent(cancellationToken);
             ResetResult();
-            StatusText = Translate("OpenEblCheck.Exporting");
+            Publish(() => StatusText = Translate("OpenEblCheck.Exporting"), cancellationToken);
             var gdsPath = await ExportGdsAsync(stem, cancellationToken);
+            CheckCurrent(cancellationToken);
             if (gdsPath == null)
                 return;   // the export failure state is already applied
 
-            GdsPathText = string.Format(CultureInfo.CurrentCulture, Translate("OpenEblCheck.GdsLocation"), gdsPath);
-            cancellationToken.ThrowIfCancellationRequested();
+            Publish(() => GdsPathText = string.Format(CultureInfo.CurrentCulture, Translate("OpenEblCheck.GdsLocation"), gdsPath), cancellationToken);
 
-            StatusText = Translate("OpenEblCheck.RunningChecks");
-            ApplyReport(await _checker.CheckAsync(gdsPath, cancellationToken));
+            Publish(() => StatusText = Translate("OpenEblCheck.RunningChecks"), cancellationToken);
+            var report = await _checker.CheckAsync(gdsPath, cancellationToken);
+            CheckCurrent(cancellationToken);
+            ApplyReport(report);
         }
         catch (OperationCanceledException)
         {
-            StatusText = Translate("OpenEblCheck.Cancelled");
+            if (!_work.IsStopping && _windowRetirement == null) StatusText = Translate("OpenEblCheck.Cancelled");
         }
         catch (Exception ex)
         {
+            if (_work.IsStopping || _cancelRequested || _windowRetirement != null) return;
             _errorConsole?.LogError($"openEBL check failed: {ex.Message}", ex);
-            HasResult = true;
-            Headline = Translate("OpenEblCheck.ResultCheckCrashed");
-            HeadlineColor = FailColor;
-            DetailMessage = ex.Message;
-            StatusText = string.Empty;
+            if (_work.IsStopping || _cancelRequested || _windowRetirement != null) return;
+            try
+            {
+                Publish(() => HasResult = true);
+                Publish(() => Headline = Translate("OpenEblCheck.ResultCheckCrashed"));
+                Publish(() => HeadlineColor = FailColor);
+                Publish(() => DetailMessage = ex.Message);
+                Publish(() => StatusText = string.Empty);
+            }
+            catch (OperationCanceledException) when (_work.IsStopping || _cancelRequested || _windowRetirement != null) { }
         }
         finally
         {
-            IsChecking = false;
-            _runCts.Dispose();
-            _runCts = null;
+            try { await operation.DisposeAsync(); }
+            finally { _runCts = null; IsChecking = false; }
         }
     }
 
     /// <summary>Cancels the running export/check; the checker kills its Python process tree.</summary>
     [RelayCommand]
-    private void Cancel() => _runCts?.Cancel();
+    private void Cancel()
+    {
+        if (_runCts == null) return;
+        _cancelRequested = true;
+        _runCts.Cancel();
+    }
 
     /// <summary>Copies the pip install command for the check toolchain to the clipboard.</summary>
     [RelayCommand]
@@ -252,21 +336,25 @@ public partial class OpenEblCheckViewModel : ObservableObject
 
     private async Task<string?> ExportGdsAsync(string stem, CancellationToken cancellationToken)
     {
+        CheckCurrent(cancellationToken);
         Directory.CreateDirectory(TempDirectory);
         var scriptPath = Path.Combine(TempDirectory, stem + ".py");
 
         var nazcaCode = BuildNazcaScript();
+        CheckCurrent(cancellationToken);
         await File.WriteAllTextAsync(scriptPath, nazcaCode, cancellationToken);
+        CheckCurrent(cancellationToken);
 
-        var result = await _gdsExport.ExportToGdsAsync(scriptPath, generateGds: true);
+        var result = await _gdsExport.ExportToGdsAsync(scriptPath, generateGds: true, cancellationToken);
+        CheckCurrent(cancellationToken);
         if (result.Success && result.GdsPath != null)
             return result.GdsPath;
 
-        HasResult = true;
-        Headline = Translate("OpenEblCheck.ResultExportFailed");
-        HeadlineColor = FailColor;
-        DetailMessage = result.ErrorMessage ?? result.Status;
-        StatusText = string.Empty;
+        Publish(() => HasResult = true, cancellationToken);
+        Publish(() => Headline = Translate("OpenEblCheck.ResultExportFailed"), cancellationToken);
+        Publish(() => HeadlineColor = FailColor, cancellationToken);
+        Publish(() => DetailMessage = result.ErrorMessage ?? result.Status, cancellationToken);
+        Publish(() => StatusText = string.Empty, cancellationToken);
         return null;
     }
 
@@ -280,21 +368,21 @@ public partial class OpenEblCheckViewModel : ObservableObject
 
     private void ApplyReport(OpenEblCheckReport report)
     {
-        HasResult = true;
-        StatusText = string.Empty;
-        SubmissionPassed = report.SubmissionChecksPassed;
-        VerificationPassed = report.VerificationPassed;
-        IsToolchainMissing = report.Status == OpenEblCheckStatus.ToolchainMissing;
-        ToolchainMessage = report.ToolchainMessage ?? string.Empty;
-        DieSizeText = report.DieBoundingBox is { } box
+        Publish(() => HasResult = true);
+        Publish(() => StatusText = string.Empty);
+        Publish(() => SubmissionPassed = report.SubmissionChecksPassed);
+        Publish(() => VerificationPassed = report.VerificationPassed);
+        Publish(() => IsToolchainMissing = report.Status == OpenEblCheckStatus.ToolchainMissing);
+        Publish(() => ToolchainMessage = report.ToolchainMessage ?? string.Empty);
+        Publish(() => DieSizeText = report.DieBoundingBox is { } box
             ? string.Format(CultureInfo.InvariantCulture, "{0:0.###} × {1:0.###} µm",
                 box.WidthMicrometers, box.HeightMicrometers)
-            : string.Empty;
-        Errors = new ObservableCollection<OpenEblCheckErrorItemViewModel>(
+            : string.Empty);
+        Publish(() => Errors = new ObservableCollection<OpenEblCheckErrorItemViewModel>(
             report.Errors.Select(error => new OpenEblCheckErrorItemViewModel(
-                CategoryLabelFor(error.Category), error.Message, FormatLocation(error))));
+                CategoryLabelFor(error.Category), error.Message, FormatLocation(error)))));
 
-        (Headline, HeadlineColor, ShowCheckOutcomes) = report.Status switch
+        var (headline, color, outcomes) = report.Status switch
         {
             OpenEblCheckStatus.Passed => (Translate("OpenEblCheck.ResultPass"), PassColor, true),
             OpenEblCheckStatus.Failed => (Translate("OpenEblCheck.ResultFail"), FailColor, true),
@@ -302,8 +390,11 @@ public partial class OpenEblCheckViewModel : ObservableObject
             OpenEblCheckStatus.ScriptsMissing => (Translate("OpenEblCheck.ResultScriptsMissing"), FailColor, false),
             _ => (Translate("OpenEblCheck.ResultCheckCrashed"), FailColor, true),
         };
-        OnPropertyChanged(nameof(SubmissionOutcomeText));
-        OnPropertyChanged(nameof(VerificationOutcomeText));
+        Publish(() => Headline = headline);
+        Publish(() => HeadlineColor = color);
+        Publish(() => ShowCheckOutcomes = outcomes);
+        Publish(() => OnPropertyChanged(nameof(SubmissionOutcomeText)));
+        Publish(() => OnPropertyChanged(nameof(VerificationOutcomeText)));
     }
 
     /// <summary>
@@ -312,40 +403,40 @@ public partial class OpenEblCheckViewModel : ObservableObject
     /// anyway" command bypasses); warnings only let it through and stay visible above the
     /// external result. Returns false when errors were found and the caller must not export yet.
     /// </summary>
-    private async Task<bool> RunPreflightAsync()
+    private async Task<bool> RunPreflightAsync(CancellationToken token)
     {
-        StatusText = Translate("OpenEblCheck.PreflightRunning");
+        Publish(() => StatusText = Translate("OpenEblCheck.PreflightRunning"), token);
         var snapshot = _canvas.ConnectionManager.Connections.ToList();
-        var findings = await Task.Run(() => OpenEblPreflightChecker.Collect(snapshot));
-        StatusText = string.Empty;
+        var findings = await Task.Run(() => OpenEblPreflightChecker.Collect(snapshot), token);
+        Publish(() => StatusText = string.Empty, token);
 
-        PreflightIssues = new ObservableCollection<OpenEblPreflightIssueViewModel>(
-            findings.Select(finding => new OpenEblPreflightIssueViewModel(finding.Message, finding.IsError)));
-        HasPreflightErrors = findings.Any(finding => finding.IsError);
-        HasPreflightWarnings = findings.Any(finding => !finding.IsError);
+        Publish(() => PreflightIssues = new ObservableCollection<OpenEblPreflightIssueViewModel>(
+            findings.Select(finding => new OpenEblPreflightIssueViewModel(finding.Message, finding.IsError))), token);
+        Publish(() => HasPreflightErrors = findings.Any(finding => finding.IsError), token);
+        Publish(() => HasPreflightWarnings = findings.Any(finding => !finding.IsError), token);
         return !HasPreflightErrors;
     }
 
     private void ClearPreflight()
     {
-        PreflightIssues.Clear();
-        HasPreflightErrors = false;
-        HasPreflightWarnings = false;
+        Publish(PreflightIssues.Clear);
+        Publish(() => HasPreflightErrors = false);
+        Publish(() => HasPreflightWarnings = false);
     }
 
     private void ResetResult()
     {
-        HasResult = false;
-        Headline = string.Empty;
-        ShowCheckOutcomes = false;
-        SubmissionPassed = false;
-        VerificationPassed = false;
-        DieSizeText = string.Empty;
-        IsToolchainMissing = false;
-        ToolchainMessage = string.Empty;
-        DetailMessage = string.Empty;
-        GdsPathText = string.Empty;
-        Errors.Clear();
+        Publish(() => HasResult = false);
+        Publish(() => Headline = string.Empty);
+        Publish(() => ShowCheckOutcomes = false);
+        Publish(() => SubmissionPassed = false);
+        Publish(() => VerificationPassed = false);
+        Publish(() => DieSizeText = string.Empty);
+        Publish(() => IsToolchainMissing = false);
+        Publish(() => ToolchainMessage = string.Empty);
+        Publish(() => DetailMessage = string.Empty);
+        Publish(() => GdsPathText = string.Empty);
+        Publish(Errors.Clear);
     }
 
     /// <summary>

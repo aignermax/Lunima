@@ -149,6 +149,9 @@ public class Issue776MixedBackendScreenshotTests
     /// <summary>Export service reporting script success without running Python.</summary>
     private sealed class StubSuccessExportService : GdsExportService
     {
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+        { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
         public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
             Task.FromResult(new GdsExportResult { ScriptPath = scriptPath, Success = true });
     }

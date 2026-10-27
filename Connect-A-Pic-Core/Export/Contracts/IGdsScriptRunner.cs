@@ -4,4 +4,5 @@ namespace CAP_Core.Export.Contracts;
 public interface IGdsScriptRunner
 {
     Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds);
+    Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken);
 }

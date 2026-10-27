@@ -105,7 +105,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         RightPanel.OnaAnalysis.StopAsync(), BottomPanel.Analysis.Spectrum.StopAsync(), RightPanel.Logic.StopAsync(),
         RightPanel.TruthTable.StopAsync(), RightPanel.Sweep.StopAsync(), RightPanel.MakeGate.StopAsync(), RightPanel.CompressLayout.StopAsync(),
         BottomPanel.Analysis.Transient.StopAsync(), BottomPanel.Analysis.Eye.StopAsync(),
-        BottomPanel.Analysis.Optimization.StopAsync(), BottomPanel.Analysis.MonteCarlo.StopAsync());
+        BottomPanel.Analysis.Optimization.StopAsync(), BottomPanel.Analysis.MonteCarlo.StopAsync(),
+        FileOperations.GdsExport.StopAsync(), GdsFactoryExport.StopAsync());
     public async ValueTask DisposeAsync() { try { await StopAsync(); } finally { Dispose(); } }
 
     [ObservableProperty]

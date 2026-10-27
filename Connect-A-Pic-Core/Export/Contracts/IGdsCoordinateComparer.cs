@@ -5,4 +5,7 @@ public interface IGdsCoordinateComparer
 {
     Task<GdsCoordinateComparisonResult> CompareAsync(
         string referenceJsonPath, string systemJsonPath, string? scriptPath = null);
+
+    Task<GdsCoordinateComparisonResult> CompareAsync(
+        string referenceJsonPath, string systemJsonPath, string? scriptPath, CancellationToken cancellationToken);
 }

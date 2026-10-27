@@ -1,5 +1,5 @@
 using CAP_Core.Export.Contracts;
-using System.Diagnostics;
+using CAP_Core.Export.Processes;
 
 namespace CAP_Core.Export;
 
@@ -12,7 +12,7 @@ namespace CAP_Core.Export;
 public class GdsCoordinateExtractor : IGdsCoordinateExtractor
 {
     private const string ScriptRelativePath = "scripts/extract_gds_coords.py";
-    private const int ExtractionTimeoutMs = 30_000;
+    private readonly CoordinateExecutionOptions _execution;
 
     private readonly ProcessLaunchFactory _launchFactory;
     private string? _customPythonPath;
@@ -22,8 +22,14 @@ public class GdsCoordinateExtractor : IGdsCoordinateExtractor
     /// </summary>
     /// <param name="launchFactory">Factory used to build process start info.</param>
     public GdsCoordinateExtractor(ProcessLaunchFactory? launchFactory = null)
+        : this(launchFactory, new CoordinateExecutionOptions(TimeSpan.FromSeconds(30)))
+    {
+    }
+
+    internal GdsCoordinateExtractor(ProcessLaunchFactory? launchFactory, CoordinateExecutionOptions execution)
     {
         _launchFactory = launchFactory ?? ProcessLaunchFactory.CreateDefault();
+        _execution = execution;
     }
 
 
@@ -50,7 +56,7 @@ public class GdsCoordinateExtractor : IGdsCoordinateExtractor
         if (!File.Exists(gdsPath))
             return Failure($"GDS file not found: {gdsPath}");
 
-        var scriptPath = FindScriptPath();
+        var scriptPath = _execution.ScriptPath ?? FindScriptPath();
         if (scriptPath == null)
             return Failure($"Extraction script not found. Expected at: {ScriptRelativePath}");
 
@@ -68,39 +74,14 @@ public class GdsCoordinateExtractor : IGdsCoordinateExtractor
             if (!_launchFactory.TryBuild(command, args, workingDir, null, out var psi, out var launchError))
                 return Failure($"Failed to build process: {launchError}");
 
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError = true;
+            var captured = await OwnedProcessCapture.RunAsync(psi, _execution.Timeout, cancellationToken);
+            if (captured.TimedOut)
+                return Failure($"Timeout after {(int)_execution.Timeout.TotalSeconds}s");
 
-            using var process = Process.Start(psi)
-                ?? throw new InvalidOperationException("Process.Start returned null.");
-
-            // Linked CTS + CancelAfter (same idiom as PdkNazcaParserService): the timeout timer
-            // is disposed with the CTS the moment the method returns, so the common fast-success
-            // path doesn't leave a 30s timer armed (one leaked timer per call).
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(ExtractionTimeoutMs);
-            var linkedToken = timeoutCts.Token;
-
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(linkedToken);
-            var stderrTask = process.StandardError.ReadToEndAsync(linkedToken);
-
-            try
+            if (captured.ExitCode != 0)
             {
-                await process.WaitForExitAsync(linkedToken);
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                process.Kill(entireProcessTree: true);
-                return Failure($"Timeout after {ExtractionTimeoutMs / 1000}s");
-            }
-
-            var stdout = await stdoutTask;
-            var stderr = await stderrTask;
-
-            if (process.ExitCode != 0)
-            {
-                var msg = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
-                return Failure($"Script failed (exit {process.ExitCode}): {msg}");
+                var msg = string.IsNullOrWhiteSpace(captured.Error) ? captured.Output : captured.Error;
+                return Failure($"Script failed (exit {captured.ExitCode}): {msg}");
             }
 
             if (!File.Exists(jsonPath))
@@ -135,17 +116,13 @@ public class GdsCoordinateExtractor : IGdsCoordinateExtractor
                 ? _launchFactory.ResolveExecutable("python3") ?? "python3"
                 : _customPythonPath;
 
-            if (!_launchFactory.TryBuild(command, new[] { "--version" }, null, null, out var psi, out _))
+            var arguments = _execution.ProbeArguments.IsDefault
+                ? new[] { "--version" } : _execution.ProbeArguments.ToArray();
+            if (!_launchFactory.TryBuild(command, arguments, null, null, out var psi, out _))
                 return false;
 
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError = true;
-
-            using var process = Process.Start(psi);
-            if (process == null) return false;
-
-            await process.WaitForExitAsync();
-            return process.ExitCode == 0;
+            var captured = await OwnedProcessCapture.RunAsync(psi, _execution.Timeout);
+            return !captured.TimedOut && captured.ExitCode == 0;
         }
         catch
         {

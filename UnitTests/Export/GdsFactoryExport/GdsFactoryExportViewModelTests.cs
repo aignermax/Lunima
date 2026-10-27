@@ -174,6 +174,9 @@ public class GdsFactoryExportViewModelTests
     /// auto-install path without a real Python.</summary>
     private sealed class StubMissingGdsFactoryExportService : GdsExportService
     {
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+        { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
         public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
             Task.FromResult(new GdsExportResult
             {
@@ -188,6 +191,9 @@ public class GdsFactoryExportViewModelTests
     /// mixed-process tests stay deterministic and offline.</summary>
     private sealed class StubSuccessExportService : GdsExportService
     {
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+        { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
         public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
             Task.FromResult(new GdsExportResult { ScriptPath = scriptPath, Success = true });
     }

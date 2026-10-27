@@ -1,5 +1,7 @@
 using CAP_Core.Export.Contracts;
 using System.Diagnostics;
+using System.ComponentModel;
+using CAP_Core.Export.Processes;
 using System.Text.Json;
 
 namespace CAP_Core.Export;
@@ -12,6 +14,7 @@ namespace CAP_Core.Export;
 public class GdsCoordinateComparisonService : IGdsCoordinateComparer
 {
     private readonly ProcessLaunchFactory _launchFactory;
+    private readonly CoordinateExecutionOptions _execution;
 
 
     private string? _customPythonPath;
@@ -21,8 +24,14 @@ public class GdsCoordinateComparisonService : IGdsCoordinateComparer
     /// </summary>
     /// <param name="launchFactory">Factory used to build <see cref="ProcessStartInfo"/> instances.</param>
     public GdsCoordinateComparisonService(ProcessLaunchFactory? launchFactory = null)
+        : this(launchFactory, new CoordinateExecutionOptions(TimeSpan.FromSeconds(30)))
+    {
+    }
+
+    internal GdsCoordinateComparisonService(ProcessLaunchFactory? launchFactory, CoordinateExecutionOptions execution)
     {
         _launchFactory = launchFactory ?? ProcessLaunchFactory.CreateDefault();
+        _execution = execution;
     }
 
     /// <summary>
@@ -41,11 +50,14 @@ public class GdsCoordinateComparisonService : IGdsCoordinateComparer
     /// When null, <see cref="FindDefaultScriptPath"/> is used.
     /// </param>
     /// <returns>Structured comparison result.</returns>
+    public Task<GdsCoordinateComparisonResult> CompareAsync(
+        string referenceJsonPath, string systemJsonPath, string? scriptPath = null)
+        => CompareAsync(referenceJsonPath, systemJsonPath, scriptPath, CancellationToken.None);
+
     public async Task<GdsCoordinateComparisonResult> CompareAsync(
-        string referenceJsonPath,
-        string systemJsonPath,
-        string? scriptPath = null)
+        string referenceJsonPath, string systemJsonPath, string? scriptPath, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var resolvedScript = scriptPath ?? FindDefaultScriptPath();
         if (resolvedScript == null || !File.Exists(resolvedScript))
             return ErrorResult($"Script not found: {resolvedScript ?? "(null)"}");
@@ -59,15 +71,33 @@ public class GdsCoordinateComparisonService : IGdsCoordinateComparer
         var reportPath = Path.Combine(Path.GetTempPath(), $"cap_comparison_{Guid.NewGuid():N}.json");
         var scriptArgs = new[] { resolvedScript, referenceJsonPath, systemJsonPath, reportPath };
 
-        if (!_launchFactory.TryBuild("python3", scriptArgs, Path.GetDirectoryName(resolvedScript), null, out var psi, out var launchError))
+        var command = string.IsNullOrEmpty(_customPythonPath) ? "python3" : _customPythonPath;
+        if (!_launchFactory.TryBuild(command, scriptArgs, Path.GetDirectoryName(resolvedScript), null, out var psi, out var launchError))
             return ErrorResult($"Failed to build process: {launchError}");
 
-        psi.RedirectStandardOutput = true;
-        psi.RedirectStandardError = true;
-
-        var (exitCode, stdout, stderr) = await RunCommandAsync(psi);
-
-        return ParseResult(exitCode, stdout, stderr, reportPath);
+        try
+        {
+            var captured = await OwnedProcessCapture.RunAsync(psi, _execution.Timeout, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (captured.TimedOut)
+                return new GdsCoordinateComparisonResult
+                {
+                    Passed = false,
+                    ErrorOutput = $"Timeout after {(int)_execution.Timeout.TotalSeconds}s"
+                };
+            return ParseResult(captured.ExitCode, captured.Output, captured.Error, reportPath);
+        }
+        catch (Win32Exception error)
+        {
+            // Native launch errors are localized and may omit the executable name.
+            // Keep the original exception contract/code while retaining actionable context.
+            throw new Win32Exception(error.NativeErrorCode, $"Could not run '{psi.FileName}': {error.Message}");
+        }
+        finally
+        {
+            // The process scope is already retired; no surviving writer can recreate the report.
+            if (File.Exists(reportPath)) File.Delete(reportPath);
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -80,7 +110,7 @@ public class GdsCoordinateComparisonService : IGdsCoordinateComparer
             {
                 var json = File.ReadAllText(reportPath);
                 File.Delete(reportPath);
-                var doc = JsonDocument.Parse(json);
+                using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
                 return new GdsCoordinateComparisonResult
                 {
@@ -112,27 +142,6 @@ public class GdsCoordinateComparisonService : IGdsCoordinateComparer
         RawOutput = message,
         ErrorOutput = message
     };
-
-    private static async Task<(int exitCode, string stdout, string stderr)> RunCommandAsync(
-        ProcessStartInfo startInfo, int timeoutMs = 30_000)
-    {
-        using var process = Process.Start(startInfo)!;
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
-
-        await Task.WhenAny(
-            process.WaitForExitAsync(),
-            Task.Delay(timeoutMs));
-
-        if (!process.HasExited)
-        {
-            process.Kill(entireProcessTree: true);
-            return (-1, string.Empty, $"Timeout after {timeoutMs / 1000}s");
-        }
-
-        return (process.ExitCode, await stdoutTask, await stderrTask);
-    }
 
     /// <summary>
     /// Searches for <c>scripts/compare_gds_coords.py</c> by walking up from the

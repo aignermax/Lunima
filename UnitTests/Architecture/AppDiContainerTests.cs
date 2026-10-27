@@ -46,6 +46,15 @@ public class AppDiContainerTests
             .ShouldBeSameAs(sp.GetRequiredService<GdsCoordinateExtractor>());
         sp.GetRequiredService<CAP_Core.Export.Contracts.IGdsCoordinateComparer>()
             .ShouldBeSameAs(sp.GetRequiredService<GdsCoordinateComparisonService>());
+        var extraction = sp.GetRequiredService<CAP.Avalonia.ViewModels.Export.GdsCoordExtractViewModel>();
+        var comparison = sp.GetRequiredService<CAP.Avalonia.ViewModels.Diagnostics.GdsCoordinateComparisonViewModel>();
+        var extractionStatus = extraction.StatusText;
+        var comparisonStatus = comparison.ComparisonStatus;
+        await sp.GetRequiredService<CAP.Avalonia.Services.Lifetime.ApplicationWorkCoordinator>().StopAsync();
+        await extraction.ExtractCoordinatesAsync();
+        await comparison.RunComparisonAsync();
+        extraction.StatusText.ShouldBe(extractionStatus);
+        comparison.ComparisonStatus.ShouldBe(comparisonStatus);
     }
 
     private static string NewTempPreferencesPath() =>

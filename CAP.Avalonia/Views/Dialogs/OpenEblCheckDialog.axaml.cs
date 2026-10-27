@@ -11,28 +11,61 @@ namespace CAP.Avalonia.Views.Dialogs;
 /// </summary>
 public partial class OpenEblCheckDialog : Window
 {
+    private OpenEblCheckViewModel? _clipboardOwner;
+    private Func<string, Task>? _clipboardCallback;
+    private Task? _retirement;
+    private bool _closeApproved;
+
     /// <summary>Initializes the dialog and bridges the ViewModel's clipboard callback.</summary>
     public OpenEblCheckDialog()
     {
         InitializeComponent();
-        DataContextChanged += (_, _) =>
-        {
-            if (DataContext is OpenEblCheckViewModel vm)
-                vm.CopyToClipboard = async text =>
-                {
-                    var clipboard = Clipboard;
-                    if (clipboard != null)
-                        await clipboard.SetTextAsync(text);
-                };
-        };
+        DataContextChanged += OnDataContextChanged;
     }
 
-    /// <summary>Closing mid-run cancels the check so no orphaned Python process keeps running.</summary>
-    protected override void OnClosing(WindowClosingEventArgs e)
+    private void OnDataContextChanged(object? sender, EventArgs args)
     {
-        if (DataContext is OpenEblCheckViewModel { IsChecking: true } vm)
-            vm.CancelCommand.Execute(null);
+        ReleaseClipboard();
+        if (DataContext is not OpenEblCheckViewModel model) return;
+        _clipboardOwner = model;
+        _clipboardCallback = async text =>
+        {
+            var clipboard = Clipboard;
+            if (clipboard != null) await clipboard.SetTextAsync(text);
+        };
+        model.CopyToClipboard = _clipboardCallback;
+    }
+
+    private void ReleaseClipboard()
+    {
+        if (_clipboardOwner != null && ReferenceEquals(_clipboardOwner.CopyToClipboard, _clipboardCallback))
+            _clipboardOwner.CopyToClipboard = null;
+        _clipboardOwner = null;
+        _clipboardCallback = null;
+    }
+
+    /// <summary>An approved close cancels and drains this session without retiring the reusable feature model.</summary>
+    protected override async void OnClosing(WindowClosingEventArgs e)
+    {
         base.OnClosing(e);
+        if (e.Cancel || _closeApproved) return;
+        e.Cancel = true;
+        if (_retirement != null) return;
+        IsEnabled = false;
+        try
+        {
+            _retirement = (DataContext as OpenEblCheckViewModel)?.CancelAndDrainAsync() ?? Task.CompletedTask;
+            await _retirement;
+        }
+        catch (Exception error) { System.Diagnostics.Trace.TraceError($"openEBL window cleanup failed: {error}"); }
+        finally { _closeApproved = true; Close(); }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        DataContextChanged -= OnDataContextChanged;
+        ReleaseClipboard();
+        base.OnClosed(e);
     }
 
     private void OnCloseClicked(object? sender, RoutedEventArgs e) => Close();

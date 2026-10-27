@@ -47,6 +47,11 @@ public class MixedBackendExportViewModelTests
         public RecordingExportService(Func<string, bool>? succeeds = null) =>
             _succeeds = succeeds ?? (_ => true);
 
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+
+        { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
+
         public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
         {
             RunScripts.Add(scriptPath);

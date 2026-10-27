@@ -87,6 +87,9 @@ public class ManufacturingTourViewModelTests
     private sealed class PendingExportService : GdsExportService
     {
         private TaskCompletionSource<GdsExportResult> _pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+        { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
         public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) => _pending.Task;
         public void Complete() => _pending.SetResult(new() { Success = true, GdsPath = "lesson.gds", Status = "Exported" });
         public void Reset() => _pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -111,6 +114,9 @@ public class ManufacturingTourViewModelTests
     private sealed class ControlledExportService : GdsExportService
     {
         public GdsExportResult Result { get; set; } = new();
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+        { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
         public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) => Task.FromResult(Result);
     }
 }

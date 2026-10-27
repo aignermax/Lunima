@@ -19,8 +19,9 @@ public class GdsCoordinateContractFlowTests
             ToleranceUm = 0.01, RawOutput = "coordinates agree", ErrorOutput = error
         };
         var comparer = new Mock<IGdsCoordinateComparer>(MockBehavior.Strict);
-        comparer.Setup(x => x.CompareAsync("reference.json", "system.json", null)).ReturnsAsync(result);
-        var vm = new GdsCoordinateComparisonViewModel(comparer.Object)
+        comparer.Setup(x => x.CompareAsync("reference.json", "system.json", null,
+            It.Is<CancellationToken>(token => token.CanBeCanceled))).ReturnsAsync(result);
+        await using var vm = new GdsCoordinateComparisonViewModel(comparer.Object)
         {
             ReferenceJsonPath = " reference.json ", SystemJsonPath = " system.json "
         };
@@ -42,13 +43,14 @@ public class GdsCoordinateContractFlowTests
     {
         var extractor = new Mock<IGdsCoordinateExtractor>(MockBehavior.Strict);
         extractor.Setup(x => x.SetCustomPythonPath("selected-python"));
-        extractor.Setup(x => x.ExtractAsync("chip.gds", null, default)).ReturnsAsync(
+        extractor.Setup(x => x.ExtractAsync("chip.gds", null,
+            It.Is<CancellationToken>(token => token.CanBeCanceled))).ReturnsAsync(
             new GdsCoordinateExtractionResult
             {
                 Success = true, JsonOutputPath = "chip.coords.json", Status = "extracted coordinates",
                 JsonContent = "{\"database_unit\":1e-9,\"cells\":{\"chip\":{\"polygons\":[{}],\"paths\":[]}}}"
             });
-        var vm = new GdsCoordExtractViewModel(extractor.Object);
+        await using var vm = new GdsCoordExtractViewModel(extractor.Object);
         vm.SetCustomPythonPath("selected-python");
         vm.SetGdsFilePath("chip.gds");
 

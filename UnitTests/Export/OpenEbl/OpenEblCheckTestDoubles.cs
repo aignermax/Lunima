@@ -133,6 +133,11 @@ internal sealed class FakeGdsExportService : GdsExportService
 
     public int CallCount { get; private set; }
 
+    public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+
+    { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
+
     public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
     {
         CallCount++;
