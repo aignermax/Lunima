@@ -65,7 +65,9 @@ runs:
           sudo python3 - <<'PY'
         from pathlib import Path
         import re
-        sources = [Path('/etc/apt/sources.list')]
+        # New runner images use mirror+file:/etc/apt/apt-mirrors.txt; rewriting
+        # only sources.list leaves the actual Azure mirror in that file active.
+        sources = [Path('/etc/apt/sources.list'), Path('/etc/apt/apt-mirrors.txt')]
         sources += list(Path('/etc/apt/sources.list.d').glob('*.list'))
         sources += list(Path('/etc/apt/sources.list.d').glob('*.sources'))
         for path in sources:
