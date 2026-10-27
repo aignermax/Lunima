@@ -37,6 +37,8 @@ public partial class RerouteImportedRoutesViewModelTests
         commands.ExecuteCommand(new CreateGroupCommand(canvas, canvas.Components.ToList(), "Imported"));
         await canvas.RecalculateRoutesAsync();
         var group = (ComponentGroup)canvas.Components.Single().Component;
+        group.InternalPaths.ShouldAllBe(path => path.IsRouteFrozen && ReferenceEquals(path.AsDrawnGeometry, mask),
+            "the grouped baseline must retain both original imported masks before conversion starts");
         var routing = (ReportedRoutingWorker)canvas.Routing;
         routing.BlockWorker = true;
         var vm = new RerouteImportedRoutesViewModel(canvas, commands);
@@ -48,6 +50,9 @@ public partial class RerouteImportedRoutesViewModelTests
         }
         finally { routing.Release.TrySetResult(); await conversion.WaitAsync(TimeSpan.FromSeconds(30)); }
         group.InternalPaths.Count.ShouldBe(2, "cancellation must not discard uncomputed imported wires on group exit");
+        foreach (var path in group.InternalPaths)
+            _output.WriteLine($"After cancellation: frozen={path.IsRouteFrozen}, maskPresent={path.AsDrawnGeometry != null}, "
+                + $"sameMask={ReferenceEquals(path.AsDrawnGeometry, mask)}, segments={path.Path.Segments.Count}");
         group.InternalPaths.ShouldContain(path => path.IsRouteFrozen && ReferenceEquals(path.AsDrawnGeometry, mask));
     }
 

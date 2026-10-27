@@ -251,8 +251,11 @@ public partial class RoutingOrchestrator
     /// </summary>
     public void CancelRouting()
     {
+        // Revoke this pass before observers run. An observer may finish this worker
+        // or start a replacement, which must not be cancelled by this Stop request.
+        var current = _routingCts;
+        if (current != null) _ = current.CancelAsync();
         StopRequested?.Invoke();
-        if (_routingCts != null) _ = _routingCts.CancelAsync();
     }
 
     /// <summary>Raised for an explicit Stop, including a batch spanning several passes.</summary>
@@ -274,7 +277,8 @@ public partial class RoutingOrchestrator
         if (_routingCts != null) _ = _routingCts.CancelAsync();
         using var stop = new CancellationTokenSource();
         _routingCts = stop;
-        await using var linked = new AsyncCancellationScope(stop.Token, operation.CancellationToken,
+        var stopToken = stop.Token;
+        await using var linked = new AsyncCancellationScope(stopToken, operation.CancellationToken,
             cancellationToken, permission?.CancellationToken ?? default);
         var token = linked.Token;
         var generation = MutationGeneration;
@@ -283,7 +287,8 @@ public partial class RoutingOrchestrator
         catch (OperationCanceledException) { if (ReferenceEquals(_routingCts, stop)) _routingCts = null; return; }
         try
         {
-            if (token.IsCancellationRequested || !operation.IsCurrent || generation != MutationGeneration) return;
+            if (stopToken.IsCancellationRequested || token.IsCancellationRequested
+                || !operation.IsCurrent || generation != MutationGeneration) return;
             RefreshProcessSettings();
             var input = CaptureInput();
             var originalPaths = RoutingPassResult.CaptureOriginalPaths(_connectionManager);
@@ -297,7 +302,7 @@ public partial class RoutingOrchestrator
             RoutingStatusText = BuildProgressText();
             StateChanged?.Invoke();
             bool Current() => passId == _passId && generation == MutationGeneration && operation.IsCurrent
-                && !token.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
+                && !stopToken.IsCancellationRequested && !token.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
             using var heartbeat = new RoutingProgressHeartbeat(Current, BuildProgressText,
                 text => { RoutingStatusText = text; StateChanged?.Invoke(); });
 
@@ -319,7 +324,7 @@ public partial class RoutingOrchestrator
                     if (complex) heartbeat.ComplexRouteStarted(); else heartbeat.ConnectionCompleted();
                     if (frame.Count == 0) return;
                     var prepared = frame.Prepare(_connectionManager);
-                    Commit(operation, permission, token, cancellationToken, () =>
+                    Commit(operation, permission, token, cancellationToken, stopToken, () =>
                     {
                         prepared.Apply();
                         NotifyRouteChanges(prepared.ConnectionIds.Where(views.ContainsKey).Select(id => views[id]));
@@ -333,7 +338,7 @@ public partial class RoutingOrchestrator
             {
                 heartbeat.ConnectionCompleted();
                 var prepared = result.Prepare(_components.Select(view => view.Component).ToArray(), _connectionManager, _router, originalPaths);
-                if (Commit(operation, permission, token, cancellationToken, () =>
+                if (Commit(operation, permission, token, cancellationToken, stopToken, () =>
                 {
                     prepared.Apply();
                     PublishCrossings(prepared);
@@ -378,9 +383,9 @@ public partial class RoutingOrchestrator
     }
 
     private static bool Commit(DocumentOperation operation, ICommitPermission? permission,
-        CancellationToken token, CancellationToken caller, Action change)
+        CancellationToken token, CancellationToken caller, CancellationToken stop, Action change)
     {
-        if (token.IsCancellationRequested || caller.IsCancellationRequested) return false;
+        if (token.IsCancellationRequested || caller.IsCancellationRequested || stop.IsCancellationRequested) return false;
         var applied = false;
         try
         {
@@ -388,7 +393,14 @@ public partial class RoutingOrchestrator
             {
                 token.ThrowIfCancellationRequested();
                 caller.ThrowIfCancellationRequested();
-                applied = operation.TryCommitAndAdvance(change);
+                stop.ThrowIfCancellationRequested();
+                applied = operation.TryCommitAndAdvance(() =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    caller.ThrowIfCancellationRequested();
+                    stop.ThrowIfCancellationRequested();
+                    change();
+                });
             }
             if (permission == null) Publish(); else permission.Commit(Publish);
         }
