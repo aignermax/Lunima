@@ -117,26 +117,42 @@ public partial class WaveguideRouter
     /// Library default is true; the application layer decides the product
     /// default (currently opt-in via the Routing settings page).
     /// </summary>
-    public bool UseDiagonalRouting { get; set; } = true;
+    public bool UseDiagonalRouting
+    {
+        get => _fineSearch.UseDiagonals;
+        set => _fineSearch.UseDiagonals = value;
+    }
 
     /// <summary>
     /// Maximum nodes for Phase 1 (quick) pathfinding.
     /// Phase 1 provides fast results for simple and medium-complexity routes.
     /// </summary>
-    public int Phase1MaxNodes { get; set; } = 200_000;
+    public int Phase1MaxNodes
+    {
+        get => _fineSearch.Phase1MaxNodes;
+        set => _fineSearch.Phase1MaxNodes = value;
+    }
 
     /// <summary>
     /// Maximum nodes for Phase 2 (extended) pathfinding.
     /// Phase 2 is triggered when Phase 1 fails, allowing longer search for complex routes.
     /// </summary>
-    public int Phase2MaxNodes { get; set; } = 2_000_000;
+    public int Phase2MaxNodes
+    {
+        get => _fineSearch.Phase2MaxNodes;
+        set => _fineSearch.Phase2MaxNodes = value;
+    }
 
     /// <summary>
     /// Invoked when routing escalates to Phase 2 (complex path search).
     /// Use this to show a "Computing complex path..." indicator in the UI.
     /// Called on the routing thread (not the UI thread).
     /// </summary>
-    public Action? OnComplexRouteStarted { get; set; }
+    public Action? OnComplexRouteStarted
+    {
+        get => _fineSearch.OnComplexRouteStarted;
+        set => _fineSearch.OnComplexRouteStarted = value;
+    }
 
     private IReadOnlyList<(double X, double Y, double Width, double Height)>? _allowedRoutingRegions;
 

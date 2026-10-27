@@ -178,6 +178,42 @@ public class TwoPhasePathfindingTests
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void EscalationCallback_ChangesMovementPolicyForTheFollowingRetry(bool retryUsesDiagonals)
+    {
+        var router = new WaveguideRouter
+        {
+            PreferDirectStyledRoutes = false,
+            CoarseRetryCellSizeFactor = 1,
+            Phase1MaxNodes = 1,
+            Phase2MaxNodes = 1,
+            UseDiagonalRouting = !retryUsesDiagonals
+        };
+        router.InitializePathfindingGrid(0, 0, 500, 500, Array.Empty<Component>());
+        int escalations = 0;
+        router.OnComplexRouteStarted = () =>
+        {
+            escalations++;
+            router.Phase1MaxNodes = 100_000;
+            router.UseDiagonalRouting = retryUsesDiagonals;
+        };
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        var result = router.Route(CreatePin(100, 100, 0), CreatePin(300, 300, 180), deadline.Token);
+
+        deadline.IsCancellationRequested.ShouldBeFalse("the small open-grid retry must remain bounded");
+        escalations.ShouldBe(1, "the first search exhausts its single-node budget before a retry");
+        result.IsBlockedFallback.ShouldBeFalse();
+        var nodes = result.DebugGridPath.ShouldNotBeNull();
+        nodes.Count.ShouldBeGreaterThan(2);
+        bool hasDiagonal = nodes.Zip(nodes.Skip(1), (left, right) =>
+            left.X != right.X && left.Y != right.Y).Any(value => value);
+        hasDiagonal.ShouldBe(retryUsesDiagonals,
+            "later searches must observe callback mutations rather than entry-time settings");
+    }
+
     private static PhysicalPin CreatePin(double x, double y, double angleDeg)
     {
         var component = new Component(
