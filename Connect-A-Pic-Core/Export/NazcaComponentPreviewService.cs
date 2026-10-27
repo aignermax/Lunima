@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using System.Text.Json;
 using CAP_Core.Export.Contracts;
+using CAP_Core.Export.Processes;
 
 namespace CAP_Core.Export;
 
@@ -126,6 +126,7 @@ public class NazcaComponentPreviewService : IPdkPreviewBackend
         string? moduleName, string nazcaFunction, string? nazcaParameters,
         CancellationToken ct = default)
     {
+        if (ct.IsCancellationRequested) return NazcaPreviewResult.Fail("Operation was cancelled.");
         var key = JsonSerializer.Serialize(new[] { moduleName ?? "", nazcaFunction, nazcaParameters ?? "" });
         return await RenderCachedAsync(key,
             python => RunScriptAsync(python, moduleName, nazcaFunction, nazcaParameters, ct));
@@ -143,6 +144,7 @@ public class NazcaComponentPreviewService : IPdkPreviewBackend
     /// <param name="ct">Cancellation token.</param>
     public virtual async Task<NazcaPreviewResult> RenderRawCodeAsync(string code, CancellationToken ct = default)
     {
+        if (ct.IsCancellationRequested) return NazcaPreviewResult.Fail("Operation was cancelled.");
         var key = "rawcode|" + ComputeCodeHash(code);
         return await RenderCachedAsync(key, python => RunRawCodeScriptAsync(python, code, ct));
     }
@@ -203,6 +205,10 @@ public class NazcaComponentPreviewService : IPdkPreviewBackend
             return await RunProcessAsync(python,
                 new[] { _scriptPath, "--code-file", tempFile }, ct);
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return NazcaPreviewResult.Fail("Operation was cancelled.");
+        }
         catch (Exception ex)
         {
             return NazcaPreviewResult.Fail($"Unexpected error: {ex.Message}");
@@ -238,6 +244,7 @@ public class NazcaComponentPreviewService : IPdkPreviewBackend
     {
         try
         {
+            ct.ThrowIfCancellationRequested();
             var workingDir = Path.GetDirectoryName(_scriptPath);
             // PYTHONSAFEPATH: stray sibling files next to the script must not shadow
             // stdlib/Nazca modules (see PythonModuleShadowing).
@@ -245,29 +252,14 @@ public class NazcaComponentPreviewService : IPdkPreviewBackend
                     PythonModuleShadowing.SafePathEnvironment, out var psi, out var launchError))
                 return NazcaPreviewResult.Fail($"Could not start Python '{pythonExecutable}': {launchError}");
 
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError = true;
-
-            using var process = Process.Start(psi);
-            if (process == null)
-                return NazcaPreviewResult.Fail($"Could not start Python '{pythonExecutable}'.");
-
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
-
-            var timeoutTask = Task.Delay(_timeout, ct);
-            var completed = await Task.WhenAny(Task.WhenAll(stdoutTask, stderrTask), timeoutTask);
-
-            if (completed == timeoutTask || ct.IsCancellationRequested)
-            {
-                TryKill(process);
-                return ct.IsCancellationRequested
-                    ? NazcaPreviewResult.Fail("Operation was cancelled.")
-                    : NazcaPreviewResult.Fail($"Preview script timed out after {_timeout.TotalSeconds:F0}s.");
-            }
-
-            await process.WaitForExitAsync(ct);
-            return ParseOutput(await stdoutTask);
+            var result = await OwnedProcessCapture.RunAsync(psi, _timeout, ct);
+            return result.TimedOut
+                ? NazcaPreviewResult.Fail($"Preview script timed out after {_timeout.TotalSeconds:F0}s.")
+                : ParseOutput(result.Output);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return NazcaPreviewResult.Fail("Operation was cancelled.");
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
@@ -400,9 +392,4 @@ public class NazcaComponentPreviewService : IPdkPreviewBackend
         return list;
     }
 
-    private static void TryKill(Process process)
-    {
-        try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-        catch { /* best-effort */ }
-    }
 }

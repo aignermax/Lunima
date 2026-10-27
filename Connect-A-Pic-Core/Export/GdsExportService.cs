@@ -1,6 +1,5 @@
 using CAP_Core.Export.Processes;
 using CAP_Core.Export.Contracts;
-using System.Diagnostics;
 
 namespace CAP_Core.Export;
 
@@ -12,9 +11,12 @@ public class GdsExportService : IGdsExportSession
 {
     private const string MinimumNazcaVersion = "0.5.0";
     private const string DefaultPythonCommand = "python3";
+    /// <summary>Maximum execution time of an exported script before owned process retirement.</summary>
+    public static readonly TimeSpan DefaultScriptTimeout = TimeSpan.FromMinutes(5);
 
     private readonly ProcessLaunchFactory _launchFactory;
     private readonly IPythonDiscovery _pythonDiscovery;
+    private readonly TimeSpan _scriptTimeout;
     private string? _customPythonPath;
 
     /// <summary>
@@ -29,10 +31,13 @@ public class GdsExportService : IGdsExportSession
     /// </summary>
     /// <param name="launchFactory">Factory used to build process start info.</param>
     /// <param name="pythonDiscovery">Service used to locate a Python interpreter with Nazca.</param>
-    public GdsExportService(ProcessLaunchFactory? launchFactory = null, IPythonDiscovery? pythonDiscovery = null)
+    /// <param name="scriptTimeout">Optional deadline for actual GDS script execution.</param>
+    public GdsExportService(ProcessLaunchFactory? launchFactory = null, IPythonDiscovery? pythonDiscovery = null,
+        TimeSpan? scriptTimeout = null)
     {
         _launchFactory   = launchFactory   ?? ProcessLaunchFactory.CreateDefault();
         _pythonDiscovery = pythonDiscovery ?? new PythonDiscoveryService(_launchFactory);
+        _scriptTimeout = scriptTimeout ?? DefaultScriptTimeout;
     }
 
     /// <summary>
@@ -98,8 +103,16 @@ public class GdsExportService : IGdsExportSession
     /// <param name="scriptPath">Path to the Python script to execute.</param>
     /// <param name="generateGds">If true, attempts to generate GDS from the script.</param>
     /// <returns>Export result with status information.</returns>
-    public virtual async Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
+    public virtual Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
+        ExportCoreAsync(scriptPath, generateGds, CancellationToken.None);
+
+    /// <summary>Executes an export under the caller's operation lifetime; cancellation drains the process before throwing.</summary>
+    public virtual Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds,
+        CancellationToken cancellationToken) => ExportCoreAsync(scriptPath, generateGds, cancellationToken);
+
+    private async Task<GdsExportResult> ExportCoreAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!File.Exists(scriptPath))
         {
             return new GdsExportResult
@@ -122,7 +135,8 @@ public class GdsExportService : IGdsExportSession
 
         var envInfo = _readyEnvironment is { } ready && ready.Interpreter == _customPythonPath
             ? ready.Info
-            : await CheckPythonEnvironmentAsync();
+            : await CheckPythonEnvironmentAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!envInfo.IsReady)
         {
             return new GdsExportResult
@@ -137,7 +151,8 @@ public class GdsExportService : IGdsExportSession
         try
         {
             var gdsPath = Path.ChangeExtension(scriptPath, ".gds");
-            var (exitCode, output, error) = await ExecutePythonScriptAsync(scriptPath);
+            var (exitCode, output, error) = await ExecutePythonScriptAsync(scriptPath, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (exitCode == 0 && File.Exists(gdsPath))
             {
@@ -159,6 +174,7 @@ public class GdsExportService : IGdsExportSession
                 ErrorMessage = $"Python script execution failed (exit code {exitCode}): {errorMsg}"
             };
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             return new GdsExportResult
@@ -215,9 +231,12 @@ public class GdsExportService : IGdsExportSession
     /// <summary>
     /// Executes a Python script file.
     /// </summary>
-    private async Task<(int exitCode, string output, string error)> ExecutePythonScriptAsync(string scriptPath)
+    private async Task<(int exitCode, string output, string error)> ExecutePythonScriptAsync(
+        string scriptPath, CancellationToken cancellationToken)
     {
-        var pythonCmd    = await ResolvePythonCommandAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+        var pythonCmd    = await ResolvePythonCommandAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         var args         = new[] { scriptPath };
         var workingDir   = Path.GetDirectoryName(scriptPath);
 
@@ -227,18 +246,9 @@ public class GdsExportService : IGdsExportSession
                 PythonModuleShadowing.SafePathEnvironment, out var psi, out var launchError))
             return (-1, string.Empty, launchError ?? "Failed to build process start info");
 
-        psi.RedirectStandardOutput = true;
-        psi.RedirectStandardError  = true;
-        using var process = Process.Start(psi);
-        if (process == null)
-            return (-1, string.Empty, "Failed to start Python process");
-
-        var outputTask = process.StandardOutput.ReadToEndAsync();
-        var errorTask  = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-        var output = await outputTask;
-        var error  = await errorTask;
-
-        return (process.ExitCode, output, error);
+        var result = await OwnedProcessCapture.RunAsync(psi, _scriptTimeout, cancellationToken);
+        return result.TimedOut
+            ? (-1, string.Empty, $"GDS script timed out after {_scriptTimeout.TotalSeconds:F0}s.")
+            : (result.ExitCode, result.Output, result.Error);
     }
 }

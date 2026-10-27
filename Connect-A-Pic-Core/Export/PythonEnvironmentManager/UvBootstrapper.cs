@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using CAP_Core.Export.Processes;
 using System.Runtime.InteropServices;
 
 namespace CAP_Core.Export.PythonEnvironmentManager;
@@ -119,15 +119,6 @@ public class UvBootstrapper
         return File.Exists(uvDefault) ? uvDefault : null;
     }
 
-    /// <summary>Stops owned subprocesses synchronously when desktop shutdown cancels setup.</summary>
-    internal static CancellationTokenRegistration KillOnCancellation(Process process, CancellationToken token) =>
-        token.Register(() =>
-        {
-            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-            catch (InvalidOperationException) { /* already exited/disposed */ }
-            catch (System.ComponentModel.Win32Exception) { /* already exiting */ }
-        });
-
     /// <summary>
     /// Runs a process built via <paramref name="launchFactory"/> and captures its output.
     /// A user cancellation throws <see cref="OperationCanceledException"/>; a pure timeout
@@ -143,25 +134,9 @@ public class UvBootstrapper
         if (!launchFactory.TryBuild(fileName, arguments, null, null, out var startInfo, out var buildError))
             throw new InvalidOperationException($"Cannot launch '{fileName}': {buildError}");
 
-        startInfo.RedirectStandardOutput = true;
-        startInfo.RedirectStandardError = true;
-
-        using var process = new Process { StartInfo = startInfo };
-        ct.ThrowIfCancellationRequested();
-        process.Start();
-        var outputTask = process.StandardOutput.ReadToEndAsync(ct);
-        var errorTask = process.StandardError.ReadToEndAsync(ct);
-
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        using var shutdown = KillOnCancellation(process, cts.Token);
-        cts.CancelAfter(timeoutMs);
-        try { await process.WaitForExitAsync(cts.Token); }
-        catch (OperationCanceledException)
-        {
-            ct.ThrowIfCancellationRequested();
-            return (-1, string.Empty, "Operation timed out.");
-        }
-
-        return (process.ExitCode, await outputTask, await errorTask);
+        var result = await OwnedProcessCapture.RunAsync(startInfo, TimeSpan.FromMilliseconds(timeoutMs), ct)
+            .ConfigureAwait(false);
+        return result.TimedOut ? (-1, string.Empty, "Operation timed out.")
+            : (result.ExitCode, result.Output, result.Error);
     }
 }

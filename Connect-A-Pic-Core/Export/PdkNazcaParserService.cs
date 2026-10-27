@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CAP_Core.Export.Processes;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -101,16 +102,10 @@ public class PdkNazcaParserService
                 $"Check the Python path in Preferences or ensure python3 is on PATH. ({launchError})");
         }
 
-        psi.RedirectStandardOutput = true;
-        psi.RedirectStandardError  = true;
-
-        Process process;
+        CapturedProcessResult result;
         try
         {
-            process = Process.Start(psi)
-                ?? throw new PdkParserException(
-                    $"Could not start Python executable '{_pythonExecutable}'. " +
-                    "Check the Python path in Preferences or ensure python3 is on PATH.");
+            result = await OwnedProcessCapture.RunAsync(psi, _timeout, cancellationToken).ConfigureAwait(false);
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
@@ -119,29 +114,11 @@ public class PdkNazcaParserService
                 "Check the Python path in Preferences or ensure python3 is on PATH.", ex);
         }
 
-        using (process)
-        {
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(_timeout);
-            var linkedToken = timeoutCts.Token;
-
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(linkedToken);
-            var stderrTask = process.StandardError.ReadToEndAsync(linkedToken);
-
-            try
-            {
-                await process.WaitForExitAsync(linkedToken);
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                TryKill(process);
-                throw new PdkParserException(
-                    $"parse_pdk.py did not finish within {_timeout.TotalSeconds:F0}s. " +
-                    "The module may have blocked on input or entered an infinite loop.");
-            }
-
-            return (process.ExitCode, await stdoutTask, await stderrTask);
-        }
+        if (result.TimedOut)
+            throw new PdkParserException(
+                $"parse_pdk.py did not finish within {_timeout.TotalSeconds:F0}s. " +
+                "The module may have blocked on input or entered an infinite loop.");
+        return (result.ExitCode, result.Output, result.Error);
     }
 
     private static IReadOnlyList<string> BuildArgumentList(string scriptPath, string moduleName, IEnumerable<string>? functionNames)
@@ -164,12 +141,6 @@ public class PdkNazcaParserService
             : $"{additionalPythonPath}{separator}{existing}";
 
         return new Dictionary<string, string> { ["PYTHONPATH"] = pythonPath };
-    }
-
-    private static void TryKill(Process process)
-    {
-        try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-        catch { /* best-effort — the process is already gone or inaccessible */ }
     }
 
     private static PdkParseResult DeserializeResult(string json)

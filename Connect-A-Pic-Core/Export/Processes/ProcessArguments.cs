@@ -52,7 +52,17 @@ internal static class ProcessArguments
         var executable = Quote(info.FileName);
         if (info.ArgumentList.Count == 0)
             return string.IsNullOrEmpty(info.Arguments) ? executable : executable + " " + info.Arguments;
-        return executable + " " + string.Join(" ", Read(info).Select(Quote));
+        return executable + " " + string.Join(" ", Read(info).Select(QuoteArgument));
+    }
+
+    private static string QuoteArgument(string value)
+    {
+        // Match System.Diagnostics.Process/.NET 10 PasteArguments.AppendArgument:
+        // simple arguments remain unquoted. cmd.exe parses quoted internal command
+        // names differently, even though a conventional argv parser would not.
+        // https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Private.CoreLib/src/System/PasteArguments.cs
+        return value.Length > 0 && !value.Any(character => char.IsWhiteSpace(character) || character == '"')
+            ? value : Quote(value);
     }
 
     private static string Quote(string value)

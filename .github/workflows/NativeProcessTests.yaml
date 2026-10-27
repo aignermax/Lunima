@@ -17,6 +17,11 @@ on:
       - 'UnitTests/AgentBridge/ClaudeCliProcessLifetimeTests.cs'
       - 'UnitTests/AgentBridge/ClaudeBatchCli*.cs'
       - 'UnitTests/Export/PdkResolution/PdkResolutionProcessLifetimeTests.cs'
+      - 'UnitTests/Export/*ProcessLifetimeTests.cs'
+      - 'UnitTests/Export/PdkNazcaParserLifetimeTests.cs'
+      - 'UnitTests/Export/PythonEnvironmentManager/UvProcessLifetimeTests.cs'
+      - 'UnitTests/Export/*Process*Fixture.cs'
+      - 'UnitTests/Export/OwnedToolProcessScenarios.cs'
       - '**/*.csproj'
       - 'Directory.Build.*'
       - 'global.json'
@@ -58,7 +63,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force UnitTests/TestResults | Out-Null
           dotnet test UnitTests/UnitTests.csproj `
-            --filter 'FullyQualifiedName~ClaudeBatchCliArgumentTests|FullyQualifiedName~ClaudeBatchCliLifetimeTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~ControlledSolverCleanupTests' `
+            --filter 'FullyQualifiedName~ClaudeBatchCliArgumentTests|FullyQualifiedName~ClaudeBatchCliLifetimeTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~ControlledSolverCleanupTests|FullyQualifiedName~OwnedProcessCaptureCommandTests|FullyQualifiedName~UvProcessLifetimeTests|FullyQualifiedName~PdkNazcaParserLifetimeTests|FullyQualifiedName~NazcaPreviewProcessLifetimeTests|FullyQualifiedName~GdsScriptProcessLifetimeTests' `
             --blame-hang --blame-hang-timeout 2m --blame-hang-dump-type none `
             --results-directory UnitTests/TestResults `
             --logger 'trx;LogFileName=windows-batch-cli.trx' `
@@ -76,6 +81,12 @@ jobs:
           results = root.findall('.//t:UnitTestResult', ns)
           batch = [r for r in results if 'ClaudeBatchCli' in r.attrib['testName']]
           assert len(batch) == 14, f'Expected all 14 actual batch CLI cases, found {len(batch)}'
+          expected = {'UvProcessLifetimeTests': 4, 'PdkNazcaParserLifetimeTests': 5,
+                      'NazcaPreviewProcessLifetimeTests': 7, 'GdsScriptProcessLifetimeTests': 7,
+                      'OwnedProcessCaptureCommandTests': 4}
+          for family, count in expected.items():
+              actual = sum(family + '.' in r.attrib['testName'] for r in results)
+              assert actual == count, f'{family}: expected {count} executed cases, found {actual}'
           unsuccessful = [(r.attrib['testName'], r.attrib['outcome']) for r in results
                           if r.attrib['outcome'] != 'Passed']
           assert not unsuccessful, unsuccessful
@@ -152,7 +163,7 @@ jobs:
       - name: Exercise real child processes and descendant cleanup
         env:
           LUNIMA_TEST_PYTHON3: ${{ steps.python.outputs.python-path }}
-          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~PdkResolutionProcessLifetimeTests
+          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~PdkResolutionProcessLifetimeTests|FullyQualifiedName~UvProcessLifetimeTests|FullyQualifiedName~PdkNazcaParserLifetimeTests|FullyQualifiedName~NazcaPreviewProcessLifetimeTests|FullyQualifiedName~GdsScriptProcessLifetimeTests
         run: |
           set -euo pipefail
           dotnet test UnitTests/UnitTests.csproj --no-build --filter "$PROCESS_FILTER" \
@@ -184,6 +195,11 @@ jobs:
               batch = root.findall('.//t:UnitTestResult', ns)
               assert batch, f'The {name} filter did not execute any tests'
               results.extend(batch)
+          expected = {'UvProcessLifetimeTests': 4, 'PdkNazcaParserLifetimeTests': 5,
+                      'NazcaPreviewProcessLifetimeTests': 7, 'GdsScriptProcessLifetimeTests': 7}
+          for family, count in expected.items():
+              actual = sum(family + '.' in r.attrib['testName'] for r in results)
+              assert actual == count, f'{family}: expected {count} executed cases, found {actual}'
           unsuccessful = [(r.attrib['testName'], r.attrib['outcome']) for r in results
                           if r.attrib['outcome'] != 'Passed']
           assert not unsuccessful, unsuccessful
