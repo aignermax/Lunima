@@ -181,12 +181,17 @@ public partial class LogicPanelViewModel : ObservableObject, IAsyncDisposable
     }
 
     /// <summary>Replaces the displayed network with nothing (failure, cancel, rebuild).</summary>
-    private void ClearNetwork()
+    private void ClearNetwork(long? buildPublicationRevision = null)
     {
-        var ownsPublishedNetwork = _builtNetworkProvider == null
-            || ReferenceEquals(_builtNetworkProvider.Network, _network);
+        var previousNetwork = _network;
         _network = null;
         HasNetwork = false;
+        // Check immediately before clearing the shared handoff, including publications
+        // made by a synchronous HasNetwork property-change observer above.
+        var ownsPublishedNetwork = _builtNetworkProvider == null
+            || (buildPublicationRevision is { } revision
+                ? _builtNetworkProvider.PublicationRevision == revision
+                : ReferenceEquals(_builtNetworkProvider.Network, previousNetwork));
         if (ownsPublishedNetwork)
         {
             _builtNetworkProvider?.Clear();

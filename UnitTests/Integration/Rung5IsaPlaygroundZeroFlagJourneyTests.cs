@@ -29,7 +29,7 @@ public class Rung5IsaPlaygroundZeroFlagJourneyTests
     [Fact]
     public async Task ZeroDetectCountTo5_PhotonicZeroFlag_DecidesEveryJzOnLight()
     {
-        using var container = BuildContainer();
+        await using var container = BuildContainer();
         var networkProvider = container.GetRequiredService<BuiltLogicNetworkProvider>();
         var playground = container.GetRequiredService<IsaPlaygroundViewModel>();
         var examples = new ExampleDesignsService().GetExamples();

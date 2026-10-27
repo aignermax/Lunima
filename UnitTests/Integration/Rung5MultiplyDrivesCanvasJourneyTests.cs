@@ -47,7 +47,7 @@ public class Rung5MultiplyDrivesCanvasJourneyTests
     public async Task Multiply3x4_PhotonicAdds_DriveLogicPanelAndCanvas_SurviveSaveLoad()
     {
         CAP.Avalonia.Services.Localization.LocalizationService.Instance.SetLanguage("en");
-        using var container = BuildContainer();
+        await using var container = BuildContainer();
         var playground = container.GetRequiredService<IsaPlaygroundViewModel>();
         var canvas = new DesignCanvasViewModel();
         var fileOps = LogicGateHalfAdderExampleTests.CreateFileOperations(canvas);
@@ -109,7 +109,7 @@ public class Rung5MultiplyDrivesCanvasJourneyTests
     [Fact]
     public async Task Multiply3x4_GoldenModel_NeverTouchesLogicPanel()
     {
-        using var container = BuildContainer();
+        await using var container = BuildContainer();
         var playground = container.GetRequiredService<IsaPlaygroundViewModel>();
         var canvas = new DesignCanvasViewModel();
         var fileOps = LogicGateHalfAdderExampleTests.CreateFileOperations(canvas);

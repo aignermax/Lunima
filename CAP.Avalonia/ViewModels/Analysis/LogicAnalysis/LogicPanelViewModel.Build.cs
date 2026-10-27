@@ -22,6 +22,7 @@ public partial class LogicPanelViewModel
         var canvas = _canvas;
         var configuration = _configurationVersion;
         AnalysisSweepOperation? operation = null;
+        long? publicationRevision = null;
         IsProcessing = true;
         StatusText = Translate("Analysis.LogicPanel.Running");
         try
@@ -29,6 +30,7 @@ public partial class LogicPanelViewModel
             operation = new AnalysisSweepOperation(_work, canvas.Document,
                 () => configuration == _configurationVersion && ReferenceEquals(canvas, _canvas), stop, stop);
             _activeBuild = operation;
+            publicationRevision = _builtNetworkProvider?.PublicationRevision;
             var components = canvas.Components.Select(c => c.Component).ToList();
             var connections = canvas.Connections.Select(c => c.Connection).ToList();
             var wavelengthNm = ResolveWavelengthNm();
@@ -47,7 +49,7 @@ public partial class LogicPanelViewModel
         catch (OperationCanceledException)
         {
             if (operation?.IsContextCurrent != true) return;
-            ClearNetwork();
+            ClearNetwork(publicationRevision);
             StatusText = Translate("Analysis.LogicPanel.Cancelled");
         }
         catch (Exception ex)
@@ -56,7 +58,7 @@ public partial class LogicPanelViewModel
             // No gate in the design (InvalidOperationException), wiring violations
             // naming the pins (ArgumentException), or an unexpected simulation
             // failure: a readable message, never a crash or a stale "running" state.
-            ClearNetwork();
+            ClearNetwork(publicationRevision);
             StatusText = string.Format(Translate("Analysis.LogicPanel.Failed"), ex.Message);
         }
         finally
