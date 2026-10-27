@@ -1,7 +1,7 @@
 # Lunima codebase map
 
 Use this as a navigation index. [ARCHITECTURE.md](../ARCHITECTURE.md) describes the
-current boundaries and outstanding hardening work; [CLAUDE.md](../CLAUDE.md)
+current boundaries and verification requirements; [CLAUDE.md](../CLAUDE.md)
 defines contributor rules. The UI uses Avalonia and CommunityToolkit.Mvvm;
 dependency injection uses Microsoft.Extensions.DependencyInjection.
 
@@ -21,7 +21,7 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | `CAP-DataAccess/PDKs/` | Bundled process design kits |
 | `CAP.Avalonia/DI/` | Feature service registration |
 | `CAP.Avalonia/ViewModels/` | Presentation state, grouped by feature |
-| `CAP.Avalonia/Services/` | Application workflows and platform integrations; boundaries are being hardened |
+| `CAP.Avalonia/Services/` | Application workflows and platform integrations, separated by capability contracts |
 | `CAP.Avalonia/Controls/` | Canvas interaction and rendering |
 | `CAP.Avalonia/Views/` | AXAML windows, dialogs and panels |
 | `CAP.Desktop/` | Desktop entry point and packaging |
@@ -40,18 +40,21 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | Immutable main/spectral simulation inputs | `Connect-A-Pic-Core/LightCalculation/Snapshots/` |
 | Truth-table and logic network input capture | `Connect-A-Pic-Core/Analysis/LogicAnalysis/TruthTableSnapshot.cs`, `LogicNetworkSnapshot.cs` |
 | Private routing input and results | `Connect-A-Pic-Core/Routing/Snapshots/` |
+| Bounded exact outline raster reuse | `Connect-A-Pic-Core/Routing/AStarPathfinder/OutlineRasterCache.cs`, `OutlineRasterRows.cs` |
 | Application and feature retirement | `CAP.Avalonia/Services/Lifetime/` |
 | Native document workflow | `CAP.Avalonia/ViewModels/Panels/NativeDesign/` |
 | Registry read capability | `Connect-A-Pic-Core/ComponentRegistry/RegistryClient/IRegistryCatalog.cs` |
 | Registry adoption capability | `CAP.Avalonia/Services/ComponentRegistry/IRegistryAdoption.cs` |
 | Bundled PDK inventory and write classification | `CAP-DataAccess/Components/ComponentDraftMapper/IBundledPdkCatalog.cs` |
 | Measured spectrum loading | `Connect-A-Pic-Core/Analysis/MeasuredSpectrum/IMeasuredSpectrumSource.cs` |
-| openEBL submission checking | `Connect-A-Pic-Core/Export/OpenEbl/` via `Export/Contracts/IOpenEblSubmissionChecker.cs` |
+| openEBL submission checking | `Connect-A-Pic-Core/Export/OpenEbl/` via `Connect-A-Pic-Core/Export/Contracts/IOpenEblSubmissionChecker.cs` |
 | GDS file reading and parsing | `CAP-DataAccess/Import/Gds/IGdsSourceReader.cs` |
-| Redirected subprocess ownership | `Connect-A-Pic-Core/Export/Processes/OwnedProcess.cs` |
+| Redirected subprocess ownership and bounded stream capture | `Connect-A-Pic-Core/Export/Processes/OwnedProcess.cs`, `OwnedProcessCapture.cs` |
 | Bridge CLI execution and Windows batch adaptation | `CAP.Avalonia/Services/AgentBridge/Registration/CliProcessRunner.cs`, `WindowsBatchCommand.cs` |
 | Explicit shell startup | `CAP.Avalonia/ViewModels/Shell/ShellActivationCoordinator.cs` |
 | Python/export capabilities | `Connect-A-Pic-Core/Export/Contracts/` |
+| Owned interpreter settings operations | `CAP.Avalonia/ViewModels/Export/GdsEnvironmentOperation.cs` |
+| Coordinate diagnostics and stale-result rejection | `CAP.Avalonia/ViewModels/Export/GdsCoordExtractViewModel.cs`, `CAP.Avalonia/ViewModels/Diagnostics/GdsCoordinateComparisonViewModel.cs` |
 | Example file inventory and localized projection | `CAP.Avalonia/Services/IExampleFileCatalog.cs`, `FileExampleCatalog.cs`, `ExampleDesignsService.cs` |
 | S-parameter import detection | `CAP-DataAccess/Import/ISParameterImportCatalog.cs`, `SParameterImportCatalog.cs` |
 | Configured preview disk cache | `CAP.Avalonia/Controls/Canvas/ComponentPreview/IGdsPreviewCache.cs` |
@@ -63,7 +66,7 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | Detached layout compression and shared force solver | `Connect-A-Pic-Core/Analysis/LayoutCompressionSnapshot.cs`, `LayoutCompressionSolver.cs` |
 | Detached circuit optimization and shared seeded search | `Connect-A-Pic-Core/Analysis/CircuitOptimization/CircuitOptimizationSnapshot.cs`, `OptimizationSearch.cs` |
 | Captured transient circuit and excitation | `Connect-A-Pic-Core/LightCalculation/TimeDomainSimulation/TransientCircuitSnapshot.cs`, `TransientExcitationSnapshot.cs` |
-| Captured fabrication variations and spectrum | `Connect-A-Pic-Core/Analysis/MonteCarloAnalysis/MonteCarloSpectrumSnapshot.cs`, `FabricationVariance/FabricationSnapshot.cs` |
+| Captured fabrication variations and spectrum | `Connect-A-Pic-Core/Analysis/MonteCarloAnalysis/MonteCarloSpectrumSnapshot.cs`, `Connect-A-Pic-Core/Analysis/MonteCarloAnalysis/FabricationVariance/FabricationSnapshot.cs` |
 | Analysis document lease and accepted routing cleanup | `CAP.Avalonia/ViewModels/Analysis/AnalysisSweepOperation.cs` |
 | Persistent analysis rebinding after accepted New/Load | `CAP.Avalonia/ViewModels/Shell/PersistentAnalysisDocumentBinding.cs` |
 | Truth-table extraction and publication ownership | `CAP.Avalonia/ViewModels/Analysis/LogicAnalysis/TruthTableWorkSession.cs` |
@@ -83,7 +86,7 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 ## Adding a feature
 
 Keep domain calculations in Core and presentation in the matching feature's
-viewmodel/view folders. Register dependencies in the relevant `DI/` extension.
+viewmodel/view folders. Register dependencies in the relevant `CAP.Avalonia/DI/` extension.
 Choose the UI surface using CLAUDE.md §5: whole-design analyses belong in the
 analysis dock; focused workflows use windows, dialogs or flyouts. **The right
 sidebar is only for properties of the current selection.**

@@ -1,9 +1,9 @@
 # Lunima architecture
 
 This guide describes the architecture-hardening branch as of October 27, 2026.
-Several ownership and dependency boundaries are implemented and regression-tested;
-the remaining work is explicitly called out below. This is not a release-readiness
-or whole-application equivalence claim. Follow
+The ownership and dependency boundaries below are implemented and protected by
+regression tests. Release readiness additionally requires the verification records
+in the hardening plan and operational signing-key provisioning. Follow
 [CODEBASE_MAP.md](docs/CODEBASE_MAP.md) for entry points and the
 [hardening design](docs/superpowers/specs/2026-10-23-architecture-hardening-design.md)
 for the required end state and verification criteria.
@@ -79,8 +79,9 @@ with separate capture, component/group mapping, loading and post-load services.
 pickers, accepted I/O and cleanup under one owner. The unused alternate UI
 workflow (`ProjectPersistenceViewModel`/`ProjectPersistenceService`) was retired.
 `GridPersistenceWithGroupsManager` remains a separately tested low-level grid
-serializer; it is not the application's native-document workflow. Native capture isolation and atomic replacement are regression-tested, including
-symlinks and Unix modes on the Linux/macOS CI matrix; final integration remains open.
+serializer; it is not the application's native-document workflow. Native capture
+isolation and atomic replacement are regression-tested, including symlinks and
+Unix modes on the Linux/macOS CI matrix.
 Preserve serialized names, IDs, geometry, models and process data.
 
 `CAP.Avalonia/Commands/CommandManager` owns undo/redo history and entry-scoped side
@@ -88,8 +89,8 @@ effects. `CAP_Core.Documents.DocumentSession` owns document identity, revision,
 navigation scope and accepted operations. `DocumentOperation` guards publication
 and drains cancellation callbacks asynchronously. Non-owning identity bookmarks
 admit configured windows only to the document they were opened for. Canvas group
-projections use canonical roots and group route publication; remaining feature
-owners must adopt these boundaries rather than invent independent root copies.
+projections use canonical roots and group route publication. Configured feature
+owners use document identity and operation leases instead of independent root copies.
 
 ## Geometry, routing and simulation
 
@@ -111,8 +112,15 @@ new workers share the same numerical kernels. Transient simulations capture the
 circuit, excitation and output metadata. Fabrication spectrum and eye sampling
 capture participants, excitation and metric inputs while preserving the legacy
 random draw order and eye-noise policy. These analysis slices have numerical and
-lifetime regression coverage; combined final verification remains open.
-A cancellation token alone is not snapshot isolation.
+lifetime regression coverage. A cancellation token alone is not snapshot isolation.
+
+Private routing snapshots share completed outline raster rows through a grid-owned,
+bounded cache. Keys compare every transformed vertex, polygon boundary, grid bound,
+cell size and padding value. Each new graph still rebuilds ownership, pin corridors,
+reservations and allowed regions. Entries retain no live components or pins; the
+256-entry/32 MiB estimated retained-size limit applies per cache, not globally to
+all in-flight snapshots. Exact geometry and production-scale reuse have regression
+coverage; cache hits never substitute bounding boxes for the real geometry.
 
 PDK JSON files are bundled under `CAP-DataAccess/PDKs/`; the schema is documented in
 [PDK_JSON_FORMAT.md](docs/PDK_JSON_FORMAT.md). Process policies constrain compatible
@@ -130,9 +138,14 @@ script regression fixtures protect emission order and coordinate conventions.
 External tools use `CAP_Core.Export.ProcessLaunchFactory`; opening URLs and files
 uses `IUrlLauncher`. Solver, Python-probe, openEBL, PDK-resolution and bridge-registration sessions use
 `Export/Processes/OwnedProcess` through stream drain, exit and descendant cleanup.
-Final review still found incomplete deadline/cancellation/drain paths in preview,
-GDS execution, uv setup and Nazca PDK parsing; these are being remediated under
-A02/A15. The shared launcher alone does not provide this ownership.
+`OwnedProcessCapture` extends the same containment to preview rendering, GDS
+script execution, uv setup and Nazca PDK parsing, with one deadline covering
+stream reads and process exit. It retires descendants before returning results,
+including when the root exits first. Real-child tests execute on Windows, Linux,
+and both macOS architectures. Coordinate extraction, comparison and interpreter
+probes use the same owned capture. Their presentation commands reject results after
+input changes, resets or feature retirement. A shared launcher alone does not
+provide these ownership guarantees.
 Python setup, registry activation and preview caches have separate capability
 contracts and effective-environment identity; shared DI aliases preserve one cache
 owner. Update manifests are authenticated, while operational release-signing secret
@@ -162,8 +175,12 @@ before application disposal. `ShellWorkScope` closes admission and waits for act
 jobs and asynchronous cancellation callbacks. Shell-owned spectrum/ONA, logic and
 truth-table extraction, GateView/MakeGate, parameter sweep, compression, optimization,
 transient/eye and Monte Carlo jobs are drained by `MainViewModel.StopAsync`.
-Python, solver, editor and registry feature owners also participate in retirement;
-the remaining subprocess gaps are described above. Async-only owners require
+Python, solver, editor and registry feature owners also participate in retirement.
+GDS export, interpreter discovery/settings, gdsfactory and coordinate diagnostics
+track accepted work and propagate cancellation through their backend contracts.
+An approved openEBL dialog close drains its current run and detaches its clipboard
+callback; reopening admits a new session on the reusable feature model. Rejected
+closes preserve the current operation. Async-only owners require
 `await using` or `DisposeAsync`, including in test containers. Synchronous disposal
 must not block the UI to hide unfinished work.
 

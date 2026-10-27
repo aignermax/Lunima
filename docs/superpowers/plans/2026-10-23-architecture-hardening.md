@@ -141,11 +141,27 @@ Files: architecture tests/checker, explicit module policy, every remaining path 
 
 ## Phase 5 — Combined verification and final review
 
-- [ ] Record resolution/evidence for every A01–A18 item and the source inventory.
-- [ ] Build and run appropriately scoped local tests serially; run full CI including Heavy and platform-specific smoke checks.
-- [ ] Independently review complete diff for regressions and responsibility boundaries; fix findings and reverify affected paths.
-- [ ] Check docs/quickstarts on clean state, staged hook and CI checker, resolved package graphs and publish outputs.
-- [ ] Prepare reviewable PR(s); report exact tests and limitations. Mark goal complete only after all required acceptance conditions hold.
+The implementation and focused review fixes are committed through `96fbc9ef`.
+The following execution records are the acceptance evidence; use their actual
+reported outcomes rather than treating the existence of a run as success.
+
+- Focused final regression run: 203 passed, zero failed/skipped
+  (`tests-20261027-155346-60876.log`). All eight final review regressions pass.
+- [Full CI including Heavy](https://github.com/aignermax/Lunima/actions/runs/40526201954),
+  on code commit `96fbc9ef`; the local broad run excludes Slow/Heavy.
+- [Native Windows, Linux and both macOS targets](https://github.com/aignermax/Lunima/actions/runs/40526212227).
+- [Architecture checks](https://github.com/aignermax/Lunima/actions/runs/40526212253),
+  plus 28 local Python guard/tool tests and the 4,213-file authored-source inventory.
+- Independent final review covered export/coordinate/raster deltas and cross-cutting
+  ownership/document integration. Reported material findings were fixed and verified;
+  this was not an exhaustive line-by-line review of the complete 6.4 MB diff.
+- Fresh Windows Release publish and Browser Release build passed; published runtime
+  dependencies and required Python/example assets were checked. The desktop starts
+  and responds. Interactive click-through is unverified because Computer Use's
+  native pipe was unavailable after recovery attempts; headless UI tests remain
+  separate evidence, not a substitute claim of a manual test.
+- [Draft PR #1574](https://github.com/aignermax/Lunima/pull/1574) carries the final
+  aggregate results and limitations. No merge or release is part of this refactor.
 
 ## Execution log
 
@@ -305,26 +321,31 @@ Additional verification, 2026-10-23 afternoon:
 
 ## Current audit resolution — October 27
 
-| Finding | Status |
+These statuses describe implemented resolutions and focused review/verification.
+Aggregate execution outcomes are linked in Phase 5 and the PR; they must be green
+before accepting the branch. Historical checkpoints below retain their original
+failures and pending work so that intermediate runs are not mistaken for acceptance.
+
+| Finding | Resolution and evidence |
 |---|---|
-| A01 | Resolved, reviewed, 124-case combined verification |
-| A02 | Shared containment verified on Windows, Linux and both macOS targets; final inventory found additional preview/export/setup/parser paths needing migration and real-child verification |
-| A03 | Bounded cache, warm lookup and PDK edit invalidation verified; final combined review pending |
-| A04 | Main, routing, wavelength, logic, parameter, compression, optimization and transient inputs detached and verified; Monte Carlo spectrum verified, Monte Carlo eye input/numerical isolation verified in `ba148c04`; final aggregate verification pending |
-| A05 | Export, shell/file/input/window and routing decomposition committed with behavior controls; final aggregate review pending |
-| A06 | Configured capability boundaries enforced; desktop/browser rebuilds have zero dependency diagnostics (`abe363e8`); final-head verification pending |
-| A07 | Semantic analyzer mandatory as errors in all shipping projects; negative and ownership coverage tests pass, no opt-in warning baseline remains |
-| A08 | Shared runtime verified; desktop/browser rebuilds pass; fresh final-head publish comparison pending |
-| A09 | All 22 command budgets pass at the unchanged 100 ms threshold; exact raster reuse and corrected acknowledgement timing committed as fe232861, final integration review pending |
-| A10 | Actual MCP/assistant mutation admission, post-cleanup response gating and isolated repair trials verified; final integrated review pending |
-| A11 | Pinned uv, authenticated updater download, installer handoff and signed publisher tooling verified; operational publisher key/secret provisioning remains external to this unreleased PR |
-| A12 | Checked-in runner/docs implemented; all 24 tooling tests pass, including actual 1,000-line commit rejection; four APT fallback controls additionally pass |
-| A13 | April report removed; architecture/map and this matrix updated for implemented boundaries; final documentation review pending |
-| A14 | Hook/CI guard active; 4,185 tracked authored files pass the 999-line ceiling; final inventory and aggregate review remain |
-| A15 | Main/window, updater, Python, solver, registry, thumbnail, editor/settings and analysis owners verified; shared shell analysis shutdown committed in `190a76d2`; truth-table ownership and shell New/Load rebinding verified in `86830706`; four direct Python process lifetime gaps remain |
-| A16 | Binary/SDK cleanup verified with fresh desktop publish; final branch/platform checks pending |
-| A17 | Native DTO/workflow separation and detached atomic save verified, including actual Linux/macOS symlink/mode checks; final integrated review pending |
-| A18 | Canonical root/scope, native capture, actual UI routing/grid publication, undo and configured-document admission verified; remaining analysis work tracked under A04/A15 |
+| A01 | History-entry retirement and crossing metadata ownership; reviewed, 124-case combined verification |
+| A02 | Shared owned process containment plus bounded stream capture, all callers migrated; actual-child native matrix includes preview/export/setup/parser and coordinate diagnostics |
+| A03 | Bounded preview cache, warm lookup, effective-environment and PDK-edit invalidation; lifetime controls verified |
+| A04 | Main, routing, wavelength, truth-table/logic, parameter, compression, optimization, transient and Monte Carlo inputs detached; legacy numerical policy controls verified |
+| A05 | Shell/input/window, export writers, routing, analysis and persistence responsibilities extracted with behavior controls |
+| A06 | Capability-based dependency boundaries; desktop/browser builds enforce the declared direction with no dependency diagnostics |
+| A07 | Semantic dependency analyzer mandatory as errors in shipping projects; negative tests and namespace/project coverage, no warning baseline |
+| A08 | Shared Avalonia 11.3.13 runtime for production/headless hosts; final publish and resolved package checks verified |
+| A09 | Whole-operation heartbeat tests retain the 100 ms command budget; exact raster reuse removes repeated scan conversion without weakening the six-second large-import budget |
+| A10 | MCP/assistant mutation admission, cancellation, post-cleanup responses and isolated repair trials verified |
+| A11 | Pinned uv, authenticated updater artifacts and signed publisher tooling verified; production signing-key provisioning is an external release prerequisite |
+| A12 | Checked-in serialized test runner, execution-result validation and matching docs; 28 Python guard/tool tests pass |
+| A13 | April assessment removed; architecture and codebase map reconciled, all 72 explicit map paths checked |
+| A14 | Staged-index hook and whole-tree CI ceiling; 4,213 authored source/documentation files at most 999 physical lines |
+| A15 | Application/shell/window/feature ownership, real process cleanup, repeated-load controls, analysis rebinding and export/settings/coordinate retirement verified; final 203-case run passes |
+| A16 | Duplicate binary removed, SDK/package policy aligned, fresh publish has one MathNet 5.0.0 assembly |
+| A17 | Native DTO/workflow separation and detached atomic save verified, including native symlink and Unix-mode checks |
+| A18 | Canonical root/scope access, native capture, revision-gated routing/grid publication and configured-document admission verified |
 
 Further integration checkpoints (same day):
 
@@ -731,3 +752,89 @@ private snapshot isolation, stale-progress rejection, and actual retirement.
   versus 128 ms transformation, 248 ms stamping, 11 ms clearing and <1 ms allocation;
   total 3.812 s, frozen-route assertions pass. Reusing immutable exact raster rows
   is being evaluated with invalidation/parity controls, not by skipping validation.
+
+- `tests-20261027-150533-59364.log`: 161 passed, nine failed, zero skips.
+  All 23 new subprocess cases now pass, including raw-code cleanup after correcting
+  Windows newline translation in its test fixture. Existing export/preview and
+  NAND/register/compression integration controls pass. Eight new exact raster
+  reuse/bounds cases are intentionally RED; the ninth failure is a Windows cmd
+  echo compatibility regression in the new capture runner and remains open.
+- CI on `ba148c04` completed: seven shards pass; fast-integration has two failed
+  truth-table journey cases, fast-rest has one related marker case and six UI
+  compression cases. These fixtures selected detached viewmodels or blocked UI
+  commands off the dispatcher. `786a373d` uses the canonical loaded selection and
+  awaited Avalonia UI execution, retaining all assertions; independent review and
+  the combined local run pass. All package preparation now completes, and native,
+  architecture and signing CI checks are separately tracked for the next head.
+
+- `a98c6775` commits shared owned stream capture and preview/export/setup/parser
+  adapters. The 23 new subprocess cases and Windows argument-parity controls pass;
+  native CI `40520449033` passes Windows, Linux and both macOS targets. Architecture
+  and signing checks also pass. Full PR CI on `786a373d` passes all selected shards.
+- `tests-20261027-151832-22168.log`: 108 passed, 11 intentional export-workflow
+  failures, one Unix-only skip. The initial raster-cache controls pass, but the
+  production import still performs 316 scan conversions and takes 3.378 seconds;
+  the optimization is not accepted from isolated controls alone.
+- `tests-20261027-152938-43396.log`: 13 passed, eight failed, zero skips. All 11
+  export-workflow ownership regressions pass. Six coordinate-helper regressions
+  remain, together with oversized retained raster storage and production cache
+  misses. The unchanged production pass takes 3.506 seconds, with 3.039 seconds
+  rebuilding the grid; original geometry/frozen-path assertions remain intact.
+
+- `tests-20261027-153558-41444.log`: 124 passed, 16 intentional failures, zero
+  skips. All original coordinate/extractor cases and 22 raster controls pass.
+  Compact exact vertex/boundary storage and merged-span trimming reduce the
+  production pass from 3.506 s to 0.810 s; grid rebuilding falls from 3.039 s to
+  0.370 s. All 158 entries fit in 31,609,504 accounted bytes under the unchanged
+  32 MiB budget, with zero new scan conversions and unchanged frozen routes.
+  Remaining REDs are three coordinate-comparison process cases, six coordinate
+  workflow cases and seven export DI/window/publication cases. No legacy export
+  control fails. Diagnostic instrumentation will be removed before acceptance.
+- All 28 Python guard/tool tests pass again; tracked authored-source size check
+  passes for 4,193 files. Full PR CI `40520449018` reports success on `a98c6775`;
+  this is not the final pending worktree or a Heavy-inclusive manual run.
+
+- Clean raster/coordinate/export checkpoint compiled in
+  `tests-20261027-154058-30032.log`, but the coordinator stopped that run after an
+  overly broad OpenEbl selection entered the real SiEPIC MZI export. It supplies
+  no passing-suite evidence. Those external integration cases remain in full CI;
+  the next local selection names the affected workflow controls explicitly.
+- Independent final-delta review found no raster correctness blocker. Coordinate
+  diagnostic APIs still need input/reset supersession and reentrant-reset guards;
+  these have no demonstrated current AXAML caller, but are supported public model
+  operations. The real export settings discovery command needs owned cancellation,
+  and a synchronous error-console observer can retire gdsfactory export before its
+  final status write. Focused regression cases are being added for these findings.
+- A separate fresh reviewer thread could not be created because the session thread
+  limit was reached. Existing non-author agents independently review the final
+  feature deltas; the raster agent also reviews the combined architecture in
+  focused passes. This limitation must not be represented as an exhaustive
+  fresh-context line-by-line review of the 1,323-file branch.
+
+- `tests-20261027-154751-52600.log`: 154 passed, ten failed, zero skips.
+  Clean raster code (all diagnostics removed), all prior export/window/DI fixes
+  and selected legacy controls pass. Eight new review regressions fail as intended.
+  A comparison success fixture also exhausted its 700 ms startup budget, and the
+  explicit-interpreter error lost its executable name in the native Win32 message;
+  both are being corrected without relaxing actual timeout/cleanup assertions.
+- `207e723c` commits the independently reviewed 11-file raster optimization after
+  clean verification. Its exact geometry keys include all polygon boundaries;
+  pin corridors, regions and ownership are rebuilt for every private graph.
+  The byte cap is per grid/cache, not a global memory guarantee across snapshots.
+
+- `tests-20261027-155346-60876.log`: all 203 selected tests pass, zero failures
+  or skips. This includes all eight final review regressions, caller-cancellation
+  controls, coordinate process/interpreter diagnostics, shell activation, export
+  settings, real DI retirement, dialog close/reopen and clean raster reuse.
+  `96fbc9ef` commits the reviewed fixes and expands all four native OS jobs with
+  twelve coordinate process/interpreter cases. All three embedded CI verifier
+  scripts compile; production timeout policy is unchanged.
+- Final runtime verification started on `96fbc9ef`: Heavy-inclusive manual xUnit
+  run `40526201954`, PR xUnit `40526212184`, native matrix `40526212227`, architecture
+  `40526212253`. Fresh Windows Release publish and Browser Release build both pass;
+  published dependencies are Avalonia/Desktop 11.3.13 and MathNet 5.0.0, with one
+  MathNet DLL and all nine checked example/Python runtime assets present.
+- Fresh published desktop started successfully (Lunima window, responding process).
+  Native Computer Use is unavailable: missing native pipe after a retry and kernel
+  reset. No interactive click-through is claimed. Existing headless UI regressions
+  remain required; a full local non-Slow/non-Heavy run is in progress separately.
