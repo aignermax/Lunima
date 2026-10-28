@@ -87,6 +87,8 @@ public partial class MainWindow : Window
         (_editorHosts, _toolWindows, _panelDialogs) = (editorHosts, toolWindows, panelDialogs);
         InitializeComponent();
 
+        AddHandler(KeyDownEvent, OnPreviewHistoryShortcut, RoutingStrategies.Tunnel);
+
         // Guard against losing unsaved changes when the window is closed
         Closing += OnWindowClosing;
         Closed += (_, _) => { ReleaseWindowBindings(); _shutdownBindings.Dispose(); };
@@ -407,6 +409,26 @@ public partial class MainWindow : Window
     {
         double width = Math.Clamp(column.Width.Value + delta, panel.MinWidth, panel.MaxWidth);
         column.Width = new GridLength(width, GridUnitType.Pixel);
+    }
+
+    /// <summary>
+    /// Ctrl+Z/Ctrl+Y a focused text field cannot use itself go to the design history. Focus stays
+    /// in a properties field after Enter, and the TextBox marks the shortcut handled even with
+    /// nothing to undo — so design edits looked un-undoable until the user clicked the canvas.
+    /// </summary>
+    private void OnPreviewHistoryShortcut(object? sender, KeyEventArgs e)
+    {
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Control) || DataContext is not MainViewModel mainVm)
+            return;
+        if (FocusManager?.GetFocusedElement() is not TextBox textBox)
+            return;
+        if (e.Key == Key.Z && !textBox.CanUndo)
+            mainVm.UndoCommand.Execute(null);
+        else if (e.Key == Key.Y && !textBox.CanRedo)
+            mainVm.RedoCommand.Execute(null);
+        else
+            return;
+        e.Handled = true;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
