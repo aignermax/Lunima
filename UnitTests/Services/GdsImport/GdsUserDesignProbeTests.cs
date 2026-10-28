@@ -40,7 +40,7 @@ public class GdsUserDesignProbeTests
 
         using var host = new GdsDesignScopeTestHost();
         var service = host.CreateService();
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         var dialogOptions = new GdsHierarchyImportOptions
         {
             PinDetection = new GdsPinDetectionOptions { PortLayers = [(1, 10), (501, 1)] },

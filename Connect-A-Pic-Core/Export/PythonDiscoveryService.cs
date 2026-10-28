@@ -1,3 +1,5 @@
+using CAP_Core.Export.Contracts;
+using CAP_Core.Export.Processes;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -7,7 +9,7 @@ namespace CAP_Core.Export;
 /// Discovers Python installations with Nazca in common locations.
 /// Supports system Python, virtual environments, and conda environments.
 /// </summary>
-public partial class PythonDiscoveryService
+public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
 {
     private readonly ProcessLaunchFactory _launchFactory;
 
@@ -25,8 +27,9 @@ public partial class PythonDiscoveryService
     /// Searches system commands, active venv, and common venv directories.
     /// </summary>
     /// <returns>List of Python installations that have Nazca installed.</returns>
-    public async Task<List<PythonInstallation>> DiscoverPythonWithNazcaAsync()
+    public virtual async Task<List<PythonInstallation>> DiscoverPythonWithNazcaAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var found = new List<PythonInstallation>();
         var checkedPaths = new HashSet<string>();
 
@@ -34,7 +37,7 @@ public partial class PythonDiscoveryService
         var venvPython = GetActiveVenvPython();
         if (venvPython != null && checkedPaths.Add(venvPython))
         {
-            var installation = await CheckPythonInstallation(venvPython, "Active venv", probeGdsFactory: true);
+            var installation = await CheckPythonInstallation(venvPython, "Active venv", probeGdsFactory: true, cancellationToken: cancellationToken);
             if (installation?.HasNazca == true)
                 found.Add(installation);
         }
@@ -47,7 +50,7 @@ public partial class PythonDiscoveryService
         {
             if (checkedPaths.Add(installPath))
             {
-                var installation = await CheckPythonInstallation(installPath, "Installed", probeGdsFactory: true);
+                var installation = await CheckPythonInstallation(installPath, "Installed", probeGdsFactory: true, cancellationToken: cancellationToken);
                 if (installation?.HasNazca == true)
                     found.Add(installation);
             }
@@ -58,7 +61,7 @@ public partial class PythonDiscoveryService
         {
             if (checkedPaths.Add(installPath))
             {
-                var installation = await CheckPythonInstallation(installPath, "Installed", probeGdsFactory: true);
+                var installation = await CheckPythonInstallation(installPath, "Installed", probeGdsFactory: true, cancellationToken: cancellationToken);
                 if (installation?.HasNazca == true)
                     found.Add(installation);
             }
@@ -71,7 +74,7 @@ public partial class PythonDiscoveryService
             var resolvedPath = ResolvePythonPath(cmd);
             if (resolvedPath != null && checkedPaths.Add(resolvedPath))
             {
-                var installation = await CheckPythonInstallation(resolvedPath, "System", probeGdsFactory: true);
+                var installation = await CheckPythonInstallation(resolvedPath, "System", probeGdsFactory: true, cancellationToken: cancellationToken);
                 if (installation?.HasNazca == true)
                     found.Add(installation);
             }
@@ -83,7 +86,7 @@ public partial class PythonDiscoveryService
         {
             if (checkedPaths.Add(venvPath))
             {
-                var installation = await CheckPythonInstallation(venvPath, GetVenvSource(venvPath), probeGdsFactory: true);
+                var installation = await CheckPythonInstallation(venvPath, GetVenvSource(venvPath), probeGdsFactory: true, cancellationToken: cancellationToken);
                 if (installation?.HasNazca == true)
                     found.Add(installation);
             }
@@ -100,35 +103,36 @@ public partial class PythonDiscoveryService
     /// works" case (e.g. resolving the preview interpreter at startup), since it does not
     /// probe every candidate. Returns <c>null</c> if none is found.
     /// </summary>
-    public async Task<string?> FindFirstNazcaPythonPathAsync()
+    public async Task<string?> FindFirstNazcaPythonPathAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var venv = GetActiveVenvPython();
-        if (venv != null && await FirstWithNazca(venv, "Active venv") is { } v)
+        if (venv != null && await FirstWithNazca(venv, "Active venv", cancellationToken) is { } v)
             return v;
 
         foreach (var installPath in GetWindowsPythonInstallPaths())
-            if (await FirstWithNazca(installPath, "Installed") is { } p)
+            if (await FirstWithNazca(installPath, "Installed", cancellationToken) is { } p)
                 return p;
 
         foreach (var installPath in GetMacOsPythonInstallPaths())
-            if (await FirstWithNazca(installPath, "Installed") is { } p)
+            if (await FirstWithNazca(installPath, "Installed", cancellationToken) is { } p)
                 return p;
 
         foreach (var cmd in GetSystemPythonCommands())
-            if (await FirstWithNazca(cmd, "System") is { } p)
+            if (await FirstWithNazca(cmd, "System", cancellationToken) is { } p)
                 return p;
 
         foreach (var venvPath in GetCommonVenvDirectories())
-            if (await FirstWithNazca(venvPath, GetVenvSource(venvPath)) is { } p)
+            if (await FirstWithNazca(venvPath, GetVenvSource(venvPath), cancellationToken) is { } p)
                 return p;
 
         return null;
     }
 
     /// <summary>Returns the path if the candidate has nazca, otherwise null.</summary>
-    private async Task<string?> FirstWithNazca(string path, string source)
+    private async Task<string?> FirstWithNazca(string path, string source, CancellationToken cancellationToken)
     {
-        var install = await CheckPythonInstallation(path, source);
+        var install = await CheckPythonInstallation(path, source, cancellationToken: cancellationToken);
         return install?.HasNazca == true ? install.Path : null;
     }
 
@@ -141,17 +145,17 @@ public partial class PythonDiscoveryService
     /// (issue #645). Off by default so the startup fast-path and health checks — which only
     /// care about Nazca — do not pay for the extra import probe.</param>
     /// <returns>Installation info with versions, or null if Python not accessible.</returns>
-    public async Task<PythonInstallation?> CheckPythonInstallation(
-        string pythonPath, string source, bool probeGdsFactory = false)
+    public virtual async Task<PythonInstallation?> CheckPythonInstallation(
+        string pythonPath, string source, bool probeGdsFactory = false, CancellationToken cancellationToken = default)
     {
         try
         {
-            var pythonVersion = await GetPythonVersion(pythonPath);
+            var pythonVersion = await GetPythonVersion(pythonPath, cancellationToken);
             if (pythonVersion == null)
                 return null;
 
-            var nazcaVersion = await GetNazcaVersion(pythonPath);
-            var gdsFactoryVersion = probeGdsFactory ? await GetGdsFactoryVersion(pythonPath) : null;
+            var nazcaVersion = await GetPackageVersion(pythonPath, "nazca", cancellationToken);
+            var gdsFactoryVersion = probeGdsFactory ? await GetPackageVersion(pythonPath, "gdsfactory", cancellationToken) : null;
 
             return new PythonInstallation
             {
@@ -162,7 +166,7 @@ public partial class PythonDiscoveryService
                 GdsFactoryVersion = gdsFactoryVersion
             };
         }
-        catch
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
             return null;
         }
@@ -328,128 +332,27 @@ public partial class PythonDiscoveryService
     /// <summary>
     /// Gets the Python version string.
     /// </summary>
-    private async Task<string?> GetPythonVersion(string pythonPath)
+    private async Task<string?> GetPythonVersion(string pythonPath, CancellationToken cancellationToken)
     {
-        try
-        {
-            var (exitCode, output, _) = await RunCommandAsync(pythonPath, new[] { "--version" });
-
-            if (exitCode == 0 && !string.IsNullOrWhiteSpace(output))
-            {
-                var parts = output.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                return parts.Length >= 2 ? parts[1] : output.Trim();
-            }
-        }
-        catch
-        {
-            // Python not accessible
-        }
-
-        return null;
+        var result = await RunCommandAsync(pythonPath, new[] { "--version" }, TimeSpan.FromSeconds(5), cancellationToken);
+        if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.Output)) return null;
+        var parts = result.Output.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? parts[1] : result.Output.Trim();
     }
 
-    /// <summary>Gets the installed Nazca version string, or null if not importable.</summary>
-    private Task<string?> GetNazcaVersion(string pythonPath) =>
-        GetPackageVersion(pythonPath, "nazca");
-
-    /// <summary>Gets the installed gdsfactory version string, or null if not importable.</summary>
-    private Task<string?> GetGdsFactoryVersion(string pythonPath) =>
-        GetPackageVersion(pythonPath, "gdsfactory");
-
-    /// <summary>
-    /// Gets the version reported by <c>&lt;module&gt;.__version__</c>, or null if the module
-    /// cannot be imported. Routes the spawn through <see cref="ProcessLaunchFactory.TryBuild"/>
-    /// with <c>ArgumentList</c> so the interpreter path is resolved and arguments are never
-    /// hand-quoted.
-    /// </summary>
-    private async Task<string?> GetPackageVersion(string pythonPath, string moduleName)
+    private async Task<string?> GetPackageVersion(string pythonPath, string moduleName, CancellationToken cancellationToken)
     {
-        try
-        {
-            var checkScript = $"import {moduleName}; print({moduleName}.__version__)";
-            IReadOnlyList<string> args = new[] { "-c", checkScript };
-
-            if (!_launchFactory.TryBuild(pythonPath, args, null, null, out var psi, out var launchError))
-                return null;
-
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError  = true;
-
-            using var process = Process.Start(psi);
-            if (process == null)
-                return null;
-
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask  = process.StandardError.ReadToEndAsync();
-
-            using var cts = new CancellationTokenSource(NazcaImportTimeoutMs);
-            try
-            {
-                await process.WaitForExitAsync(cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                try { process.Kill(entireProcessTree: true); } catch { /* already gone */ }
-                return null;
-            }
-
-            var output = await outputTask;
-            if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-                return output.Trim();
-        }
-        catch
-        {
-            // Nazca not installed
-        }
-
-        return null;
+        var result = await RunCommandAsync(pythonPath, new[] { "-c", $"import {moduleName}; print({moduleName}.__version__)" },
+            TimeSpan.FromSeconds(20), cancellationToken);
+        return result.ExitCode == 0 && !string.IsNullOrWhiteSpace(result.Output) ? result.Output.Trim() : null;
     }
 
-    /// <summary>
-    /// Runs a command with the given argument list, capturing output and killing it if it
-    /// does not exit within <paramref name="timeoutMs"/>. The timeout is essential on
-    /// Windows: a bare "python"/"python3" command can be a Microsoft Store
-    /// execution-alias stub that hangs instead of exiting — without a kill that would
-    /// block discovery forever. A timed-out command is reported as a failure (exit -1).
-    /// </summary>
-    private async Task<(int exitCode, string output, string error)> RunCommandAsync(
-        string fileName, IReadOnlyList<string> arguments, int timeoutMs = DefaultCommandTimeoutMs)
+    private Task<(int ExitCode, string Output, string Error)> RunCommandAsync(
+        string fileName, IReadOnlyList<string> arguments, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        if (!_launchFactory.TryBuild(fileName, arguments, null, null, out var psi, out _))
-            return (-1, string.Empty, "Failed to build process start info.");
-
-        psi.RedirectStandardOutput = true;
-        psi.RedirectStandardError  = true;
-
-        using var process = Process.Start(psi);
-        if (process == null)
-            return (-1, string.Empty, "Process.Start returned null.");
-
-        var outputTask = process.StandardOutput.ReadToEndAsync();
-        var errorTask  = process.StandardError.ReadToEndAsync();
-
-        using var cts = new CancellationTokenSource(timeoutMs);
-        try
-        {
-            await process.WaitForExitAsync(cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            try { process.Kill(entireProcessTree: true); } catch { /* already gone */ }
-            return (-1, string.Empty, "Command timed out.");
-        }
-
-        var output = await outputTask;
-        var error  = await errorTask;
-
-        return (process.ExitCode, output, error);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!_launchFactory.TryBuild(fileName, arguments, null, null, out var startInfo, out _))
+            return Task.FromResult((-1, string.Empty, "Failed to build process start info."));
+        return PythonProbeRunner.RunAsync(startInfo, timeout, cancellationToken);
     }
-
-    /// <summary>Default timeout for a probe command (version check). Real interpreters
-    /// answer in well under a second; a longer wait means a hung Store-alias stub.</summary>
-    private const int DefaultCommandTimeoutMs = 5000;
-
-    /// <summary>Timeout for the nazca import check — generous because importing nazca
-    /// (and its heavy deps) on a cold interpreter can legitimately take several seconds.</summary>
-    private const int NazcaImportTimeoutMs = 20000;
 }

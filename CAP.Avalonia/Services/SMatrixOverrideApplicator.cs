@@ -1,3 +1,4 @@
+using CAP_Contracts.Logger;
 using System.Numerics;
 using CAP_Core;
 using CAP_Core.Components.Core;
@@ -57,7 +58,7 @@ public static class SMatrixOverrideApplicator
     public static ApplyResult Apply(
         Component component,
         ComponentSMatrixData data,
-        ErrorConsoleService? errorConsole = null)
+        IDiagnosticSink? errorConsole = null)
     {
         var skipped = new List<(string, string)>();
         var physPins = component.PhysicalPins;
@@ -119,7 +120,7 @@ public static class SMatrixOverrideApplicator
         int applied,
         int replaced,
         List<(string, string)> skipped,
-        ErrorConsoleService? errorConsole)
+        IDiagnosticSink? errorConsole)
     {
         if (errorConsole != null && skipped.Count > 0)
         {
@@ -145,7 +146,7 @@ public static class SMatrixOverrideApplicator
         IReadOnlyDictionary<string, ComponentSMatrixData> storedSMatrices,
         Func<Component, string?>? templateKeyResolver = null,
         Func<Component, string?>? geometryKeyResolver = null,
-        ErrorConsoleService? errorConsole = null,
+        IDiagnosticSink? errorConsole = null,
         Func<string, bool>? keyMatchesKnownTemplate = null,
         bool reportOrphans = false)
     {

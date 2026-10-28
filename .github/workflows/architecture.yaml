@@ -1,0 +1,38 @@
+name: Architecture guardrails
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  resolved-dependencies:
+    name: Resolved architecture dependencies
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_PROCESSOR_COUNT: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Check desktop composition
+        run: dotnet build CAP.Desktop/CAP.Desktop.csproj -m:1
+      - name: Check browser composition
+        run: dotnet build CAP.Browser/CAP.Browser.csproj -m:1
+  source-size:
+    name: Source size and guard tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test source guards, hook installation and safe test selection
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+      - name: Check every tracked source file
+        run: python3 scripts/check_source_size.py

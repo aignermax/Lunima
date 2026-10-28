@@ -9,7 +9,7 @@ namespace CAP.Avalonia.Commands;
 /// Command for placing a group template instance on the canvas.
 /// Creates a deep copy of the template group with new unique identifiers.
 /// Returns null from TryCreate if no valid placement position exists or the
-/// template's frozen physics data is rejected (see <see cref="TryCreate(DesignCanvasViewModel, GroupLibraryManager, GroupTemplate, double, double, out NonConvergentCircuitException?)"/>).
+/// template's frozen physics data is rejected (see <see cref="TryCreate(DesignCanvasViewModel, IGroupLibrary, GroupTemplate, double, double, out NonConvergentCircuitException?)"/>).
 /// </summary>
 public class PlaceGroupTemplateCommand : IUndoableCommand
 {
@@ -35,7 +35,7 @@ public class PlaceGroupTemplateCommand : IUndoableCommand
     /// </summary>
     public static PlaceGroupTemplateCommand? TryCreate(
         DesignCanvasViewModel canvas,
-        GroupLibraryManager libraryManager,
+        IGroupLibrary libraryManager,
         GroupTemplate template,
         double x,
         double y)
@@ -60,7 +60,7 @@ public class PlaceGroupTemplateCommand : IUndoableCommand
     /// </param>
     public static PlaceGroupTemplateCommand? TryCreate(
         DesignCanvasViewModel canvas,
-        GroupLibraryManager libraryManager,
+        IGroupLibrary libraryManager,
         GroupTemplate template,
         double x,
         double y,

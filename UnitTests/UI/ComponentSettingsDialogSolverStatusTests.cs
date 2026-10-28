@@ -37,7 +37,7 @@ public class ComponentSettingsDialogSolverStatusTests
         service.Setup(s => s.CheckAvailabilityAsync(It.IsAny<CancellationToken>()))
                .ReturnsAsync(FdtdAvailability.Unavailable(DockerHint));
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: (_, _) => Task.FromResult<FdtdSMatrixRequest?>(null));

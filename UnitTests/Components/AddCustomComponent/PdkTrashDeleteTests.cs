@@ -1,3 +1,4 @@
+using CAP_Core.Export;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -43,14 +44,14 @@ public class PdkTrashDeleteTests : IDisposable
         AddCustomComponentDependencies? deps = null;
         if (userPdkStore != null)
         {
-            var nazca = new Mock<IComponentPreviewRenderer>();
-            var gds = new Mock<IComponentPreviewRenderer>();
+            var nazca = new Mock<IPdkGeometryRenderer>();
+            var gds = new Mock<IPdkGeometryRenderer>();
             var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
-            deps = new AddCustomComponentDependencies(extractor, Fdtd: null, UserPdkStore: userPdkStore);
+            deps = new AddCustomComponentDependencies(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, Fdtd: null, UserPdkStore: userPdkStore);
         }
 
-        return new LeftPanelViewModel(
-            canvas, libraryManager, pdkLoader, preferences,
+        return new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
+            canvas, libraryManager, pdkLoader, preferences, preferences,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
@@ -344,8 +345,16 @@ public class PdkTrashDeleteTests : IDisposable
         var vm = CreateLeftPanelViewModel(store, out _);
         vm.RegisterCreatedPdk(path);
         var template = vm.AllTemplates.First(t => t.Name == "Straight A");
+        var revisions = 0;
+        vm.PdkManager.DefinitionsChanged += () =>
+        {
+            vm.AllTemplates.ShouldNotContain(t => t.Name == "Straight A");
+            vm.GetLoadedPdkDrafts().First(d => d.Name == "My Lib").Components.ShouldNotContain(c => c.Name == "Straight A");
+            revisions++;
+        };
 
         vm.RemoveCustomComponentCommand.Execute(template);
+        revisions.ShouldBe(1);
 
         vm.AllTemplates.ShouldNotContain(t => t.Name == "Straight A");
         var reloaded = new PdkLoader().LoadFromFileForEditing(path);
@@ -364,8 +373,11 @@ public class PdkTrashDeleteTests : IDisposable
         var template = vm.AllTemplates.First(t => t.Name == "Straight A");
 
         File.WriteAllText(path, "{ not valid json");
+        var revisions = 0;
+        vm.PdkManager.DefinitionsChanged += () => revisions++;
 
         Should.NotThrow(() => vm.RemoveCustomComponentCommand.Execute(template));
+        revisions.ShouldBe(0);
         vm.AllTemplates.ShouldContain(t => t.Name == "Straight A",
             "a failed delete must leave the library unchanged");
     }

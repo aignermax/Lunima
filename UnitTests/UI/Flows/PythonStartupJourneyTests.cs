@@ -29,7 +29,8 @@ public class PythonStartupJourneyTests
             var registry = new PythonEnvironmentRegistry(Path.Combine(folder, "envs.json"));
             registry.OnActiveEnvironmentChanged = prefs.SetCustomPythonPath;
             var installer = new FakePythonProvisioner();
-            var startup = new PythonStartupViewModel(registry, prefs, installer, folder);
+            var startup = new PythonStartupViewModel(registry, prefs, installer,
+                new CAP_Core.Export.Contracts.ManagedPythonEnvironmentOptions(folder));
             var backend = new Mock<NazcaComponentPreviewService>("python", "script", null, null);
             backend.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => installer.Ready
@@ -41,7 +42,7 @@ public class PythonStartupJourneyTests
             LocalizationService.Instance.SetLanguage(language);
             var attempt = startup.StartOnceAsync();
             UiInput.RunJobs();
-            var progress = host.Window.FindControl<StackPanel>("PythonStartupProgress");
+            var progress = UiInput.Named<StackPanel>(host.Window, "PythonStartupProgress");
             progress.ShouldNotBeNull();
             progress.IsEffectivelyVisible.ShouldBeTrue();
             // Real text input remains usable while provisioning is pending.
@@ -56,12 +57,12 @@ public class PythonStartupJourneyTests
             await previews.WaitForPendingAsync();
             previews.TryGetGeometry(key).ShouldBeNull();
             UiInput.RunJobs();
-            host.Window.FindControl<Button>("PreviewPythonSettingsButton")!.IsEffectivelyVisible.ShouldBeFalse();
+            UiInput.Named<Button>(host.Window, "PreviewPythonSettingsButton")!.IsEffectivelyVisible.ShouldBeFalse();
             installer.Completion.SetException(new IOException("Offline — retry when connected"));
             var oldProgress = installer.Progress!;
             await attempt;
             UiInput.RunJobs();
-            var retry = host.Window.FindControl<Button>("PythonStartupRetryButton");
+            var retry = UiInput.Named<Button>(host.Window, "PythonStartupRetryButton");
             retry.ShouldNotBeNull();
             retry.IsEffectivelyVisible.ShouldBeTrue();
             if (Environment.GetEnvironmentVariable("UI_SHOT_DIR") is { Length: > 0 } shots)

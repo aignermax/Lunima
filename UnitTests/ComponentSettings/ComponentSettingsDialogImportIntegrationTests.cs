@@ -44,7 +44,7 @@ public class ComponentSettingsDialogImportIntegrationTests
             .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(path);
 
-        var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), fileDialog.Object);
         vm.Configure("comp_bdc", "comp_bdc", "BDC TE 1550", store);
 
         await vm.LoadFromFileCommand.ExecuteAsync(null);
@@ -104,7 +104,7 @@ public class ComponentSettingsDialogImportIntegrationTests
             .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(path);
 
-        var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), fileDialog.Object);
         vm.Configure("comp_bdc", "comp_bdc", "BDC TE 1550", store);
         await vm.LoadFromFileCommand.ExecuteAsync(null);
 

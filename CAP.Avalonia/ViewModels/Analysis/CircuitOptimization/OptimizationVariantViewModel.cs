@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Collections.Immutable;
 
 namespace CAP.Avalonia.ViewModels.Analysis.CircuitOptimization;
 
@@ -42,7 +43,7 @@ public partial class OptimizationVariantViewModel : ObservableObject
         ScoreText = scoreText;
         ImprovementText = improvementText;
         ParameterSummary = parameterSummary;
-        ParameterValues = parameterValues;
+        ParameterValues = parameterValues.ToImmutableArray();
         _applyAction = applyAction ?? throw new ArgumentNullException(nameof(applyAction));
     }
 

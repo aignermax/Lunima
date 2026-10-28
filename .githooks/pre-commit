@@ -1,0 +1,12 @@
+#!/bin/sh
+# Read the index so partially staged commits cannot bypass the source ceiling.
+set -eu
+root=$(git rev-parse --show-toplevel)
+if command -v py >/dev/null 2>&1; then
+    exec py -3 "$root/scripts/check_source_size.py" --staged
+elif command -v python3 >/dev/null 2>&1; then
+    exec python3 "$root/scripts/check_source_size.py" --staged
+else
+    echo "Python 3 is required for the Lunima source-size hook." >&2
+    exit 1
+fi

@@ -53,7 +53,7 @@ public class PanelWidthPersistenceTests : IDisposable
 
     /// <summary>Creates a LeftPanelViewModel with all required sub-VM dependencies.</summary>
     private LeftPanelViewModel CreateLeftPanelViewModel() =>
-        new(_canvas, _libraryManager, _pdkLoader, _preferencesService,
+        new(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), _canvas, _libraryManager, _pdkLoader, _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(_canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(_libraryManager));
@@ -71,8 +71,8 @@ public class PanelWidthPersistenceTests : IDisposable
             new CompressLayoutViewModel(),
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
-            new PdkConsistencyViewModel(),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService),
+            new PdkConsistencyViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader()),
+            new AiAssistantViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), Mock.Of<IAiService>(), _preferencesService),
             new OnaSweepViewModel(),
             new CAP.Avalonia.ViewModels.Export.Netlist.NetlistViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel(),

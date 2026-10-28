@@ -38,12 +38,12 @@ public class NewComponentViewModelPdkFirstTests : IDisposable
     private (NewComponentViewModel vm, Mock<IFdtdSMatrixService> fdtd) Build(
         UserPdkStore store, IReadOnlyList<ProcessDefinition>? processes = null, bool withFdtd = true)
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Ok());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
         var fdtd = new Mock<IFdtdSMatrixService>();
-        var vm = new NewComponentViewModel(extractor, withFdtd ? fdtd.Object : null, store,
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, withFdtd ? fdtd.Object : null, store,
             processes ?? new List<ProcessDefinition> { new() { Name = "P" } });
         vm.ComponentName = "My Comp";
         vm.Code = "import gdsfactory as gf\ncomponent = gf.components.coupler()";

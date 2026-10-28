@@ -54,7 +54,7 @@ public class ExamplesManifestLocalizationTests
     [Fact]
     public void CuratedLadder_ListsTheSrLatch_AfterTheFourBitAdder()
     {
-        var ladder = new CAP.Avalonia.Services.ExampleDesignsService().GetExamples()
+        var ladder = new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples()
             .Where(example => example.DescriptionKey != null)
             .ToList();
 
@@ -71,7 +71,7 @@ public class ExamplesManifestLocalizationTests
     [Fact]
     public void CuratedLadder_ListsTheBit_BetweenTheSrLatchAndTheCounter()
     {
-        var ladder = new CAP.Avalonia.Services.ExampleDesignsService().GetExamples()
+        var ladder = new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples()
             .Where(example => example.DescriptionKey != null)
             .ToList();
 
@@ -92,7 +92,7 @@ public class ExamplesManifestLocalizationTests
     [Fact]
     public void CuratedLadder_ListsTheRegister2Bit_BetweenTheBitAndTheCounter()
     {
-        var ladder = new CAP.Avalonia.Services.ExampleDesignsService().GetExamples()
+        var ladder = new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples()
             .Where(example => example.DescriptionKey != null)
             .ToList();
 
@@ -113,7 +113,7 @@ public class ExamplesManifestLocalizationTests
     [Fact]
     public void CuratedLadder_ListsTheRam2x2_BetweenTheRegisterAndTheCounter()
     {
-        var ladder = new CAP.Avalonia.Services.ExampleDesignsService().GetExamples()
+        var ladder = new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples()
             .Where(example => example.DescriptionKey != null)
             .ToList();
 
@@ -134,7 +134,7 @@ public class ExamplesManifestLocalizationTests
     [Fact]
     public void CuratedLadder_ListsTheRam2x4_BetweenTheRam2x2AndTheCounter()
     {
-        var ladder = new CAP.Avalonia.Services.ExampleDesignsService().GetExamples()
+        var ladder = new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples()
             .Where(example => example.DescriptionKey != null)
             .ToList();
 
@@ -155,7 +155,7 @@ public class ExamplesManifestLocalizationTests
     [Fact]
     public void CuratedLadder_ListsTheRam4x4_BetweenTheRam2x4AndTheCounter()
     {
-        var ladder = new CAP.Avalonia.Services.ExampleDesignsService().GetExamples()
+        var ladder = new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples()
             .Where(example => example.DescriptionKey != null)
             .ToList();
 
@@ -176,7 +176,7 @@ public class ExamplesManifestLocalizationTests
     [Fact]
     public void CuratedLadder_ListsTheCounter2Bit_AfterTheSrLatch()
     {
-        var ladder = new CAP.Avalonia.Services.ExampleDesignsService().GetExamples()
+        var ladder = new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples()
             .Where(example => example.DescriptionKey != null)
             .ToList();
 
@@ -194,7 +194,7 @@ public class ExamplesManifestLocalizationTests
     [Fact]
     public void CuratedLadder_ListsThePc2Bit_AfterTheCounter()
     {
-        var ladder = new CAP.Avalonia.Services.ExampleDesignsService().GetExamples()
+        var ladder = new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples()
             .Where(example => example.DescriptionKey != null)
             .ToList();
 

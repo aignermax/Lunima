@@ -1,90 +1,61 @@
 using System.Diagnostics;
-using CAP.Avalonia.Services.AgentBridge.Tools.Edit;
+using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Connections;
+using CAP_Core.Routing.Snapshots;
 
 namespace CAP.Avalonia.Services.AgentBridge.Tools.Repair.Suggest;
 
-/// <summary>
-/// Tries repair candidates on the live design and takes each back: execute through the shared
-/// undo history → full re-route → measure → undo → restore every wire's original route →
-/// re-route (which keeps them). Undo restores components and the crossings the re-route changed
-/// (crossing undo journal), the route snapshot the wires, so the design ends where it started;
-/// that is checked after every trial, and trials stop if it ever does not hold. Running on the live
-/// design (not a copy) is deliberate: only the real joint routing pass says whether a wire
-/// routes. The user's redo stack is cleared by the trials.
-/// </summary>
+/// <summary>Runs each edit on a fresh private graph; the user's model and history are never trial state.</summary>
 public sealed class RepairSandbox
 {
-    private readonly AgentDesignSession _session;
-    private readonly WaveguideConnection _target;
+    private readonly RoutingInputSnapshot _input;
+    private readonly ExampleDesignsService _examples;
+    private readonly RepairCrossingTemplate? _crossing;
+    private readonly RepairTrialPermission _permission;
+    private readonly CanvasRoutingFactory? _routingFactory;
+    private readonly RepairGraphBuilder? _graphBuilder;
+    private readonly Guid _target;
+    private readonly Guid? _scope;
+    private readonly (double, double, double, double) _bounds;
 
-    /// <summary>Creates the sandbox for repairing <paramref name="target"/>.</summary>
-    public RepairSandbox(AgentDesignSession session, WaveguideConnection target)
+    internal RepairSandbox(AgentDesignSession session, WaveguideConnection target,
+        RepairTrialPermission permission, CanvasRoutingFactory? trialRoutingFactory, RepairGraphBuilder? graphBuilder = null)
     {
-        _session = session;
-        _target = target;
+        _permission = permission;
+        _examples = session.Examples;
+        _routingFactory = trialRoutingFactory;
+        _graphBuilder = graphBuilder;
+        _target = target.Id;
+        var canvas = session.Canvas;
+        _scope = canvas.CurrentEditGroup?.Id;
+        _input = RoutingInputSnapshot.Capture(canvas.Components.Select(view => view.Component).ToArray(), canvas.Router, canvas.ConnectionManager);
+        _crossing = RepairCrossingTemplate.Capture(session);
+        _bounds = (canvas.ChipMinX, canvas.ChipMinY, canvas.ChipMaxX, canvas.ChipMaxY);
     }
 
-    /// <summary>Set when a trial's undo did not restore the starting state; no further trials run.</summary>
-    public string? Drift { get; private set; }
+    /// <summary>Retained response field: private trials cannot drift the live design.</summary>
+    public string? Drift => null;
 
-    /// <summary>Tries one candidate against <paramref name="baseline"/> and restores the design.</summary>
     public async Task<TrialOutcome> TryAsync(RepairCandidate candidate, RoutingMetrics baseline)
     {
+        _permission.EnsureCurrent();
         var clock = Stopwatch.StartNew();
-        var (plan, error) = candidate.Build();
-        if (plan == null)
-            return NotApplicable(candidate, error, clock);
-
-        var routes = RouteSnapshot.Capture(_session);
-        var undoFrom = _session.Commands.UndoCount;
-        if (!await plan.ExecuteAndRouteAsync(_session))
-        {
-            await RestoreAsync(routes, baseline, undoFrom);
+        await using var workbench = await RepairWorkbench.CreateAsync(_examples, _input, _crossing, _permission, _routingFactory, _bounds, _scope, _graphBuilder);
+        var session = workbench.Session;
+        var target = session.FindConnection(_target.ToString())!.Connection;
+        var (plan, error) = candidate.Build(session);
+        if (plan == null) return NotApplicable(candidate, error, clock);
+        if (!await workbench.ExecuteAsync(plan))
             return NotApplicable(candidate, "the edit did not take effect here", clock);
-        }
-
-        var after = RoutingMetrics.Measure(_session);
-        var fixedTarget = !TargetStillBlocked();
-
-        await RestoreAsync(routes, baseline, undoFrom);
-
-        return new TrialOutcome(candidate, true, null, after.BlockedCount,
-            after.CrossingCount - baseline.CrossingCount, fixedTarget, clock.Elapsed.TotalSeconds);
+        _permission.EnsureCurrent();
+        var after = RoutingMetrics.Measure(session);
+        var stillBlocked = session.Canvas.Connections.Any(view => view.Connection.IsBlockedFallback
+            && (Touches(view.Connection, target.StartPin.PinId) || Touches(view.Connection, target.EndPin.PinId)));
+        return new(candidate, true, null, after.BlockedCount,
+            after.CrossingCount - baseline.CrossingCount, !stillBlocked, clock.Elapsed.TotalSeconds);
     }
 
-    /// <summary>
-    /// Undo, let the routing pass the undo started finish, put every wire's original route back
-    /// (<see cref="RouteSnapshot"/>) and run a pass that keeps them, then verify the start state.
-    /// </summary>
-    private async Task RestoreAsync(RouteSnapshot routes, RoutingMetrics baseline, int undoFrom)
-    {
-        while (_session.Commands.UndoCount > undoFrom
-               && await _session.Canvas.Routing.ExecuteHistoryChangeAsync(_session.Commands.Undo, () => _session.Commands.CanUndo))
-            await RoutingAwaiter.WaitForIdleAsync(_session.Canvas);
-        await RoutingAwaiter.WaitForIdleAsync(_session.Canvas);
-        routes.Restore(_session);
-        await RoutingAwaiter.RerouteAndWaitAsync(_session.Canvas);
-        _session.Canvas.InvalidateSimulation();
-        CheckRestored(baseline);
-    }
-
-    /// <summary>A blocked wire still ends at one of the target's pins (the target may have been split into pieces).</summary>
-    private bool TargetStillBlocked() =>
-        _session.Canvas.Connections.Any(vm => vm.Connection.IsBlockedFallback
-            && (Touches(vm.Connection, _target.StartPin) || Touches(vm.Connection, _target.EndPin)));
-
-    private static bool Touches(WaveguideConnection connection, CAP_Core.Components.Core.PhysicalPin pin) =>
-        connection.StartPin == pin || connection.EndPin == pin;
-
-    private void CheckRestored(RoutingMetrics baseline)
-    {
-        var now = RoutingMetrics.Measure(_session);
-        if (now.BlockedCount != baseline.BlockedCount || now.CrossingCount != baseline.CrossingCount)
-            Drift = $"after undo the design has {now.BlockedCount} blocked wires and {now.CrossingCount} crossings " +
-                    $"(started with {baseline.BlockedCount} and {baseline.CrossingCount})";
-    }
-
+    private static bool Touches(WaveguideConnection wire, Guid pin) => wire.StartPin.PinId == pin || wire.EndPin.PinId == pin;
     private static TrialOutcome NotApplicable(RepairCandidate candidate, string? reason, Stopwatch clock) =>
         new(candidate, false, reason, -1, 0, false, clock.Elapsed.TotalSeconds);
 }

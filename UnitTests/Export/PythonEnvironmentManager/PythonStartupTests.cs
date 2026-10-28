@@ -20,16 +20,15 @@ public sealed class PythonStartupTests : IDisposable
         _registry.OnActiveEnvironmentChanged = _preferences.SetCustomPythonPath;
     }
 
-    private PythonStartupViewModel Create() => new(_registry, _preferences, _installer, _root);
+    private PythonStartupViewModel Create() => new(_registry, _preferences, _installer,
+        new CAP_Core.Export.Contracts.ManagedPythonEnvironmentOptions(_root));
 
     [Fact]
     public async Task SettingsCreation_DoesNotCompeteWithBackgroundSetup()
     {
         var startup = Create();
         var pending = startup.StartOnceAsync();
-        var manager = new PythonEnvironmentManagerViewModel(_registry,
-            new UvBootstrapper(), new NazcaPackageInstaller(), new EnvironmentHealthChecker(new CAP_Core.Export.PythonDiscoveryService()),
-            provisioner: _installer, startup: startup);
+        var manager = PythonSetupTestServices.Create(_registry, provisioner: _installer, startup: startup);
         await manager.CreateAndInstallCommand.ExecuteAsync(null);
         _installer.Installs.ShouldBe(1);
         _registry.GetAll().Count().ShouldBe(1);
@@ -41,9 +40,7 @@ public sealed class PythonStartupTests : IDisposable
     [Fact]
     public async Task SettingsCreation_UsesSameProvisionerAndPackageHealthPipeline()
     {
-        var manager = new PythonEnvironmentManagerViewModel(_registry,
-            new UvBootstrapper(), new NazcaPackageInstaller(), new EnvironmentHealthChecker(new CAP_Core.Export.PythonDiscoveryService()),
-            provisioner: _installer);
+        var manager = PythonSetupTestServices.Create(_registry, provisioner: _installer);
         var pending = manager.CreateAndInstallCommand.ExecuteAsync(null);
         _installer.Installs.ShouldBe(1);
         _installer.Finish();

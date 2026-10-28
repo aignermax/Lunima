@@ -16,6 +16,62 @@ public class WaveguideObstacleSharedCellTests
     private const double Width = 4;
 
     [Fact]
+    public void RemovingBatch_PreservesUnrelatedCrossingsAndAllowsExactReplacement()
+    {
+        var bulk = new PathfindingGrid(0, 0, 400, 400, CellSize);
+        var sequential = new PathfindingGrid(0, 0, 400, 400, CellSize);
+        var horizontal = Guid.NewGuid();
+        var vertical = Guid.NewGuid();
+        var retained = Guid.NewGuid();
+        foreach (var grid in new[] { bulk, sequential })
+        {
+            grid.AddWaveguideObstacle(horizontal, new[] { new StraightSegment(0, 200, 400, 200, 0) }, Width);
+            grid.AddWaveguideObstacle(vertical, new[] { new StraightSegment(200, 0, 200, 400, 90) }, Width);
+            grid.AddWaveguideObstacle(retained, new[] { new StraightSegment(0, 200, 400, 200, 0) }, Width);
+        }
+
+        bulk.RemoveWaveguideObstacles(new[] { horizontal, vertical, horizontal, Guid.NewGuid() });
+        sequential.RemoveWaveguideObstacle(horizontal);
+        sequential.RemoveWaveguideObstacle(vertical);
+        AssertSameCells(bulk, sequential);
+        var crossing = bulk.PhysicalToGrid(200, 200);
+        bulk.GetCellState(crossing.gridX, crossing.gridY).ShouldBe((byte)2);
+        bulk.GetWaveguideGeometries().Count.ShouldBe(1);
+
+        foreach (var grid in new[] { bulk, sequential })
+        {
+            grid.AddWaveguideObstacle(horizontal, new[] { new StraightSegment(0, 100, 400, 100, 0) }, Width);
+            grid.RemoveWaveguideObstacle(retained);
+        }
+        AssertSameCells(bulk, sequential);
+        bulk.GetCellState(crossing.gridX, crossing.gridY).ShouldBe((byte)0);
+    }
+
+    [Fact]
+    public void RemovingEntireBatch_LeavesNoOrphanedCellsOrGeometry()
+    {
+        var grid = new PathfindingGrid(0, 0, 400, 400, CellSize);
+        var ids = new[] { Guid.NewGuid(), Guid.NewGuid() };
+        grid.AddWaveguideObstacle(ids[0], new[] { new StraightSegment(0, 200, 400, 200, 0) }, Width);
+        grid.AddWaveguideObstacle(ids[1], new[] { new StraightSegment(200, 0, 200, 400, 90) }, Width);
+
+        grid.RemoveWaveguideObstacles(ids);
+
+        grid.GetWaveguideGeometries().ShouldBeEmpty();
+        AssertSameCells(grid, new PathfindingGrid(0, 0, 400, 400, CellSize));
+        var version = grid.WaveguideVersion;
+        grid.RemoveWaveguideObstacles(ids);
+        grid.WaveguideVersion.ShouldBe(version, "removing absent obstacles is a no-op");
+    }
+
+    private static void AssertSameCells(PathfindingGrid actual, PathfindingGrid expected)
+    {
+        for (var x = 0; x < actual.Width; x++)
+        for (var y = 0; y < actual.Height; y++)
+            actual.GetCellState(x, y).ShouldBe(expected.GetCellState(x, y), $"cell ({x}, {y})");
+    }
+
+    [Fact]
     public void RemovingOneOfTwoCrossingWires_KeepsTheSharedCellsBlocked()
     {
         var grid = new PathfindingGrid(0, 0, 400, 400, CellSize);

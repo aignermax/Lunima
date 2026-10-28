@@ -84,7 +84,7 @@ namespace CAP_Core.Analysis.OnaAnalysis
             return total > 0 ? total : 1.0; // fallback to 1.0 so dB stays finite
         }
 
-        private static List<string> CollectWavelengthCoverageWarnings(
+        internal static List<string> CollectWavelengthCoverageWarnings(
             GridManager gridManager,
             WavelengthSweepConfiguration config)
         {

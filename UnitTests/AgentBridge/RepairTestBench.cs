@@ -54,7 +54,7 @@ internal sealed class RepairTestBench
         var commands = new CommandManager();
         binder.UndoJournal.Attach(commands);
         canvas.CommandManager = commands;
-        var session = new AgentDesignSession(canvas, commands, () => fileOps, new ExampleDesignsService(), () => templates);
+        var session = new AgentDesignSession(canvas, commands, () => fileOps, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()), () => templates);
         return new RepairTestBench(session, fileOps);
     }
 

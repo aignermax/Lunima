@@ -1,3 +1,4 @@
+using CAP.Avalonia.Services.Lifetime;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CAP.Avalonia.Services.Localization;
@@ -10,7 +11,7 @@ namespace CAP.Avalonia.ViewModels.ComponentRegistry.RegistryBrowser;
 /// Detail pane of the registry browser: description, ports, design parameters
 /// and per-artifact provenance of the currently selected registry component.
 /// </summary>
-public partial class RegistryComponentDetailsViewModel : ObservableObject
+public partial class RegistryComponentDetailsViewModel : ObservableObject, IAsyncDisposable
 {
     /// <summary>True while the component manifest is being fetched.</summary>
     [ObservableProperty]
@@ -59,26 +60,49 @@ public partial class RegistryComponentDetailsViewModel : ObservableObject
     /// Loads the manifest at <paramref name="manifestPath"/> and populates the pane.
     /// Never throws — failures surface via <see cref="ErrorMessage"/>.
     /// </summary>
-    public async Task LoadAsync(RegistryClient client, string manifestPath)
+    public Task LoadAsync(IRegistryCatalog client, string manifestPath) =>
+        _work.RunAsync(stop => LoadCoreAsync(client, manifestPath, stop));
+
+    private readonly ShellWorkScope _work = new();
+    private long _requestVersion;
+
+    public Task StopAsync() => _work.StopAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+
+    private async Task LoadCoreAsync(IRegistryCatalog client, string manifestPath, CancellationToken stop)
     {
+        var request = ++_requestVersion;
+        ClearCore();
         IsLoading = true;
-        Clear();
-        var result = await client.GetComponentAsync(manifestPath);
-        if (result.IsSuccess)
+        try
         {
-            ManifestPath = manifestPath;
-            Populate(result.Value!);
+            var result = await client.GetComponentAsync(manifestPath, cancellationToken: stop);
+            if (_work.IsStopping || stop.IsCancellationRequested || request != _requestVersion) return;
+            if (result.IsSuccess)
+            {
+                ManifestPath = manifestPath;
+                Populate(result.Value!);
+            }
+            else
+            {
+                ErrorMessage = string.Format(CultureInfo.InvariantCulture,
+                    LocalizationService.Instance.Translate("Registry.DetailsLoadFailed"), result.ErrorMessage);
+            }
         }
-        else
-        {
-            ErrorMessage = string.Format(CultureInfo.InvariantCulture,
-                LocalizationService.Instance.Translate("Registry.DetailsLoadFailed"), result.ErrorMessage);
-        }
+        catch (OperationCanceledException) when (_work.IsStopping || stop.IsCancellationRequested) { }
+        finally { if (!_work.IsStopping && request == _requestVersion) IsLoading = false; }
+    }
+
+    /// <summary>Clears the selection and revokes publication of earlier manifest requests.</summary>
+    public void Clear()
+    {
+        if (_work.IsStopping) return;
+        ++_requestVersion;
+        ClearCore();
         IsLoading = false;
     }
 
-    /// <summary>Resets the pane to its empty state (no component selected).</summary>
-    public void Clear()
+    private void ClearCore()
     {
         Manifest = null;
         ManifestPath = null;

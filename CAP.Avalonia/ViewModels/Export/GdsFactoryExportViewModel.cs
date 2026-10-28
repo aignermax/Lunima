@@ -1,3 +1,5 @@
+using CAP_Core.Export.Contracts;
+using CAP.Avalonia.Services.Lifetime;
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.GdsFactoryExport;
@@ -21,10 +23,19 @@ namespace CAP.Avalonia.ViewModels.Export;
 /// is always generated and opened; a missing gdsfactory is auto-installed into a
 /// managed environment and the export retried.
 /// </summary>
-public partial class GdsFactoryExportViewModel : ObservableObject
+public partial class GdsFactoryExportViewModel : ObservableObject, IAsyncDisposable
 {
+    private readonly ShellWorkScope _work = new();
+    /// <summary>Retires accepted export workflows.</summary>
+    public Task StopAsync() => _work.StopAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private void CheckCurrent(CancellationToken token)
+    {
+        _work.ThrowIfStopping();
+        token.ThrowIfCancellationRequested();
+    }
     private readonly DesignCanvasViewModel _canvas;
-    private readonly GdsExportService _exportService;
+    private readonly IGdsScriptRunner _exportService;
     private readonly IUrlLauncher _urlLauncher;
     private readonly ErrorConsoleService? _errorConsole;
     private readonly GdsFactoryExporter _exporter = new();
@@ -68,15 +79,17 @@ public partial class GdsFactoryExportViewModel : ObservableObject
     /// <param name="urlLauncher">Launcher used to open the generated GDS.</param>
     /// <param name="errorConsole">Optional error logging.</param>
     public GdsFactoryExportViewModel(
+        IUrlLauncher urlLauncher,
         DesignCanvasViewModel canvas,
-        GdsExportService exportService,
-        IUrlLauncher? urlLauncher = null,
-        ErrorConsoleService? errorConsole = null)
+        IGdsScriptRunner exportService,
+        ErrorConsoleService? errorConsole = null,
+        ApplicationWorkCoordinator? applicationWork = null)
     {
         _canvas = canvas;
         _exportService = exportService;
-        _urlLauncher = urlLauncher ?? PlatformShellLauncher.CreateDefault();
+        _urlLauncher = urlLauncher;
         _errorConsole = errorConsole;
+        _work.RegisterWith(applicationWork, StopAsync);
     }
 
     /// <summary>
@@ -119,8 +132,15 @@ public partial class GdsFactoryExportViewModel : ObservableObject
 
     /// <summary>Runs the export: file dialog → shadowing guard → script → optional GDS.</summary>
     [RelayCommand]
-    public async Task Export()
+    public Task Export() => _work.RunAsync(async token =>
     {
+        try { await ExportCoreAsync(token); }
+        catch (OperationCanceledException) when (_work.IsStopping || token.IsCancellationRequested) { }
+    });
+
+    private async Task ExportCoreAsync(CancellationToken token)
+    {
+        CheckCurrent(token);
         if (FileDialogService == null)
         {
             StatusText = LocalizationService.Instance.Translate("Export.GdsFactory.NotAvailable");
@@ -139,6 +159,7 @@ public partial class GdsFactoryExportViewModel : ObservableObject
         // (dialog + Error Console) — layer maps of the two processes are not reconciled,
         // so cross-process layer alignment must still be verified before fabrication.
         var library = (TemplateLibraryProvider?.Invoke() ?? Enumerable.Empty<ComponentTemplate>()).ToList();
+        CheckCurrent(token);
         var isMixedBackend = MixedBackendGdsOrchestrator.IsMixedBackendDesign(_canvas, library);
         // The two-script path is taken whenever anything is nazca-native — even with an
         // empty gdsfactory group — so nazca components always render with their own
@@ -171,11 +192,14 @@ public partial class GdsFactoryExportViewModel : ObservableObject
         if (mixedProcessWarning != null)
         {
             StatusText = mixedProcessWarning;
+            CheckCurrent(token);
             _errorConsole?.LogWarning(mixedProcessWarning);
+            CheckCurrent(token);
         }
 
         var filePath = await FileDialogService.ShowSaveFileDialogAsync(
             "Export to gdsfactory Python", "py", "Python Files|*.py|All Files|*.*");
+        CheckCurrent(token);
         if (filePath == null)
             return;
 
@@ -188,7 +212,7 @@ public partial class GdsFactoryExportViewModel : ObservableObject
             return;
         }
 
-        await RunExportAsync(filePath, mixedProcessWarning, hasNazcaNative ? library : null);
+        await RunExportAsync(filePath, token, mixedProcessWarning, hasNazcaNative ? library : null);
     }
 
     /// <summary>
@@ -198,12 +222,15 @@ public partial class GdsFactoryExportViewModel : ObservableObject
     /// script merges into the final output.
     /// </summary>
     private async Task RunExportAsync(
-        string filePath, string? mixedProcessWarning = null,
+        string filePath, CancellationToken token, string? mixedProcessWarning = null,
         IReadOnlyList<ComponentTemplate>? mixedBackendLibrary = null)
     {
-        IsExporting = true;
+        var completed = false;
         try
         {
+            CheckCurrent(token);
+            IsExporting = true;
+            CheckCurrent(token);
             // Collected by the exporter(s) as a side effect of writing the script(s) below —
             // connections/frozen paths whose route is a placeholder or invalid never render as
             // GDS geometry (a self-crossing fallback has no optical model; invalid geometry
@@ -220,16 +247,19 @@ public partial class GdsFactoryExportViewModel : ObservableObject
             if (mixedBackendLibrary != null)
             {
                 var mixedResult = await WriteAndRunMixedBackendPartAsync(
-                    filePath, mixedBackendLibrary, skippedConnections, unresolvedCrossings, exportWarnings);
+                    filePath, mixedBackendLibrary, skippedConnections, unresolvedCrossings, exportWarnings, token);
+                CheckCurrent(token);
                 mixedBackendFailureMessage = mixedResult.FailureMessage;
             }
             else
             {
                 // Always ubcpdk-where-available with stub fallback — no geometry question.
-                await File.WriteAllTextAsync(filePath,
-                    _exporter.Export(_canvas, new GdsFactoryExportOptions(GdsFactoryComponentMode.UbcPdkCells),
+                var code = _exporter.Export(_canvas, new GdsFactoryExportOptions(GdsFactoryComponentMode.UbcPdkCells),
                         MetalRoutingSpecProvider?.Invoke(),
-                        skippedConnections: skippedConnections, unresolvedCrossings: unresolvedCrossings));
+                        skippedConnections: skippedConnections, unresolvedCrossings: unresolvedCrossings);
+                CheckCurrent(token);
+                await File.WriteAllTextAsync(filePath, code, token);
+                CheckCurrent(token);
             }
 
             // All collectors are fully populated by now regardless of the branch above (the
@@ -244,8 +274,10 @@ public partial class GdsFactoryExportViewModel : ObservableObject
             var missingSourcesWarning = ExportWarningMessages.BuildMissingGdsSources(exportWarnings);
             if (skippedConnectionsWarning != null)
                 _errorConsole?.LogWarning(skippedConnectionsWarning);
+            CheckCurrent(token);
             if (unresolvedCrossingsWarning != null)
                 _errorConsole?.LogWarning(unresolvedCrossingsWarning);
+            CheckCurrent(token);
 
             if (mixedBackendFailureMessage != null)
             {
@@ -256,37 +288,51 @@ public partial class GdsFactoryExportViewModel : ObservableObject
             }
 
             StatusText = LocalizationService.Instance.Translate("Export.GdsFactory.Running");
-            var result = await _exportService.ExportToGdsAsync(filePath, generateGds: true);
+            CheckCurrent(token);
+            var result = await _exportService.ExportToGdsAsync(filePath, generateGds: true, token);
+            CheckCurrent(token);
 
             // gdsfactory missing → auto-install into a managed environment and retry once.
             if (!result.Success && IsGdsFactoryMissing(result.ErrorMessage) && EnsureGdsFactoryAsync != null)
             {
-                var progress = new Progress<string>(m => StatusText = m);
+                var progress = new Progress<string>(m =>
+                {
+                    if (!completed && !_work.IsStopping && !token.IsCancellationRequested) StatusText = m;
+                });
                 StatusText = LocalizationService.Instance.Translate("Export.GdsFactory.Installing");
-                var installed = await EnsureGdsFactoryAsync(progress, CancellationToken.None);
+                CheckCurrent(token);
+                var installed = await EnsureGdsFactoryAsync(progress, token);
+                CheckCurrent(token);
                 if (installed)
                 {
                     StatusText = LocalizationService.Instance.Translate("Export.GdsFactory.Retrying");
-                    result = await _exportService.ExportToGdsAsync(filePath, generateGds: true);
+                    CheckCurrent(token);
+                    result = await _exportService.ExportToGdsAsync(filePath, generateGds: true, token);
+                    CheckCurrent(token);
                 }
             }
 
             // Keep every warning visible next to the final result — they must not be scrolled
             // away by the success line (field round 4).
             var status = DescribeResult(filePath, result);
+            CheckCurrent(token);
             StatusText = WithWarnings(status, mixedProcessWarning, skippedConnectionsWarning,
                 unresolvedCrossingsWarning, missingSourcesWarning);
+            CheckCurrent(token);
             if (result.Success && result.GdsPath != null)
                 TryOpenGds(result.GdsPath);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) when (_work.IsStopping || token.IsCancellationRequested) { }
+        catch (Exception ex) when (!_work.IsStopping && !token.IsCancellationRequested)
         {
             _errorConsole?.LogError($"gdsfactory export failed: {ex.Message}", ex);
+            if (_work.IsStopping || token.IsCancellationRequested) return;
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Export.GdsFactory.ExportFailed"), ex.Message);
         }
         finally
         {
+            completed = true;
             IsExporting = false;
         }
     }
@@ -313,29 +359,40 @@ public partial class GdsFactoryExportViewModel : ObservableObject
     private async Task<(bool Success, string? FailureMessage)> WriteAndRunMixedBackendPartAsync(
         string filePath, IReadOnlyList<ComponentTemplate> library,
         List<string> skippedConnections, List<string> unresolvedCrossings,
-        List<string> exportWarnings)
+        List<string> exportWarnings, CancellationToken token)
     {
+        CheckCurrent(token);
         var orchestrator = new MixedBackendGdsOrchestrator(NazcaExporterProvider?.Invoke());
+        CheckCurrent(token);
         var scripts = orchestrator.BuildScripts(
             _canvas, new GdsFactoryExportOptions(GdsFactoryComponentMode.UbcPdkCells),
             MetalRoutingSpecProvider?.Invoke(), library, filePath, skippedConnections, unresolvedCrossings,
             exportWarnings);
+        CheckCurrent(token);
 
         // Raw-code components whose geometry source vanished (a deleted .gds) render as
         // placeholder boxes in the nazca partial — surface that before the run, not after.
         foreach (var exportWarning in exportWarnings)
+        {
             _errorConsole?.LogWarning(exportWarning);
+            CheckCurrent(token);
+        }
 
         var partialPath = MixedBackendGdsOrchestrator.PartialScriptPathFor(filePath);
-        await File.WriteAllTextAsync(partialPath, scripts.NazcaPartialScript);
-        await File.WriteAllTextAsync(filePath, scripts.GdsFactoryScript);
+        await File.WriteAllTextAsync(partialPath, scripts.NazcaPartialScript, token);
+        CheckCurrent(token);
+        await File.WriteAllTextAsync(filePath, scripts.GdsFactoryScript, token);
+        CheckCurrent(token);
 
         StatusText = LocalizationService.Instance.Translate("Export.GdsFactory.MixedBackendRunningNazca");
-        var partialResult = await _exportService.ExportToGdsAsync(partialPath, generateGds: true);
+        CheckCurrent(token);
+        var partialResult = await _exportService.ExportToGdsAsync(partialPath, generateGds: true, token);
+        CheckCurrent(token);
         if (partialResult.Success)
             return (true, null);
 
         _errorConsole?.LogError($"Mixed-backend nazca partial failed: {partialResult.ErrorMessage}");
+        CheckCurrent(token);
         var failureMessage = string.Format(
             LocalizationService.Instance.Translate("Export.GdsFactory.MixedBackendNazcaFailed"),
             Path.GetFileName(partialPath));
@@ -365,7 +422,7 @@ public partial class GdsFactoryExportViewModel : ObservableObject
         }
     }
 
-    private string DescribeResult(string filePath, GdsExportService.ExportResult result)
+    private string DescribeResult(string filePath, GdsExportResult result)
     {
         var scriptName = Path.GetFileName(filePath);
         if (result.Success && result.GdsPath != null)

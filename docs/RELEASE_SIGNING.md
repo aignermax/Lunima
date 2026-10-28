@@ -1,0 +1,63 @@
+# Publisher-authenticated releases
+
+Stable releases publish exactly seven platform artifacts and `release-manifest.json`.
+The manifest signs the UTF-8 payload bytes with ECDSA P-256 / SHA-256 and stores the
+signature as 64-byte IEEE P1363 `r || s`. The payload binds the stable version,
+resolved source commit, artifact names, runtime identifiers, sizes and SHA-256 hashes.
+This is publisher authentication for the updater, separate from Windows Authenticode
+or Apple application signing/notarization.
+
+`CAP-DataAccess/Updates/publisher-keys.json` is the single public-key registry. DataAccess
+embeds it in the application; `scripts/release/sign_manifest.py` reads the same file.
+The registry pins `publisher-2026-10`; its private key exists only as the `release-signing`
+environment secret and in the maintainer's offline backup. A build with an empty registry
+permits only manual updates, and stable release signing fails closed without the secret.
+Tests never generate or commit a production key.
+
+## Provisioning after code review
+
+1. Configure the GitHub `release-signing` environment with required reviewers and
+   protected release refs. Restrict who can modify the release workflow and approve
+   this environment. Repository dispatch must identify the exact reviewed tag commit.
+2. Generate a dedicated P-256 publisher key using your approved secret-management
+   procedure. Store its private PKCS#8 PEM only as the environment secret
+   `LUNIMA_RELEASE_SIGNING_KEY_PEM`. Do not paste it into commands, logs, issues,
+   repository files or release artifacts.
+3. Add only its public SubjectPublicKeyInfo PEM to `publisher-keys.json`, keyed by
+   a stable ID such as `publisher-2026-01`, through review. Set the environment
+   variable `LUNIMA_RELEASE_SIGNING_KEY_ID` to that ID. The signing tool rejects a
+   secret that does not match the checked-in pin.
+4. Ship the public pin in the application before relying on it for automatic updates.
+   Existing installations without a trusted pin continue through manual downloads.
+   For rotation, first ship old and new public pins together, then switch the CI key ID.
+5. Run the release workflow on a matching stable `vMAJOR.MINOR.PATCH` tag. Review the
+   exact source commit and seven staged files before approving protected signing.
+
+The workflow verifies that the project version, tag, tag commit, checked-out commit
+and triggering SHA agree. A manually dispatched build receives a `-build.N` prerelease
+tag, carries no stable manifest, and is explicitly marked for manual download only.
+Only the signing step receives the secret. It never writes the private key to disk;
+errors use a fixed message so parser/crypto exceptions cannot echo key material.
+
+## Local and CI verification
+
+Use Python 3.11 or newer in an isolated environment:
+
+```text
+python -m pip install --require-hashes --only-binary=:all: -r scripts/release/requirements.txt
+python -m unittest discover -s scripts/release/tests -p 'test_*.py' -v
+```
+
+Tests generate disposable private keys in memory and verify real signatures,
+tampering, the exact inventory, wrong keys/curves, source identity, and secret-free
+CLI diagnostics. The .NET interoperability test contains only a public fixture key
+and a Python-generated signed envelope; its private key was never persisted.
+
+Dependencies are pinned with wheel SHA-256 hashes from the official PyPI metadata:
+[cryptography 50.0.2](https://pypi.org/project/cryptography/50.0.2/),
+[cffi 2.1.1](https://pypi.org/project/cffi/2.1.1/) and
+[pycparser 3.12](https://pypi.org/project/pycparser/3.12/).
+The conversion from DER signatures to `(r, s)` follows
+[the cryptography API](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/utils/).
+Refreshing a dependency requires reviewing the upstream release and replacing its
+version and hashes together; CI uses `--require-hashes --only-binary=:all:`.

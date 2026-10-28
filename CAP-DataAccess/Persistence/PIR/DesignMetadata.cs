@@ -35,6 +35,9 @@ public class DesignMetadata
 /// </summary>
 public class DesignRulesData
 {
+    /// <summary>Copies the scalar fabrication constraints for a detached save.</summary>
+    public DesignRulesData Copy() => (DesignRulesData)MemberwiseClone();
+
     /// <summary>
     /// Minimum bend radius for waveguides in micrometers.
     /// Null if unconstrained.

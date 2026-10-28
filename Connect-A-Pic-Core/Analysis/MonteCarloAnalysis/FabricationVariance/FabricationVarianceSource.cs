@@ -39,19 +39,7 @@ namespace CAP_Core.Analysis.MonteCarloAnalysis.FabricationVariance
         /// <inheritdoc />
         public void ApplyVariance(GaussianSampler sampler)
         {
-            if (sampler == null) throw new ArgumentNullException(nameof(sampler));
-
-            double waferDeltaWidth = sampler.NextGaussian() * _tolerances.WidthSigmaNm;
-            double waferDeltaThickness = sampler.NextGaussian() * _tolerances.ThicknessSigmaNm;
-
-            var deviations = new Dictionary<Component, ComponentDeviation>();
-            foreach (var component in _components)
-            {
-                deviations[component] = new ComponentDeviation(
-                    waferDeltaWidth + sampler.NextGaussian() * LocalSigmaFraction * _tolerances.WidthSigmaNm,
-                    waferDeltaThickness + sampler.NextGaussian() * LocalSigmaFraction * _tolerances.ThicknessSigmaNm);
-            }
-            CurrentDeviations = deviations;
+            CurrentDeviations = FabricationVarianceSampling.Draw(_components, _tolerances, sampler);
         }
 
         /// <inheritdoc />

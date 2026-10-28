@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 using CAP_Core.Export.PythonEnvironmentManager;
 using Shouldly;
@@ -70,7 +71,7 @@ public class InterpreterEntryViewModelTests
     [Fact]
     public void SystemRow_IsNotManaged_AndHasNoBadge()
     {
-        var install = new CAP_Core.Export.PythonDiscoveryService.PythonInstallation
+        var install = new PythonInstallation
         {
             Path = "/usr/bin/python3.12", Source = "System",
             PythonVersion = "3.12.0", NazcaVersion = "0.6.1",

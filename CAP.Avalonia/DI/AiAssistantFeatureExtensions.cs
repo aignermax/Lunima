@@ -45,6 +45,7 @@ internal static class AiAssistantFeatureExtensions
         services.AddSingleton<IAiToolRegistry, AiToolRegistry>();
 
         services.AddSingleton<AiAssistantViewModel>(sp => new AiAssistantViewModel(
+            sp.GetRequiredService<IUrlLauncher>(),
             sp.GetRequiredService<IAiService>(),
             sp.GetRequiredService<UserPreferencesService>(),
             sp.GetRequiredService<IAiToolRegistry>()));

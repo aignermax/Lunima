@@ -1,3 +1,4 @@
+using UnitTests.ViewModels.Canvas;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Canvas.RerouteImported;
@@ -14,7 +15,7 @@ public partial class RerouteImportedRoutesViewModelTests
     [InlineData(true)]
     public async Task RerouteGroup_StopOrScopeSwitch_DoesNotStartTheNextGroup(bool switchScope)
     {
-        var canvas = new DesignCanvasViewModel();
+        var canvas = ReportedRoutingWorker.CreateCanvas();
         var commands = new CommandManager();
         var groups = new List<ComponentGroup>();
         for (int i = 0; i < 2; i++)
@@ -27,19 +28,13 @@ public partial class RerouteImportedRoutesViewModelTests
             await canvas.RecalculateRoutesAsync();
             groups.Add((ComponentGroup)canvas.Components.Last().Component);
         }
-        using var parked = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        canvas.Routing.BuildConnectionProcessFloorProvider = () => (_, _) =>
-        {
-            parked.Set();
-            release.Wait();
-            return null;
-        };
+        var routing = (ReportedRoutingWorker)canvas.Routing;
+        routing.BlockWorker = true;
         var vm = new RerouteImportedRoutesViewModel(canvas, commands);
         var reroute = vm.RerouteAllCommand.ExecuteAsync(null);
         try
         {
-            parked.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
+            await routing.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             canvas.CurrentEditGroup.ShouldBeSameAs(groups[0]);
             if (switchScope)
             {
@@ -48,7 +43,7 @@ public partial class RerouteImportedRoutesViewModelTests
             }
             else canvas.StopRouting();
         }
-        finally { release.Set(); await reroute; }
+        finally { routing.Release.TrySetResult(); await reroute.WaitAsync(TimeSpan.FromSeconds(30)); }
         canvas.CurrentEditGroup.ShouldBeSameAs(switchScope ? groups[1] : null);
         groups[1].InternalPaths.Single().IsRouteFrozen.ShouldBeTrue();
         groups[1].InternalPaths.Single().Path.Segments.Count.ShouldBe(DetourSegmentCount);

@@ -5,12 +5,13 @@ using CAP_Core.Routing.CrossingInsertion;
 namespace CAP_Core.Routing;
 
 /// <summary>
-/// The A*-attempt half of <see cref="WaveguideRouter"/>: one obstacle-avoiding routing try at
-/// a specific bend radius, with the cost model, pin corridors and path smoother synchronized
-/// to that radius (split out to keep the router below the file-size limit).
+/// Adapts a bend-radius attempt to the fine-grid search policy, owning temporary pin corridors,
+/// cost restoration, smoothing and final crossing-aware geometric acceptance.
 /// </summary>
 public partial class WaveguideRouter
 {
+    private readonly FineGridRouteSearch _fineSearch = new();
+
     /// <summary>
     /// The reachability verdict of the most recent <see cref="TryRouteAStar"/> call. When
     /// false, the whole-grid flood proved no path to the goal region can exist on the fine
@@ -92,89 +93,17 @@ public partial class WaveguideRouter
             int scaledStraightRun = Math.Min(originalStraightRun, Math.Max(2, gridDistance / 4));
             CostCalculator.MinStraightRunCells = scaledStraightRun;
 
-            List<AStarNode>? gridPath = null;
             var crossingStep = CreateCrossingStep();
             LastPlannedCrossings = Array.Empty<PlannedCrossing>();
 
             // The heuristic's distance metric must match the movement model.
             CostCalculator.UseDiagonals = UseDiagonalRouting;
 
-            // Reachability gate: a cheap flood fill over the whole grid decides whether
-            // ANY path to the goal region can exist at all. The flood ignores direction,
-            // turn and pin-escape constraints, so its reachable set is a superset of what
-            // the constrained searches below could ever reach — a negative verdict lets
-            // every search (windowed, full-grid, tolerant and minimal-constraint retries)
-            // be skipped with the same null result they would have returned after burning
-            // their full node budgets. The flood sees the same grid state the searches
-            // would: the pin corridors above are already cleared.
-            // The flood treats every waveguide as a wall, so it cannot judge a search that
-            // may cross them — with crossings allowed, the search itself decides.
-            bool goalReachable = _hierarchicalPathfinder != null && UseHierarchicalPathfinding
-                || crossingStep != null
-                || PathfindingGrid.CanReachGoalDirected(
-                    gridStartX, gridStartY, gridEndX, gridEndY,
-                    AStarPathfinder.AStarPathfinder.DefaultGoalTolerance, UseDiagonalRouting);
-            _lastFineAttemptGoalReachable = goalReachable;
-
-            if (_hierarchicalPathfinder != null && UseHierarchicalPathfinding)
-            {
-                gridPath = _hierarchicalPathfinder.FindPath(
-                    gridStartX, gridStartY, startDir,
-                    gridEndX, gridEndY, endDir);
-            }
-            else if (goalReachable)
-            {
-                gridPath = RunAStarPhases(gridStartX, gridStartY, startDir,
-                                          gridEndX, gridEndY, endDir, crossingStep, cancellationToken);
-            }
-
-            // Lateral-tolerance retry: the strict phases require an exact
-            // on-axis arrival, which is impossible when another waveguide
-            // crosses the pin's entry axis outside the cleared corridor.
-            // Retry accepting a small lateral offset; the smoother snaps the
-            // final approach onto the axis. Only otherwise-blocked routes
-            // reach this point, so successful routes are unaffected.
-            if (gridPath == null && goalReachable && !cancellationToken.IsCancellationRequested)
-            {
-                var tolerantRetry = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
-                {
-                    MaxNodesExpanded = Phase1MaxNodes,
-                    AllowLateralGoalTolerance = true,
-                    UseDiagonals = UseDiagonalRouting,
-                    Crossings = crossingStep
-                };
-                gridPath = tolerantRetry.FindPath(gridStartX, gridStartY, startDir,
-                                                  gridEndX, gridEndY, endDir, cancellationToken);
-            }
-
-            // Loop detection: if path is >2× Manhattan distance, retry with minimal constraints
-            if (gridPath != null && gridPath.Count > gridDistance * 2 && scaledEscape > 2)
-            {
-                CostCalculator.MinPinEscapeCells = 2;
-                CostCalculator.MinStraightRunCells = 2;
-                var retry = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
-                {
-                    UseDiagonals = UseDiagonalRouting,
-                    Crossings = crossingStep
-                };
-                var retryPath = retry.FindPath(gridStartX, gridStartY, startDir,
-                                               gridEndX, gridEndY, endDir, cancellationToken);
-                if (retryPath != null && retryPath.Count < gridPath.Count)
-                    gridPath = retryPath;
-            }
-
-            if ((gridPath == null || gridPath.Count < 2) && goalReachable)
-            {
-                CostCalculator.MinPinEscapeCells = 2;
-                CostCalculator.MinStraightRunCells = 2;
-                var fallback = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
-                {
-                    UseDiagonals = UseDiagonalRouting,
-                    Crossings = crossingStep
-                };
-                gridPath = fallback.FindPath(gridStartX, gridStartY, startDir,
-                                             gridEndX, gridEndY, endDir, cancellationToken);
-            }
+            var gridPath = _fineSearch.FindPath(PathfindingGrid, CostCalculator,
+                UseHierarchicalPathfinding ? _hierarchicalPathfinder : null, crossingStep,
+                crossingStep != null ? CrossingRouting?.MaxNodesExpanded : null,
+                gridStartX, gridStartY, startDir, gridEndX, gridEndY, endDir, scaledEscape,
+                cancellationToken, out _lastFineAttemptGoalReachable);
 
             CostCalculator.MinStraightRunCells = originalStraightRun;
 
@@ -210,40 +139,6 @@ public partial class WaveguideRouter
             PathfindingGrid.RestoreCells(clearedStartFanout);
             PathfindingGrid.RestoreCells(clearedEndFanout);
         }
-    }
-
-    /// <summary>
-    /// Runs the A* search for one routing attempt. One continuous search replaces the
-    /// former back-to-back Phase-1/Phase-2 runs: the extended phase's budget IS the total
-    /// budget and <see cref="AStarPathfinder.AStarPathfinder.OnEscalationThresholdReached"/>
-    /// marks where the quick phase would have ended. The expansion sequence — and
-    /// therefore the outcome — is identical to the two-phase version, minus the
-    /// repeated quick-phase work and minus the redundant extended re-run when the
-    /// quick phase had already emptied the open set (a deterministic re-run of an
-    /// exhausted search returns null again).
-    /// </summary>
-    private List<AStarNode>? RunAStarPhases(
-        int gridStartX, int gridStartY, GridDirection startDir,
-        int gridEndX, int gridEndY, GridDirection endDir,
-        CrossingStep? crossingStep,
-        CancellationToken cancellationToken)
-    {
-        var search = new AStarPathfinder.AStarPathfinder(PathfindingGrid!, CostCalculator)
-        {
-            // The continuous search replays the exact expansion sequence of the
-            // former quick-then-extended phases (the extended phase re-expanded the
-            // quick phase's prefix identically), so the extended phase's budget IS
-            // the total budget — the quick phase survives only as the escalation mark.
-            MaxNodesExpanded = crossingStep != null && CrossingRouting != null
-                ? CrossingRouting.MaxNodesExpanded
-                : Phase2MaxNodes,
-            UseDiagonals = UseDiagonalRouting,
-            EscalationThresholdNodes = Phase1MaxNodes,
-            OnEscalationThresholdReached = () => OnComplexRouteStarted?.Invoke(),
-            Crossings = crossingStep
-        };
-        return search.FindPath(gridStartX, gridStartY, startDir,
-                               gridEndX, gridEndY, endDir, cancellationToken);
     }
 
     /// <summary>

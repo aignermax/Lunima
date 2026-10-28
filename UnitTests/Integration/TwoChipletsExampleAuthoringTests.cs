@@ -73,14 +73,14 @@ public class TwoChipletsExampleAuthoringTests
         }
 
         var examplePath = Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), ExampleFileName);
-        var fileOps = new FileOperationsViewModel(
+        var fileOps = new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             design.Canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(design.Templates),
-            new GdsExportViewModel(new GdsExportService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), design.Canvas),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), design.Canvas),
             null!,
             errorConsole: new ErrorConsoleService());
         fileOps.ProcessCatalogProvider = () => catalog;

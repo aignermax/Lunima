@@ -26,6 +26,7 @@ public partial class LogicPanelViewModel
     /// <summary>Rebuilds the candidate list from the canvas; leaves it untouched when nothing changed.</summary>
     public void RefreshGateCandidates()
     {
+        if (_work.IsStopping) return;
         var groups = _canvas?.Components
             .Select(c => c.Component)
             .OfType<ComponentGroup>()
@@ -40,5 +41,8 @@ public partial class LogicPanelViewModel
         HasGateCandidates = GateCandidates.Count > 0;
     }
 
-    private void RequestMakeGate(ComponentGroup group) => MakeGateRequested?.Invoke(group);
+    private void RequestMakeGate(ComponentGroup group)
+    {
+        if (!_work.IsStopping) MakeGateRequested?.Invoke(group);
+    }
 }

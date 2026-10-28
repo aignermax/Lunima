@@ -4,39 +4,16 @@ using CAP_DataAccess.Persistence.PIR;
 
 namespace CAP.Avalonia.Services.AddCustomComponent;
 
-public interface IComponentPreviewRenderer
-{
-    Task<NazcaPreviewResult> RenderAsync(string? module, string function, string? parameters, CancellationToken ct = default);
-
-    Task<NazcaPreviewResult> RenderRawCodeAsync(string code, CancellationToken ct = default);
-}
-
-public sealed class ComponentPreviewRendererAdapter : IComponentPreviewRenderer
-{
-    private readonly NazcaComponentPreviewService _service;
-
-    public ComponentPreviewRendererAdapter(NazcaComponentPreviewService service)
-    {
-        _service = service;
-    }
-
-    public Task<NazcaPreviewResult> RenderAsync(string? module, string function, string? parameters, CancellationToken ct = default)
-        => _service.RenderAsync(module, function, parameters, ct);
-
-    public Task<NazcaPreviewResult> RenderRawCodeAsync(string code, CancellationToken ct = default)
-        => _service.RenderRawCodeAsync(code, ct);
-}
-
 public sealed record GeometryExtractResult(
     bool Success, string? Error, double WidthUm, double HeightUm,
     IReadOnlyList<OverridePinData> Pins, NazcaPreviewResult Raw);
 
 public sealed class ComponentGeometryExtractor
 {
-    private readonly IComponentPreviewRenderer _nazca;
-    private readonly IComponentPreviewRenderer _gdsFactory;
+    private readonly IPdkGeometryRenderer _nazca;
+    private readonly IPdkGeometryRenderer _gdsFactory;
 
-    public ComponentGeometryExtractor(IComponentPreviewRenderer nazcaPreview, IComponentPreviewRenderer gdsFactoryPreview)
+    public ComponentGeometryExtractor(IPdkGeometryRenderer nazcaPreview, IPdkGeometryRenderer gdsFactoryPreview)
     {
         _nazca = nazcaPreview;
         _gdsFactory = gdsFactoryPreview;
@@ -57,7 +34,7 @@ public sealed class ComponentGeometryExtractor
 
     private Task<NazcaPreviewResult> RenderAsync(GeometryReference reference, CancellationToken ct)
     {
-        IComponentPreviewRenderer renderer = reference.Backend == GeometryBackend.GdsFactory ? _gdsFactory : _nazca;
+        IPdkGeometryRenderer renderer = reference.Backend == GeometryBackend.GdsFactory ? _gdsFactory : _nazca;
 
         if (reference.RawSourceCode is not null)
             return renderer.RenderRawCodeAsync(reference.RawSourceCode, ct);

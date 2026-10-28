@@ -20,9 +20,11 @@ namespace CAP.Avalonia.ViewModels.Panels;
 
 public partial class LeftPanelViewModel : ObservableObject
 {
+    private readonly IBundledPdkCatalog _bundledPdks;
     private readonly DesignCanvasViewModel _canvas;
-    private readonly PdkLoader _pdkLoader;
-    private readonly UserPreferencesService _preferencesService;
+    private readonly IPdkReader _pdkLoader;
+    private readonly CAP_Core.Preferences.IPdkLibraryPreferences _preferencesService;
+    private readonly CAP_Core.Preferences.IPanelLayoutPreferences _panelLayoutPreferences;
     private readonly ErrorConsoleService? _errorConsole;
     private readonly AddCustomComponentDependencies? _addCustomComponentDeps;
     private readonly RegistryBrowserViewModel? _registryBrowser;
@@ -91,23 +93,28 @@ public partial class LeftPanelViewModel : ObservableObject
     public Func<string, Task<string?>>? ShowImportWizardAsync { get; set; }
 
     public Func<CAP.Avalonia.ViewModels.Components.AddCustomComponent.NewComponentViewModel, Task>? ShowNewComponentWindowAsync { get; set; }
-    public LeftPanelViewModel(
+    public LeftPanelViewModel(IBundledPdkCatalog bundledPdks,
         DesignCanvasViewModel canvas,
-        GroupLibraryManager libraryManager,
-        PdkLoader pdkLoader,
-        UserPreferencesService preferencesService,
+        IGroupLibrary libraryManager,
+        IPdkReader pdkLoader,
+        CAP_Core.Preferences.IPdkLibraryPreferences preferencesService,
+        CAP_Core.Preferences.IPanelLayoutPreferences panelLayoutPreferences,
         HierarchyPanelViewModel hierarchyPanel,
         PdkManagerViewModel pdkManager,
         ComponentLibraryViewModel componentLibrary,
         ErrorConsoleService? errorConsole = null,
         AddCustomComponentDependencies? addCustomComponentDeps = null,
-        RegistryBrowserViewModel? registryBrowser = null)
+        RegistryBrowserViewModel? registryBrowser = null,
+        CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary? userPdkLibrary = null)
     {
         _canvas = canvas;
+        _bundledPdks = bundledPdks ?? throw new ArgumentNullException(nameof(bundledPdks));
         _pdkLoader = pdkLoader;
         _preferencesService = preferencesService;
+        _panelLayoutPreferences = panelLayoutPreferences;
         _errorConsole = errorConsole;
         _addCustomComponentDeps = addCustomComponentDeps;
+        _userPdkLibrary = userPdkLibrary ?? addCustomComponentDeps?.UserPdkStore;
         _registryBrowser = registryBrowser;
 
         HierarchyPanel = hierarchyPanel;
@@ -184,21 +191,20 @@ public partial class LeftPanelViewModel : ObservableObject
 
     private void LoadBundledPdks()
     {
-        var pdkDir = ResolveBundledPdkDirectory(AppDomain.CurrentDomain.BaseDirectory);
-        if (pdkDir == null) return;
-
-        LoadBundledPdksFrom(pdkDir);
+        var inventory = _bundledPdks.ReadInventory();
+        if (inventory is null) return;
+        LoadBundledPdkFiles(inventory.Files);
     }
 
     /// <summary>
-    /// Loads every bundled PDK JSON from <paramref name="pdkDir"/> and records each in the
+    /// Loads every bundled PDK JSON from <paramref name="files"/> and records each in the
     /// bundled-origin catalog. A user fork on disk does NOT suppress the bundled load here —
     /// the startup reload replaces (shadows) the bundled entry instead, which keeps the
     /// built-in PDK available when the fork file turns out to be unreadable.
     /// </summary>
-    internal void LoadBundledPdksFrom(string pdkDir)
+    internal void LoadBundledPdkFiles(IEnumerable<string> files)
     {
-        foreach (var pdkFile in Directory.GetFiles(pdkDir, "*.json"))
+        foreach (var pdkFile in files)
         {
             try
             {
@@ -232,14 +238,6 @@ public partial class LeftPanelViewModel : ObservableObject
             }
         }
     }
-
-    /// <summary>
-    /// Resolution moved to <see cref="CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkPaths"/>
-    /// so the data-access layer (PdkJsonSaver write guard) shares the same notion of
-    /// "bundled directory" as the library load path. Facade kept for existing callers/tests.
-    /// </summary>
-    internal static string? ResolveBundledPdkDirectory(string baseDir) =>
-        CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkPaths.ResolveBundledPdkDirectory(baseDir);
 
     /// <summary>
     /// Restricts <see cref="FilteredTemplates"/> to the templates the active workspace places
@@ -362,13 +360,13 @@ public partial class LeftPanelViewModel : ObservableObject
 
     private void RestoreLeftPanelWidth()
     {
-        var width = _preferencesService.GetLeftPanelWidth();
+        var width = _panelLayoutPreferences.GetLeftPanelWidth();
         LeftPanelWidth = new GridLength(width);
     }
 
     private void SaveLeftPanelWidth()
     {
-        _preferencesService.SetLeftPanelWidth(LeftPanelWidth.Value);
+        _panelLayoutPreferences.SetLeftPanelWidth(LeftPanelWidth.Value);
     }
 
     [RelayCommand]

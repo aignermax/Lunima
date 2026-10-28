@@ -150,7 +150,7 @@ public class TourAnchorTests
     {
         var logic = new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
             new FakeLogicRunClock());
-        var playground = new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel();
+        var playground = new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var tour = new RunProgramTourViewModel(logic, MakeDock(), playground);
         tour.Start();
 
@@ -214,7 +214,7 @@ public class TourAnchorTests
     {
         var logic = new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
             new FakeLogicRunClock());
-        var playground = new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel();
+        var playground = new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         return new RunProgramTourViewModel(logic, MakeDock(), playground).Steps;
     }
 
@@ -228,7 +228,7 @@ public class TourAnchorTests
     private static CAP.Avalonia.ViewModels.Panels.AnalysisDockViewModel MakeDock() =>
         new(new CAP.Avalonia.ViewModels.Analysis.TimeDomainViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.EyeDiagram.EyeDiagramViewModel(),
-            new CAP.Avalonia.ViewModels.Analysis.WavelengthSpectrum.WavelengthSpectrumViewModel(),
+            new CAP.Avalonia.ViewModels.Analysis.WavelengthSpectrum.WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()),
             new CAP.Avalonia.ViewModels.Analysis.AnalysisOutput.AnalysisOutputPanelViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.MonteCarloAnalysis.MonteCarloViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.CircuitOptimization.CircuitOptimizationViewModel(

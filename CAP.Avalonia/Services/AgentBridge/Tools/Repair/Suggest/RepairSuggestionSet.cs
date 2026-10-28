@@ -10,27 +10,15 @@ public sealed record RepairSuggestion(string Id, TrialOutcome Outcome);
 /// were computed on (<see cref="Stamp"/>): any edit in between makes them stale.
 /// </summary>
 /// <param name="TargetId">The blocked connection they repair.</param>
-/// <param name="Stamp">Design fingerprint when the suggestions were made.</param>
+/// <param name="Stamp">Exact document revision and scope when the suggestions were made.</param>
 /// <param name="Suggestions">Ranked best first.</param>
-public sealed record RepairSuggestionSet(string TargetId, int Stamp, IReadOnlyList<RepairSuggestion> Suggestions)
+public sealed record RepairSuggestionSet(string TargetId, CAP_Core.Documents.DocumentRevisionStamp Stamp, IReadOnlyList<RepairSuggestion> Suggestions)
 {
     /// <summary>
-    /// Fingerprint of what the suggestions depend on: every component's id and position and
-    /// every connection's id.
+    /// Captures an exact, non-owning revision and scope stamp.
     /// </summary>
-    public static int ComputeStamp(AgentDesignSession session)
-    {
-        var hash = new HashCode();
-        foreach (var vm in session.Canvas.Components.OrderBy(c => c.Component.Id))
-        {
-            hash.Add(vm.Component.Id);
-            hash.Add(Math.Round(vm.X, 3));
-            hash.Add(Math.Round(vm.Y, 3));
-        }
-        foreach (var id in session.Canvas.Connections.Select(c => c.Connection.Id).OrderBy(id => id))
-            hash.Add(id);
-        return hash.ToHashCode();
-    }
+    public static CAP_Core.Documents.DocumentRevisionStamp ComputeStamp(AgentDesignSession session) =>
+        session.Canvas.Document.CaptureRevision();
 
     /// <summary>
     /// Ranks applicable trials: fewest blocked wires, then fewest crossings added, then the

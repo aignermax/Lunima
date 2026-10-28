@@ -28,4 +28,16 @@ public class ImportedSParameters
 
     /// <summary>Optional metadata (polarization, simulation settings, etc.).</summary>
     public Dictionary<string, string> Metadata { get; set; } = new();
+
+    /// <summary>Owns the parsed values before an interactive mapping step can suspend the import.</summary>
+    public ImportedSParameters Copy() => new()
+    {
+        SourceFormat = SourceFormat,
+        SourceFilePath = SourceFilePath,
+        PortCount = PortCount,
+        PortNames = new List<string>(PortNames),
+        SMatricesByWavelengthNm = SMatricesByWavelengthNm.ToDictionary(
+            pair => pair.Key, pair => (Complex[,])pair.Value.Clone()),
+        Metadata = new Dictionary<string, string>(Metadata, Metadata.Comparer)
+    };
 }

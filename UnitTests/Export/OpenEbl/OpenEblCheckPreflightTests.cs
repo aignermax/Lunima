@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.Services.OpenEblCheck;
 using Shouldly;

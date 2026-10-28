@@ -30,7 +30,7 @@ public class GeometryOnlyComponentSweepTests
         var canvas = BuildCanvas();
         var console = new ErrorConsoleService();
 
-        var spectrum = new WavelengthSpectrumViewModel(console);
+        var spectrum = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource(), console);
         spectrum.Configure(canvas);
         await spectrum.RunSweepCommand.ExecuteAsync(null);
         var monteCarlo = new MonteCarloViewModel(console);

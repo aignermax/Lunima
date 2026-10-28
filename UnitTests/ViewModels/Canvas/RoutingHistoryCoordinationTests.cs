@@ -54,7 +54,7 @@ public partial class RoutingOrchestratorProgressTests
         binder.Service.ComponentAdded!(crossing);
         var commands = new CAP.Avalonia.Commands.CommandManager();
         var session = new CAP.Avalonia.Services.AgentBridge.Tools.AgentDesignSession(
-            canvas, commands, () => null, new CAP.Avalonia.Services.ExampleDesignsService());
+            canvas, commands, () => null, new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var result = await new CAP.Avalonia.Services.AgentBridge.Tools.Edit.UndoTool(session)
             .ExecuteAsync(System.Text.Json.JsonDocument.Parse("{}").RootElement);
         result.IsError.ShouldBeTrue();
@@ -66,28 +66,21 @@ public partial class RoutingOrchestratorProgressTests
     public async Task HistoryChange_WaitsForCancelledWorker_ThenRestoresAfterItsLastWrite()
     {
         var orchestrator = CreateOrchestratorWithDeferredConnections(1);
-        using var parked = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
         var value = "before";
-        orchestrator.BuildConnectionProcessFloorProvider = () => (_, _) =>
-        {
-            parked.Set();
-            release.Wait();
-            value = "late worker write";
-            return null;
-        };
+        orchestrator.BlockWorker = true;
+        orchestrator.AfterRelease = () => value = "late worker write";
         var routing = orchestrator.RecalculateRoutesAsync();
         Task<bool>? history = null;
         try
         {
-            parked.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
+            await orchestrator.Entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
             history = orchestrator.ExecuteHistoryChangeAsync(() => { value = "restored"; return true; }, () => true);
             history.IsCompleted.ShouldBeFalse("cancellation must drain the mutating worker first");
             value.ShouldBe("before");
         }
         finally
         {
-            release.Set();
+            orchestrator.Release.TrySetResult();
             await PumpUntilDone(history == null ? routing : Task.WhenAll(routing, history));
         }
         value.ShouldBe("restored");

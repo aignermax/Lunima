@@ -26,7 +26,7 @@ public class GdsMainCanvasPerformanceProbeTests(ITestOutputHelper output)
         if (string.IsNullOrWhiteSpace(path)) return;
         using var host = new GdsDesignScopeTestHost();
         var service = host.CreateService();
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path);
         var top = analysis.TopCellCandidates[0];
         var review = new GdsImportInterpretation
         {

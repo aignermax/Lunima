@@ -55,7 +55,7 @@ public class ShowcaseAgentBridgeGifTests
             ShowcaseAgentStage.HideRightPanel(window);
             ShowcaseCircuit.SetView(window, vm, Focus);
             var session = new AgentDesignSession(vm.Canvas, vm.CommandManager, () => vm.FileOperations,
-                new ExampleDesignsService(), () => vm.LeftPanel.AllTemplates.ToList());
+                new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()), () => vm.LeftPanel.AllTemplates.ToList());
             var padId = vm.Canvas.Components.First(c => c.Name == PadTemplate).Component.Identifier;
             var gif = new ShowcaseGifRecorder("agent-bridge", window, ShowcaseAgentStage.CanvasWithToolbar(window));
             var caption = new ShowcaseTerminalCaption(window, "claude  ·  Lunima MCP agent bridge");

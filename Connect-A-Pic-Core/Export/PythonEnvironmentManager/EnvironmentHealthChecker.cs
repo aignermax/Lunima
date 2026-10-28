@@ -6,7 +6,7 @@ namespace CAP_Core.Export.PythonEnvironmentManager;
 /// Reuses <see cref="PythonDiscoveryService.CheckPythonInstallation"/> for
 /// Python and Nazca version detection.
 /// </summary>
-public class EnvironmentHealthChecker
+public class EnvironmentHealthChecker : CAP_Core.Export.Contracts.IPythonEnvironmentHealth
 {
     private readonly PythonDiscoveryService _discovery;
     private readonly ProcessLaunchFactory _launchFactory;
@@ -28,8 +28,9 @@ public class EnvironmentHealthChecker
     /// <param name="env">Environment to check. Modified in place.</param>
     /// <param name="ct">Cancellation token; cancelling aborts the probes.</param>
     /// <returns>The same <paramref name="env"/> instance after updating.</returns>
-    public async Task<PythonEnvironment> CheckAsync(PythonEnvironment env, CancellationToken ct = default)
+    public virtual async Task<PythonEnvironment> CheckAsync(PythonEnvironment env, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var pythonExe = env.PythonExecutable;
 
         if (!File.Exists(pythonExe))
@@ -39,7 +40,8 @@ public class EnvironmentHealthChecker
         }
 
         ct.ThrowIfCancellationRequested();
-        var installation = await _discovery.CheckPythonInstallation(pythonExe, "Managed");
+        var installation = await _discovery.CheckPythonInstallation(pythonExe, "Managed", cancellationToken: ct);
+        ct.ThrowIfCancellationRequested();
         if (installation == null)
         {
             MarkBroken(env, "Python executable exists but could not be queried for version.");
@@ -58,6 +60,7 @@ public class EnvironmentHealthChecker
         env.HasPyclipper = await CheckPyclipperAsync(pythonExe, ct);
         env.GdsFactoryVersion = await ProbePackageVersionAsync(pythonExe, "gdsfactory", ct);
         env.CspdkVersion = await ProbePackageVersionAsync(pythonExe, "cspdk", ct);
+        ct.ThrowIfCancellationRequested();
 
         env.Status = PythonEnvironmentStatus.Healthy;
         env.LastError = null;

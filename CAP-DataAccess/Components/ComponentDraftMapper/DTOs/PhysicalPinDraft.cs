@@ -9,6 +9,9 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
     /// </summary>
     public class PhysicalPinDraft
     {
+        /// <summary>Copies the scalar definition for an independent snapshot.</summary>
+        public PhysicalPinDraft Copy() => (PhysicalPinDraft)MemberwiseClone();
+
         /// <summary>
         /// Name of the pin, used for Nazca export (e.g., "a0", "b1", "west0").
         /// Should match the corresponding logical pin name when applicable.

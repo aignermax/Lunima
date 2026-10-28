@@ -233,7 +233,7 @@ public class PdkConsistencyTests
     [Fact]
     public void PdkConsistencyViewModel_CheckPdksCommand_ExecutesWithoutException()
     {
-        var vm = new CAP.Avalonia.ViewModels.Diagnostics.PdkConsistencyViewModel();
+        var vm = new CAP.Avalonia.ViewModels.Diagnostics.PdkConsistencyViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader());
 
         // Command should execute without throwing
         vm.CheckPdksCommand.Execute(null);

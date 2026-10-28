@@ -69,48 +69,67 @@ public partial class MakeGateViewModel
     /// <summary>Marks each row with the bit the intended function expects (null for custom).</summary>
     private void ApplyFunctionExpectations()
     {
+        if (!CanPublishResult) return;
         var outputs = Math.Max(1, _table?.OutputPinNames.Count ?? 1);
         var inputs = Math.Max(1, _table?.InputPinNames.Count ?? 1);
         for (var i = 0; i < Rows.Count; i++)
+        {
+            if (!CanPublishResult) return;
             Rows[i].ExpectedBit = GateFunctionTable.Expected(SelectedFunction.Function, i / outputs, inputs);
+        }
     }
 
     /// <summary>Computes the suggestion, shows margin/overlap and moves the threshold onto it.</summary>
     private void ApplySuggestedThreshold()
     {
+        if (!CanPublishResult) return;
         var samples = Rows.Select(r => new GatePowerSample(r.Power, r.ExpectedBit)).ToList();
         var suggestion = _advisor.Suggest(samples);
         SuggestedThreshold = suggestion.Threshold;
+        if (!CanPublishResult) return;
         HasOverlap = suggestion.LevelsOverlap;
+        if (!CanPublishResult) return;
         SuggestionText = suggestion.LevelsOverlap
             ? string.Format(CultureInfo.InvariantCulture, Translate("MakeGate.Overlap"),
                 suggestion.BrightestZero, suggestion.DarkestOne)
             : string.Format(CultureInfo.InvariantCulture, Translate("MakeGate.Suggestion"),
                 suggestion.Threshold, suggestion.MarginDb);
+        if (!CanPublishResult) return;
         Threshold = suggestion.Threshold;
+        if (!CanPublishResult) return;
         ReclassifyRows();
     }
 
-    private void ClearThresholdSuggestion()
+    private void ClearThresholdSuggestion(Func<bool> canContinue)
     {
         SuggestedThreshold = null;
+        if (!canContinue()) return;
         HasOverlap = false;
+        if (!canContinue()) return;
         SuggestionText = "";
+        if (!canContinue()) return;
         MatchText = "";
-        MatchesFunction = false;
+        if (canContinue()) MatchesFunction = false;
     }
 
     /// <summary>Re-reads every row against the current threshold and updates the match summary.</summary>
     private void ReclassifyRows()
     {
-        foreach (var row in Rows)
+        if (!CanPublishResult) return;
+        foreach (var row in Rows.ToArray())
+        {
+            if (!CanPublishResult) return;
             row.Classify(Threshold);
+        }
+        if (!CanPublishResult) return;
         CanUseSuggestedThreshold = SuggestedThreshold is { } suggested
             && Math.Abs(suggested - Threshold) > ThresholdTolerance;
+        if (!CanPublishResult) return;
         if (Rows.Count == 0)
             return;
         var mismatches = Rows.Count(r => !r.Matches);
         MatchesFunction = SelectedFunction.Function != GateFunction.Custom && mismatches == 0;
+        if (!CanPublishResult) return;
         MatchText = SelectedFunction.Function == GateFunction.Custom
             ? ""
             : mismatches == 0

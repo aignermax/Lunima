@@ -474,8 +474,8 @@ public class AiGridServiceTests
         var pdkManager = new PdkManagerViewModel();
         var componentLibrary = new ComponentLibraryViewModel(libraryManager);
 
-        return new LeftPanelViewModel(
-            canvas, libraryManager, pdkLoader, prefs,
+        return new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
+            canvas, libraryManager, pdkLoader, prefs, prefs,
             hierarchy, pdkManager, componentLibrary);
     }
 

@@ -81,7 +81,7 @@ public class ConnectionsRoundTripTests : IDisposable
         // ── Re-import the exported GDS ─────────────────────────────────────
         using var importHost = new GdsDesignScopeTestHost();
         _hosts.Add(importHost);
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         var service = importHost.CreateService(() => loadHost.Templates.ToList());
         var outcome = await service.ImportAsync(gdsPath, analysis.TopCellCandidates[0],
             new GdsHierarchyImportOptions
@@ -128,14 +128,14 @@ public class ConnectionsRoundTripTests : IDisposable
     private static FileOperationsViewModel CreateFileOperations(
         DesignCanvasViewModel canvas, GdsDesignScopeTestHost host)
     {
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             host.Templates,
-            new GdsExportViewModel(new GdsExportService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: new ErrorConsoleService())
         {

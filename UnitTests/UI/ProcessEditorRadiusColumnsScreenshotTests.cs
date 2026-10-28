@@ -30,7 +30,7 @@ public class ProcessEditorRadiusColumnsScreenshotTests
         var outputDir = ResolveOutputDirectory();
         Directory.CreateDirectory(outputDir);
 
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>());
         vm.Load(CreateCornerstoneLikeProcess());
 
         var window = new ProcessManagementWindow { DataContext = vm };

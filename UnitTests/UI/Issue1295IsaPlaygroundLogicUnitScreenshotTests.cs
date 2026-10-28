@@ -124,7 +124,7 @@ public class Issue1295IsaPlaygroundLogicUnitScreenshotTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
         vm.PhotonicAndAlu.ShouldNotBeNull("the fixture network must run AND photonically");
         vm.PhotonicNotAlu.ShouldNotBeNull("the fixture network must run NOT photonically");
         return vm;

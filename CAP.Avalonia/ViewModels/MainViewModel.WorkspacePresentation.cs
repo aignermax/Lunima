@@ -19,7 +19,15 @@ public partial class MainViewModel
     {
         Canvas.ViewSettings.Emphasis = WorkspaceSwitch.Profile.Presentation.Emphasis;
         WorkspaceSwitch.Switched += ApplyWorkspacePresentation;
-        CommandManager.StateChanged += (_, _) => Canvas.ViewSettings.ClearDesignCheckFindings();
+        CommandManager.StateChanged += ClearFindingsOnHistoryChange;
+    }
+
+    private void ClearFindingsOnHistoryChange(object? sender, EventArgs args) => Canvas.ViewSettings.ClearDesignCheckFindings();
+
+    private void UnwireWorkspacePresentation()
+    {
+        WorkspaceSwitch.Switched -= ApplyWorkspacePresentation;
+        CommandManager.StateChanged -= ClearFindingsOnHistoryChange;
     }
 
     /// <summary>The overlays on screen right now.</summary>

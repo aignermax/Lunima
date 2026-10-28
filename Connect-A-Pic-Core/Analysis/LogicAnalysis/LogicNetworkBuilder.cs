@@ -68,17 +68,29 @@ public sealed partial class LogicNetworkBuilder
             throw new ArgumentException("A logic network needs at least one gate group.", nameof(gates));
 
         var contexts = gates.Select(GateContext.Create).ToList();
+        var topology = CaptureTopology(contexts, connections, wavelengthNm ?? StandardWaveLengths.RedNM);
+        return topology.Build(gates.ToDictionary(gate => gate.GateId ?? gate.Group.GroupName, gate => gate.Model));
+    }
+
+    internal LogicNetworkTopology CaptureTopology(IReadOnlyList<LogicGateTopologyInput> gates,
+        IReadOnlyList<WaveguideConnection> connections, double wavelengthNm) =>
+        CaptureTopology(gates.Select(GateContext.Create).ToList(), connections, wavelengthNm);
+
+    private LogicNetworkTopology CaptureTopology(IReadOnlyList<GateContext> contexts,
+        IReadOnlyList<WaveguideConnection> connections, double wavelengthNm)
+    {
         ThrowOnDuplicateGateIds(contexts);
 
+        var endpoints = new EndpointIndex(contexts);
         var adjacency = LogicPinTracer.BuildPinAdjacency(connections);
         var drivers = new Dictionary<LogicPinRef, LogicPinRef>();
         var edgeConnections = new Dictionary<LogicPinRef, IReadOnlyList<WaveguideConnection>>();
         foreach (var connection in connections)
         {
-            AddConnectionDrivers(contexts, adjacency, connection, drivers, edgeConnections);
+            AddConnectionDrivers(endpoints, adjacency, connection, drivers, edgeConnections);
         }
 
-        return AssembleNetwork(contexts, drivers, edgeConnections, wavelengthNm ?? StandardWaveLengths.RedNM);
+        return CaptureNetwork(contexts, drivers, edgeConnections, wavelengthNm);
     }
 
     /// <summary>
@@ -93,14 +105,14 @@ public sealed partial class LogicNetworkBuilder
     /// input; a gate output whose path dead-ends stays an output tap, as before.
     /// </summary>
     private static void AddConnectionDrivers(
-        IReadOnlyList<GateContext> contexts,
+        EndpointIndex endpoints,
         IReadOnlyDictionary<PhysicalPin, List<WaveguideConnection>> adjacency,
         WaveguideConnection connection,
         IDictionary<LogicPinRef, LogicPinRef> drivers,
         IDictionary<LogicPinRef, IReadOnlyList<WaveguideConnection>> edgeConnections)
     {
-        var start = ResolveEndpoint(contexts, connection.StartPin);
-        var end = ResolveEndpoint(contexts, connection.EndPin);
+        var start = endpoints.Resolve(connection.StartPin);
+        var end = endpoints.Resolve(connection.EndPin);
         if (start == null && end == null)
             return;
 
@@ -118,7 +130,7 @@ public sealed partial class LogicNetworkBuilder
             var unresolvedPin = start == null ? connection.StartPin : connection.EndPin;
             if (unresolvedPin == null)
                 return;
-            var traced = TracePassThrough(contexts, adjacency, unresolvedPin, connection, resolved, path, out var failure);
+            var traced = TracePassThrough(endpoints, adjacency, unresolvedPin, connection, resolved, path, out var failure);
             if (traced == null)
             {
                 if (failure != null && resolved.Role == PinRole.Input)
@@ -145,7 +157,7 @@ public sealed partial class LogicNetworkBuilder
     /// or ends without reaching a gate pin.
     /// </summary>
     private static Endpoint? TracePassThrough(
-        IReadOnlyList<GateContext> contexts,
+        EndpointIndex endpoints,
         IReadOnlyDictionary<PhysicalPin, List<WaveguideConnection>> adjacency,
         PhysicalPin startPin,
         WaveguideConnection arrivalConnection,
@@ -154,7 +166,7 @@ public sealed partial class LogicNetworkBuilder
         out string? failure)
     {
         var traced = LogicPinTracer.Trace(
-            pin => ResolveEndpoint(contexts, pin), adjacency, startPin, arrivalConnection, path, out var reason);
+            endpoints.Resolve, adjacency, startPin, arrivalConnection, path, out var reason);
         failure = reason == null ? null : UnresolvableMessage(gateEnd, startPin, reason);
         return traced;
     }
@@ -195,21 +207,31 @@ public sealed partial class LogicNetworkBuilder
     /// through the external pin's name, so a loaded design assembles straight from
     /// its own connections.
     /// </summary>
-    private static Endpoint? ResolveEndpoint(IReadOnlyList<GateContext> contexts, PhysicalPin? pin)
+    private sealed class EndpointIndex
     {
-        if (pin?.ParentComponent == null)
-            return null;
-        var context = contexts.FirstOrDefault(c => ReferenceEquals(c.Group, pin.ParentComponent));
-        if (context != null)
-            return ToEndpoint(context, pin.Name);
+        private readonly Dictionary<Component, GateContext> _groups = new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<PhysicalPin, (GateContext Context, string Name)> _pins = new(ReferenceEqualityComparer.Instance);
 
-        foreach (var candidate in contexts)
+        public EndpointIndex(IEnumerable<GateContext> contexts)
         {
-            var external = candidate.Group.ExternalPins.FirstOrDefault(p => ReferenceEquals(p.InternalPin, pin));
-            if (external != null)
-                return ToEndpoint(candidate, external.Name);
+            foreach (var context in contexts)
+            {
+                _groups.TryAdd(context.Group, context);
+                foreach (var external in context.Group.ExternalPins)
+                    if (external.InternalPin is { } pin) _pins.TryAdd(pin, (context, external.Name));
+            }
         }
-        return null;
+
+        public Endpoint? Resolve(PhysicalPin? pin)
+        {
+            if (pin?.ParentComponent == null) return null;
+            // Direct group ownership takes precedence; otherwise the first matching
+            // external pin wins, including pins without a role. Preserve validation semantics.
+            if (_groups.TryGetValue(pin.ParentComponent, out var context))
+                return ToEndpoint(context, pin.Name);
+            return _pins.TryGetValue(pin, out var external)
+                ? ToEndpoint(external.Context, external.Name) : null;
+        }
     }
 
     /// <summary>Wraps one gate pin name as an endpoint, or null when the pin carries no role.</summary>
@@ -227,7 +249,7 @@ public sealed partial class LogicNetworkBuilder
     /// from its group's internal optical path length, and each inter-gate wire's
     /// delay from the connecting waveguide's routed path.
     /// </summary>
-    private LogicNetworkEvaluator AssembleNetwork(
+    private LogicNetworkTopology CaptureNetwork(
         IReadOnlyList<GateContext> contexts,
         IReadOnlyDictionary<LogicPinRef, LogicPinRef> drivers,
         IReadOnlyDictionary<LogicPinRef, IReadOnlyList<WaveguideConnection>> edgeConnections,
@@ -237,7 +259,6 @@ public sealed partial class LogicNetworkBuilder
         var inputMembers = new Dictionary<string, List<string>>();
         var wiring = new Dictionary<LogicPinRef, LogicNetDriver>();
         var outputTaps = new Dictionary<string, LogicPinRef>();
-        var models = new Dictionary<string, LogicGateModel>();
         var delays = new Dictionary<string, double>();
         var wireDelays = new Dictionary<LogicWireEdge, double>();
         var wireLinkLosses = new Dictionary<LogicWireEdge, LogicWireLinkLoss>();
@@ -254,16 +275,15 @@ public sealed partial class LogicNetworkBuilder
 
         foreach (var context in contexts)
         {
-            models[context.GateId] = context.Model;
             delays[context.GateId] = _delayCalculator.CalculatePicoseconds(context.Group, wavelengthNm);
-            foreach (var pinName in context.Model.InputPinNames)
+            foreach (var pinName in context.InputPinNames)
             {
                 var load = new LogicPinRef(context.GateId, pinName);
                 wiring[load] = drivers.TryGetValue(load, out var source)
                     ? new LogicNetDriver.GateOutput(source)
                     : new LogicNetDriver.NetworkInput(NetworkInputName(networkInputs, inputMembers, context, load));
             }
-            foreach (var pinName in context.Model.OutputPinNames)
+            foreach (var pinName in context.OutputPinNames)
             {
                 AddOutputTap(outputTaps, context, pinName);
             }
@@ -272,11 +292,11 @@ public sealed partial class LogicNetworkBuilder
         ThrowOnInputOutputNameCollision(inputMembers, outputTaps);
 
         var registerGateIds = contexts
-            .Where(context => context.Instance.Roles.IsRegister)
+            .Where(context => context.Roles.IsRegister)
             .Select(context => context.GateId)
             .ToList();
-        return new LogicNetworkEvaluator(
-            networkInputs, models, wiring, outputTaps, delays, wireDelays, registerGateIds, wireLinkLosses);
+        return new LogicNetworkTopology(
+            networkInputs, wiring, outputTaps, delays, wireDelays, registerGateIds, wireLinkLosses);
     }
 
     /// <summary>

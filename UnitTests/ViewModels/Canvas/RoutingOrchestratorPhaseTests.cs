@@ -18,34 +18,14 @@ public partial class RoutingOrchestratorProgressTests
         WaveguideConnectionManager manager = null!;
         var orchestrator = CreateOrchestratorWithDeferredConnections(1, value => manager = value);
         manager.CrossingInsertion = new CAP_Core.Routing.CrossingInsertion.CrossingInsertionService(() => null);
-        using var parked = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        Action<RoutingPhase>? late = null;
-        orchestrator.BuildConnectionProcessFloorProvider = () =>
-        {
-            // Factory executes before routing installs its pass callbacks; provider runs afterward.
-            return (_, _) =>
-            {
-                if (late == null)
-                {
-                    late = manager.OnRoutingPhaseChanged;
-                    manager.OnRoutingPhaseChanged = phase =>
-                    {
-                        late!(phase);
-                        if (phase != target) return;
-                        manager.OnComplexRouteStarted?.Invoke();
-                        parked.Set();
-                        release.Wait();
-                    };
-                }
-                return null;
-            };
-        };
+        orchestrator.BlockWorker = true;
+        orchestrator.ReportedPhase = target;
+        orchestrator.ReportComplex = true;
         var task = orchestrator.RecalculateRoutesAsync();
         try
         {
-            parked.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
-            Dispatcher.UIThread.RunJobs();
+            await orchestrator.Entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            await AwaitStatus(orchestrator, "Routing.Status." + target);
             string first = orchestrator.RoutingStatusText;
             first.ShouldContain(LocalizationService.Instance.Translate("Routing.Status." + target));
             first.ShouldNotContain(LocalizationService.Instance.Translate("Routing.Status.ComplexPath"));
@@ -60,17 +40,17 @@ public partial class RoutingOrchestratorProgressTests
             orchestrator.RoutedConnectionCount.ShouldBe(count);
             orchestrator.CancelRouting();
             string cancelled = orchestrator.RoutingStatusText;
-            late!(RoutingPhase.Initial);
+            orchestrator.Mailbox!.PhaseChanged(RoutingPhase.Initial);
             Dispatcher.UIThread.RunJobs();
             orchestrator.RoutingStatusText.ShouldBe(cancelled);
         }
         finally
         {
-            release.Set();
+            orchestrator.Release.TrySetResult();
             await PumpUntilDone(task);
         }
         string finished = orchestrator.RoutingStatusText;
-        late!(RoutingPhase.Initial);
+        orchestrator.Mailbox!.PhaseChanged(RoutingPhase.Initial);
         Dispatcher.UIThread.RunJobs();
         orchestrator.RoutingStatusText.ShouldBe(finished);
     }

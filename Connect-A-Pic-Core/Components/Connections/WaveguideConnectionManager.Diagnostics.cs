@@ -17,6 +17,15 @@ public partial class WaveguideConnectionManager
     /// </summary>
     public RoutingPassTimings? LastRoutingPassTimings { get; private set; }
 
+    internal void ApplyCompletedDiagnostics(RoutingPassTimings? timings)
+    {
+        LastRoutingPassTimings = timings;
+        LastOrderingAttemptCount = timings?.OrderingAttempts ?? 0;
+        LastOrderingEarlyStopped = timings?.OrderingEarlyStopped ?? false;
+        LastContentionRepairAttemptCount = timings?.ContentionRepairAttempts ?? 0;
+        LastContentionRepairAcceptCount = timings?.ContentionRepairAccepts ?? 0;
+    }
+
     /// <summary>Measures one routing pass's wall-clock duration.</summary>
     private static TimeSpan MeasurePass(Action pass)
     {

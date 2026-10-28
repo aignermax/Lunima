@@ -288,14 +288,14 @@ public class LogicAcrossChipletLinkJourneyTests
     }
 
     private static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas) =>
-        new(
+        new(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates()),
-            new GdsExportViewModel(new CAP_Core.Export.GdsExportService()),
-            new PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas),
+            new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new CAP_Core.Export.PhotonTorchExporter(), canvas),
             null!);
 
     private static async Task SaveToFile(FileOperationsViewModel vm, string filePath)

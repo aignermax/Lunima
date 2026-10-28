@@ -105,7 +105,7 @@ public class LogicGateRegisterMarkerRenderTests
             CountPainted(ReadPixels(bitmap)).ShouldBe(0, "a combinational group draws no marker");
 
         // Toggle on through the panel — the repaint must fire and the marker appear.
-        var component = new ComponentViewModel(group);
+        var component = canvas.Components.Single(item => ReferenceEquals(item.Component, group));
         canvas.Selection.SelectSingle(component);
         var repaints = 0;
         canvas.RepaintRequested = () => repaints++;
@@ -131,7 +131,7 @@ public class LogicGateRegisterMarkerRenderTests
         var group = LogicGateFixtureFactory.CreateCombinerGroup();
         var canvas = new DesignCanvasViewModel();
         canvas.AddComponent(group);
-        var component = new ComponentViewModel(group);
+        var component = canvas.Components.Single(item => ReferenceEquals(item.Component, group));
         canvas.Selection.SelectSingle(component);
         var repaints = 0;
         canvas.RepaintRequested = () => repaints++;

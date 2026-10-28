@@ -113,10 +113,11 @@ public class GdsUserPdkStartupRoundTripTests : IDisposable
         var errorConsole = new ErrorConsoleService();
         var canvas = new DesignCanvasViewModel();
         var groupLibrary = new GroupLibraryManager();
-        var leftPanel = new LeftPanelViewModel(
-            canvas, groupLibrary, new PdkLoader(), new UserPreferencesService(_prefsPath),
+        var preferences = new UserPreferencesService(_prefsPath);
+        var leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
+            canvas, groupLibrary, new PdkLoader(), preferences, preferences,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
-            new ComponentLibraryViewModel(groupLibrary), errorConsole);
+            new ComponentLibraryViewModel(groupLibrary), errorConsole, userPdkLibrary: store);
 
         await leftPanel.ReloadUserPdksAtStartupAsync(userPdkRoot);
 

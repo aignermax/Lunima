@@ -199,7 +199,7 @@ namespace CAP_Core.LightCalculation
                     $"at component {component.Identifier}");
             }
         }
-        private Dictionary<(Guid LightIn, Guid LightOut), Complex> GetAllConnectionsBetweenComponents()
+        internal Dictionary<(Guid LightIn, Guid LightOut), Complex> GetAllConnectionsBetweenComponents()
         {
             int gridWidth = Grid.TileManager.Tiles.GetLength(0);
             int gridHeight = Grid.TileManager.Tiles.GetLength(1);

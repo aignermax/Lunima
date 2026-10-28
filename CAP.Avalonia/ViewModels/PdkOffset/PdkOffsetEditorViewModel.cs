@@ -27,10 +27,11 @@ namespace CAP.Avalonia.ViewModels.PdkOffset;
 /// </summary>
 public partial class PdkOffsetEditorViewModel : ObservableObject
 {
-    private readonly PdkLoader _pdkLoader;
-    private readonly PdkJsonSaver _pdkSaver;
+    private readonly IBundledPdkCatalog _bundledPdks;
+    private readonly IPdkReader _pdkLoader;
+    private readonly IPdkWriter _pdkSaver;
     private readonly PdkManagerViewModel _pdkManager;
-    private readonly NazcaComponentPreviewService? _previewService;
+    private readonly IPdkGeometryRenderer? _previewService;
 
     /// <summary>
     /// Store for the fork-on-save path: saving a BUNDLED PDK must never write
@@ -38,12 +39,12 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     /// the managed user-pdks root instead, exactly like the component editor's
     /// fork flow. Null (tests / legacy wiring) makes bundled saves refuse.
     /// </summary>
-    private readonly CAP_DataAccess.Components.AddCustomComponent.UserPdkStore? _userPdkStore;
+    private readonly CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary? _userPdkStore;
 
     /// <summary>gdsfactory preview back-end for gdsfactory-native components (#570); null → no preview.
     /// Typed as the base so it can be mocked in tests; DI injects the
     /// <see cref="GdsFactoryComponentPreviewService"/> instance.</summary>
-    private readonly NazcaComponentPreviewService? _gdsFactoryPreviewService;
+    private readonly IPdkGeometryRenderer? _gdsFactoryPreviewService;
 
     private PdkDraft? _loadedPdk;
     private string? _loadedFilePath;
@@ -239,14 +240,15 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     internal Func<Action, Task> UiThreadMarshaller { get; set; } =
         static async action => await Dispatcher.UIThread.InvokeAsync(action);
 
-    public PdkOffsetEditorViewModel(
-        PdkLoader pdkLoader,
-        PdkJsonSaver pdkSaver,
+    public PdkOffsetEditorViewModel(IBundledPdkCatalog bundledPdks,
+        IPdkReader pdkLoader,
+        IPdkWriter pdkSaver,
         PdkManagerViewModel pdkManager,
-        NazcaComponentPreviewService? previewService = null,
-        NazcaComponentPreviewService? gdsFactoryPreviewService = null,
-        CAP_DataAccess.Components.AddCustomComponent.UserPdkStore? userPdkStore = null)
+        IPdkGeometryRenderer? previewService = null,
+        IPdkGeometryRenderer? gdsFactoryPreviewService = null,
+        CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary? userPdkStore = null)
     {
+        _bundledPdks = bundledPdks ?? throw new ArgumentNullException(nameof(bundledPdks));
         _pdkLoader = pdkLoader;
         _pdkSaver = pdkSaver;
         _pdkManager = pdkManager;

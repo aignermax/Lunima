@@ -43,7 +43,7 @@ internal static class ShowcaseProcess
     };
 
     /// <summary>Renderer stub returning a 1x2-MMI polygon set (tapers + multimode body).</summary>
-    public static IComponentPreviewRenderer MmiPreviewRenderer()
+    public static IPdkGeometryRenderer MmiPreviewRenderer()
     {
         static NazcaPreviewPolygon Poly(params (double X, double Y)[] v) =>
             new() { Layer = 1, Vertices = v };
@@ -65,7 +65,7 @@ internal static class ShowcaseProcess
                 new() { Name = "o3", X = 32, Y = -1.5, Angle = 0 },
             },
         };
-        var mock = new Mock<IComponentPreviewRenderer>();
+        var mock = new Mock<IPdkGeometryRenderer>();
         mock.Setup(r => r.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(),
             It.IsAny<CancellationToken>())).ReturnsAsync(result);
         mock.Setup(r => r.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

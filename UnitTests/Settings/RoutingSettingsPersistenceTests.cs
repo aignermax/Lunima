@@ -30,21 +30,21 @@ public class RoutingSettingsPersistenceTests : IDisposable
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void CrossingInsertionEnabled_PersistedChoice_BinderHonorsIt(bool enabled)
+    public async Task CrossingInsertionEnabled_PersistedChoice_BinderHonorsIt(bool enabled)
     {
         new UserPreferencesService(_preferencesPath).SetCrossingInsertionEnabled(enabled);
 
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
         var binder = sp.GetRequiredService<CrossingInsertionCanvasBinder>();
 
         binder.IsEnabled.ShouldBe(enabled);
     }
 
     [Fact]
-    public void CrossingInsertionEnabled_ToggledOn_PersistsToPreferences()
+    public async Task CrossingInsertionEnabled_ToggledOn_PersistsToPreferences()
     {
         new UserPreferencesService(_preferencesPath).SetCrossingInsertionEnabled(false);
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
         var binder = sp.GetRequiredService<CrossingInsertionCanvasBinder>();
         binder.IsEnabled.ShouldBeFalse("an explicit disabled preference must be retained");
 
@@ -57,11 +57,11 @@ public class RoutingSettingsPersistenceTests : IDisposable
     [InlineData(null, true)]
     [InlineData("true", true)]
     [InlineData("false", false)]
-    public void Startup_RestoresCrossingPolicy_WithoutStartingRouting(string? storedValue, bool expected)
+    public async Task Startup_RestoresCrossingPolicy_WithoutStartingRouting(string? storedValue, bool expected)
     {
         File.WriteAllText(_preferencesPath, storedValue == null ? "{}"
             : "{\"CrossingInsertionEnabled\":" + storedValue + "}");
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
         var canvas = sp.GetRequiredService<DesignCanvasViewModel>();
         var start = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         var end = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
@@ -89,11 +89,11 @@ public class RoutingSettingsPersistenceTests : IDisposable
     /// resolving <c>MainViewModel</c> or the binder type directly.
     /// </summary>
     [Fact]
-    public void ActivateStartupSingletons_RestoresCrossingInsertion_WithoutResolvingMainViewModel()
+    public async Task ActivateStartupSingletons_RestoresCrossingInsertion_WithoutResolvingMainViewModel()
     {
         new UserPreferencesService(_preferencesPath).SetCrossingInsertionEnabled(true);
 
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
         App.ActivateStartupSingletons(sp);
 
         // The canvas' connection manager is the actual routing-time observable — checking it,
@@ -105,11 +105,11 @@ public class RoutingSettingsPersistenceTests : IDisposable
     }
 
     [Fact]
-    public void UseDiagonalRouting_PersistedTrue_CanvasStartsEnabled()
+    public async Task UseDiagonalRouting_PersistedTrue_CanvasStartsEnabled()
     {
         new UserPreferencesService(_preferencesPath).SetUseDiagonalRouting(true);
 
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
         var canvas = sp.GetRequiredService<DesignCanvasViewModel>();
 
         canvas.UseDiagonalRouting.ShouldBeTrue();
@@ -117,9 +117,9 @@ public class RoutingSettingsPersistenceTests : IDisposable
     }
 
     [Fact]
-    public void UseDiagonalRouting_ToggledOn_PersistsToPreferences()
+    public async Task UseDiagonalRouting_ToggledOn_PersistsToPreferences()
     {
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(_preferencesPath);
         var canvas = sp.GetRequiredService<DesignCanvasViewModel>();
         canvas.UseDiagonalRouting.ShouldBeFalse("diagonal routing is opt-in");
 

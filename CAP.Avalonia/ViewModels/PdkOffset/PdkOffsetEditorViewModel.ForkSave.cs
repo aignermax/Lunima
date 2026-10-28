@@ -34,17 +34,6 @@ public partial class PdkOffsetEditorViewModel
     public Action<string, string>? UserPdkSaved { get; set; }
 
     /// <summary>
-    /// Probe deciding whether a file path lies in the read-only bundled-PDK
-    /// directory. Path-based on purpose: the library row check alone misses a
-    /// bundled PDK whose registration was already replaced by a shadowing fork
-    /// (component-editor fork in the same session, or a startup shadow) — in
-    /// that state saving must STILL fork, never write the shipped JSON
-    /// (round-5 review [1]). Injectable for tests.
-    /// </summary>
-    internal Func<string, bool> IsBundledPdkFilePath { get; set; } =
-        static path => BundledPdkPaths.IsBundledPdkFile(path);
-
-    /// <summary>
     /// Saves the current PDK draft — directly for custom PDKs, as a user fork
     /// for anything that originates from the bundled directory.
     /// </summary>
@@ -68,7 +57,7 @@ public partial class PdkOffsetEditorViewModel
                 SaveBundledPdkAsFork(bundled.Name);
                 return;
             }
-            if (IsBundledPdkFilePath(_loadedFilePath))
+            if (_bundledPdks.IsBundledFile(_loadedFilePath))
             {
                 SaveBundledPdkAsFork(_loadedPdk.Name);
                 return;

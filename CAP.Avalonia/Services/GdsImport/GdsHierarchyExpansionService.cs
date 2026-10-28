@@ -10,7 +10,7 @@ using CAP_DataAccess.Import.Gds.Interpretation;
 namespace CAP.Avalonia.Services.GdsImport;
 
 /// <summary>Exposes real source references from an embedded GDS without segmenting polygons.</summary>
-public sealed partial class GdsHierarchyExpansionService(DesignScopedGdsComponentService scope)
+public sealed partial class GdsHierarchyExpansionService(IGdsSourceReader sourceReader, DesignScopedGdsComponentService scope)
 {
     /// <summary>Whether this instance belongs to an embedded imported component set.</summary>
     public bool IsImportedComponent(ComponentViewModel selected) =>
@@ -44,8 +44,7 @@ public sealed partial class GdsHierarchyExpansionService(DesignScopedGdsComponen
             throw new InvalidOperationException("The original source cell identity was not saved. Review and re-import the GDS before exposing its children.");
         var prepared = await Task.Run(async () =>
         {
-            using var stream = new MemoryStream(set.GdsBytes, writable: false);
-            var library = await new GdsReader().ReadAsync(stream, ct);
+            var library = await sourceReader.ParseAsync(set.GdsBytes, ct);
             if (sourceDraft.ImportedOwnGeometryOnly)
                 throw new InvalidOperationException("This component contains only the source cell's own polygons, with no child references.");
             var names = library.Cells.Keys.Where(n => sourceDraft.ImportedSourceCellName is { } sourceName

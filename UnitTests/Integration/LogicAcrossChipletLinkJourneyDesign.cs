@@ -232,14 +232,14 @@ public sealed class LogicAcrossChipletLinkJourneyDesign
 
     /// <summary>File operations over the full test template library, for example loads.</summary>
     private static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas) =>
-        new(
+        new(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates()),
-            new GdsExportViewModel(new GdsExportService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new PhotonTorchExporter(), canvas),
             null!);
 
     private static PhysicalPin Pin(Component component, string pinName) =>

@@ -89,44 +89,9 @@ internal static class EyeTraceSelector
         bool hasMultipleCandidates = false,
         double injectedPeakPower = 0)
     {
-        double threshold = injectedPeakPower * MinimumRelativeOutputPower;
-
-        if (designatedPinIds != null)
-        {
-            var designated = TracesFor(result, designatedPinIds);
-            if (designated.Count == 0)
-                return new Selection(null, null, NoSignalAtDesignatedOutputError);
-            var strongest = SelectStrongest(designated);
-            return Peak(strongest) < threshold
-                ? new Selection(null, null, BelowNoiseFloorError)
-                : new Selection(strongest, null, null);
-        }
-
-        if (outputCouplerPinIds.Count == 0)
-            return new Selection(SelectStrongest(result.PinTraces.Values), AllLasersOnWarning, null);
-
-        var candidates = TracesFor(result, outputCouplerPinIds);
-        if (candidates.Count == 0)
-            return new Selection(null, null, NoSignalAtOutputError);
-        var strongestCandidate = SelectStrongest(candidates);
-        if (Peak(strongestCandidate) < threshold)
-            return new Selection(null, null, NoSignalAtOutputError);
-
-        var warning = hasMultipleCandidates ? MultipleOutputsWarning : null;
-        return new Selection(strongestCandidate, warning, null);
+        var selected = CAP_Core.Analysis.EyeDiagram.EyeTracePolicy.Select(result, outputCouplerPinIds,
+            designatedPinIds, hasMultipleCandidates, injectedPeakPower,
+            new(NoSignalAtDesignatedOutputError, BelowNoiseFloorError, MultipleOutputsWarning));
+        return new(selected.Trace, selected.Warning, selected.Error);
     }
-
-    /// <summary>Traces of the result whose pin id is in the given set.</summary>
-    private static List<double[]> TracesFor(TimeDomainResult result, IReadOnlyCollection<Guid> pinIds) =>
-        result.PinTraces
-            .Where(kv => pinIds.Contains(kv.Key))
-            .Select(kv => kv.Value)
-            .ToList();
-
-    /// <summary>Picks the highest-peak trace. The caller guarantees at least one exists.</summary>
-    private static double[] SelectStrongest(IEnumerable<double[]> traces) =>
-        traces.OrderByDescending(Peak).First();
-
-    /// <summary>Peak intensity of a trace (0 for an empty trace).</summary>
-    private static double Peak(double[] trace) => trace.Length == 0 ? 0 : trace.Max();
 }

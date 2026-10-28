@@ -221,7 +221,7 @@ public class GdsImportDesignRoundTripTests : IDisposable
         // 2-optical-pin cell must ride the .lun save/load inside the persisted
         // interpretation — and keep the imported draft geometry-only after reload.
         var gdsPath = WriteGds();
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new GdsSourceReader()).AnalyzeAsync(gdsPath);
         using var saveHost = new GdsDesignScopeTestHost();
         var service = saveHost.CreateService(() => Array.Empty<ComponentTemplate>());
         var review = new GdsImportInterpretation
@@ -410,14 +410,14 @@ public class GdsImportDesignRoundTripTests : IDisposable
         out ErrorConsoleService errorConsole)
     {
         errorConsole = new ErrorConsoleService();
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             host.Templates,
-            new GdsExportViewModel(new GdsExportService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: errorConsole)
         {

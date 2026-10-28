@@ -22,7 +22,7 @@ namespace CAP_Core.Analysis.LogicAnalysis;
 /// Identical groups are extracted per instance — the extraction is the source of the
 /// model, and caching would only ever save simulation runs, never change the result.
 /// </summary>
-public sealed class LogicNetworkAssembler
+public class LogicNetworkAssembler : ILogicNetworkAssembler
 {
     private readonly TruthTableExtractor _extractor;
     private readonly LogicNetworkBuilder _builder;
@@ -70,31 +70,15 @@ public sealed class LogicNetworkAssembler
         int wavelengthNm,
         CancellationToken cancellationToken = default)
     {
-        if (components == null) throw new ArgumentNullException(nameof(components));
-        if (connections == null) throw new ArgumentNullException(nameof(connections));
-
-        var gateGroups = new List<(ComponentGroup Group, string GateId)>();
-        var internalWires = new List<WaveguideConnection>();
-        CollectGates(components, ancestorPath: null, gateGroups, internalWires);
-        if (gateGroups.Count == 0)
-        {
-            throw new InvalidOperationException(
-                "The design contains no logic gate: no group carries a persisted " +
-                "truth-table pin assignment. Extract a group's truth table in the Truth Table " +
-                "panel to turn the group into a gate.");
-        }
-
-        var gates = new List<LogicGateInstance>(gateGroups.Count);
-        foreach (var (group, gateId) in gateGroups)
-        {
-            gates.Add(await ExtractGateAsync(group, gateId, wavelengthNm, cancellationToken));
-        }
-
-        var allConnections = internalWires.Count == 0
-            ? connections
-            : connections.Concat(internalWires).ToList();
-        return _builder.Build(gates, allConnections, wavelengthNm);
+        cancellationToken.ThrowIfCancellationRequested();
+        var snapshot = LogicNetworkSnapshot.Capture(components, connections, wavelengthNm, _builder);
+        return await SolveSnapshotAsync(snapshot, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Worker boundary for assembling captured physics and network topology.</summary>
+    protected virtual Task<LogicNetworkEvaluator> SolveSnapshotAsync(
+        LogicNetworkSnapshot snapshot, CancellationToken cancellationToken) =>
+        Task.Run(() => snapshot.SolveAsync(_extractor, cancellationToken), cancellationToken);
 
     /// <summary>
     /// Collects the gates of one design level, descending into every group without a
@@ -149,27 +133,4 @@ public sealed class LogicNetworkAssembler
         return connection;
     }
 
-    /// <summary>Re-extracts one gate group's model with exactly its persisted roles and threshold.</summary>
-    private async Task<LogicGateInstance> ExtractGateAsync(
-        ComponentGroup group, string gateId, int wavelengthNm, CancellationToken cancellationToken)
-    {
-        var persisted = group.TruthTablePinAssignment!;
-        var roles = new GateRoleAssignment(
-            persisted.InputPinNames,
-            persisted.OutputPinNames,
-            persisted.BiasPinNames,
-            persisted.Threshold,
-            persisted.InputSignalNames,
-            persisted.OutputSignalNames,
-            persisted.IsRegister);
-        var table = await _extractor.ExtractAsync(
-            group,
-            roles.InputPinNames,
-            roles.OutputPinNames,
-            roles.BiasPinNames,
-            roles.PowerThreshold,
-            wavelengthNm,
-            cancellationToken);
-        return new LogicGateInstance(group, LogicGateModel.FromTruthTable(table), roles, gateId);
-    }
 }

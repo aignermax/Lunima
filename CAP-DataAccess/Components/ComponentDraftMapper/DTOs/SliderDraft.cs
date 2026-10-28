@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,6 +13,9 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
     }
     public class SliderDraft
     {
+        /// <summary>Copies the scalar definition for an independent snapshot.</summary>
+        public SliderDraft Copy() => (SliderDraft)MemberwiseClone();
+
         [JsonPropertyName("sliderNumber")] 
         public int SliderNumber { get; set; } // used to identify this Slider in a formula e.g. SliderNumber = 0 would be accessed using "SLIDER0"
         [JsonPropertyName("godotSliderName")] 

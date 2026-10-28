@@ -7,6 +7,11 @@ internal sealed class OutlineRasterRows
 {
     private readonly Dictionary<int, List<(int Start, int End)>> _rows = new();
 
+    // Build is the only writer. Dictionary/list capacity is included conservatively,
+    // so sharing completed rows does not hide retained backing-array allocations.
+    internal long RetainedBytes => 64L + _rows.EnsureCapacity(0) * 64L
+        + _rows.Values.Sum(spans => 64L + spans.Capacity * 8L);
+
     public IEnumerable<(int X, int Y)> Cells()
     {
         foreach (var (y, spans) in _rows)
@@ -89,6 +94,9 @@ internal sealed class OutlineRasterRows
                 else spans[++write] = spans[read];
             }
             spans.RemoveRange(write + 1, spans.Count - write - 1);
+            // The merged union is the immutable result. Do not retain the much larger
+            // backing storage used while every polygon edge contributed candidate spans.
+            spans.TrimExcess();
         }
     }
 }

@@ -48,14 +48,14 @@ public class UserGlobalOverrideOnPlacementTests : IDisposable
         ObservableCollection<ComponentTemplate> library,
         UserSMatrixOverrideStore? userStore)
     {
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             library,
-            new GdsExportViewModel(new GdsExportService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas),
             null!, // verilogAExport — not exercised here
             errorConsole: null,
             userSMatrixOverrideStore: userStore);

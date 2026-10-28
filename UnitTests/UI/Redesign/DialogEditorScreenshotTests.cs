@@ -54,7 +54,7 @@ public class DialogEditorScreenshotTests : IDisposable
         if (!DialogShot.Enabled) return;
         Directory.CreateDirectory(_root);
         var vm = new CreateCustomPdkViewModel(
-            Store(), new[] { SampleProcess() }, new ProcessManagementViewModel(Mock.Of<IFileDialogService>()));
+            Store(), new[] { SampleProcess() }, new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>()));
         vm.ProcessSource = PdkProcessSource.DefineNew;
         vm.PdkName = "My PDK";
         DialogShot.Capture(new CreateCustomPdkWindow { DataContext = vm }, "create-custom-pdk");
@@ -66,8 +66,8 @@ public class DialogEditorScreenshotTests : IDisposable
         if (!DialogShot.Enabled) return;
         Directory.CreateDirectory(_root);
         var extractor = new ComponentGeometryExtractor(
-            Mock.Of<IComponentPreviewRenderer>(), Mock.Of<IComponentPreviewRenderer>());
-        var vm = new NewComponentViewModel(
+            Mock.Of<IPdkGeometryRenderer>(), Mock.Of<IPdkGeometryRenderer>());
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             extractor, Mock.Of<IFdtdSMatrixService>(), Store(), new List<ProcessDefinition> { SampleProcess() })
         {
             ComponentName = "My coupler",

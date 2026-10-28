@@ -40,6 +40,7 @@ public sealed partial class GdsImportService
     /// <summary>Display-name prefix of the per-file design-scoped set an import creates ("GDS Import - &lt;file stem&gt;").</summary>
     public const string ImportPdkNamePrefix = "GDS Import - ";
 
+    private readonly IGdsSourceReader _sourceReader;
     private readonly DesignScopedGdsComponentService _designScope;
     private readonly Func<IReadOnlyList<ComponentTemplate>>? _templateProvider;
     private readonly Func<double?>? _processDefaultWidthProvider;
@@ -65,10 +66,12 @@ public sealed partial class GdsImportService
     /// context before the background handoff.
     /// </param>
     public GdsImportService(
+        IGdsSourceReader sourceReader,
         DesignScopedGdsComponentService? designScope = null,
         Func<IReadOnlyList<ComponentTemplate>>? templateProvider = null,
         Func<double?>? processDefaultWidthProvider = null)
     {
+        _sourceReader = sourceReader ?? throw new ArgumentNullException(nameof(sourceReader));
         _designScope = designScope ?? new DesignScopedGdsComponentService();
         _templateProvider = templateProvider;
         _processDefaultWidthProvider = processDefaultWidthProvider;
@@ -85,16 +88,14 @@ public sealed partial class GdsImportService
     /// The file is not a readable GDS II stream, or nothing but metadata sentinel
     /// cells was found (there is no layout top cell to import).
     /// </exception>
-    public static async Task<GdsImportAnalysis> AnalyzeAsync(string gdsPath, CancellationToken ct = default)
+    public async Task<GdsImportAnalysis> AnalyzeAsync(string gdsPath, CancellationToken ct = default)
     {
         // Parse (and census-count) on a thread-pool thread: the record loop is
         // CPU-bound and would otherwise pin the caller's (UI) context for the
         // whole file — the census is one more pass over every element.
         var (library, layerCensus, sourceBytes) = await Task.Run(async () =>
         {
-            if (!File.Exists(gdsPath))
-                throw new FileNotFoundException($"GDS file not found: {gdsPath}", gdsPath);
-            var bytes = await File.ReadAllBytesAsync(gdsPath, ct).ConfigureAwait(false);
+            var bytes = await _sourceReader.ReadBytesAsync(gdsPath, ct).ConfigureAwait(false);
             var lib = await ParseSnapshotAsync(bytes, gdsPath, ct).ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
             return (lib, GdsLayerCensus.Build(lib), bytes);
@@ -316,9 +317,7 @@ public sealed partial class GdsImportService
         IReadOnlyList<ComponentTemplate>? modelTemplates = null)
     {
         progress?.Report($"Reading '{Path.GetFileName(gdsPath)}'…");
-        if (sourceBytes is null && !File.Exists(gdsPath))
-            throw new FileNotFoundException($"GDS file not found: {gdsPath}", gdsPath);
-        sourceBytes ??= await File.ReadAllBytesAsync(gdsPath, ct).ConfigureAwait(false);
+        sourceBytes ??= await _sourceReader.ReadBytesAsync(gdsPath, ct).ConfigureAwait(false);
         var sourceHash = Convert.ToHexString(SHA256.HashData(sourceBytes));
         var interpretation = options.Interpretation;
         if (interpretation is not null)
@@ -452,12 +451,11 @@ public sealed partial class GdsImportService
 
     // ── Stages ───────────────────────────────────────────────────────────────
 
-    private static async Task<GdsLibrary> ParseSnapshotAsync(byte[] bytes, string gdsPath, CancellationToken ct)
+    private async Task<GdsLibrary> ParseSnapshotAsync(byte[] bytes, string gdsPath, CancellationToken ct)
     {
         try
         {
-            using var stream = new MemoryStream(bytes, writable: false);
-            return await new GdsReader().ReadAsync(stream, ct).ConfigureAwait(false);
+            return await _sourceReader.ParseAsync(bytes, ct).ConfigureAwait(false);
         }
         catch (InvalidDataException ex)
         {

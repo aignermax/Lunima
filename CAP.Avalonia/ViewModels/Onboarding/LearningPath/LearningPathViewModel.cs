@@ -1,4 +1,4 @@
-using CAP.Avalonia.Services;
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,7 +8,7 @@ namespace CAP.Avalonia.ViewModels.Onboarding.LearningPath;
 /// <summary>Course navigation and earned progress, independent of the open design.</summary>
 public partial class LearningPathViewModel : ObservableObject
 {
-    private readonly UserPreferencesService _preferences;
+    private readonly ILearningPreferences _preferences;
     private bool _active;
     private bool _starting;
     private bool _cancelPendingStart;
@@ -33,7 +33,7 @@ public partial class LearningPathViewModel : ObservableObject
         : LocalizationService.Instance.Translate("LearningPath.Completed");
     public string ResumeLabel => LocalizationService.Instance.Translate(CompletedCount == 0 ? "LearningPath.Start" : "LearningPath.Resume");
 
-    public LearningPathViewModel(UserPreferencesService preferences)
+    public LearningPathViewModel(ILearningPreferences preferences)
     {
         _preferences = preferences;
         string[] titles = ["Home.Learn.FirstSteps", "Home.FirstGateTour", "Home.WatchComputeTour", "Home.StoreNumberTour",

@@ -1,7 +1,9 @@
+using CAP_Core.Export.Contracts;
 using System.Collections.Concurrent;
 using System.Globalization;
 using Avalonia.Threading;
 using CAP.Avalonia.Services.GdsFactoryExport;
+using CAP.Avalonia.Services.Lifetime;
 using CAP_Core.Components.Core;
 using CAP_Core.Export;
 
@@ -24,25 +26,72 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 /// every frame. Failures are never persisted to disk.
 /// </para>
 /// </remarks>
-public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.ComponentModel.ObservableObject, IAsyncDisposable
 {
-    private readonly NazcaComponentPreviewService _previewService;
+    /// <summary>Closes preview admission and awaits queued renders and cache writes.</summary>
+    public Task StopAsync()
+    {
+        lock (_environmentGate)
+        {
+            if (_retirement != null) return _retirement;
+            _stopping = true;
+            InvalidateMemory();
+            _environmentBindings?.Dispose();
+            _environmentBindings = null;
+            _inlineNazcaCodeLookup = null;
+            _layerRolesLookup = null;
+            ReportPreviewFailure = null;
+            OnPreviewLoaded = null;
+            return _retirement = RetireAsync(_pending.Values.ToArray());
+        }
+    }
+
+    public ValueTask DisposeAsync() => new(StopAsync());
+
+    private async Task RetireAsync(Task[] pending)
+    {
+        try { await Task.WhenAll(_stop.CancelAsync(), Task.WhenAll(pending)); }
+        finally
+        {
+            _applicationRegistration?.Dispose();
+            _renderGate.Dispose();
+            _stop.Dispose();
+        }
+    }
+
+    internal void OwnEnvironmentBindings(IDisposable bindings)
+    {
+        lock (_environmentGate)
+        {
+            if (_stopping) { bindings.Dispose(); return; }
+            _environmentBindings?.Dispose();
+            _environmentBindings = bindings;
+        }
+    }
+
+    private readonly CancellationTokenSource _stop = new();
+    private readonly IDisposable? _applicationRegistration;
+    private IDisposable? _environmentBindings;
+    private bool _stopping;
+    private Task? _retirement;
+    private readonly IPdkPreviewBackend _previewService;
 
     /// <summary>Renders gdsfactory-native components (cspdk etc.); null falls back to no preview.
     /// Typed as the base so it can be mocked in tests; DI injects the
     /// <see cref="GdsFactoryComponentPreviewService"/> instance.</summary>
-    private readonly NazcaComponentPreviewService? _gdsFactoryPreviewService;
+    private readonly IPdkPreviewBackend? _gdsFactoryPreviewService;
 
     private readonly GdsPreviewCache _cache = new();
 
     /// <summary>Persistent on-disk cache for resolution-independent geometry.</summary>
-    private readonly GdsPreviewDiskCache _diskCache;
+    private readonly IGdsPreviewCache _diskCache;
 
     /// <summary>Throttles concurrent Python renders so the library can't spawn a flood.</summary>
     private readonly SemaphoreSlim _renderGate = new(3, 3);
 
     /// <summary>In-memory LRU of geometry keyed by <see cref="GdsPreviewKey.Hash"/>.</summary>
-    private readonly GdsGeometryCache _memGeometry = new();
+    private readonly GdsGeometryCache _memGeometry;
+    private readonly OversizedPreviewHandoff _oversizedGeometry = new();
 
     /// <summary>Tracks in-flight fetches (geometry and canvas previews) by cache key.</summary>
     private readonly ConcurrentDictionary<string, Task> _pending = new();
@@ -55,14 +104,45 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     /// </summary>
     private readonly ConcurrentDictionary<string, int> _failedGeometryKeys = new();
     private int _environmentGeneration;
+    private readonly object _environmentGate = new();
+    private string? _environmentIdentity;
+    private readonly string _memoryNamespace = Guid.NewGuid().ToString("N");
 
-    /// <summary>Retries failed previews after interpreter activation, preserving successful geometry.</summary>
+    /// <summary>Retries all previews after interpreter activation, including successful old geometry.</summary>
     public void RetryFailedPreviews()
     {
-        Interlocked.Increment(ref _environmentGeneration);
-        _failedGeometryKeys.Clear();
+        lock (_environmentGate)
+        {
+            if (_stopping) return;
+            _diskCache.InvalidateEnvironment();
+            InvalidateMemory();
+        }
         PublishPreviewFailure(null, Volatile.Read(ref _environmentGeneration));
         RaisePreviewLoaded();
+    }
+
+    /// <summary>Invalidates loaded PDK/code revisions without changing the persistent activation token.</summary>
+    public void InvalidatePdkPreviews()
+    {
+        lock (_environmentGate)
+        {
+            if (_stopping) return;
+            InvalidateMemory();
+        }
+        RaisePreviewLoaded();
+    }
+
+    private void InvalidateMemory()
+    {
+        _environmentGeneration++;
+        _environmentIdentity = null;
+        _previewService.InvalidateCache();
+        _gdsFactoryPreviewService?.InvalidateCache();
+        _memGeometry.Clear();
+        _oversizedGeometry.Clear();
+        _cache.Clear();
+        _failedGeometryKeys.Clear();
+        _layerRolesByFunction.Clear();
     }
 
     /// <summary>
@@ -79,7 +159,22 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     /// Called on the UI thread when a preview is requested. Unset, every component renders
     /// through its PDK module.
     /// </summary>
-    public Func<string?, string?, string?>? InlineNazcaCodeLookup { get; set; }
+    public Func<string?, string?, string?>? InlineNazcaCodeLookup
+    {
+        get => _inlineNazcaCodeLookup;
+        set
+        {
+            lock (_environmentGate)
+            {
+                if (_stopping) return;
+                if (ReferenceEquals(_inlineNazcaCodeLookup, value)) return;
+                _inlineNazcaCodeLookup = value;
+                InvalidateMemory();
+            }
+        }
+    }
+
+    private Func<string?, string?, string?>? _inlineNazcaCodeLookup;
 
     /// <summary>
     /// Resolves a placed component's core/metal preview layer roles from its fabrication
@@ -100,28 +195,20 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     private readonly Dictionary<(string?, string?), GdsPreviewLayerRoles> _layerRolesByFunction = new();
 
     /// <summary>
-    /// Initializes the service with the shared Nazca preview back-end and a
-    /// default disk cache.
-    /// </summary>
-    public GdsPreviewRenderService(
-        NazcaComponentPreviewService previewService,
-        NazcaComponentPreviewService? gdsFactoryPreviewService = null)
-        : this(previewService, new GdsPreviewDiskCache(), gdsFactoryPreviewService)
-    {
-    }
-
-    /// <summary>
     /// Initializes the service with the shared Nazca preview back-end, an explicit disk cache
     /// (used by tests to redirect cache files), and an optional gdsfactory preview back-end
     /// for gdsfactory-native components (#570).
     /// </summary>
     public GdsPreviewRenderService(
-        NazcaComponentPreviewService previewService, GdsPreviewDiskCache diskCache,
-        NazcaComponentPreviewService? gdsFactoryPreviewService = null)
+        IPdkPreviewBackend previewService, IGdsPreviewCache diskCache,
+        IPdkPreviewBackend? gdsFactoryPreviewService = null,
+        ApplicationWorkCoordinator? applicationWork = null)
     {
         _previewService = previewService ?? throw new ArgumentNullException(nameof(previewService));
         _diskCache = diskCache ?? throw new ArgumentNullException(nameof(diskCache));
         _gdsFactoryPreviewService = gdsFactoryPreviewService;
+        _memGeometry = new GdsGeometryCache(previewService);
+        _applicationRegistration = applicationWork?.Register(StopAsync);
     }
 
     /// <summary>
@@ -138,22 +225,25 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     /// <param name="component">The placed component (top-level or a group child).</param>
     public GdsPreviewData? TryGetPreview(Component component)
     {
-        var key = GdsPreviewKey.ForComponent(component);
-        var geometry = TryGetGeometry(key);
-        if (geometry == null || geometry.Polygons.Count == 0)
-            return null;
+        lock (_environmentGate)
+        {
+            var key = GdsPreviewKey.ForComponent(component);
+            var geometry = TryGetGeometry(key);
+            if (geometry == null || geometry.Polygons.Count == 0)
+                return null;
 
-        var (width, height) = GdsPolygonRenderer.GetUnrotatedSize(
-            component.RotationDegrees, component.WidthMicrometers, component.HeightMicrometers);
-        var roles = ResolveLayerRoles(component);
-        var previewKey = BuildPreviewKey(key, width, height, roles);
-        if (_cache.TryGet(previewKey, out var cached) && cached != null)
-            return cached;
+            var (width, height) = GdsPolygonRenderer.GetUnrotatedSize(
+                component.RotationDegrees, component.WidthMicrometers, component.HeightMicrometers);
+            var roles = ResolveLayerRoles(component);
+            var previewKey = BuildPreviewKey(key, width, height, roles);
+            if (_cache.TryGet(previewKey, out var cached) && cached != null && ReferenceEquals(cached.Result, geometry))
+                return cached;
 
-        var data = new GdsPreviewData(geometry, width, height) { LayerRoles = roles };
-        _cache.Set(previewKey, data);
-        ScheduleRasterization(previewKey, data);
-        return data;
+            var data = new GdsPreviewData(geometry, width, height) { LayerRoles = roles };
+            _cache.Set(previewKey, data);
+            ScheduleRasterization(previewKey, data);
+            return data;
+        }
     }
 
     private GdsPreviewLayerRoles ResolveLayerRoles(Component component)
@@ -184,14 +274,20 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     /// </summary>
     private void ScheduleRasterization(string previewKey, GdsPreviewData data)
     {
+        var generation = Volatile.Read(ref _environmentGeneration);
         var (bitmapW, bitmapH) = GdsPolygonRenderer.GetBitmapSize(data.WidthMicrometers, data.HeightMicrometers);
         try
         {
             Dispatcher.UIThread.Post(() =>
             {
+                if (generation != Volatile.Read(ref _environmentGeneration)) return;
                 var bitmap = GdsPolygonRenderer.RasterizeToBitmap(data.Result, bitmapW, bitmapH, data.LayerRoles);
                 if (bitmap == null) return;
-                _cache.Set(previewKey, data with { Bitmap = bitmap });
+                lock (_environmentGate)
+                {
+                    if (generation != _environmentGeneration) { bitmap.Dispose(); return; }
+                    _cache.Set(previewKey, data with { Bitmap = bitmap });
+                }
                 OnPreviewLoaded?.Invoke();
             });
         }
@@ -202,12 +298,12 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     /// Renders a gdsfactory-native component's geometry via the gdsfactory preview back-end,
     /// or a failure result when no service is wired / the function is not module-qualified (#570).
     /// </summary>
-    private async Task<NazcaPreviewResult> RenderGdsFactoryAsync(string? gdsFactoryFunction)
+    private async Task<NazcaPreviewResult> RenderGdsFactoryAsync(string? gdsFactoryFunction, CancellationToken ct)
     {
         var code = GdsFactoryPreviewCode.For(gdsFactoryFunction);
         if (code == null || _gdsFactoryPreviewService == null)
             return NazcaPreviewResult.Fail("No gdsfactory preview available for this component.");
-        return await _gdsFactoryPreviewService.RenderRawCodeAsync(code);
+        return await _gdsFactoryPreviewService.RenderRawCodeAsync(code, ct);
     }
 
     /// <summary>
@@ -218,89 +314,136 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     public NazcaPreviewResult? TryGetGeometry(GdsPreviewKey key)
     {
         if (!key.IsRenderable) return null;
-        var cacheKey = key.Hash();
-        if (_memGeometry.TryGet(cacheKey, out var cached)) return cached;
-        if (_failedGeometryKeys.TryGetValue(cacheKey, out var failedGeneration)
-            && failedGeneration == Volatile.Read(ref _environmentGeneration)) return null;
-        // Reserve the slot BEFORE starting the fetch (mirrors the canvas TryGetPreview
-        // path) so a duplicate fetch is never launched for the same key. Passing the
-        // started task straight into TryAdd would run the task before TryAdd decides
-        // to keep it, defeating the _pending dedup under concurrent callers.
-        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        if (_pending.TryAdd(cacheKey, completion.Task))
-            _ = FetchGeometryAsync(key, cacheKey, completion);
+        var renderKey = key.Hash();
+        lock (_environmentGate)
+        {
+            if (_stopping) return null;
+            // Frame lookups use only memory. Resolve interpreter/file revisions on background fetches.
+            var cacheKey = "geometry|" + _memoryNamespace + "|" + _environmentGeneration + "|" + renderKey;
+            if (_memGeometry.TryGet(cacheKey, out var cached)) return cached;
+            if (_oversizedGeometry.TryGet(cacheKey, out var oversized)) return oversized;
+            if (_failedGeometryKeys.TryGetValue(cacheKey, out var failedGeneration)
+                && failedGeneration == _environmentGeneration) return null;
+            if (_pending.ContainsKey(cacheKey)) return null;
+            // Template saves explicitly invalidate this generation. Scan the library only
+            // for a real miss; the backend hashes inline code only when actually rendered.
+            var inlineCode = InlineNazcaCodeLookup?.Invoke(key.Module, key.Function);
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var generation = _environmentGeneration;
+            if (_pending.TryAdd(cacheKey, completion.Task))
+                _ = Task.Run(() => FetchGeometryAsync(key, cacheKey, inlineCode, generation, completion));
+        }
         return null;
     }
 
-    /// <summary>Test hook: awaits all in-flight geometry and canvas preview fetches.</summary>
+    /// <summary>Awaits currently pending preview fetches.</summary>
     public Task WaitForPendingAsync() => Task.WhenAll(_pending.Values.ToArray());
 
-    private async Task FetchGeometryAsync(GdsPreviewKey key, string cacheKey, TaskCompletionSource completion)
+    private async Task FetchGeometryAsync(GdsPreviewKey key, string cacheKey, string? inlineCode,
+        int generation, TaskCompletionSource completion)
     {
-        var generation = Volatile.Read(ref _environmentGeneration);
         try
         {
-            var inlineCode = InlineNazcaCodeLookup?.Invoke(key.Module, key.Function);
-            // Inline code is not part of the disk-cache key, so its renders are never persisted:
-            // an edited template must not keep showing the old geometry.
-            if (inlineCode == null && _diskCache.TryRead(key, out var disk))
-            {
-                _memGeometry.Set(cacheKey, disk);
-                RaisePreviewLoaded();
-                return;
-            }
-            await _renderGate.WaitAsync();
-            NazcaPreviewResult result;
+            // Bound disk parsing and Python together. Neither runs on the UI thread or under its gate.
+            var ct = _stop.Token;
+            await _renderGate.WaitAsync(ct);
             try
             {
-                result = inlineCode != null
-                    ? await _previewService.RenderRawCodeAsync(inlineCode)
+                if (generation != Volatile.Read(ref _environmentGeneration)) return;
+                var environment = CurrentEnvironmentIdentity();
+                lock (_environmentGate)
+                {
+                    if (generation != _environmentGeneration) return;
+                    if (_environmentIdentity != null && _environmentIdentity != environment)
+                    {
+                        InvalidateMemory();
+                        return;
+                    }
+                    _environmentIdentity = environment;
+                }
+                if (inlineCode == null && _diskCache.TryRead(key, out var disk, environment))
+                {
+                    lock (_environmentGate)
+                    {
+                        if (generation != _environmentGeneration) return;
+                        StoreGeometry(cacheKey, disk);
+                    }
+                    disk = null;
+                    RaisePreviewLoaded();
+                    return;
+                }
+                if (generation != Volatile.Read(ref _environmentGeneration)) return;
+                NazcaPreviewResult? result = inlineCode != null
+                    ? await _previewService.RenderRawCodeAsync(inlineCode, ct)
                     : string.IsNullOrWhiteSpace(key.Function)
-                        ? await RenderGdsFactoryAsync(key.GdsFactoryFunction)
-                        : await _previewService.RenderAsync(key.Module, key.Function!, key.Parameters);
+                        ? await RenderGdsFactoryAsync(key.GdsFactoryFunction, ct)
+                        : await _previewService.RenderAsync(key.Module, key.Function!, key.Parameters, ct);
+                ct.ThrowIfCancellationRequested();
+                var completedEnvironment = CurrentEnvironmentIdentity();
+                lock (_environmentGate)
+                {
+                    if (generation != _environmentGeneration) return;
+                    if (environment != completedEnvironment)
+                    {
+                        InvalidateMemory();
+                        return;
+                    }
+                }
+                // An immutable environment tag makes even a racing obsolete disk write unusable
+                // by the new environment. Serialization and I/O never hold the UI state gate.
+                if (result.Success && inlineCode == null &&
+                    PreviewGeometryCache.EstimatePayloadBytes(cacheKey, result) <= PreviewGeometryCache.MaxPayloadBytes)
+                {
+                    if (result.Polygons.Count > 0) _diskCache.Write(key, result, environment);
+                    else _diskCache.WriteEmpty(key, environment);
+                }
+                lock (_environmentGate)
+                {
+                    if (generation != _environmentGeneration) return;
+                    if (result.Success) StoreGeometry(cacheKey, result.Polygons.Count > 0 ? result : null);
+                    else
+                    {
+                        _failedGeometryKeys[cacheKey] = generation;
+                        PublishPreviewFailure(result.Error ?? "Preview render failed.", generation);
+                    }
+                }
+                // The weak handoff must not be kept alive by this completed async state machine.
+                result = null;
+                RaisePreviewLoaded();
             }
             finally { _renderGate.Release(); }
-
-            if (result.Success && result.Polygons.Count > 0)
-            {
-                if (inlineCode == null) _diskCache.Write(key, result);
-                _memGeometry.Set(cacheKey, result);
-            }
-            else if (result.Success)
-            {
-                // A genuinely empty render (0 polygons) — persist the empty marker so we don't
-                // keep re-rendering a component that has no geometry.
-                if (inlineCode == null) _diskCache.WriteEmpty(key);
-                _memGeometry.Set(cacheKey, null);
-            }
-            else
-            {
-                // The render FAILED (Python/env/script error — e.g. cspdk not yet installed, a
-                // broken or half-provisioned interpreter). Do NOT persist: a transient env failure
-                // must not poison the disk cache permanently, or the component stays blank forever
-                // even after the env is fixed. Activation or restart allows another attempt.
-                _failedGeometryKeys[cacheKey] = generation;
-                PublishPreviewFailure(result.Error ?? "Preview render failed.", generation);
-            }
-            RaisePreviewLoaded();
         }
+        catch (OperationCanceledException) when (Volatile.Read(ref _stopping)) { }
         catch (Exception ex)
         {
-            // Transient failure (e.g. Python hiccup): remember "empty" for this session
-            // only — deliberately NOT WriteEmpty, so a restart can retry. A genuinely
-            // empty render (above) persists the empty marker; a crash does not.
-            _failedGeometryKeys[cacheKey] = generation;
-            PublishPreviewFailure(ex.Message, generation);
+            lock (_environmentGate)
+            {
+                if (generation == _environmentGeneration)
+                {
+                    _failedGeometryKeys[cacheKey] = generation;
+                    PublishPreviewFailure(ex.Message, generation);
+                }
+            }
         }
         finally
         {
             _pending.TryRemove(cacheKey, out _);
             completion.TrySetResult();
-            // An activation repaint may have happened while this old request still held
-            // the slot. Repaint again now so the newly selected interpreter gets a turn.
             if (generation != Volatile.Read(ref _environmentGeneration)) RaisePreviewLoaded();
         }
     }
+
+    private void StoreGeometry(string key, NazcaPreviewResult? result)
+    {
+        if (result != null && PreviewGeometryCache.EstimatePayloadBytes(key, result) > PreviewGeometryCache.MaxPayloadBytes)
+            _oversizedGeometry.Set(key, result);
+        else
+            _memGeometry.Set(key, result);
+    }
+
+    private string CurrentEnvironmentIdentity() => PreviewIdentityHash.Compute(
+        _previewService.EnvironmentIdentity + "|" + _gdsFactoryPreviewService?.EnvironmentIdentity +
+        "|" + _diskCache.ActivationIdentity);
 
     /// <summary>
     /// Raises <see cref="OnPreviewLoaded"/> on the UI thread. Safe in headless tests:
@@ -308,9 +451,17 @@ public sealed partial class GdsPreviewRenderService : CommunityToolkit.Mvvm.Comp
     /// </summary>
     private void RaisePreviewLoaded()
     {
+        if (Volatile.Read(ref _stopping)) return;
+        var generation = Volatile.Read(ref _environmentGeneration);
         var handler = OnPreviewLoaded;
         if (handler == null) return;
-        try { Dispatcher.UIThread.Post(() => handler()); }
+        try
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!Volatile.Read(ref _stopping) && generation == Volatile.Read(ref _environmentGeneration)) handler();
+            });
+        }
         catch { /* no dispatcher in headless tests */ }
     }
 }

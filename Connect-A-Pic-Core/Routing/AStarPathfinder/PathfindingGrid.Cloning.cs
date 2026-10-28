@@ -8,6 +8,14 @@ namespace CAP_Core.Routing.AStarPathfinder;
 /// </summary>
 public partial class PathfindingGrid
 {
+    /// <summary>Copies primitive cell state for a quiescent pass-start snapshot; no grid object escapes.</summary>
+    internal byte[] CaptureCellStates()
+    {
+        var cells = new byte[_cells.Length];
+        Buffer.BlockCopy(_cells, 0, cells, 0, cells.Length);
+        return cells;
+    }
+
     /// <summary>
     /// The top-level components (and groups) currently registered as obstacles, taken under
     /// the bookkeeping lock. Rebuilding a fresh grid from exactly this set reproduces the

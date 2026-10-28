@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -47,7 +48,7 @@ public class Issue776MixedBackendScreenshotTests
         {
             // State 1: export started on a mixed design, save dialog cancelled — the
             // automatic merge notice is already visible in the dialog status.
-            var vm = new GdsFactoryExportViewModel(MixedBackendCanvas(), new StubSuccessExportService())
+            var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), MixedBackendCanvas(), new StubSuccessExportService())
             {
                 FileDialogService = new StubFileDialog(null),
             };
@@ -148,8 +149,11 @@ public class Issue776MixedBackendScreenshotTests
     /// <summary>Export service reporting script success without running Python.</summary>
     private sealed class StubSuccessExportService : GdsExportService
     {
-        public override Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
-            Task.FromResult(new ExportResult { ScriptPath = scriptPath, Success = true });
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+        { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds) =>
+            Task.FromResult(new GdsExportResult { ScriptPath = scriptPath, Success = true });
     }
 
     private sealed class StubFileDialog(string? path) : IFileDialogService

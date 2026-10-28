@@ -27,7 +27,7 @@ public enum KeyedComponentSaveOutcome
 /// <summary>Outcome and target file of <see cref="UserPdkStore.SaveComponentKeyed"/>.</summary>
 public sealed record KeyedComponentSaveResult(KeyedComponentSaveOutcome Outcome, string FilePath);
 
-public sealed class UserPdkStore
+public sealed class UserPdkStore : IUserPdkLibrary
 {
     private readonly string _root;
     private readonly PdkJsonSaver _saver;
@@ -47,6 +47,12 @@ public sealed class UserPdkStore
 
     /// <summary>The writable root directory every managed user-PDK file (and its sidecar files, e.g. imported .gds) lives in.</summary>
     public string RootDirectory => _root;
+
+    public IReadOnlyList<string> GetPdkFilePaths(string? directory = null)
+    {
+        var source = directory ?? _root;
+        return Directory.Exists(source) ? Directory.GetFiles(source, "*.json") : Array.Empty<string>();
+    }
 
     public string ForkBundledPdk(string bundledFilePath, string pdkName)
     {
@@ -82,6 +88,8 @@ public sealed class UserPdkStore
     }
 
     public PdkTrashService CreateTrashService() => new(_root, _loader, _saver);
+
+    IPdkTrash IUserPdkLibrary.CreateTrashService() => CreateTrashService();
 
     public string ResolvePath(ProcessDefinition process) =>
         Path.Combine(_root, Slug(process.Name) + ".json");

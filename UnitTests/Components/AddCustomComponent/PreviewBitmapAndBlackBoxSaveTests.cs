@@ -43,15 +43,15 @@ public class PreviewBitmapAndBlackBoxSaveTests : IDisposable
 
     private (NewComponentViewModel vm, Mock<IFdtdSMatrixService> fdtd) Build(bool withFdtd = false)
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(OkWithPolygon());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
         var fdtd = new Mock<IFdtdSMatrixService>();
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
         var process = new ProcessDefinition { Name = "P" };
         store.SaveToNamedPdk("My PDK", process, SeedComponent("seed"), "gdsfactory", null);
-        var vm = new NewComponentViewModel(extractor, withFdtd ? fdtd.Object : null, store,
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, withFdtd ? fdtd.Object : null, store,
             new List<ProcessDefinition> { process });
         vm.ComponentName = "My Comp";
         vm.SelectedBackend = GeometryBackend.GdsFactory;
@@ -80,8 +80,8 @@ public class PreviewBitmapAndBlackBoxSaveTests : IDisposable
     [Fact]
     public async Task RunPreview_failure_clearsAnyPreviousBitmap()
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.SetupSequence(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(OkWithPolygon())
             .ReturnsAsync(NazcaPreviewResult.Fail("boom"));
@@ -89,7 +89,7 @@ public class PreviewBitmapAndBlackBoxSaveTests : IDisposable
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
         var process = new ProcessDefinition { Name = "P" };
         store.SaveToNamedPdk("My PDK", process, SeedComponent("seed"), "gdsfactory", null);
-        var vm = new NewComponentViewModel(extractor, null, store, new List<ProcessDefinition> { process });
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, null, store, new List<ProcessDefinition> { process });
         vm.Code = "import gdsfactory as gf\ncomponent = gf.components.coupler()";
 
         await vm.RunPreviewCommand.ExecuteAsync(null);

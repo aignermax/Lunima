@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CAP.Avalonia.Services.Localization;
@@ -28,11 +29,11 @@ public class DieFilesExportWorkflowTests
             canvas.AddComponent(DieTestFixtures.Die("Die A", 0, 0, 100, 100));
             canvas.AddComponent(DieTestFixtures.Die("Die-A", 200, 0, 100, 100));
             var service = new BatchService(ready);
-            var export = new GdsExportViewModel(service) { GenerateGdsEnabled = true };
+            var export = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService()) { GenerateGdsEnabled = true };
             var dialogs = new Dialogs(Path.Combine(directory, "chip.py"));
-            var operations = new FileOperationsViewModel(canvas, new CommandManager(),
+            var operations = new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),canvas, new CommandManager(),
                 new SimpleNazcaExporter(), new SaxExporter(), new ObservableCollection<ComponentTemplate>(),
-                export, new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas), null!);
+                export, new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas), null!);
             operations.FileDialogService = dialogs;
             operations.MessageBoxService = dialogs;
             string status = "";
@@ -59,14 +60,17 @@ public class DieFilesExportWorkflowTests
     private sealed class BatchService(bool ready) : GdsExportService
     {
         private int _exports;
-        protected override Task<PythonEnvironmentInfo> ProbeEnvironmentAsync() => Task.FromResult(
+        protected override Task<PythonEnvironmentInfo> ProbeEnvironmentAsync(CancellationToken cancellationToken = default) => Task.FromResult(
             new PythonEnvironmentInfo { PythonAvailable = ready, NazcaAvailable = ready });
-        public override async Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+        { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
+        public override async Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
         {
-            if (++_exports == 2) return new ExportResult { Success = false, ErrorMessage = "fixture failure" };
+            if (++_exports == 2) return new GdsExportResult { Success = false, ErrorMessage = "fixture failure" };
             var path = Path.ChangeExtension(scriptPath, ".gds");
             await File.WriteAllTextAsync(path, "fixture GDS");
-            return new ExportResult { Success = true, GdsPath = path };
+            return new GdsExportResult { Success = true, GdsPath = path };
         }
     }
 

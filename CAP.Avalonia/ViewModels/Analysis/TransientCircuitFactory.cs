@@ -21,6 +21,21 @@ namespace CAP.Avalonia.ViewModels.Analysis;
 /// </summary>
 internal static class TransientCircuitFactory
 {
+    /// <summary>Reads editor state once, before a worker is admitted.</summary>
+    internal static (TransientCircuitSnapshot Circuit, TransientExcitationSnapshot Excitation) Capture(
+        DesignCanvasViewModel canvas)
+    {
+        var tiles = new ComponentListTileManager();
+        foreach (var component in canvas.Components) tiles.AddComponent(component.Component);
+        var ports = new PhysicalExternalPortManager();
+        ConfigureLightSources(canvas, ports);
+        var grid = GridManager.CreateForSimulation(tiles, canvas.ConnectionManager, ports);
+        var excitation = new TransientExcitationSnapshot(ports.GetUsedExternalInputs().Select(input =>
+                new TransientSource(input.AttachedComponentPinId, Math.Sqrt(input.Input.InFlowPower.Magnitude))),
+            BuildPhaseNoiseSettings(canvas), CollectOutputCouplerPinIds(canvas), ResolveRinDbPerHz(canvas));
+        return (TransientCircuitSnapshot.Capture(grid, BuildClosureContext(canvas)), excitation);
+    }
+
     /// <summary>
     /// Creates the simulator and the port manager holding all configured light sources.
     /// Every non-directional coupler with its laser switched on is treated as a laser

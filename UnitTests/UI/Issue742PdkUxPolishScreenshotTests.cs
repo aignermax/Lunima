@@ -82,8 +82,8 @@ public class Issue742PdkUxPolishScreenshotTests
         });
 
         var extractor = new ComponentGeometryExtractor(
-            Mock.Of<IComponentPreviewRenderer>(), Mock.Of<IComponentPreviewRenderer>());
-        var vm = new NewComponentViewModel(extractor, Mock.Of<IFdtdSMatrixService>(), store,
+            Mock.Of<IPdkGeometryRenderer>(), Mock.Of<IPdkGeometryRenderer>());
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, Mock.Of<IFdtdSMatrixService>(), store,
             new List<ProcessDefinition> { process });
         vm.LoadForEdit(new ComponentTemplate
         {

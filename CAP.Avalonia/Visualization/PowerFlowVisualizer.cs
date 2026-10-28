@@ -69,6 +69,40 @@ public class PowerFlowVisualizer
     }
 
     /// <summary>
+    /// Prepares complete flattened fields for later guarded publication, without reading
+    /// component matrices. Unlike the legacy collapsed path, missing endpoint fields are
+    /// an invalid result rather than permission to reconstruct physics from the live design.
+    /// </summary>
+    public PowerFlowResult PrepareFromFlattenedSimulation(
+        IReadOnlyList<WaveguideConnection> connections,
+        IReadOnlyList<Component> components,
+        IReadOnlyDictionary<Guid, Complex> fieldResults)
+    {
+        var frozenPaths = CollectAllFrozenPaths(components);
+        foreach (var connection in connections)
+        {
+            RequireEndpointFields(connection.StartPin, fieldResults);
+            RequireEndpointFields(connection.EndPin, fieldResults);
+        }
+        foreach (var path in frozenPaths)
+        {
+            RequireEndpointFields(path.StartPin, fieldResults);
+            RequireEndpointFields(path.EndPin, fieldResults);
+        }
+        return _analyzer.Analyze(connections, frozenPaths, fieldResults);
+    }
+
+    private static void RequireEndpointFields(PhysicalPin? physicalPin, IReadOnlyDictionary<Guid, Complex> fields)
+    {
+        if (physicalPin?.LogicalPin is not { } pin) return; // Pin-less imported geometry has no optical fields.
+        if (!fields.ContainsKey(pin.IDInFlow) || !fields.ContainsKey(pin.IDOutFlow))
+            throw new InvalidDataException($"Flattened simulation is missing endpoint fields for pin '{physicalPin.Name}'.");
+    }
+
+    /// <summary>Publishes an already prepared result without recomputing physics.</summary>
+    public void PublishPreparedResult(PowerFlowResult result) => CurrentResult = result;
+
+    /// <summary>
     /// Builds an enhanced field results dictionary that adds computed internal field
     /// amplitudes for ComponentGroup frozen path pins that are absent from the global
     /// simulation results (because they are collapsed into the group's S-Matrix).

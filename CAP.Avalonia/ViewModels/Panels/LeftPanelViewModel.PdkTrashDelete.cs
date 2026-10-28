@@ -48,7 +48,7 @@ public partial class LeftPanelViewModel
             return;
 
         var pdkInfo = PdkManager.LoadedPdks.FirstOrDefault(p => p.Name == template.PdkSource);
-        var userPdkStore = _addCustomComponentDeps?.UserPdkStore;
+        var userPdkStore = _userPdkLibrary;
         if (pdkInfo?.FilePath is null || userPdkStore is null)
             return;
 
@@ -80,6 +80,7 @@ public partial class LeftPanelViewModel
             d.FilePath != null && Path.GetFullPath(d.FilePath) == normalizedPath);
         draft?.Components.RemoveAll(c => string.Equals(c.Name, template.Name, StringComparison.OrdinalIgnoreCase));
 
+        PdkManager.NotifyDefinitionsChanged();
         ReapplyActiveProcessAfterPdkChange();
         FilterComponents();
     }

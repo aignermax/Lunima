@@ -57,7 +57,7 @@ public class Issue1215IsaPlaygroundPhotonicScreenshotTests
 
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
         vm.ToggleRunCommand.Execute(null);
         for (int i = 0; i < TicksBeforeRunningCapture; i++)
         {
@@ -94,7 +94,7 @@ public class Issue1215IsaPlaygroundPhotonicScreenshotTests
         var dir = PrepareOutputDirectory();
         var manifest = new List<ManifestEntry>();
 
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         vm.IsPhotonicAddAvailable.ShouldBeFalse("no network was built, so the toggle stays disabled");
         vm.IsPhotonicToggleEnabled.ShouldBeFalse();
 

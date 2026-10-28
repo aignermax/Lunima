@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
 using CAP_Core.Analysis.LogicAnalysis.GateBuilding;
 using CAP_Core.Components.Core;
+using CAP_Core.Analysis.Hierarchy;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -20,9 +22,9 @@ namespace CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.MakeGate;
 /// assignment (which makes the group a gate) and optionally saves it to the library,
 /// then offers to open the Logic tab. Non-modal: the canvas stays interactive.
 /// </summary>
-public partial class MakeGateViewModel : ObservableObject
+public partial class MakeGateViewModel : ObservableObject, IAsyncDisposable
 {
-    private readonly TruthTableExtractor _extractor = new();
+    private readonly TruthTableExtractor _extractor;
     private readonly GatePinRoleSuggester _suggester = new();
     private readonly GateThresholdAdvisor _advisor = new();
     private ComponentGroup? _group;
@@ -30,8 +32,60 @@ public partial class MakeGateViewModel : ObservableObject
     /// <summary>The exact group whose current editor state is being displayed.</summary>
     internal ComponentGroup? ConfiguredGroup => _group;
     private DesignCanvasViewModel? _canvas;
-    private CancellationTokenSource? _simulateCts;
+    private readonly MakeGateWorkSession _session = new();
+    private readonly ObservablePublicationQueue _publication = new();
+    private Task? _retirement;
     private TruthTable? _table;
+
+    /// <summary>Creates the editor with its optical extraction worker.</summary>
+    public MakeGateViewModel(TruthTableExtractor? extractor = null) => _extractor = extractor ?? new TruthTableExtractor();
+
+    /// <summary>Retires editor work before its owning shell is disposed.</summary>
+    public Task StopAsync()
+    {
+        if (_retirement != null) return _retirement;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _retirement = completion.Task;
+        _ = RetireAsync(completion);
+        return _retirement;
+    }
+    public ValueTask DisposeAsync() => new(StopAsync());
+
+    private async Task RetireAsync(TaskCompletionSource completion)
+    {
+        try
+        {
+            var work = _session.StopAsync();
+            var version = _session.Version;
+            DetachPins();
+            try
+            {
+                await _publication.PublishAsync(() =>
+                {
+                    IsActive = false;
+                    CanMakeGate = false;
+                    ResetResultDisplay(version);
+                });
+            }
+            finally
+            {
+                try { await work; }
+                finally
+                {
+                    _group = null;
+                    _canvas = null;
+                    ExecuteCommand = null;
+                    SaveToLibraryRequested = null;
+                    OpenLogicRequested = null;
+                    GateSaved = null;
+                    GateDefinitionChanged = null;
+                    await _publication.PublishAsync(() => Pins.Clear());
+                }
+            }
+            completion.TrySetResult();
+        }
+        catch (Exception error) { completion.TrySetException(error); }
+    }
 
     /// <summary>True while the Make-gate steps replace the plain truth table in the right panel.</summary>
     [ObservableProperty]
@@ -95,59 +149,107 @@ public partial class MakeGateViewModel : ObservableObject
     /// </summary>
     public void ConfigureForSelection(ComponentViewModel? component, DesignCanvasViewModel? canvas)
     {
-        _canvas = canvas;
+        if (_session.IsStopping) return;
         var group = component?.Component as ComponentGroup;
         var singleSelection = canvas == null || canvas.Selection.SelectedComponents.Count <= 1;
-        CanMakeGate = group is { IsDie: false } && singleSelection;
-        if (ReferenceEquals(group, _group) && CanMakeGate)
+        var canMakeGate = group is { IsDie: false } && singleSelection;
+        if (ReferenceEquals(group, _group) && ReferenceEquals(canvas, _canvas)
+            && canMakeGate && _session.IsConfiguredCurrent)
+        {
+            var currentVersion = _session.Version;
+            _publication.Publish(() => { if (_session.IsCurrent(currentVersion)) CanMakeGate = true; });
             return;
+        }
 
-        _simulateCts?.Cancel();
-        _group = CanMakeGate ? group : null;
-        IsActive = false;
-        ResetResult();
+        // Revoke private ownership before any observable notification or deferred display work.
+        _canvas = canvas;
+        _group = canMakeGate ? group : null;
+        _session.Configure(canvas?.Document, () => _group != null && ReferenceEquals(_group, group)
+            && (canvas == null || DesignHierarchy.From(canvas.Groups.RootComponents.Select(view => view.Component))
+                .Groups.Any(value => ReferenceEquals(value, group))));
+        var version = _session.Version;
+        _table = null;
+        _publication.Publish(() =>
+        {
+            if (_session.Version != version || _session.IsStopping) return;
+            CanMakeGate = canMakeGate;
+            if (_session.Version != version || _session.IsStopping) return;
+            IsActive = false;
+            if (_session.Version == version && !_session.IsStopping) ResetResultDisplay(version);
+        });
     }
 
     /// <summary>Opens the steps for the selected group, prefilled from a persisted assignment or the suggestions.</summary>
     [RelayCommand]
     private void Open()
     {
-        if (!CanMakeGate || _group == null)
-            return;
-        ResetResult();
-        LoadPins();
-        GateName = DefaultGateName();
-        StatusText = Translate("MakeGate.PinsHint");
-        IsActive = true;
+        if (_group == null || !_session.IsConfiguredCurrent) return;
+        _session.Invalidate();
+        var version = _session.Version;
+        _table = null;
+        _publication.Publish(() =>
+        {
+            if (!_session.IsCurrent(version)) return;
+            CanMakeGate = true;
+            if (!_session.IsCurrent(version)) return;
+            ResetResultDisplay(version);
+            if (!_session.IsCurrent(version) || !LoadPins(version)) return;
+            GateName = DefaultGateName();
+            if (!_session.IsCurrent(version)) return;
+            StatusText = Translate("MakeGate.PinsHint");
+            if (_session.IsCurrent(version)) IsActive = true;
+        });
     }
 
     /// <summary>Closes the steps and returns to the plain truth table.</summary>
     [RelayCommand]
     private void Close()
     {
-        _simulateCts?.Cancel();
-        IsActive = false;
+        _session.Invalidate();
+        var version = _session.Version;
+        _publication.Publish(() => { if (_session.Version == version) IsActive = false; });
     }
 
     /// <summary>Rebuilds the pin rows from the group: persisted roles first, else the heuristic.</summary>
-    private void LoadPins()
+    private bool LoadPins(long version)
     {
+        var group = _group;
+        if (group == null || !_session.IsCurrent(version)) return false;
+        DetachPins();
         Pins.Clear();
-        if (_group == null)
-            return;
-        var saved = _group.TruthTablePinAssignment;
-        var rows = _suggester.Suggest(_group, ExternallyConnectedPins()).Select(suggestion =>
+        if (!_session.IsCurrent(version) || !ReferenceEquals(_group, group)) return false;
+        var saved = group.TruthTablePinAssignment;
+        var rows = _suggester.Suggest(group, ExternallyConnectedPins()).Select(suggestion =>
         {
             var role = saved == null ? suggestion.Role : PersistedRole(saved, suggestion.PinName);
             var name = saved == null ? suggestion.SuggestedName : suggestion.PinName;
             return new GatePinRowViewModel(suggestion.PinName, role, name, suggestion.Role,
-                _group.ExternalPins.Single(p => p.Name == suggestion.PinName));
+                group.ExternalPins.Single(p => p.Name == suggestion.PinName));
         });
         // The gate interface first (inputs in bit order, outputs, bias), unused pins last.
         foreach (var row in rows.OrderBy(r => (int)r.Role).ThenBy(r => BitOrder(saved, r)))
+        {
+            if (!_session.IsCurrent(version) || !ReferenceEquals(_group, group)) return false;
+            row.PropertyChanged += PinEditorChanged;
             Pins.Add(row);
+        }
+        if (!_session.IsCurrent(version) || !ReferenceEquals(_group, group)) return false;
         if (saved != null)
             Threshold = saved.Threshold;
+        return _session.IsCurrent(version) && ReferenceEquals(_group, group);
+    }
+
+    private void DetachPins()
+    {
+        foreach (var pin in Pins) pin.PropertyChanged -= PinEditorChanged;
+    }
+
+    private void PinEditorChanged(object? sender, PropertyChangedEventArgs change)
+    {
+        if (change.PropertyName is not (nameof(GatePinRowViewModel.Role) or nameof(GatePinRowViewModel.Name))) return;
+        if (!IsProcessing && change.PropertyName == nameof(GatePinRowViewModel.Name)) return;
+        _session.Invalidate();
+        ResetResult();
     }
 
     /// <summary>
@@ -215,11 +317,22 @@ public partial class MakeGateViewModel : ObservableObject
     private void ResetResult()
     {
         _table = null;
+        var version = _session.Version;
+        _publication.Publish(() => ResetResultDisplay(version));
+    }
+
+    private void ResetResultDisplay(long version)
+    {
+        if (_session.Version != version) return;
+        _table = null;
         Rows.Clear();
+        if (_session.Version != version) return;
         HasResult = false;
+        if (_session.Version != version) return;
         IsSaved = false;
+        if (_session.Version != version) return;
         StatusText = "";
-        ClearThresholdSuggestion();
+        if (_session.Version == version) ClearThresholdSuggestion(() => _session.Version == version);
     }
 
     private static string Translate(string key) => LocalizationService.Instance.Translate(key);

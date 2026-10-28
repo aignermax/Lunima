@@ -287,6 +287,33 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             UpdateGroupBounds();
     }
 
+    /// <summary>Replaces one scope's ordered topology with a single bounds/cache update.</summary>
+    public void ReplaceChildren(IReadOnlyCollection<Component> components)
+    {
+        ArgumentNullException.ThrowIfNull(components);
+        var replacement = components.ToArray();
+        if (replacement.Any(child => child == null || ReferenceEquals(child, this))
+            || replacement.Distinct().Count() != replacement.Length)
+            throw new ArgumentException("Group children must be distinct, non-null components other than the group.", nameof(components));
+        if (ChildComponents.SequenceEqual(replacement)
+            && replacement.All(child => ReferenceEquals(child.ParentGroup, this)
+                && (child is not ComponentGroup nested || ReferenceEquals(nested.ParentGroup, this)))) return;
+        foreach (var child in ChildComponents.Except(replacement))
+        {
+            if (ReferenceEquals(child.ParentGroup, this)) child.ParentGroup = null;
+            if (child is ComponentGroup oldGroup && ReferenceEquals(oldGroup.ParentGroup, this)) oldGroup.ParentGroup = null;
+        }
+        ChildComponents.Clear();
+        foreach (var child in replacement)
+        {
+            child.ParentGroup = this;
+            if (child is ComponentGroup group) group.ParentGroup = this;
+            ChildComponents.Add(child);
+        }
+        UpdateGroupBounds();
+        InvalidateSMatrix();
+    }
+
     /// <summary>
     /// Adds a frozen waveguide path between two child components, or pin-less
     /// frozen geometry (a GDS-imported route outline).
@@ -877,6 +904,13 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     {
         // Clear the cached S-Matrix dictionary
         WaveLengthToSMatrixMap.Clear();
+    }
+
+    /// <summary>Refreshes derived geometry and physics after an internal-route edit batch.</summary>
+    public void RefreshInternalPaths()
+    {
+        UpdateGroupBounds();
+        InvalidateSMatrix();
     }
 
     /// <summary>

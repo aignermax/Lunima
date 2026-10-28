@@ -3,7 +3,7 @@ using CAP.Avalonia.ViewModels.Analysis;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Core;
 using Shouldly;
-using Xunit;
+using Avalonia.Headless.XUnit;
 
 namespace UnitTests.Analysis;
 
@@ -22,12 +22,12 @@ public class CompressLayoutIntegrationTests
         LocalizationService.Instance.SetLanguage(SupportedLanguage.English.Code);
     }
 
-    [Fact]
-    public void ViewModel_ExecutesCompressionAndUpdatesStatus()
+    [AvaloniaFact]
+    public async Task ViewModel_ExecutesCompressionAndUpdatesStatus()
     {
         // Arrange
         var canvas = new DesignCanvasViewModel();
-        var viewModel = new CompressLayoutViewModel();
+        await using var viewModel = new CompressLayoutViewModel();
         viewModel.Configure(canvas);
 
         // Add test components
@@ -43,7 +43,7 @@ public class CompressLayoutIntegrationTests
 
         // Act
         var task = viewModel.CompressLayoutCommand.ExecuteAsync(null);
-        task.Wait();
+        await task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // Assert
         viewModel.StatusText.ShouldContain("complete");
@@ -51,12 +51,12 @@ public class CompressLayoutIntegrationTests
         viewModel.ResultText.ShouldContain("Area reduction");
     }
 
-    [Fact]
-    public void ViewModel_UpdatesComponentPositions()
+    [AvaloniaFact]
+    public async Task ViewModel_UpdatesComponentPositions()
     {
         // Arrange
         var canvas = new DesignCanvasViewModel();
-        var viewModel = new CompressLayoutViewModel();
+        await using var viewModel = new CompressLayoutViewModel();
         viewModel.Configure(canvas);
 
         var comp1 = TestComponentFactory.CreateBasicComponent();
@@ -76,7 +76,7 @@ public class CompressLayoutIntegrationTests
 
         // Act
         var task = viewModel.CompressLayoutCommand.ExecuteAsync(null);
-        task.Wait();
+        await task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // Assert
         // At least one component should have moved
@@ -88,28 +88,28 @@ public class CompressLayoutIntegrationTests
         componentsMoved.ShouldBeTrue();
     }
 
-    [Fact]
-    public void ViewModel_WithNoComponents_ShowsAppropriateMessage()
+    [AvaloniaFact]
+    public async Task ViewModel_WithNoComponents_ShowsAppropriateMessage()
     {
         // Arrange
         var canvas = new DesignCanvasViewModel();
-        var viewModel = new CompressLayoutViewModel();
+        await using var viewModel = new CompressLayoutViewModel();
         viewModel.Configure(canvas);
 
         // Act
         var task = viewModel.CompressLayoutCommand.ExecuteAsync(null);
-        task.Wait();
+        await task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // Assert
         viewModel.StatusText.ShouldContain("No components");
     }
 
-    [Fact]
-    public void ViewModel_RespectsLockedComponents()
+    [AvaloniaFact]
+    public async Task ViewModel_RespectsLockedComponents()
     {
         // Arrange
         var canvas = new DesignCanvasViewModel();
-        var viewModel = new CompressLayoutViewModel();
+        await using var viewModel = new CompressLayoutViewModel();
         viewModel.Configure(canvas);
 
         var comp1 = TestComponentFactory.CreateBasicComponent();
@@ -128,7 +128,7 @@ public class CompressLayoutIntegrationTests
 
         // Act
         var task = viewModel.CompressLayoutCommand.ExecuteAsync(null);
-        task.Wait();
+        await task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // Assert
         vm1.X.ShouldBe(originalVm1X); // Locked component unchanged
@@ -136,12 +136,12 @@ public class CompressLayoutIntegrationTests
         vm2.X.ShouldNotBe(1500.0); // Unlocked component moved
     }
 
-    [Fact]
-    public void ViewModel_CalculatesAreaReduction()
+    [AvaloniaFact]
+    public async Task ViewModel_CalculatesAreaReduction()
     {
         // Arrange
         var canvas = new DesignCanvasViewModel();
-        var viewModel = new CompressLayoutViewModel();
+        await using var viewModel = new CompressLayoutViewModel();
         viewModel.Configure(canvas);
 
         // Create components with large spacing
@@ -162,7 +162,7 @@ public class CompressLayoutIntegrationTests
 
         // Act
         var task = viewModel.CompressLayoutCommand.ExecuteAsync(null);
-        task.Wait();
+        await task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // Assert
         viewModel.ResultText.ShouldContain("mm²");
@@ -170,12 +170,12 @@ public class CompressLayoutIntegrationTests
         viewModel.ResultText.ShouldContain("%");
     }
 
-    [Fact]
-    public void ViewModel_PreventsConcurrentExecution()
+    [AvaloniaFact]
+    public async Task ViewModel_PreventsConcurrentExecution()
     {
         // Arrange
         var canvas = new DesignCanvasViewModel();
-        var viewModel = new CompressLayoutViewModel();
+        await using var viewModel = new CompressLayoutViewModel();
         viewModel.Configure(canvas);
 
         var comp = TestComponentFactory.CreateBasicComponent();
@@ -190,12 +190,12 @@ public class CompressLayoutIntegrationTests
         canExecute.ShouldBeFalse();
     }
 
-    [Fact]
-    public void ViewModel_UpdatesProgressDuringCompression()
+    [AvaloniaFact]
+    public async Task ViewModel_UpdatesProgressDuringCompression()
     {
         // Arrange
         var canvas = new DesignCanvasViewModel();
-        var viewModel = new CompressLayoutViewModel();
+        await using var viewModel = new CompressLayoutViewModel();
         viewModel.Configure(canvas);
 
         // Add components far apart to ensure compression takes multiple iterations
@@ -211,7 +211,7 @@ public class CompressLayoutIntegrationTests
 
         // Act
         var task = viewModel.CompressLayoutCommand.ExecuteAsync(null);
-        task.Wait();
+        await task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // Assert
         // CurrentIteration should be set to MaxIterations after completion
@@ -219,12 +219,12 @@ public class CompressLayoutIntegrationTests
         viewModel.StatusText.ShouldContain("complete");
     }
 
-    [Fact]
-    public void ViewModel_AnimatesComponentPositions()
+    [AvaloniaFact]
+    public async Task ViewModel_AnimatesComponentPositions()
     {
         // Arrange
         var canvas = new DesignCanvasViewModel();
-        var viewModel = new CompressLayoutViewModel();
+        await using var viewModel = new CompressLayoutViewModel();
         viewModel.Configure(canvas);
 
         var comp1 = TestComponentFactory.CreateBasicComponent();
@@ -242,7 +242,7 @@ public class CompressLayoutIntegrationTests
 
         // Act
         var task = viewModel.CompressLayoutCommand.ExecuteAsync(null);
-        task.Wait();
+        await task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // Assert
         // ViewModel positions should be updated (animation occurred)

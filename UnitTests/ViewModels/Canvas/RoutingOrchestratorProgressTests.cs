@@ -28,25 +28,16 @@ public partial class RoutingOrchestratorProgressTests
     [AvaloniaFact]
     public async Task ComplexRoute_KeepsProgressAliveUntilCancelled_AndIgnoresLateCallbacks()
     {
-        Action? reportComplex = null;
-        var orchestrator = CreateOrchestratorWithDeferredConnections(1,
-            manager => reportComplex = () => manager.OnComplexRouteStarted?.Invoke());
-        using var parked = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        orchestrator.BuildConnectionProcessFloorProvider = () => (_, _) =>
-        {
-            reportComplex!();
-            parked.Set();
-            release.Wait();
-            return null;
-        };
+        var orchestrator = CreateOrchestratorWithDeferredConnections(1);
+        orchestrator.BlockWorker = true;
+        orchestrator.ReportComplex = true;
         int updates = 0;
         orchestrator.StateChanged += () => updates++;
         var task = orchestrator.RecalculateRoutesAsync();
         try
         {
-            parked.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
-            Dispatcher.UIThread.RunJobs();
+            await orchestrator.Entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            await AwaitStatus(orchestrator, "Routing.Status.ComplexPath");
             var first = orchestrator.RoutingStatusText;
             first.ShouldContain("0/1");
             first.ShouldContain(LocalizationService.Instance.Translate("Routing.Status.ComplexPath"));
@@ -61,14 +52,14 @@ public partial class RoutingOrchestratorProgressTests
 
             orchestrator.CancelRouting();
             int afterCancel = updates;
-            reportComplex!();
+            orchestrator.Mailbox!.ComplexStarted();
             await Task.Delay(1100);
             Dispatcher.UIThread.RunJobs();
             updates.ShouldBe(afterCancel, "cancelled passes must stop heartbeat and queued phase updates");
         }
         finally
         {
-            release.Set();
+            orchestrator.Release.TrySetResult();
             await PumpUntilDone(task);
         }
         int afterFinish = updates;
@@ -108,21 +99,7 @@ public partial class RoutingOrchestratorProgressTests
         const int connectionCount = 6;
         var orchestrator = CreateOrchestratorWithDeferredConnections(connectionCount);
 
-        // Deterministic mid-pass cancellation: the per-connection process-floor provider is
-        // consulted on the routing thread as each connection starts routing, so parking the
-        // routing thread there guarantees the pass is genuinely in flight when Stop is
-        // pressed. Cancelling from the test thread instead races the pass — six straight
-        // waveguides route in microseconds, so on a fast CI machine the pass can complete
-        // (and clear its status) before CancelRouting lands.
-        var routingThreadParked = new ManualResetEventSlim(false);
-        var releaseRouting = new ManualResetEventSlim(false);
-        orchestrator.BuildConnectionProcessFloorProvider = () => (start, end) =>
-        {
-            routingThreadParked.Set();
-            releaseRouting.Wait();
-            return null;
-        };
-
+        orchestrator.BlockWorker = true;
         var task = orchestrator.RecalculateRoutesAsync();
         orchestrator.IsRouting.ShouldBeTrue();
         task.IsCompleted.ShouldBeFalse(
@@ -130,16 +107,15 @@ public partial class RoutingOrchestratorProgressTests
 
         try
         {
-            routingThreadParked.Wait(TimeSpan.FromSeconds(30)).ShouldBeTrue(
-                "the routing thread must reach the first connection's floor consultation");
+            await orchestrator.Entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
             orchestrator.CancelRouting();
-            releaseRouting.Set();
+            orchestrator.Release.TrySetResult();
 
             await PumpUntilDone(task);
         }
         finally
         {
-            releaseRouting.Set();
+            orchestrator.Release.TrySetResult();
         }
 
         orchestrator.IsRouting.ShouldBeFalse();
@@ -184,13 +160,13 @@ public partial class RoutingOrchestratorProgressTests
     /// the total. The ViewModel collections stay empty: the pass only reads them for the
     /// obstacle rebuild and the repaint notifications.
     /// </summary>
-    private static RoutingOrchestrator CreateOrchestratorWithDeferredConnections(
+    private static ReportedRoutingWorker CreateOrchestratorWithDeferredConnections(
         int connectionCount, Action<WaveguideConnectionManager>? configureManager = null)
     {
         var router = new WaveguideRouter();
         var manager = new WaveguideConnectionManager(router);
         configureManager?.Invoke(manager);
-        var orchestrator = new RoutingOrchestrator(
+        var orchestrator = new ReportedRoutingWorker(
             router,
             manager,
             new ObservableCollection<ComponentViewModel>(),

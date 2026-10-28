@@ -34,69 +34,17 @@ namespace CAP_Core.Analysis.CircuitOptimization
             var originalValues = settings.Parameters.Select(p => p.GetSlider().Value).ToArray();
             try
             {
-                return await SearchAsync(settings, originalValues, cancellationToken, progress);
+                var ranges = settings.Parameters.Select(p => new OptimizationSearch.Range(p.MinValue, p.MaxValue)).ToArray();
+                var result = await OptimizationSearch.RunAsync(ranges, originalValues, settings.EvaluationBudget,
+                    settings.Seed, settings.TopN, (values, token) => EvaluateAsync(settings, values, token),
+                    cancellationToken, progress);
+                return new OptimizationResult(settings, result.BaselineScore, result.TopVariants,
+                    result.EvaluationsUsed, result.WasCancelled);
             }
             finally
             {
                 ApplyValues(settings, originalValues);
             }
-        }
-
-        private async Task<OptimizationResult> SearchAsync(
-            OptimizationSettings settings,
-            double[] startValues,
-            CancellationToken cancellationToken,
-            IProgress<OptimizationProgress>? progress)
-        {
-            var rng = new Random(settings.Seed);
-            var evaluated = new List<OptimizationCandidate>();
-            double stepFraction = OptimizationSettings.InitialStepFraction;
-            int evaluations = 0;
-            bool cancelled = false;
-
-            double baselineScore = double.NaN;
-            var bestValues = (double[])startValues.Clone();
-            double bestScore = double.NegativeInfinity;
-
-            try
-            {
-                baselineScore = await EvaluateAsync(settings, startValues, cancellationToken);
-                evaluations++;
-                bestScore = baselineScore;
-                progress?.Report(new OptimizationProgress(evaluations, settings.EvaluationBudget, bestScore));
-
-                while (evaluations < settings.EvaluationBudget)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var candidateValues = Mutate(settings.Parameters, bestValues, rng, stepFraction);
-                    double score = await EvaluateAsync(settings, candidateValues, cancellationToken);
-                    evaluations++;
-                    evaluated.Add(new OptimizationCandidate(candidateValues, score));
-
-                    if (score > bestScore)
-                    {
-                        bestScore = score;
-                        bestValues = candidateValues;
-                        stepFraction = OptimizationSettings.InitialStepFraction;
-                    }
-                    else
-                    {
-                        stepFraction = Math.Max(
-                            OptimizationSettings.MinStepFraction,
-                            stepFraction * OptimizationSettings.StepDecayFactor);
-                    }
-
-                    progress?.Report(new OptimizationProgress(evaluations, settings.EvaluationBudget, bestScore));
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                cancelled = true;
-            }
-
-            var top = SelectTopVariants(evaluated, baselineScore, settings.TopN);
-            return new OptimizationResult(settings, baselineScore, top, evaluations, cancelled);
         }
 
         private async Task<double> EvaluateAsync(
@@ -116,42 +64,11 @@ namespace CAP_Core.Analysis.CircuitOptimization
             return settings.Objective.Score(powers);
         }
 
-        private static double[] Mutate(
-            IReadOnlyList<OptimizationParameter> parameters,
-            double[] baseValues,
-            Random rng,
-            double stepFraction)
-        {
-            var values = (double[])baseValues.Clone();
-            int index = rng.Next(parameters.Count);
-            var parameter = parameters[index];
-
-            double range = parameter.MaxValue - parameter.MinValue;
-            double delta = range * stepFraction * (2 * rng.NextDouble() - 1);
-            values[index] = parameter.Clamp(values[index] + delta);
-            return values;
-        }
-
         private static void ApplyValues(OptimizationSettings settings, double[] values)
         {
             for (int i = 0; i < settings.Parameters.Count; i++)
                 settings.Parameters[i].GetSlider().Value = values[i];
         }
 
-        private static List<OptimizationCandidate> SelectTopVariants(
-            List<OptimizationCandidate> evaluated,
-            double baselineScore,
-            int topN)
-        {
-            if (double.IsNaN(baselineScore))
-                return new List<OptimizationCandidate>();
-
-            return evaluated
-                .Where(c => c.Score > baselineScore)
-                .OrderByDescending(c => c.Score)
-                .DistinctBy(c => string.Join(";", c.ParameterValues))
-                .Take(topN)
-                .ToList();
-        }
     }
 }

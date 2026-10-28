@@ -16,7 +16,7 @@ public partial class NewComponentViewModel
 {
     private ComponentSMatrixData? _computedModel;
 
-    private bool CanSave => !IsBusy && !IsAwaitingCloudConfirmation && SelectedCustomPdk is not null;
+    private bool CanSave => !_work.IsStopping && !IsBusy && !IsAwaitingCloudConfirmation && SelectedCustomPdk is not null;
 
     partial void OnIsBusyChanged(bool value)
     {
@@ -25,7 +25,9 @@ public partial class NewComponentViewModel
     }
 
     [RelayCommand(CanExecute = nameof(CanRunCompute))]
-    private async Task ComputeSMatrix()
+    private Task ComputeSMatrix() => _work.RunAsync(ComputeSMatrixCoreAsync);
+
+    private async Task ComputeSMatrixCoreAsync(CancellationToken stop)
     {
         if (IsBusy) return;
         if (SelectedProcess is null)
@@ -41,19 +43,23 @@ public partial class NewComponentViewModel
         }
 
         IsBusy = true;
-        _computeCts = new CancellationTokenSource();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        _computeCts = cancellation;
+        var ct = cancellation.Token;
         try
         {
             // Render the geometry ourselves when no preview exists yet, like Save does;
             // a render failure leaves its reason in StatusText and computes nothing.
-            if (!await EnsurePreviewAsync() || _lastPreview is not { Success: true } preview)
+            if (!await EnsurePreviewAsync(ct) || _lastPreview is not { Success: true } preview)
             {
                 return;
             }
 
             var availability = BackendSelection != null
-                ? await BackendSelection.CheckAvailabilityAsync(_computeCts.Token)
-                : await service.CheckAvailabilityAsync(_computeCts.Token);
+                ? await BackendSelection.CheckAvailabilityAsync(ct)
+                : await service.CheckAvailabilityAsync(ct);
+            _work.ThrowIfStopping();
+            ct.ThrowIfCancellationRequested();
             if (!availability.IsAvailable)
             {
                 _computedModel = null;
@@ -68,23 +74,23 @@ public partial class NewComponentViewModel
             // confirmation. The solve continues via ConfirmCloudSubmitCommand.
             if (service is IFdtdCostEstimator estimator)
             {
-                await PrepareCloudConfirmationAsync(estimator, request, _computeCts.Token);
+                await PrepareCloudConfirmationAsync(estimator, request, ct);
                 return;
             }
 
-            await ExecuteSolveAsync(service, request, _computeCts.Token);
+            await ExecuteSolveAsync(service, request, ct);
         }
         catch (OperationCanceledException)
         {
+            if (_work.IsStopping) return;
             _computedModel = null;
             StatusText = LocalizationService.Instance.Translate("NewComp.SMatrixComputationCancelled");
         }
         finally
         {
             IsBusy = false;
-            _computeCts?.Dispose();
-            _computeCts = null;
-            RefreshSMatrixEntries();
+            if (ReferenceEquals(_computeCts, cancellation)) _computeCts = null;
+            if (!_work.IsStopping) RefreshSMatrixEntries();
         }
     }
 
@@ -102,6 +108,8 @@ public partial class NewComponentViewModel
         string? provenanceLabel = null)
     {
         var result = await RunSolveWithLiveStatusAsync(service, request, ct);
+        _work.ThrowIfStopping();
+        ct.ThrowIfCancellationRequested();
         if (!result.Success)
         {
             _computedModel = null;
@@ -119,9 +127,11 @@ public partial class NewComponentViewModel
     }
 
     [RelayCommand(CanExecute = nameof(CanSave))]
-    private async Task Save()
+    private Task Save() => _work.RunAsync(SaveCoreAsync);
+
+    private async Task SaveCoreAsync(CancellationToken stop)
     {
-        if (IsBusy) return;
+        if (_work.IsStopping || IsBusy) return;
         var name = ComponentName?.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -155,10 +165,12 @@ public partial class NewComponentViewModel
         IsBusy = true;
         try
         {
-            if (!await EnsurePreviewAsync() || _lastPreview is not { Success: true } preview)
+            if (!await EnsurePreviewAsync(stop) || _lastPreview is not { Success: true } preview)
             {
                 return;
             }
+
+            _work.ThrowIfStopping();
 
             var reference = BuildReference();
             // A fresh compute/import wins; otherwise an unchanged-geometry same-PDK edit keeps
@@ -188,6 +200,7 @@ public partial class NewComponentViewModel
             {
                 return;
             }
+            _work.ThrowIfStopping();
             if (executesPendingFork)
             {
                 _store.ForkBundledPdk(_pendingForkSourcePath!, pdk.Name);
@@ -241,8 +254,10 @@ public partial class NewComponentViewModel
             }
             Saved?.Invoke(this, EventArgs.Empty);
         }
+        catch (OperationCanceledException) when (_work.IsStopping || stop.IsCancellationRequested) { }
         catch (Exception ex)
         {
+            if (_work.IsStopping) return;
             // Without this catch the AsyncRelayCommand swallows the fault and Save looks like it
             // did nothing — e.g. when the fork file was trashed underneath an open editor.
             StatusText = string.Format(LocalizationService.Instance.Translate("NewComp.SaveFailed"), ex.Message);
@@ -295,7 +310,9 @@ public partial class NewComponentViewModel
                 LocalizationService.Instance.Translate("NewComp.AlreadyExists"), componentName, targetName);
             return false;
         }
-        if (!await ConfirmOverwrite(componentName, targetName))
+        var approved = await ConfirmOverwrite(componentName, targetName);
+        _work.ThrowIfStopping();
+        if (!approved)
         {
             StatusText = LocalizationService.Instance.Translate("NewComp.SaveCancelled");
             return false;

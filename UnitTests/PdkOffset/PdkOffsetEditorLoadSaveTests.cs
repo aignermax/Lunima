@@ -52,7 +52,7 @@ public class PdkOffsetEditorLoadSaveTests
     }";
 
     private static PdkOffsetEditorViewModel BuildViewModel() =>
-        new(new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel());
+        new(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel());
 
     [Fact]
     public async Task LoadPdkFile_WithMissingOffsets_LoadsAndReportsCounts()

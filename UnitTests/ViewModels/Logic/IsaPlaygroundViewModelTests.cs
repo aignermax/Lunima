@@ -23,7 +23,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void Ctor_LoadsAllShippedSamples_AndPreassemblesCountTo5()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         vm.Samples.Count.ShouldBe(4);
         vm.Samples[0].FileName.ShouldBe("count-to-5.asm");
@@ -38,7 +38,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void StepUntilHalt_CountTo5_EndsWithAccumulator5()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         for (int i = 0; i < StepBudget && vm.MachineStatusText != HaltedText; i++)
         {
@@ -52,7 +52,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void Assemble_UnknownMnemonic_ShowsErrorAndDisablesStepAndReset()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         vm.ProgramText = "LOAD 1\nFROB 2";
         vm.AssembleCommand.Execute(null);
@@ -66,7 +66,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void Reset_AfterSteps_RestoresPowerOnState()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         vm.StepCommand.Execute(null);
         vm.StepCommand.Execute(null);
         vm.ProgramCounter.ShouldBeGreaterThan(0);
@@ -80,7 +80,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void SelectingOtherSample_LoadsItsSourceAndReassembles()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         vm.SelectedSample = vm.Samples[1];
 
@@ -93,7 +93,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void EditingProgramText_MarksAssembledStateStale()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         vm.IsAssembled.ShouldBeTrue();
 
         vm.ProgramText += "\n";
@@ -105,7 +105,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void Run_CountTo5_TicksUntilHalt_EndsHaltedWithAccumulator5()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         vm.ToggleRunCommand.Execute(null);
         vm.IsRunning.ShouldBeTrue();
 
@@ -128,7 +128,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void RunCommand_ReturnsImmediately_NoStepsWithoutTicks()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         vm.ToggleRunCommand.Execute(null);
 
@@ -140,7 +140,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void Stop_MidRun_LeavesPcAndReenablesStep()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         vm.ToggleRunCommand.Execute(null);
         vm.AdvanceRunTick();
         vm.AdvanceRunTick();
@@ -159,7 +159,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void Run_EndlessLoop_StepCapStopsWithMessage()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         vm.ProgramText = "loop: JMP loop";
         vm.AssembleCommand.Execute(null);
         vm.ToggleRunCommand.Execute(null);
@@ -181,7 +181,7 @@ public class IsaPlaygroundViewModelTests
     [Fact]
     public void WhileRunning_EditorReadOnly_AndAssembleStepDisabled()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         vm.ToggleRunCommand.Execute(null);
 

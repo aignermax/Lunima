@@ -16,7 +16,7 @@ namespace CAP.Avalonia.ViewModels.Export;
 public partial class VerilogAExportViewModel : ObservableObject
 {
     private readonly VerilogAExporter _exporter;
-    private readonly VerilogAFileWriter _fileWriter;
+    private readonly IVerilogAExportWriter _fileWriter;
     private readonly DesignCanvasViewModel _canvas;
     private readonly ErrorConsoleService? _errorConsole;
     private readonly IUrlLauncher _urlLauncher;
@@ -57,20 +57,19 @@ public partial class VerilogAExportViewModel : ObservableObject
     /// <summary>Initializes the ViewModel with required services.</summary>
     /// <param name="errorConsole">Optional service for surfacing best-effort failures (e.g. auto-open folder)
     /// to the bottom-panel error console without overwriting the user-facing status message.</param>
-    /// <param name="urlLauncher">Optional launcher used to open the output folder after export.
-    /// Defaults to <see cref="PlatformShellLauncher.CreateDefault"/> when not supplied.</param>
+    /// <param name="urlLauncher">Configured launcher used to open the output folder after export.</param>
     public VerilogAExportViewModel(
         VerilogAExporter exporter,
-        VerilogAFileWriter fileWriter,
+        IVerilogAExportWriter fileWriter,
         DesignCanvasViewModel canvas,
-        ErrorConsoleService? errorConsole = null,
-        IUrlLauncher? urlLauncher = null)
+        IUrlLauncher urlLauncher,
+        ErrorConsoleService? errorConsole = null)
     {
         _exporter = exporter;
-        _fileWriter = fileWriter;
+        _fileWriter = fileWriter ?? throw new ArgumentNullException(nameof(fileWriter));
         _canvas = canvas;
         _errorConsole = errorConsole;
-        _urlLauncher = urlLauncher ?? PlatformShellLauncher.CreateDefault();
+        _urlLauncher = urlLauncher ?? throw new ArgumentNullException(nameof(urlLauncher));
     }
 
     /// <summary>

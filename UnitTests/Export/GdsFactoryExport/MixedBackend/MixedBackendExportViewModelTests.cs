@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.GdsFactoryExport.MixedBackend;
 using CAP.Avalonia.Services.Localization;
@@ -46,11 +47,16 @@ public class MixedBackendExportViewModelTests
         public RecordingExportService(Func<string, bool>? succeeds = null) =>
             _succeeds = succeeds ?? (_ => true);
 
-        public override Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+
+        { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
+
+        public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
         {
             RunScripts.Add(scriptPath);
             var ok = _succeeds(scriptPath);
-            return Task.FromResult(new ExportResult
+            return Task.FromResult(new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = ok,
@@ -82,7 +88,7 @@ public class MixedBackendExportViewModelTests
         try
         {
             var service = new RecordingExportService();
-            var vm = new GdsFactoryExportViewModel(MixedBackendCanvas(), service)
+            var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), MixedBackendCanvas(), service)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -118,7 +124,10 @@ public class MixedBackendExportViewModelTests
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var service = new RecordingExportService(succeeds: _ => false);
             var vm = new GdsFactoryExportViewModel(
-                MixedBackendCanvas(), service, errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                MixedBackendCanvas(),
+                service,
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -206,7 +215,10 @@ public class MixedBackendExportViewModelTests
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var service = new RecordingExportService(succeeds: _ => false);
             var vm = new GdsFactoryExportViewModel(
-                MixedBackendCanvasWithSkippedConnection(), service, errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                MixedBackendCanvasWithSkippedConnection(),
+                service,
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };
@@ -245,7 +257,10 @@ public class MixedBackendExportViewModelTests
             var errorConsole = new CAP_Core.ErrorConsoleService();
             var service = new RecordingExportService();
             var vm = new GdsFactoryExportViewModel(
-                MixedBackendCanvasWithRawCodeComponent(), service, errorConsole: errorConsole)
+                Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+                MixedBackendCanvasWithRawCodeComponent(),
+                service,
+                errorConsole: errorConsole)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
                 TemplateLibraryProvider = () => new[] { RawCodeTemplate(missingGds) },
@@ -339,7 +354,7 @@ public class MixedBackendExportViewModelTests
             gf.GdsFactoryFunction = "cspdk.sin300.mmi1x2";
             canvas.AddComponent(gf, "SiN MMI");
             var service = new RecordingExportService();
-            var vm = new GdsFactoryExportViewModel(canvas, service)
+            var vm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), canvas, service)
             {
                 FileDialogService = new FixedPathFileDialog(scriptPath),
             };

@@ -25,6 +25,8 @@ public partial class GroupEditService
 
     private readonly Stack<ComponentGroup> _editModeStack = new();
     private CanvasState? _rootCanvasBackup;
+    private readonly GroupContentCoordinator _content;
+    private readonly HashSet<ComponentGroup> _modifiedGroups = new();
 
     /// <summary>
     /// The currently edited group (null if at root level).
@@ -77,6 +79,63 @@ public partial class GroupEditService
         _endCommandExecution = endCommandExecution;
         _initializeRouting = initializeRouting;
         _recalculateRoutes = recalculateRoutes;
+        _content = new GroupContentCoordinator(components, connections);
+    }
+
+    internal void BeginContentEdit() => _content.BeginEdit();
+    internal void EndContentEdit() => _content.EndEdit();
+
+    /// <summary>Publishes one accepted route frame, then refreshes canonical group content once.</summary>
+    internal void PublishRouteChanges(IEnumerable<WaveguideConnectionViewModel> connections)
+    {
+        _content.BeginEdit();
+        try
+        {
+            foreach (var connection in connections) connection.NotifyPathChanged();
+        }
+        finally { _content.EndEdit(); }
+    }
+    public bool IsProjecting => _content.IsProjecting;
+    internal void DisposeDocumentBindings() => _content.Dispose();
+    internal void MarkCurrentScopeChanged()
+    {
+        if (IsProjecting || CurrentEditGroup == null) return;
+        _modifiedGroups.Add(CurrentEditGroup);
+        foreach (var ancestor in _editModeStack) _modifiedGroups.Add(ancestor);
+    }
+
+    /// <summary>Adopts an already reconstructed private projection without loading, routing or replacing its graph.</summary>
+    internal void AdoptCapturedScope(ComponentGroup group)
+    {
+        if (CurrentEditGroup != null || _rootCanvasBackup != null)
+            throw new InvalidOperationException("A captured scope requires a fresh projection owner.");
+        using var projection = _content.Project(group);
+        var ancestors = new List<ComponentGroup>();
+        for (var parent = group.ParentGroup as ComponentGroup; parent != null; parent = parent.ParentGroup as ComponentGroup)
+            ancestors.Add(parent);
+        foreach (var ancestor in ancestors.AsEnumerable().Reverse()) _editModeStack.Push(ancestor);
+        CurrentEditGroup = group;
+        CurrentEditGroupChanging?.Invoke(group);
+        UpdateBreadcrumbPath();
+        // EditStateChanged initiates a new routing grid in the interactive canvas. This
+        // projection already owns its captured grid, bounds, records and connection identities.
+    }
+
+    /// <summary>Discards the outgoing document and its presentation scopes as one projection reset.</summary>
+    public void ResetDocument()
+    {
+        using var projection = _content.Project(null);
+        _rootCanvasBackup = null;
+        _editModeStack.Clear();
+        _modifiedGroups.Clear();
+        CurrentEditGroup = null;
+        CurrentEditGroupChanging?.Invoke(null);
+        _components.Clear();
+        _connections.Clear();
+        _allPins.Clear();
+        _connectionManager.Clear();
+        UpdateBreadcrumbPath();
+        EditStateChanged?.Invoke();
     }
 
     /// <summary>
@@ -89,10 +148,12 @@ public partial class GroupEditService
 
         if (CurrentEditGroup == null)
         {
+            _modifiedGroups.Clear();
             _rootCanvasBackup = BackupCanvasState();
         }
         else
         {
+            _content.Synchronize();
             _editModeStack.Push(CurrentEditGroup);
         }
 
@@ -112,7 +173,7 @@ public partial class GroupEditService
             return;
 
         var editedGroup = CurrentEditGroup;
-        SaveSubCanvasToGroup(editedGroup);
+        _content.Synchronize();
 
         if (_editModeStack.Count > 0)
         {
@@ -146,7 +207,7 @@ public partial class GroupEditService
             return;
 
         var editedGroup = CurrentEditGroup;
-        SaveSubCanvasToGroup(editedGroup);
+        _content.Synchronize();
 
         while (_editModeStack.Count > 0)
             _editModeStack.Pop();
@@ -159,7 +220,7 @@ public partial class GroupEditService
             _rootCanvasBackup = null;
         }
 
-        NotifyGroupDimensionsChanged(editedGroup);
+        foreach (var changed in _modifiedGroups) NotifyGroupDimensionsChanged(changed);
         _editModeStack.Clear();
         UpdateBreadcrumbPath();
         EditStateChanged?.Invoke();
@@ -180,11 +241,15 @@ public partial class GroupEditService
         if (index < 0)
             return;
 
-        while (_editModeStack.Count > BreadcrumbPath.Count - index - 2)
-            _editModeStack.Pop();
+        if (ReferenceEquals(CurrentEditGroup, group)) return;
+        if (CurrentEditGroup != null) _content.Synchronize();
+        var ancestors = BreadcrumbPath.Take(index).ToArray();
+        _editModeStack.Clear();
+        foreach (var ancestor in ancestors) _editModeStack.Push(ancestor);
 
         CurrentEditGroup = group;
         CurrentEditGroupChanging?.Invoke(CurrentEditGroup);
+        LoadGroupAsSubCanvas(group);
         UpdateBreadcrumbPath();
         EditStateChanged?.Invoke();
     }
@@ -194,6 +259,7 @@ public partial class GroupEditService
     /// </summary>
     public void UpdateExternalPinPositions(ComponentGroup group)
     {
+        group.RefreshInternalPaths();
         foreach (var externalPin in group.ExternalPins)
         {
             var (pinX, pinY) = externalPin.InternalPin.GetAbsolutePosition();
@@ -226,9 +292,8 @@ public partial class GroupEditService
     private void UpdateBreadcrumbPath()
     {
         BreadcrumbPath.Clear();
-        var tempStack = new Stack<ComponentGroup>(_editModeStack.Reverse());
-        while (tempStack.Count > 0)
-            BreadcrumbPath.Add(tempStack.Pop());
+        foreach (var ancestor in _editModeStack.Reverse())
+            BreadcrumbPath.Add(ancestor);
 
         if (CurrentEditGroup != null)
             BreadcrumbPath.Add(CurrentEditGroup);
@@ -247,6 +312,7 @@ public partial class GroupEditService
 
     private void RestoreCanvasState(CanvasState state)
     {
+        using var projection = _content.Project(null);
         try
         {
             _beginCommandExecution();
@@ -269,11 +335,12 @@ public partial class GroupEditService
             _endCommandExecution();
         }
 
-        _ = _recalculateRoutes();
+        if (_modifiedGroups.Count > 0) _ = _recalculateRoutes();
     }
 
     private void LoadGroupAsSubCanvas(ComponentGroup group)
     {
+        using var projection = _content.Project(group);
         try
         {
             _beginCommandExecution();
@@ -290,17 +357,17 @@ public partial class GroupEditService
             foreach (var frozenPath in group.InternalPaths)
             {
                 // Pin-less frozen geometry (GDS-imported route outlines) cannot become
-                // a live connection — it stays stored on the group and is re-attached
-                // untouched by SaveSubCanvasToGroup on exit.
+                // a live connection — it stays stored on the document group throughout editing.
                 if (frozenPath.StartPin is null || frozenPath.EndPin is null)
                     continue;
 
-                // DeepCopy: the group's stored InternalPaths must stay immutable while
-                // the sub-canvas connection is live — bend-handle edits mutate the
-                // segment objects in place and would otherwise leak into the stored
-                // geometry before the exit re-capture (round-5 review [4]).
-                var connection = _connectionManager.AddConnectionWithCachedRoute(
-                    frozenPath.StartPin, frozenPath.EndPin, frozenPath.Path?.DeepCopy()!);
+                // Mutable handle edits remain private until NotifyPathChanged publishes
+                // the accepted geometry through GroupRouteContent.
+                var connection = frozenPath.Path is { Segments.Count: > 0 } routed
+                    ? _connectionManager.AddConnectionWithCachedRoute(
+                        frozenPath.StartPin, frozenPath.EndPin, routed.DeepCopy())
+                    : _connectionManager.AddConnectionDeferred(frozenPath.StartPin, frozenPath.EndPin);
+                connection.Id = frozenPath.PathId;
                 // The cached route restores only the geometry; without this the editor
                 // shows a fresh default connection ("Auto") although the curve renders
                 // correctly (field report round 5, finding a).
@@ -321,55 +388,9 @@ public partial class GroupEditService
         }
     }
 
-    private void SaveSubCanvasToGroup(ComponentGroup group)
-    {
-        // Set lookups + batched group mutations keep this O(N + P·S): per-item
-        // AddChild/RemoveChild/AddInternalPath each rescan all children and all
-        // path segments for the bounds, which is quadratic at GDS-import scale.
-        var canvasComponents = _components.Select(c => c.Component).ToHashSet();
-        group.RemoveChildren(group.ChildComponents.Where(c => !canvasComponents.Contains(c)).ToList());
-
-        var existingChildren = group.ChildComponents.ToHashSet();
-        group.AddChildren(_components
-            .Select(c => c.Component)
-            .Where(c => !existingChildren.Contains(c))
-            .ToList());
-
-        // Pin-less frozen paths (GDS-imported route outlines) never entered the
-        // sub-canvas as live connections, so the clear-and-rebuild below would
-        // silently drop them — capture and re-attach them unchanged.
-        var pinLessPaths = group.InternalPaths
-            .Where(p => p.StartPin is null || p.EndPin is null)
-            .ToList();
-
-        group.InternalPaths.Clear();
-        var frozenPaths = new List<FrozenWaveguidePath>();
-        foreach (var connVm in _connections.ToList())
-        {
-            var conn = connVm.Connection;
-            if (conn.RoutedPath == null)
-                continue;
-
-            var frozenPath = new FrozenWaveguidePath
-            {
-                StartPin = conn.StartPin,
-                EndPin = conn.EndPin,
-                Path = conn.RoutedPath
-            };
-            // Keep the per-connection routing settings across the exit, otherwise
-            // they reset to "Auto" defaults on the next expand.
-            frozenPath.CaptureSettingsFrom(conn);
-            frozenPaths.Add(frozenPath);
-        }
-        frozenPaths.AddRange(pinLessPaths);
-        group.AddInternalPaths(frozenPaths);
-
-        // Still needed when the clear above removed paths but nothing was re-added.
-        group.UpdateGroupBounds();
-    }
-
     private void NotifyGroupDimensionsChanged(ComponentGroup editedGroup)
     {
+        if (!_modifiedGroups.Contains(editedGroup)) return;
         var groupViewModel = _components.FirstOrDefault(c => c.Component == editedGroup);
         if (groupViewModel == null)
             return;

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using Avalonia.Headless.XUnit;
 using CAP.Avalonia.ViewModels.Analysis;
-using CAP.Avalonia.ViewModels.Analysis.TimeTrace;
+using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.LightCalculation.TimeDomainSimulation;
 using OxyPlot;
 using OxyPlot.Series;
@@ -16,8 +16,8 @@ namespace UnitTests.Analysis.TimeTrace;
 public class TimeTraceVisibilityTests
 {
     /// <summary>Hiding and restoring a trace retain the user's viewport and data buffers.</summary>
-    [Fact]
-    public void TogglingTrace_PreservesZoomAndExistingPointBuffers()
+    [AvaloniaFact]
+    public async Task TogglingTrace_PreservesZoomAndExistingPointBuffers()
     {
         var result = new TimeDomainResult(new[] { 0.0, 1e-12, 2e-12 },
             new Dictionary<Guid, double[]>
@@ -25,26 +25,41 @@ public class TimeTraceVisibilityTests
                 [Guid.NewGuid()] = new[] { 0.0, 1.0, 0.0 },
                 [Guid.NewGuid()] = new[] { 0.0, 0.5, 0.0 }
             });
-        var vm = new TimeDomainViewModel();
-        typeof(TimeDomainViewModel).GetField("_lastResult", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .SetValue(vm, result);
-        typeof(TimeDomainViewModel).GetMethod("BuildPlot", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(vm, new object[] { result, TimeTracePeak.Build(result) });
-        var model = vm.PlotModel;
-        var traces = model.Series.Cast<LineSeries>().ToArray();
-        model.Axes[0].Zoom(0.25, 1.25);
+        var canvas = new DesignCanvasViewModel();
+        canvas.Components.Add(new ComponentViewModel(TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins()));
+        await using var vm = new TimeDomainViewModel(runner: new CompletedRunner(result));
+        vm.Configure(canvas);
+        try
+        {
+            await vm.RunTransientCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(5));
+            var model = vm.PlotModel;
+            var traces = model.Series.Cast<LineSeries>().ToArray();
+            model.Axes[0].Zoom(0.25, 1.25);
 
-        vm.Series[0].IsVisible = false;
+            vm.Series[0].IsVisible = false;
 
-        vm.PlotModel.ShouldBeSameAs(model);
-        ((IPlotModel)model).Update(false);
-        model.Axes[0].ActualMinimum.ShouldBe(0.25);
-        model.Axes[0].ActualMaximum.ShouldBe(1.25);
-        model.Series.Where(s => s.IsVisible).Single().ShouldBeSameAs(traces[1]);
-        vm.Series[0].IsVisible = true;
-        model.Series.Where(s => s.IsVisible).Count().ShouldBe(2);
-        model.Series[0].ShouldBeSameAs(traces[0]);
-        traces[0].Points[1].Y.ShouldBe(1.0);
+            vm.PlotModel.ShouldBeSameAs(model);
+            ((IPlotModel)model).Update(false);
+            model.Axes[0].ActualMinimum.ShouldBe(0.25);
+            model.Axes[0].ActualMaximum.ShouldBe(1.25);
+            model.Series.Where(s => s.IsVisible).Single().ShouldBeSameAs(traces[1]);
+            vm.Series[0].IsVisible = true;
+            model.Series.Where(s => s.IsVisible).Count().ShouldBe(2);
+            model.Series[0].ShouldBeSameAs(traces[0]);
+            traces[0].Points[1].Y.ShouldBe(1.0);
+        }
+        finally
+        {
+            await vm.StopAsync();
+            await canvas.Document.RetireAsync();
+            canvas.DisposeDocumentBindings();
+        }
+    }
+
+    private sealed class CompletedRunner(TimeDomainResult result) : ITransientSimulationRunner
+    {
+        public Task<TransientSimulationOutcome> RunAsync(TransientSimulationRequest request, CancellationToken cancellationToken)
+            => Task.FromResult(new TransientSimulationOutcome(result, []));
     }
 }
 

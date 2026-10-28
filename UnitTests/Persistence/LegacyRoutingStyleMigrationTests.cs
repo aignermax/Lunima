@@ -89,14 +89,14 @@ public class LegacyRoutingStyleMigrationTests
     private (FileOperationsViewModel vm, DesignCanvasViewModel canvas) CreateSetup()
     {
         var canvas = new DesignCanvasViewModel();
-        var vm = new FileOperationsViewModel(
+        var vm = new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             _library,
-            new GdsExportViewModel(new CAP_Core.Export.GdsExportService()),
-            new PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas),
+            new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_Core.Export.PhotonTorchExporter(), canvas),
             null!);
         return (vm, canvas);
     }

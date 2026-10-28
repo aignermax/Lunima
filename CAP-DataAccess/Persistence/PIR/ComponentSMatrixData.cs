@@ -6,6 +6,13 @@ namespace CAP_DataAccess.Persistence.PIR;
 /// </summary>
 public class ComponentSMatrixData
 {
+    /// <summary>Copies every matrix value before background serialization.</summary>
+    public ComponentSMatrixData Copy() => new()
+    {
+        SourceNote = SourceNote,
+        Wavelengths = Wavelengths.ToDictionary(pair => pair.Key, pair => pair.Value.Copy(), Wavelengths.Comparer)
+    };
+
     /// <summary>
     /// S-matrix entries keyed by wavelength in nanometers (string key for JSON compatibility).
     /// Example key: "1550" for 1550 nm.
@@ -27,6 +34,13 @@ public class ComponentSMatrixData
 /// </summary>
 public class SMatrixWavelengthEntry
 {
+    /// <summary>Copies matrix arrays and port ordering without changing their representation.</summary>
+    public SMatrixWavelengthEntry Copy() => new()
+    {
+        Rows = Rows, Cols = Cols, Real = [.. Real], Imag = [.. Imag],
+        PortNames = PortNames is null ? null : [.. PortNames]
+    };
+
     /// <summary>Number of rows (= number of ports).</summary>
     public int Rows { get; set; }
 

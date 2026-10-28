@@ -37,7 +37,7 @@ public class ProcessBridgeCheckboxForkTests : IDisposable
     }
 
     private ProcessManagementViewModel CreateVm(UserPdkStore store) =>
-        new(Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), userPdkStore: store);
+        new(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver(), userPdkStore: store);
 
     private UserPdkStore TempStore() =>
         new(Path.Combine(_tempDir, "user-pdks"), new PdkJsonSaver(), new PdkLoader());

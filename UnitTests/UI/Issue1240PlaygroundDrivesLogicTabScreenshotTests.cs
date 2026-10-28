@@ -68,7 +68,7 @@ public class Issue1240PlaygroundDrivesLogicTabScreenshotTests
         await logic.BuildNetworkCommand.ExecuteAsync(null);
         logic.HasNetwork.ShouldBeTrue(logic.StatusText);
 
-        var playground = new IsaPlaygroundViewModel(provider)
+        var playground = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider)
         {
             UsePhotonicAdder = true,
             ProgramText = "LOAD 5\nSTORE 0\nLOAD 3\nADD 0\nHALT",

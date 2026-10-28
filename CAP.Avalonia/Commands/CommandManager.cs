@@ -12,8 +12,8 @@ public class CommandManager : INotifyPropertyChanged
 
     private readonly LinkedList<IUndoableCommand> _undoStack = new();
     private readonly Stack<IUndoableCommand> _redoStack = new();
-    private readonly Dictionary<IUndoableCommand, (LinkedListNode<IUndoableCommand>? Anchor, int Generation)> _pending = new();
-    private int _historyGeneration;
+    private readonly Dictionary<IUndoableCommand, LinkedListNode<IUndoableCommand>?> _pending = new(ReferenceEqualityComparer.Instance);
+    private readonly ConditionalWeakTable<IUndoableCommand, object> _retiredReservations = new();
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -34,6 +34,9 @@ public class CommandManager : INotifyPropertyChanged
 
     /// <summary>Raised after the whole history was dropped.</summary>
     public event Action? HistoryCleared;
+
+    /// <summary>Raised when an entry can no longer be undone, redone, or committed.</summary>
+    public event Action<IUndoableCommand>? HistoryEntryRetired;
 
     /// <summary>
     /// Gets whether there are commands that can be undone.
@@ -68,7 +71,8 @@ public class CommandManager : INotifyPropertyChanged
     /// <summary>Establishes ownership before an asynchronous command starts mutating the design.</summary>
     public void BeginExecution(IUndoableCommand command)
     {
-        _pending.Add(command, (_undoStack.Last, _historyGeneration));
+        if (_retiredReservations.TryGetValue(command, out _)) return;
+        _pending.Add(command, _undoStack.Last);
         Executing?.Invoke(command);
         NotifyPropertyChanged(nameof(CanUndo));
         NotifyPropertyChanged(nameof(CanRedo));
@@ -78,6 +82,8 @@ public class CommandManager : INotifyPropertyChanged
     public void CancelExecution(IUndoableCommand command)
     {
         if (!_pending.Remove(command)) return;
+        _retiredReservations.GetValue(command, _ => new object());
+        HistoryEntryRetired?.Invoke(command);
         NotifyPropertyChanged(nameof(CanUndo));
         NotifyPropertyChanged(nameof(CanRedo));
     }
@@ -87,13 +93,13 @@ public class CommandManager : INotifyPropertyChanged
     /// </summary>
     public void ExecuteCommand(IUndoableCommand command)
     {
-        var completing = _pending.Remove(command, out var reservation);
-        if (completing && reservation.Generation != _historyGeneration)
+        if (_retiredReservations.TryGetValue(command, out _))
         {
             NotifyPropertyChanged(nameof(CanUndo));
             NotifyPropertyChanged(nameof(CanRedo));
             return;
         }
+        var completing = _pending.Remove(command, out var anchor);
         // Decided up front so side effects of the execution are attributed to the history
         // entry that will own them.
         var mergeTarget = !completing && _pending.Count == 0 && _undoStack.Count > 0
@@ -111,8 +117,8 @@ public class CommandManager : INotifyPropertyChanged
         }
         else
         {
-            if (completing && reservation.Anchor?.List == _undoStack)
-                _undoStack.AddAfter(reservation.Anchor, command);
+            if (completing && anchor?.List == _undoStack)
+                _undoStack.AddAfter(anchor, command);
             else if (completing)
                 _undoStack.AddFirst(command);
             else
@@ -121,12 +127,16 @@ public class CommandManager : INotifyPropertyChanged
             // Trim history if too large
             while (_undoStack.Count > MaxHistorySize)
             {
+                var retired = _undoStack.First!.Value;
                 _undoStack.RemoveFirst();
+                HistoryEntryRetired?.Invoke(retired);
             }
         }
 
         // Clear redo stack when new command is executed
+        var discardedRedo = _redoStack.ToArray();
         _redoStack.Clear();
+        foreach (var retired in discardedRedo) HistoryEntryRetired?.Invoke(retired);
 
         NotifyPropertyChanged(nameof(CanUndo));
         NotifyPropertyChanged(nameof(CanRedo));
@@ -194,9 +204,13 @@ public class CommandManager : INotifyPropertyChanged
     /// </summary>
     public void ClearHistory()
     {
-        _historyGeneration++;
+        var retired = _undoStack.Concat(_redoStack).Concat(_pending.Keys).ToArray();
+        foreach (var command in _pending.Keys)
+            _retiredReservations.GetValue(command, _ => new object());
+        _pending.Clear();
         _undoStack.Clear();
         _redoStack.Clear();
+        foreach (var command in retired) HistoryEntryRetired?.Invoke(command);
         HistoryCleared?.Invoke();
 
         NotifyPropertyChanged(nameof(CanUndo));

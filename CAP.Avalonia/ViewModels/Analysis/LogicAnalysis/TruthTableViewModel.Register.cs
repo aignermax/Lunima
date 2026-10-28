@@ -27,8 +27,9 @@ public partial class TruthTableViewModel
     /// <summary>Writes the toggle through to the group's persisted assignment, when one exists.</summary>
     partial void OnIsRegisterChanged(bool value)
     {
-        if (_revertingPinCheck)
+        if (_revertingPinCheck || _work.IsStopping)
             return;
+        _work.Invalidate();
         var assignment = _group?.TruthTablePinAssignment;
         if (assignment != null)
         {

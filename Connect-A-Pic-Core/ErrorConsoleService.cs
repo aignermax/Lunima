@@ -7,7 +7,7 @@ namespace CAP_Core;
 /// Singleton service that collects application log entries for display in the error console UI.
 /// Retains at most <see cref="MaxEntries"/> entries to prevent unbounded memory growth.
 /// </summary>
-public class ErrorConsoleService
+public class ErrorConsoleService : IDiagnosticSink
 {
     /// <summary>Maximum number of retained log entries.</summary>
     public const int MaxEntries = 100;

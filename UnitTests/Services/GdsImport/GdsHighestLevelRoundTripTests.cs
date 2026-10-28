@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using System.Diagnostics;
 using System.Globalization;
 using CAP.Avalonia.Services;
@@ -505,7 +506,7 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     // ── Harness ──────────────────────────────────────────────────────────────
 
     /// <summary>Internal for <see cref="GdsReexportIdempotencyTests"/> (the re-export generation loop).</summary>
-    internal sealed record ExportResult(
+    internal sealed record GdsExportResult(
         DesignCanvasViewModel Canvas,
         string Script,
         string GdsPath,
@@ -522,7 +523,7 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     /// bare-nazca python would write (stub boxes + (1,10) pin labels). Internal
     /// static so <see cref="GdsReexportIdempotencyTests"/> shares the same exports.
     /// </summary>
-    internal static async Task<ExportResult> ExportUserDesignAsync(
+    internal static async Task<GdsExportResult> ExportUserDesignAsync(
         bool stripSiepicUpgrade, bool requireSiepicUpgradeStack = true)
     {
         var python = await FindExportPythonAsync(requireSiepicUpgradeStack);
@@ -530,11 +531,11 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         // run cost seconds each, and every caller only reads the result. The files live in
         // a run-wide directory — callers' own roots stay theirs to clean up.
         var export = ExportCache.GetOrAdd((stripSiepicUpgrade, python!),
-            key => new Lazy<Task<ExportResult>>(() => ExportUserDesignUncachedAsync(key.Python, key.Strip)));
+            key => new Lazy<Task<GdsExportResult>>(() => ExportUserDesignUncachedAsync(key.Python, key.Strip)));
         return await export.Value;
     }
 
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(bool Strip, string Python), Lazy<Task<ExportResult>>>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(bool Strip, string Python), Lazy<Task<GdsExportResult>>>
         ExportCache = new();
 
     private static readonly string ExportCacheRoot = CreateExportCacheRoot();
@@ -575,7 +576,7 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         return python;
     }
 
-    private static async Task<ExportResult> ExportUserDesignUncachedAsync(string python, bool stripSiepicUpgrade)
+    private static async Task<GdsExportResult> ExportUserDesignUncachedAsync(string python, bool stripSiepicUpgrade)
     {
         var canvas = GdsUserDesignFixture.BuildUserDesignCanvas();
         var skippedConnections = new List<string>();
@@ -600,7 +601,7 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         File.Exists(gdsPath).ShouldBeTrue($"script did not write {gdsPath}:\n{run.StdOut}");
 
         var siepicUpgraded = run.StdOut.Contains("SiEPIC cell(s) upgraded", StringComparison.Ordinal);
-        return new ExportResult(
+        return new GdsExportResult(
             canvas, script, gdsPath, python, siepicUpgraded, skippedConnections, exportWarnings, run.StdErr);
     }
 
@@ -622,7 +623,7 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     internal static async Task<GdsImportOutcome> ImportExplodeAsync(
         GdsDesignScopeTestHost host, string gdsPath, Func<IReadOnlyList<ComponentTemplate>>? templateProvider = null)
     {
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         analysis.TopCellCandidates.ShouldBe(new[] { "ConnectAPIC_Design" });
         analysis.TopCells.ShouldBe(new[] { new GdsTopCellSummary("ConnectAPIC_Design", 7) });
 

@@ -66,8 +66,9 @@ public class ImpulseResponseBuilder
     public IReadOnlyList<ImpulseResponse> Build(
         double centerWavelengthNm, double spanNm, int nPoints,
         IReadOnlyCollection<Guid>? activeInputPinIds = null,
-        TransitiveClosureContext? circuitContext = null)
+        TransitiveClosureContext? circuitContext = null, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (nPoints < 2) throw new ArgumentOutOfRangeException(nameof(nPoints), "Need at least 2 frequency points.");
         if (spanNm <= 0) throw new ArgumentOutOfRangeException(nameof(spanNm));
 
@@ -80,6 +81,7 @@ public class ImpulseResponseBuilder
         // the design. Only field-dependent (inner-loop) connections are truly nonlinear.
         int referenceNm = FreqToWavelengthNmInt(freqGrid[nPoints / 2]);
         var referenceMatrix = _matrixBuilder.GetSystemSMatrix(referenceNm);
+        cancellationToken.ThrowIfCancellationRequested();
         EvaluateParameterOnlyAndThrowIfFieldDependent(referenceMatrix);
 
         // Cache S-matrix results by rounded wavelength nm to avoid duplicate calls.
@@ -93,8 +95,8 @@ public class ImpulseResponseBuilder
         // fast with the actionable message instead of running into an OOM allocation.
         ThrowIfMemoryLimitExceeded(matrixCache[referenceNm].Count, nPoints);
 
-        var hFreq = CollectFrequencyResponses(freqGrid, nPoints, matrixCache, activeInputPinIds, circuitContext);
-        return InverseTransform(hFreq, nPoints, dt);
+        var hFreq = CollectFrequencyResponses(freqGrid, nPoints, matrixCache, activeInputPinIds, circuitContext, cancellationToken);
+        return InverseTransform(hFreq, nPoints, dt, cancellationToken);
     }
 
     /// <summary>
@@ -118,11 +120,12 @@ public class ImpulseResponseBuilder
         double[] freqGrid, int nPoints,
         Dictionary<int, Dictionary<(Guid, Guid), Complex>> matrixCache,
         IReadOnlyCollection<Guid>? activeInputPinIds,
-        TransitiveClosureContext? circuitContext)
+        TransitiveClosureContext? circuitContext, CancellationToken cancellationToken)
     {
         var hFreq = new Dictionary<(Guid, Guid), Complex[]>();
         for (int k = 0; k < nPoints; k++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int wavelengthNm = FreqToWavelengthNmInt(freqGrid[k]);
             if (!matrixCache.TryGetValue(wavelengthNm, out var values))
             {
@@ -136,6 +139,7 @@ public class ImpulseResponseBuilder
                 // connection set is wavelength-invariant (interpolators copy it over), but if
                 // that invariant ever breaks, a field-dependent connection must throw here
                 // rather than silently stay 0 in the linear matrix.
+                cancellationToken.ThrowIfCancellationRequested();
                 EvaluateParameterOnlyAndThrowIfFieldDependent(sMatrix);
                 values = ComputeTransitiveValues(sMatrix, activeInputPinIds, circuitContext, wavelengthNm);
                 matrixCache[wavelengthNm] = values;
@@ -189,12 +193,13 @@ public class ImpulseResponseBuilder
     /// (unit-delta identity convolution).
     /// </summary>
     private static IReadOnlyList<ImpulseResponse> InverseTransform(
-        Dictionary<(Guid, Guid), Complex[]> hFreq, int nPoints, double dt)
+        Dictionary<(Guid, Guid), Complex[]> hFreq, int nPoints, double dt, CancellationToken cancellationToken)
     {
         var results = new List<ImpulseResponse>(hFreq.Count);
         double invN = 1.0 / nPoints;
         foreach (var (conn, hf) in hFreq)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var ht = (Complex[])hf.Clone();
             Fourier.Inverse(ht, FourierOptions.NoScaling);
             for (int i = 0; i < ht.Length; i++)

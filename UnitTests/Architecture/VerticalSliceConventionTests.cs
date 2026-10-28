@@ -158,21 +158,55 @@ public class VerticalSliceConventionTests
 
             var afterUsing = trimmed[6..].TrimEnd(';', ' ');
 
-            // Skip alias imports (e.g., "using Alias = Some.Namespace") — the target
-            // is visible in the type reference, not the using statement.
-            if (afterUsing.Contains(" = "))
-                continue;
-
             // Skip global using and static using modifiers
             if (afterUsing.StartsWith("global ") || afterUsing.StartsWith("static "))
                 continue;
 
-            if (siblingNamespaces.Any(ns => afterUsing.StartsWith(ns)))
+            if (IsSiblingImport(relativePath, afterUsing, siblingNamespaces))
             {
                 violations.Add($"{relativePath}: `using {afterUsing}`");
             }
         }
     }
+
+    // These process owners live in a legacy Export namespace, but are shared infrastructure
+    // in RepositoryModelNamespaces/RepositoryTypeOwnership. Permit only registration
+    // infrastructure and its fixtures, never presentation or the whole Export namespace.
+    private static bool IsSiblingImport(string relativePath, string import, string[] siblingNamespaces)
+    {
+        var path = relativePath.Replace('\\', '/');
+        var agentBridge = path.StartsWith("CAP.Avalonia/Services/AgentBridge/", StringComparison.Ordinal)
+            || path.StartsWith("CAP.Avalonia/ViewModels/Settings/AgentBridge/", StringComparison.Ordinal)
+            || path.StartsWith("UnitTests/AgentBridge/", StringComparison.Ordinal);
+        var alias = import.IndexOf(" = ", StringComparison.Ordinal);
+        if (alias >= 0)
+        {
+            // Preserve the older scanner outside this reconciled slice. The semantic
+            // architecture analyzer checks aliases and all type references repository-wide.
+            if (!agentBridge) return false;
+            import = import[(alias + 3)..].Trim();
+        }
+
+        var processConsumer = path.StartsWith("CAP.Avalonia/Services/AgentBridge/Registration/", StringComparison.Ordinal)
+            || path.StartsWith("UnitTests/AgentBridge/", StringComparison.Ordinal);
+        if (processConsumer && (import == "CAP_Core.Export.Processes"
+                || import == "CAP_Core.Export.ProcessLaunchFactory"))
+            return false;
+
+        return siblingNamespaces.Any(ns => import == ns || import.StartsWith(ns + ".", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("CAP.Avalonia/Services/AgentBridge/Registration/CliProcessRunner.cs", "CAP_Core.Export.Processes", false)]
+    [InlineData("UnitTests/AgentBridge/Fixture.cs", "Factory = CAP_Core.Export.ProcessLaunchFactory", false)]
+    [InlineData("CAP.Avalonia/Services/AgentBridge/Registration/Registrar.cs", "CAP_Core.Export", true)]
+    [InlineData("CAP.Avalonia/Services/AgentBridge/Registration/Registrar.cs", "Export = CAP_Core.Export.GdsExportService", true)]
+    [InlineData("CAP.Avalonia/ViewModels/Settings/AgentBridge/Settings.cs", "CAP_Core.Export.Processes", true)]
+    [InlineData("CAP.Avalonia/ViewModels/Settings/AgentBridge/Settings.cs", "Factory = CAP_Core.Export.ProcessLaunchFactory", true)]
+    [InlineData("CAP.Avalonia/Services/AgentBridge/Tools/Tool.cs", "CAP_Core.Export.Processes", true)]
+    [InlineData("UnitTests/AgentBridge/Fixture.cs", "CAP_Core.Export.ProcessesExtra", true)]
+    public void SharedProcessImports_KeepExportAndPresentationBoundaries(string path, string import, bool forbidden)
+        => IsSiblingImport(path, import, new[] { "CAP_Core.Export" }).ShouldBe(forbidden);
 
     private static string FindRepoRoot()
     {

@@ -15,16 +15,27 @@ public sealed record RepairEditPlan(IUndoableCommand Command, Func<bool> Applied
     /// <summary>Runs the command, then each follow-up after a routing pass; ends with a routing pass.</summary>
     public async Task<bool> ExecuteAndRouteAsync(AgentDesignSession session)
     {
-        session.Commands.ExecuteCommand(Command);
-        if (!Applied())
-            return false;
+        await using var operation = new AgentDocumentOperation(session.Canvas);
+        return await ExecuteAndRouteAsync(session, operation);
+    }
+
+    /// <summary>Retains the caller's permission across every follow-up and routing pass.</summary>
+    public async Task<bool> ExecuteAndRouteAsync(AgentDesignSession session, AgentDocumentOperation operation)
+    {
+        return await ExecuteStepsAsync(session, operation.Commit, async () => { await operation.RouteAsync(); });
+    }
+
+    internal async Task<bool> ExecuteStepsAsync(AgentDesignSession session, Action<Action> commit, Func<Task> route)
+    {
+        commit(() => session.Commands.ExecuteCommand(Command));
+        if (!Applied()) return false;
         foreach (var followUp in FollowUps ?? Array.Empty<IUndoableCommand>())
         {
-            await Edit.RoutingAwaiter.RerouteAndWaitAsync(session.Canvas);
-            session.Commands.ExecuteCommand(followUp);
+            await route();
+            commit(() => session.Commands.ExecuteCommand(followUp));
         }
-        await Edit.RoutingAwaiter.RerouteAndWaitAsync(session.Canvas);
-        session.Canvas.InvalidateSimulation();
+        await route();
+        commit(session.Canvas.InvalidateSimulation);
         return true;
     }
 }
@@ -37,10 +48,13 @@ public sealed record RepairEditPlan(IUndoableCommand Command, Func<bool> Applied
 /// <param name="Description">Human-readable summary, also shown to the agent.</param>
 /// <param name="GeometryChangeUm">How far geometry moves (µm) — the last ranking key.</param>
 /// <param name="Arguments">The equivalent direct tool call (tool name and arguments), so the agent can replay or vary it.</param>
-/// <param name="Build">Builds the edit, or returns null with a reason when it is not possible right now.</param>
+/// <param name="Instruction">Detached edit parameters, resolved against the receiving session.</param>
 public sealed record RepairCandidate(
     string Kind, string Description, double GeometryChangeUm, object Arguments,
-    Func<(RepairEditPlan? Plan, string? Error)> Build);
+    RepairInstruction Instruction)
+{
+    public (RepairEditPlan? Plan, string? Error) Build(AgentDesignSession session) => Instruction.Build(session);
+}
 
 /// <summary>Result of trying one candidate in the sandbox.</summary>
 /// <param name="Candidate">What was tried.</param>
@@ -49,7 +63,7 @@ public sealed record RepairCandidate(
 /// <param name="BlockedAfter">Blocked wires after the edit and re-route.</param>
 /// <param name="CrossingsAdded">Crossing components added (negative: removed).</param>
 /// <param name="TargetFixed">Whether the wire being repaired is no longer blocked.</param>
-/// <param name="Seconds">Wall time of the trial including both re-routes.</param>
+/// <param name="Seconds">Wall time of the private trial including its routing passes.</param>
 public sealed record TrialOutcome(
     RepairCandidate Candidate, bool Applicable, string? Note, int BlockedAfter, int CrossingsAdded,
     bool TargetFixed, double Seconds);

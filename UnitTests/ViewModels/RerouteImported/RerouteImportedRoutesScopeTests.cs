@@ -1,3 +1,4 @@
+using UnitTests.ViewModels.Canvas;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Canvas.RerouteImported;
@@ -15,7 +16,7 @@ public partial class RerouteImportedRoutesViewModelTests
     [InlineData(false, true)]
     public async Task RerouteGroup_WaitsForPreviousWorkerBeforeReplacingTheCanvas(bool removeGroupWhileWaiting, bool stopWhileWaiting)
     {
-        var canvas = new DesignCanvasViewModel();
+        var canvas = ReportedRoutingWorker.CreateCanvas();
         var (startA, endA) = AddComponentPair(canvas, 0);
         var (startB, endB) = AddComponentPair(canvas, 2000);
         ConnectFrozenImported(canvas, startA, endA);
@@ -26,14 +27,8 @@ public partial class RerouteImportedRoutesViewModelTests
         var outside = ConnectFrozenImported(canvas, outsideStart, outsideEnd).Connection;
         outside.IsRouteFrozen = false;
         outside.InvalidateRoute();
-        using var parked = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        canvas.Routing.BuildConnectionProcessFloorProvider = () => (_, _) =>
-        {
-            parked.Set();
-            release.Wait();
-            return null;
-        };
+        var routing = (ReportedRoutingWorker)canvas.Routing;
+        routing.BlockWorker = true;
         var commands = new CommandManager();
         var viewModel = new RerouteImportedRoutesViewModel(canvas, commands);
         commands.ExecuteCommand(new CreateGroupCommand(canvas, selected, "ImportedTopCell"));
@@ -51,7 +46,7 @@ public partial class RerouteImportedRoutesViewModelTests
         Task? reroute = null;
         try
         {
-            parked.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
+            await routing.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             reroute = viewModel.RerouteAllCommand.ExecuteAsync(null);
             canvas.IsInGroupEditMode.ShouldBeFalse(
                 "a live worker must finish before its connection list becomes a different canvas");
@@ -66,8 +61,8 @@ public partial class RerouteImportedRoutesViewModelTests
         }
         finally
         {
-            release.Set();
-            if (reroute != null) await reroute;
+            routing.Release.TrySetResult();
+            if (reroute != null) await reroute.WaitAsync(TimeSpan.FromSeconds(30));
             await canvas.RecalculateRoutesAsync();
         }
         if (stopWhileWaiting)
@@ -126,7 +121,7 @@ public partial class RerouteImportedRoutesViewModelTests
     [InlineData(true)]
     public async Task RerouteAll_TargetRemovedDuringCanvasRouting_KeepsOnlyLiveHistory(bool replaceCanvas)
     {
-        var canvas = new DesignCanvasViewModel();
+        var canvas = ReportedRoutingWorker.CreateCanvas();
         var (groupStart, groupEnd) = AddComponentPair(canvas, 2000);
         ConnectFrozenImported(canvas, groupStart, groupEnd);
         var commands = new CommandManager();
@@ -135,19 +130,13 @@ public partial class RerouteImportedRoutesViewModelTests
         var groupVm = canvas.Components.Single();
         var (start, end) = AddComponentPair(canvas, 0);
         var route = ConnectFrozenImported(canvas, start, end).Connection;
-        using var parked = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        canvas.Routing.BuildConnectionProcessFloorProvider = () => (_, _) =>
-        {
-            parked.Set();
-            release.Wait();
-            return null;
-        };
+        var routing = (ReportedRoutingWorker)canvas.Routing;
+        routing.BlockWorker = true;
         var vm = new RerouteImportedRoutesViewModel(canvas, commands);
         var reroute = vm.RerouteAllCommand.ExecuteAsync(null);
         try
         {
-            parked.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
+            await routing.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             canvas.Components.Remove(groupVm);
             if (replaceCanvas)
             {
@@ -156,7 +145,7 @@ public partial class RerouteImportedRoutesViewModelTests
                 commands.ClearHistory();
             }
         }
-        finally { release.Set(); await reroute; }
+        finally { routing.Release.TrySetResult(); await reroute.WaitAsync(TimeSpan.FromSeconds(30)); }
         if (replaceCanvas)
         {
             commands.UndoCount.ShouldBe(0, "old design snapshots must not enter new design history");
@@ -178,7 +167,7 @@ public partial class RerouteImportedRoutesViewModelTests
     [InlineData(true)]
     public async Task RerouteAll_OpeningAnotherScope_KeepsHistory(bool startInsideGroup)
     {
-        var canvas = new DesignCanvasViewModel();
+        var canvas = ReportedRoutingWorker.CreateCanvas();
         var (groupStart, groupEnd) = AddComponentPair(canvas, 2000);
         ConnectFrozenImported(canvas, groupStart, groupEnd);
         var commands = new CommandManager();
@@ -196,24 +185,18 @@ public partial class RerouteImportedRoutesViewModelTests
             canvas.EnterGroupEditMode(originalScope);
             route = canvas.Connections.Single().Connection;
         }
-        using var parked = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        canvas.Routing.BuildConnectionProcessFloorProvider = () => (_, _) =>
-        {
-            parked.Set();
-            release.Wait();
-            return null;
-        };
+        var routing = (ReportedRoutingWorker)canvas.Routing;
+        routing.BlockWorker = true;
         var vm = new RerouteImportedRoutesViewModel(canvas, commands);
         var reroute = vm.RerouteAllCommand.ExecuteAsync(null);
         try
         {
-            parked.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
+            await routing.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             route.IsRouteFrozen.ShouldBeFalse("the root operation already changed this route");
             if (startInsideGroup) canvas.ExitGroupEditMode();
             else canvas.EnterGroupEditMode(group);
         }
-        finally { release.Set(); await reroute; }
+        finally { routing.Release.TrySetResult(); await reroute.WaitAsync(TimeSpan.FromSeconds(30)); }
         canvas.CurrentEditGroup.ShouldBeSameAs(startInsideGroup ? null : group,
             "reroute must not steal the user's new scope");
         commands.UndoCount.ShouldBe(startInsideGroup ? 3 : 2,

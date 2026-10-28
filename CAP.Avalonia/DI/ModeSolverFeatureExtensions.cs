@@ -39,7 +39,8 @@ internal static class ModeSolverFeatureExtensions
         {
             var vm = new ModeSolverViewModel(
                 sp.GetRequiredService<IModeSolverService>(),
-                sp.GetRequiredService<CrossSectionDefaultsStore>());
+                sp.GetRequiredService<CrossSectionDefaultsStore>(),
+                sp.GetRequiredService<Services.Lifetime.ApplicationWorkCoordinator>());
             vm.EnsureBackendAsync = MakeEnsureBackend(sp);
             return vm;
         });
@@ -47,7 +48,8 @@ internal static class ModeSolverFeatureExtensions
         {
             var vm = new ModeProbeViewModel(
                 sp.GetRequiredService<IModeSolverService>(),
-                sp.GetRequiredService<CrossSectionDefaultsStore>());
+                sp.GetRequiredService<CrossSectionDefaultsStore>(),
+                sp.GetRequiredService<Services.Lifetime.ApplicationWorkCoordinator>());
             vm.EnsureBackendAsync = MakeEnsureBackend(sp);
             return vm;
         });

@@ -26,7 +26,7 @@ public class DynamicGdsFilenameIntegrationTests
         // Arrange
         var exporter = new SimpleNazcaExporter();
         var exportService = new GdsExportService();
-        var viewModel = new GdsExportViewModel(exportService);
+        var viewModel = new GdsExportViewModel(exportService, new global::CAP_Core.Export.PythonDiscoveryService());
 
         var canvas = CreateMinimalCanvas();
 
@@ -120,7 +120,7 @@ public class DynamicGdsFilenameIntegrationTests
         // Arrange
         var exporter = new SimpleNazcaExporter();
         var exportService = new GdsExportService();
-        var viewModel = new GdsExportViewModel(exportService);
+        var viewModel = new GdsExportViewModel(exportService, new global::CAP_Core.Export.PythonDiscoveryService());
 
         var canvas = CreateMinimalCanvas();
 

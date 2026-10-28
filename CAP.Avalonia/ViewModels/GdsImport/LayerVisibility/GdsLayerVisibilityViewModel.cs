@@ -1,3 +1,4 @@
+using CAP_DataAccess.Persistence.NativeDesign;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CAP.Avalonia.Services.GdsImport.LayerVisibility;
@@ -14,13 +15,14 @@ namespace CAP.Avalonia.ViewModels.GdsImport.LayerVisibility;
 /// toggles and opacity sliders. Edits go into <see cref="State"/> — a pure
 /// view filter the canvas renderers consult, persisted per design in the .lun.
 /// </summary>
-public partial class GdsLayerVisibilityViewModel : ObservableObject
+public partial class GdsLayerVisibilityViewModel : ObservableObject, IDisposable
 {
     /// <summary>Full opacity in the percent scale the sliders use.</summary>
     private const double FullOpacityPercent = 100.0;
 
     private readonly DesignCanvasViewModel _canvas;
     private bool _refreshQueued;
+    private bool _disposed;
 
     /// <summary>True while the canvas carries any imported per-layer geometry.</summary>
     [ObservableProperty]
@@ -30,12 +32,25 @@ public partial class GdsLayerVisibilityViewModel : ObservableObject
     public GdsLayerVisibilityViewModel(DesignCanvasViewModel canvas)
     {
         _canvas = canvas;
-        _canvas.Components.CollectionChanged += (_, _) => QueueRefresh();
-        _canvas.CanvasFrozenPaths.CollectionChanged += (_, _) => QueueRefresh();
+        _canvas.Components.CollectionChanged += ContentChanged;
+        _canvas.CanvasFrozenPaths.CollectionChanged += ContentChanged;
         // Routed waveguides carry the process companion bands (trench / cladding / keep-out).
-        _canvas.Connections.CollectionChanged += (_, _) => QueueRefresh();
-        State.Changed += () => _canvas.RepaintRequested?.Invoke();
+        _canvas.Connections.CollectionChanged += ContentChanged;
+        State.Changed += Repaint;
     }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _canvas.Components.CollectionChanged -= ContentChanged;
+        _canvas.CanvasFrozenPaths.CollectionChanged -= ContentChanged;
+        _canvas.Connections.CollectionChanged -= ContentChanged;
+        State.Changed -= Repaint;
+        SettingsEdited = null;
+    }
+
+    private void ContentChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs args) => QueueRefresh();
+    private void Repaint() => _canvas.RepaintRequested?.Invoke();
 
     /// <summary>The per-layer display state the canvas renderers consult.</summary>
     public GdsLayerVisibilityState State { get; } = new();
@@ -52,6 +67,7 @@ public partial class GdsLayerVisibilityViewModel : ObservableObject
     /// <summary>Rebuilds the rows from the canvas contents and the current state.</summary>
     public void Refresh()
     {
+        if (_disposed) return;
         var usages = WaveguideCompanionLayerUsage.Merge(
             DesignLayerUsageCollector.Collect(
                 _canvas.Components.Select(vm => vm.Component),
@@ -111,7 +127,7 @@ public partial class GdsLayerVisibilityViewModel : ObservableObject
     /// </summary>
     private void QueueRefresh()
     {
-        if (_refreshQueued)
+        if (_disposed || _refreshQueued)
             return;
         _refreshQueued = true;
         try

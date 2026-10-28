@@ -69,7 +69,7 @@ public class Issue582FdtdCoverageScreenshotTests
                     It.IsAny<FdtdSMatrixRequest>(), It.IsAny<IProgress<string>?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(FakeResult(solvedWavelengthsUm));
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: (_, _) => Task.FromResult<FdtdSMatrixRequest?>(new FdtdSMatrixRequest()));

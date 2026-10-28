@@ -1,3 +1,4 @@
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -29,7 +30,7 @@ public enum WizardStep
 /// </summary>
 public partial class PdkImportWizardViewModel : ObservableObject
 {
-    private readonly PdkImportService _importService;
+    private readonly IPdkImportWorkflow _importService;
     private PdkParseResult? _parseResult;
 
     /// <summary>
@@ -104,7 +105,7 @@ public partial class PdkImportWizardViewModel : ObservableObject
     /// <summary>Initializes a new <see cref="PdkImportWizardViewModel"/>.</summary>
     /// <param name="pyFilePath">Absolute path to the Python .py file to import.</param>
     /// <param name="importService">Service that parses and converts PDK data.</param>
-    public PdkImportWizardViewModel(string pyFilePath, PdkImportService importService)
+    public PdkImportWizardViewModel(string pyFilePath, IPdkImportWorkflow importService)
     {
         PyFilePath = pyFilePath ?? throw new ArgumentNullException(nameof(pyFilePath));
         _importService = importService ?? throw new ArgumentNullException(nameof(importService));

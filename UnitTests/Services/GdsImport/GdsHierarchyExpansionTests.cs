@@ -40,7 +40,7 @@ public class GdsHierarchyExpansionTests
         var placement = PlaceComponentCommand.CreateExact(canvas, host.Templates.Single(), 100, 200,
             mirrorPinsHorizontally: mirror, exactRotationDegrees: angle);
         placement.Execute();
-        return (canvas, placement.CreatedViewModel!, new GdsHierarchyExpansionService(host.Scope));
+        return (canvas, placement.CreatedViewModel!, new GdsHierarchyExpansionService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope));
     }
 
     [Theory]

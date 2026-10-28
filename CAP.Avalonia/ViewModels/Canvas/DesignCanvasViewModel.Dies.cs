@@ -44,8 +44,8 @@ public partial class DesignCanvasViewModel
             return;
         if (Dies.IsAssemblyRoot)
             RefreshDieInterfaces();
-        _ = Dies.ApplyScopeBoundsInBackground();
         NotifyDiesChanged();
+        _ = Dies.ApplyScopeBoundsInBackground();
         _ = RecalculateRoutesAsync();
     }
 
@@ -62,8 +62,8 @@ public partial class DesignCanvasViewModel
         if (Math.Abs(component.X - _dragStart.X) < 1e-9 && Math.Abs(component.Y - _dragStart.Y) < 1e-9)
             return true;
         // The carrier grid takes a second or more to rebuild — never on the UI thread at the drop.
-        _ = Dies.ApplyScopeBoundsInBackground();
         NotifyDiesChanged();
+        _ = Dies.ApplyScopeBoundsInBackground();
         return !DieMoveNeedsRouting(die);
     }
 

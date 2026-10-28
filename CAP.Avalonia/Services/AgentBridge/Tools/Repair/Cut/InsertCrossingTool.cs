@@ -40,8 +40,14 @@ public sealed class InsertCrossingTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) => ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        await using var edit = new AgentDocumentOperation(_session.Canvas, context);
         var id = ToolArguments.GetString(arguments, "connection_id") ?? "";
         var cut = _session.FindConnection(id)?.Connection;
         if (cut == null)
@@ -60,10 +66,10 @@ public sealed class InsertCrossingTool : IAgentBridgeTool
         if (plan == null)
             return AgentToolResult.Error("Cannot cut there: " + error);
 
-        var routed = await RepairEdit.ExecuteAndRouteAsync(_session, plan.Command);
+        var routed = await RepairEdit.ExecuteAndRouteAsync(_session, plan.Command, edit);
         if (!plan.Insert.Succeeded)
         {
-            await RepairEdit.UndoAndRouteAsync(_session);
+            await RepairEdit.UndoAndRouteAsync(_session, edit);
             return AgentToolResult.Error("The crossing could not be inserted there (the wire changed or the crossing lacks a port).");
         }
 

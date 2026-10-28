@@ -154,7 +154,7 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
         ScreenshotArtifacts.SavePng(panel2, path2);
 
         // ── 6. Analyze + explode-import through the button's service path ──
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         analysis.TopCellCandidates.ShouldBe(new[] { TopCellName });
         using var host = new GdsDesignScopeTestHost();
         var service = host.CreateService();

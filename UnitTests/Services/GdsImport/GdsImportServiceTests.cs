@@ -72,7 +72,7 @@ public class GdsImportServiceTests : IDisposable
     {
         var path = WriteGds(TwoWaveguideLibrary());
 
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path);
 
         analysis.CellCount.ShouldBe(3);
         analysis.TopCellCandidates.ShouldBe(new[] { "TOP" });
@@ -86,7 +86,7 @@ public class GdsImportServiceTests : IDisposable
     {
         var missing = Path.Combine(_root, "nope.gds");
         await Should.ThrowAsync<FileNotFoundException>(
-            () => GdsImportService.AnalyzeAsync(missing));
+            () => new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(missing));
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class GdsImportServiceTests : IDisposable
             .ToArray();
         var path = WriteGds(library);
 
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path);
 
         analysis.TopCellCandidates.ShouldBe(new[] { "TOP" });
         analysis.TopCells.ShouldHaveSingleItem().CellName.ShouldBe("TOP");
@@ -133,7 +133,7 @@ public class GdsImportServiceTests : IDisposable
         var path = WriteGds(library);
 
         var ex = await Should.ThrowAsync<InvalidDataException>(
-            () => GdsImportService.AnalyzeAsync(path));
+            () => new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path));
 
         ex.Message.ShouldContain("no layout top cell");
         ex.Message.ShouldContain("$$$CONTEXT_INFO$$$");
@@ -158,7 +158,7 @@ public class GdsImportServiceTests : IDisposable
             .ToArray();
         var path = WriteGds(library);
 
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path);
 
         analysis.TopCellCandidates.ShouldBe(new[] { "$$$partial" });
     }
@@ -289,7 +289,7 @@ public class GdsImportServiceTests : IDisposable
         cts.Cancel();
 
         await Should.ThrowAsync<OperationCanceledException>(
-            () => GdsImportService.AnalyzeAsync(path, cts.Token));
+            () => new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path, cts.Token));
     }
 
     /// <summary>Cancels the source synchronously on the first reported stage.</summary>

@@ -45,7 +45,7 @@ public class ComponentSettingsDialogFdtdTests
     [Fact]
     public void CanRecalculate_IsFalse_WithoutFdtdWiring()
     {
-        var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), Mock.Of<IFileDialogService>());
         vm.Configure("c", "c", "C", new Dictionary<string, ComponentSMatrixData>(),
             liveComponent: TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins());
 
@@ -62,7 +62,7 @@ public class ComponentSettingsDialogFdtdTests
                .ReturnsAsync(SuccessResult());
         var store = new Dictionary<string, ComponentSMatrixData>();
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
@@ -101,7 +101,7 @@ public class ComponentSettingsDialogFdtdTests
                    EnergySumPerInput = new Dictionary<string, double>(),
                });
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
@@ -137,7 +137,7 @@ public class ComponentSettingsDialogFdtdTests
                    EnergySumPerInput = new Dictionary<string, double>(),
                });
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
@@ -160,7 +160,7 @@ public class ComponentSettingsDialogFdtdTests
                .ReturnsAsync(FdtdSMatrixResult.Fail("image build failed", missingDependency: "docker"));
         var store = new Dictionary<string, ComponentSMatrixData>();
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
@@ -184,7 +184,7 @@ public class ComponentSettingsDialogFdtdTests
         var store = new Dictionary<string, ComponentSMatrixData>();
         ComponentSMatrixData? propagatedData = null;
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
@@ -210,7 +210,7 @@ public class ComponentSettingsDialogFdtdTests
                .ReturnsAsync(SuccessResult());
         var store = new Dictionary<string, ComponentSMatrixData>();
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
@@ -235,7 +235,7 @@ public class ComponentSettingsDialogFdtdTests
                .ReturnsAsync(FdtdSMatrixResult.Fail("boom"));
         var propagateCalled = false;
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
@@ -261,7 +261,7 @@ public class ComponentSettingsDialogFdtdTests
                .ReturnsAsync(FdtdAvailability.Available("ready"));
         var store = new Dictionary<string, ComponentSMatrixData>();
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: (_, _) => throw new InvalidOperationException(factoryMessage));
@@ -283,7 +283,7 @@ public class ComponentSettingsDialogFdtdTests
         service.Setup(s => s.CheckAvailabilityAsync(It.IsAny<CancellationToken>()))
                .ReturnsAsync(FdtdAvailability.Available("ready"));
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: (_, _) => Task.FromResult<FdtdSMatrixRequest?>(null));
@@ -304,7 +304,7 @@ public class ComponentSettingsDialogFdtdTests
                .ReturnsAsync(FdtdAvailability.Unavailable("Docker is not installed. Install Docker Desktop."));
         var store = new Dictionary<string, ComponentSMatrixData>();
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
@@ -334,7 +334,7 @@ public class ComponentSettingsDialogFdtdTests
                 It.IsAny<Func<CancellationToken, Task<FdtdAvailability>>>()))
             .ReturnsAsync(false); // user cancelled — Docker still missing
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory(),
@@ -367,7 +367,7 @@ public class ComponentSettingsDialogFdtdTests
             .ReturnsAsync(true); // user started Docker; re-check succeeded
         var store = new Dictionary<string, ComponentSMatrixData>();
 
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory(),

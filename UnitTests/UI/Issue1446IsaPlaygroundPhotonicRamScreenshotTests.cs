@@ -79,7 +79,7 @@ public class Issue1446IsaPlaygroundPhotonicRamScreenshotTests
         {
             var provider = new BuiltLogicNetworkProvider();
             provider.Publish(_fixture.Network);
-            var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+            var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
             vm.SelectedSample = vm.Samples.Single(s => s.FileName == MultiplySampleFileName);
             RunToHalt(vm);
             vm.DataMemory.ShouldNotBeNull("the RAM 4x4 network must hold the data memory on light");

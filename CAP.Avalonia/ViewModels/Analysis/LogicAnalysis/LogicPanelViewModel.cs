@@ -22,14 +22,49 @@ namespace CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 /// badge (issue #994). Assembly failures (no gate in the design, invalid wiring) are
 /// shown as readable status text, never as a crash.
 /// </summary>
-public partial class LogicPanelViewModel : ObservableObject
+public partial class LogicPanelViewModel : ObservableObject, IAsyncDisposable
 {
-    private readonly LogicNetworkAssembler _assembler = new();
+    private readonly ILogicNetworkAssembler _assembler;
+
+    /// <summary>Retires accepted analysis work and its live presentation subscriptions.</summary>
+    public Task StopAsync() => _retirement ??= RetireAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private readonly Services.Lifetime.ShellWorkScope _work = new();
+    private Task? _retirement;
+    private long _configurationVersion;
     private readonly BuiltLogicNetworkProvider? _builtNetworkProvider;
     private DesignCanvasViewModel? _canvas;
-    private CancellationTokenSource? _buildCts;
+    private AnalysisSweepOperation? _activeBuild;
     private LogicNetworkEvaluator? _network;
     private bool _isApplyingDrivenInputs;
+
+    private async Task RetireAsync()
+    {
+        var work = _work.StopAsync();
+        DetachCanvas();
+        _runClock.Tick -= OnRunClockTick;
+        _runClock.Stop();
+        if (_builtNetworkProvider != null) _builtNetworkProvider.InputsDriven -= OnInputsDriven;
+        ClearNetwork();
+        try { await work; }
+        finally
+        {
+            if (_ownsRunClock && _runClock is IDisposable clock) clock.Dispose();
+            _canvas = null;
+            MakeGateRequested = null;
+            ClockStepped = null;
+            RegistersReset = null;
+            GateCandidates.Clear();
+            HasGateCandidates = false;
+        }
+    }
+
+    private void DetachCanvas()
+    {
+        if (_canvas == null) return;
+        _canvas.Components.CollectionChanged -= OnDesignEdited;
+        _canvas.Connections.CollectionChanged -= OnDesignEdited;
+    }
 
     /// <summary>True while the network is being assembled (spinner + Cancel button).</summary>
     [ObservableProperty]
@@ -83,11 +118,11 @@ public partial class LogicPanelViewModel : ObservableObject
     /// </summary>
     public void Configure(DesignCanvasViewModel canvas)
     {
-        if (_canvas != null)
-        {
-            _canvas.Components.CollectionChanged -= OnDesignEdited;
-            _canvas.Connections.CollectionChanged -= OnDesignEdited;
-        }
+        if (_work.IsStopping) return;
+        _configurationVersion++;
+        _activeBuild?.Cancel();
+        DetachCanvas();
+        ClearNetwork();
         _canvas = canvas;
         _canvas.Components.CollectionChanged += OnDesignEdited;
         _canvas.Connections.CollectionChanged += OnDesignEdited;
@@ -97,6 +132,7 @@ public partial class LogicPanelViewModel : ObservableObject
     /// <summary>A design edit discards the shown network and its canvas badges.</summary>
     private void OnDesignEdited(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (_work.IsStopping) return;
         if (ReferenceEquals(sender, _canvas?.Components))
             RefreshGateCandidates();
         if (!HasNetwork)
@@ -145,12 +181,22 @@ public partial class LogicPanelViewModel : ObservableObject
     }
 
     /// <summary>Replaces the displayed network with nothing (failure, cancel, rebuild).</summary>
-    private void ClearNetwork()
+    private void ClearNetwork(long? buildPublicationRevision = null)
     {
+        var previousNetwork = _network;
         _network = null;
         HasNetwork = false;
-        _builtNetworkProvider?.Clear();
-        _canvas?.LogicGateStates.Clear();
+        // Check immediately before clearing the shared handoff, including publications
+        // made by a synchronous HasNetwork property-change observer above.
+        var ownsPublishedNetwork = _builtNetworkProvider == null
+            || (buildPublicationRevision is { } revision
+                ? _builtNetworkProvider.PublicationRevision == revision
+                : ReferenceEquals(_builtNetworkProvider.Network, previousNetwork));
+        if (ownsPublishedNetwork)
+        {
+            _builtNetworkProvider?.Clear();
+            _canvas?.LogicGateStates.Clear();
+        }
         HasFanOutWarnings = false;
         HasSplitFanOutWarnings = false;
         CriticalPathText = "";
@@ -170,6 +216,7 @@ public partial class LogicPanelViewModel : ObservableObject
     /// <summary>A toggled input re-evaluates the whole network synchronously.</summary>
     private void OnInputPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (_work.IsStopping) return;
         if (e.PropertyName == nameof(LogicNetworkInputViewModel.IsOn) && !_isApplyingDrivenInputs)
             ReEvaluate();
     }
@@ -183,7 +230,7 @@ public partial class LogicPanelViewModel : ObservableObject
     /// </summary>
     private void OnInputsDriven(IReadOnlyDictionary<string, bool> bits)
     {
-        if (_network == null)
+        if (_work.IsStopping || _network == null)
             return;
         _isApplyingDrivenInputs = true;
         try

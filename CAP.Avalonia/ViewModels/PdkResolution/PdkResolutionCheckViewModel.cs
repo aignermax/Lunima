@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text;
 using CAP.Avalonia.Services.Localization;
-using CAP.Avalonia.ViewModels.Panels;
 using CAP_Core.Export.PdkResolution;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
@@ -17,15 +16,15 @@ namespace CAP.Avalonia.ViewModels.PdkResolution;
 /// </summary>
 public partial class PdkResolutionCheckViewModel : ObservableObject
 {
+    private readonly IBundledPdkCatalog _bundledPdks;
     /// <summary>Sentinel nazcaFunction of virtual analysis tools — never exported, skip.</summary>
     private const string AnalyzerSentinel = "__analyzer__";
 
     /// <summary>Backend name of raw code that targets Nazca (absent means Nazca, the GDS-import default).</summary>
     private const string NazcaRawCodeBackend = "nazca";
 
-    private readonly PdkLoader _pdkLoader;
-    private readonly PdkFunctionResolutionService _resolutionService;
-    private readonly Func<string?> _pdkDirectoryResolver;
+    private readonly IPdkReader _pdkLoader;
+    private readonly IPdkFunctionResolver _resolutionService;
 
     /// <summary>Set by the dialog code-behind to the Avalonia clipboard bridge.</summary>
     public Func<string, Task>? CopyToClipboard { get; set; }
@@ -50,19 +49,13 @@ public partial class PdkResolutionCheckViewModel : ObservableObject
     /// </summary>
     /// <param name="pdkLoader">Loader for PDK JSON files.</param>
     /// <param name="resolutionService">Python-backed nazcaFunction resolver.</param>
-    /// <param name="pdkDirectoryResolver">
-    /// Optional override for the PDK directory (tests). Defaults to the
-    /// bundled-PDK directory resolution used by the component library.
-    /// </param>
-    public PdkResolutionCheckViewModel(
-        PdkLoader pdkLoader,
-        PdkFunctionResolutionService resolutionService,
-        Func<string?>? pdkDirectoryResolver = null)
+    public PdkResolutionCheckViewModel(IBundledPdkCatalog bundledPdks,
+        IPdkReader pdkLoader,
+        IPdkFunctionResolver resolutionService)
     {
+        _bundledPdks = bundledPdks ?? throw new ArgumentNullException(nameof(bundledPdks));
         _pdkLoader = pdkLoader;
-        _resolutionService = resolutionService;
-        _pdkDirectoryResolver = pdkDirectoryResolver
-            ?? (() => LeftPanelViewModel.ResolveBundledPdkDirectory(AppDomain.CurrentDomain.BaseDirectory));
+        _resolutionService = resolutionService ?? throw new ArgumentNullException(nameof(resolutionService));
     }
 
     /// <summary>Runs the consistency check over every PDK JSON in the bundled directory.</summary>
@@ -75,14 +68,14 @@ public partial class PdkResolutionCheckViewModel : ObservableObject
         StatusText = LocalizationService.Instance.Translate("PdkResolution.StatusChecking");
         try
         {
-            var pdkDir = _pdkDirectoryResolver();
-            if (pdkDir == null || !Directory.Exists(pdkDir))
+            var inventory = _bundledPdks.ReadInventory();
+            if (inventory is null)
             {
                 StatusText = LocalizationService.Instance.Translate("PdkResolution.StatusNoDirectory");
                 return;
             }
 
-            foreach (var file in Directory.GetFiles(pdkDir, "*.json").OrderBy(f => f))
+            foreach (var file in inventory.Files.OrderBy(f => f))
                 Pdks.Add(await CheckPdkFileAsync(file));
 
             var errors = Pdks.SelectMany(p => p.Rows).Count(r => r.Status == PdkResolutionStatus.Error);

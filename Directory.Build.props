@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Shipping hosts and the headless test host must resolve the same runtime. -->
+    <AvaloniaVersion>11.3.13</AvaloniaVersion>
+  </PropertyGroup>
+</Project>

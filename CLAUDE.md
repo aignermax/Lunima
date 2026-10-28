@@ -1,4 +1,4 @@
-# Agent Instructions for Connect-A-PIC-Pro
+# Agent instructions for Lunima
 
 C# / Avalonia / MVVM photonic simulation tool. Stability, clarity, and architectural discipline are more important than speed.
 
@@ -104,12 +104,12 @@ Lunima ships for **macOS (arm64 + x64), Linux (x64), and Windows (x64) together*
 ## 1. Architecture Rules
 
 - Follow SOLID principles strictly.
-- **Maximum 250 lines per NEW file.** Existing large files (MainViewModel.cs, DesignCanvas.cs) should not be refactored just for line count.
+- **Prefer 250 lines or fewer per new file; the hard ceiling is 999 physical lines per authored source file.** Separate real responsibilities into collaborators. Do not evade the limit with added partial-class fragments, minification, encoded source or deleted assertions. Data/fixture/generated-artifact scope is pending clarification; do not assume a blanket exemption.
 - No God classes — one responsibility per class.
 - Prefer composition over inheritance.
 - Avoid deep inheritance hierarchies.
 - Use dependency injection where appropriate (constructor injection).
-- **Only create interfaces when multiple implementations exist.** Concrete classes are fine otherwise.
+- **Use interfaces at substitutable or independently testable boundaries.** Concrete collaborators are fine otherwise; avoid dependency bags and service locators.
 - Do not introduce unnecessary abstractions.
 - Do not refactor unrelated modules.
 - Never modify UI or Routing unless explicitly required by the issue.
@@ -157,7 +157,7 @@ All ViewModels must:
 - Inherit from `ObservableObject`
 - Use `[ObservableProperty]` for bindable properties
 - Use `[RelayCommand]` for user actions
-- Be registered in DI container (`CAP.Avalonia/App.axaml.cs`)
+- Register injected viewmodels in the appropriate `CAP.Avalonia/DI/` feature extension
 
 Example:
 ```csharp
@@ -179,7 +179,7 @@ public partial class MyFeatureViewModel : ObservableObject
 }
 ```
 
-Reference: `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs`
+Reference: `CAP.Avalonia/ViewModels/Analysis/ParameterSweepViewModel.cs`
 
 ---
 
@@ -241,109 +241,69 @@ Issue title determines which recipe to use.
 
 ---
 
-## 8. Build & Verification
+## 8. Build and verification
 
-Before finishing work:
+Use the SDK selected by `global.json`. Run `dotnet build` and relevant tests for
+code changes; fix failures and report what was actually verified. Use the
+checked-in test helper, which works without separately installed agent tools:
 
-1. Run `dotnet build`
-2. **REQUIRED: Run tests using `python3 tools/smart_test.py`** (NOT `dotnet test`!)
-3. Fix all build errors.
-4. Fix all failing tests.
-5. Ensure no new warnings are introduced unnecessarily.
-
-**Do not stop until build AND tests pass.**
-
-### Testing: Use `smart_test.py` (MANDATORY)
-
-**⚠️ avoid using `dotnet test` directly - it outputs 100K+ chars!**
+```powershell
+# Windows
+py scripts/run_tests.py
+py scripts/run_tests.py FrozenPathObstacle
+```
 
 ```bash
-python3 tools/smart_test.py                     # All tests
-python3 tools/smart_test.py FrozenPathObstacle  # Pattern match
-python3 tools/smart_test.py --file MyTests.cs   # Specific file
+# Linux/macOS
+python3 scripts/run_tests.py
+python3 scripts/run_tests.py FrozenPathObstacle
 ```
 
-**Why:** 90% less output, agent-friendly format, prevents context overflow.
+The default filter is `Category!=Slow&Category!=Heavy`; a positional test-name
+substring retains those exclusions. `--filter` supplies a VSTest expression while
+keeping the exclusions; only a specifically selected run with `--include-expensive`
+removes them. The helper sets `DOTNET_PROCESSOR_COUNT=2`, prints a
+compact result and saves detailed output to an ignored local log. Run .NET
+verification serially. Slow/Heavy runs belong in CI unless specifically selected
+for a local investigation. Never run the unfiltered suite casually on a desktop.
 
-**Slow tests are CI-only locally:** heavyweight tests (full-MainWindow flows, all-component
-renders, Skia screenshot walkthroughs) carry `[Trait("Category", "Slow")]`. Never run the
-unfiltered suite on a local desktop session — parallel test hosts fill RAM and the machine
-freezes (global OOM). `make test` and `.agent.toml` already exclude `Category=Slow` and
-`Category=Heavy`; with
-`smart_test.py` set `SMART_TEST_EXCLUDE_CATEGORY=Slow` (the `safe_test.sh` wrapper does
-this). Run local tests through `scripts/throttle.sh <cmd>` (`make test` does): one shared
-systemd slice caps CPU and memory (10 GB) across all concurrent runs, so a runaway run is
-killed instead of the desktop.
+`UnitTests` uses xUnit 2.4.2 through VSTest. Collection parallelism is disabled in
+`xunit.runner.json` for the shared headless Avalonia runtime. The processor setting
+is not a memory cap; `scripts/throttle.sh` only adds cgroup limits when systemd
+support is available. Windows/macOS and other fallback runs have no such cap.
 
-**CI test pipeline:** `.github/workflows/xUnitTests.yaml` runs the suite as parallel shards
-on separate runners (filters in `scripts/ci/test-shards.json`; a new top-level test namespace
-lands in a `*-rest` shard automatically). Tests taking ~25 s or more additionally carry
-`[Trait("Category", "Heavy")]`: pull requests skip them, pushes to `dev`/`main`, tags, the
-nightly and manual runs execute everything. Docs-only PRs skip the tests entirely. Details:
-`docs/TESTING.md` → "CI test pipeline".
+CI shards, Heavy selection, logs and prerequisites are documented in
+[docs/TESTING.md](docs/TESTING.md). Record unrun tests and platforms explicitly.
 
----
+### Source-size guard
 
-## 8.1. REQUIRED Python Tools (Token Optimization)
+Install the local hook after cloning:
 
-**⚠️ MANDATORY: Use Python tools - NOT MCP (doesn't work in headless mode)!**
-
-### Tool Installation & Location
-
-**Tools can be in two locations:**
-1. `~/.cap-tools/` (recommended for persistent installation)
-2. `tools/` (inside repository, for agent sessions)
-
-**If tools are missing, install them:**
-```bash
-# Clone tools repository
-git clone https://github.com/aignermax/python-dev-tools.git /tmp/python-dev-tools
-
-# Option 1: Install to ~/.cap-tools/ (persistent)
-mkdir -p ~/.cap-tools
-cp /tmp/python-dev-tools/smart_test.py ~/.cap-tools/
-cp /tmp/python-dev-tools/semantic_search.py ~/.cap-tools/
-
-# Option 2: Install to tools/ (repository-local)
-mkdir -p tools
-cp /tmp/python-dev-tools/smart_test.py tools/
-cp /tmp/python-dev-tools/semantic_search.py tools/
-
-# Clean up
-rm -rf /tmp/python-dev-tools
+```powershell
+# Windows
+py scripts/install_hooks.py
+py scripts/check_source_size.py
+py scripts/check_source_size.py --staged
 ```
-
-**Usage (try both locations):**
-```bash
-# Preferred (persistent installation):
-python3 ~/.cap-tools/smart_test.py
-python3 ~/.cap-tools/semantic_search.py
-
-# Alternative (repository-local):
-python3 tools/smart_test.py
-python3 tools/semantic_search.py
-```
-
-### 🔍 Semantic Search (`semantic_search.py`)
-
-Intent-based code discovery - use instead of grep/reading multiple files:
 
 ```bash
-python3 ~/.cap-tools/semantic_search.py "ViewModel for analysis features"
-python3 ~/.cap-tools/semantic_search.py "pathfinding grid obstacle"
-python3 ~/.cap-tools/semantic_search.py --rebuild  # After major refactoring
+# Linux/macOS
+python3 scripts/install_hooks.py
+python3 scripts/check_source_size.py
+python3 scripts/check_source_size.py --staged
 ```
 
-**Benefits:** Sub-second results, 90% token savings (top 5 matches vs 50+ file reads), smart semantic matching
+The hook checks staged source; the default checker inspects the whole tree. CI
+must independently enforce the whole-tree limit. A local hook is not a security
+boundary, and installing it does not prove that existing oversized files have
+been decomposed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Use when:** Finding classes/implementations, exploring unfamiliar areas, looking for examples
+### Code navigation
 
-### 📊 Tool Usage Reporting (REQUIRED)
-
-Report at end of each issue:
-```
-✅ Complete! Tools: semantic_search.py (3 searches, ~15K saved), smart_test.py (~100K saved)
-```
+Use the repository's available CodeGraph tools for structural questions and
+literal text search for strings/comments. External semantic-search helpers are
+optional; no untracked `tools/` installation is required to build or test.
+Report actual checks and results, not estimated token savings.
 
 ---
 
@@ -399,7 +359,7 @@ python scripts/compare_gds_coords.py /tmp/ref_coords.json /tmp/test_coords.json
 | DI container setup | `CAP.Avalonia/App.axaml.cs` |
 | Main ViewModel | `CAP.Avalonia/ViewModels/MainViewModel.cs` |
 | Main Window layout | `CAP.Avalonia/Views/MainWindow.axaml` |
-| Example ViewModel | `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs` |
+| Example ViewModel | `CAP.Avalonia/ViewModels/Analysis/ParameterSweepViewModel.cs` |
 | Example unit tests | `UnitTests/Analysis/ParameterSweeperTests.cs` |
 | Test helpers | `UnitTests/Helpers/TestComponentFactory.cs` |
 | GDS testing tools | `scripts/extract_gds_coords.py`, `scripts/compare_gds_coords.py` |

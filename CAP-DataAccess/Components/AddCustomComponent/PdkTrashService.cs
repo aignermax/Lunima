@@ -9,7 +9,7 @@ using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 
 namespace CAP_DataAccess.Components.AddCustomComponent;
 
-public sealed class PdkTrashService
+public sealed class PdkTrashService : IPdkTrash
 {
     private const string TrashDirectoryName = ".trash";
 

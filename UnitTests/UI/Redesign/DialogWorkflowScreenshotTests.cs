@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using CAP.Avalonia.Commands;
@@ -74,19 +75,19 @@ public class DialogWorkflowScreenshotTests : IDisposable
     public async Task OpenEblCheckDialog_Failed()
     {
         if (!DialogShot.Enabled) return;
-        var report = new CAP.Avalonia.Services.OpenEblCheck.OpenEblCheckReport
+        var report = new CAP_Core.Export.Contracts.OpenEblCheckReport
         {
-            Status = CAP.Avalonia.Services.OpenEblCheck.OpenEblCheckStatus.Failed,
+            Status = CAP_Core.Export.Contracts.OpenEblCheckStatus.Failed,
             SubmissionChecksPassed = false,
             VerificationPassed = true,
             SubmissionErrorCount = 2,
-            DieBoundingBox = new CAP.Avalonia.Services.OpenEblCheck.OpenEblDieBoundingBox(700.0, 450.0),
+            DieBoundingBox = new CAP_Core.Export.Contracts.OpenEblDieBoundingBox(700.0, 450.0),
             Errors = new[]
             {
-                new CAP.Avalonia.Services.OpenEblCheck.OpenEblCheckError(
-                    CAP.Avalonia.Services.OpenEblCheck.OpenEblCheckCategories.TopCell, "Layout has 2 top cells."),
-                new CAP.Avalonia.Services.OpenEblCheck.OpenEblCheckError(
-                    CAP.Avalonia.Services.OpenEblCheck.OpenEblCheckCategories.DieSize,
+                new CAP_Core.Export.Contracts.OpenEblCheckError(
+                    CAP_Core.Export.Contracts.OpenEblCheckCategories.TopCell, "Layout has 2 top cells."),
+                new CAP_Core.Export.Contracts.OpenEblCheckError(
+                    CAP_Core.Export.Contracts.OpenEblCheckCategories.DieSize,
                     "Die size 700 um x 450 um exceeds allowed size 605 um x 410 um",
                     XMicrometers: 350.0, YMicrometers: 225.0),
             },
@@ -109,7 +110,7 @@ public class DialogWorkflowScreenshotTests : IDisposable
         var service = new Mock<IFdtdSMatrixService>();
         service.Setup(s => s.CheckAvailabilityAsync(It.IsAny<CancellationToken>()))
                .ReturnsAsync(FdtdAvailability.Unavailable(hint));
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: (_, _) => Task.FromResult<FdtdSMatrixRequest?>(null));

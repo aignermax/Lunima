@@ -1,3 +1,4 @@
+using CAP_Core.Solvers.Protocol;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CAP_Core.Solvers.Fdtd;
@@ -26,7 +27,7 @@ public static class Tidy3dJsonContract
 
     public static FdtdAvailability ParseCheck(string stdout, string stderr = "")
     {
-        var jsonLine = SubprocessJsonRunner.ExtractTrailingJsonLine(stdout);
+        var jsonLine = TrailingJsonObject.Extract(stdout);
         if (jsonLine == null)
             return FdtdAvailability.Unavailable(
                 $"Tidy3D availability check produced no result. {FirstLine(stderr)}".Trim());
@@ -56,7 +57,7 @@ public static class Tidy3dJsonContract
 
     public static FdtdCostEstimate ParseEstimate(string stdout, string stderr = "")
     {
-        var jsonLine = SubprocessJsonRunner.ExtractTrailingJsonLine(stdout);
+        var jsonLine = TrailingJsonObject.Extract(stdout);
         if (jsonLine == null)
             return FdtdCostEstimate.Fail(
                 $"Tidy3D cost estimation produced no result. {FirstLine(stderr)}".Trim());

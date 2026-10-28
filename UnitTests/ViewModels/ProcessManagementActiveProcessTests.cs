@@ -29,7 +29,7 @@ public class ProcessManagementActiveProcessTests
     }
 
     private static ProcessManagementViewModel CreateVm() =>
-        new(Mock.Of<IFileDialogService>());
+        new(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>());
 
     private static ProcessFingerprint SoiFingerprint() =>
         new("Si", 220, "SiO2", 1550, "Generic SOI 220nm");

@@ -111,14 +111,8 @@ public class UiScreenshotTests
             PythonVersion = "3.12.4", NazcaVersion = "0.6.1", GdsFactoryVersion = null, HasPyclipper = true,
         });
         envRegistry.SetActive("nazca");
-        var envVm = new CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonEnvironmentManagerViewModel(
-            envRegistry,
-            new CAP_Core.Export.PythonEnvironmentManager.UvBootstrapper(),
-            new CAP_Core.Export.PythonEnvironmentManager.NazcaPackageInstaller(),
-            new CAP_Core.Export.PythonEnvironmentManager.EnvironmentHealthChecker(
-                new CAP_Core.Export.PythonDiscoveryService()),
-            new CAP_Core.Export.PythonDiscoveryService(),
-            () => Path.Combine(CAP_Core.Export.PythonEnvironmentManager.UvBootstrapper.EnvironmentsBaseDir, "nazca",
+        var envVm = UnitTests.Export.PythonEnvironmentManager.PythonSetupTestServices.Create(
+            envRegistry, getActiveInterpreterPath: () => Path.Combine(CAP_Core.Export.PythonEnvironmentManager.UvBootstrapper.EnvironmentsBaseDir, "nazca",
                 OperatingSystem.IsWindows() ? @"Scripts\python.exe" : "bin/python"));
         TryCapture(() => new PythonEnvironmentManagerPanel(), envVm, 500, 700, outputDir, "PythonEnvironmentManagerPanel.png", captured, skipped);
 
@@ -228,7 +222,7 @@ public class UiScreenshotTests
         var tempFile = Path.Combine(Path.GetTempPath(), $"lunima-ui-shot-pdk-{Guid.NewGuid():N}.json");
         File.WriteAllText(tempFile, pdkJson);
 
-        var vm = new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel())
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel())
         {
             FileDialogService = new StubFileDialogService(tempFile),
         };

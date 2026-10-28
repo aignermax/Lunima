@@ -1,3 +1,4 @@
+using CAP_DataAccess.Persistence.NativeDesign;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP_Core.Components;

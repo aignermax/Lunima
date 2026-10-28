@@ -52,7 +52,7 @@ public class LibraryProcessFilterTests : IDisposable
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
 
-        _leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, preferencesService,
+        _leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), canvas, groupLibrary, pdkLoader, preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(groupLibrary));
         _leftPanel.Initialize();

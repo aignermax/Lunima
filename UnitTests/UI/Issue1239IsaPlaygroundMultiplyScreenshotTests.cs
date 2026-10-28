@@ -53,7 +53,7 @@ public class Issue1239IsaPlaygroundMultiplyScreenshotTests
 
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider);
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
         vm.SelectedSample = vm.Samples.Single(s => s.FileName == "multiply-3x4.asm");
         vm.ProgramText.ShouldContain("multiply-3x4", customMessage: "the picker must load the multiply sample");
         vm.UsePhotonicAdder = true;

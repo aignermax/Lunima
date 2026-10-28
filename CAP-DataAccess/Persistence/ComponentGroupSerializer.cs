@@ -58,7 +58,7 @@ public static class ComponentGroupSerializer
 
         // Render-only background geometry (GDS-imported base plates, logos, …)
         if (group.OutlinePolygons is { Count: > 0 })
-            dto.BackgroundPolygons = group.OutlinePolygons.ToList();
+            dto.BackgroundPolygons = group.OutlinePolygons.Select(polygon => polygon.Copy()).ToList();
 
         return dto;
     }

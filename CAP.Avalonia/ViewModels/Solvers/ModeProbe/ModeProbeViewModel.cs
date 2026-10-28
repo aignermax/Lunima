@@ -1,4 +1,5 @@
 using CAP.Avalonia.Services.Localization;
+using CAP.Avalonia.Services.Lifetime;
 using CAP_Core.Components.Process;
 using CAP_Core.Solvers.ModeProbe;
 using CAP_Core.Solvers.ModeSolver;
@@ -15,8 +16,17 @@ namespace CAP.Avalonia.ViewModels.Solvers.ModeProbe;
 /// and — for grating/edge couplers — reports the Gaussian fiber-overlap efficiency.
 /// State/commands live here; the solve pipeline is in ModeProbeViewModel.Solve.cs.
 /// </summary>
-public partial class ModeProbeViewModel : ObservableObject
+public partial class ModeProbeViewModel : ObservableObject, IAsyncDisposable
 {
+    /// <summary>Retires probe admission and awaits subprocess/install cleanup.</summary>
+    public async Task StopAsync()
+    {
+        IsOpen = false;
+        await _work.StopAsync();
+        ModeFieldImage = null;
+    }
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private readonly ShellWorkScope _work = new();
     // ── panel state ─────────────────────────────────────────────────────────
 
     /// <summary>True while the probe flyout is visible.</summary>
@@ -116,10 +126,12 @@ public partial class ModeProbeViewModel : ObservableObject
     public Func<string, IProgress<string>, CancellationToken, Task<bool>>? EnsureBackendAsync { get; set; }
 
     /// <summary>Initialises the probe ViewModel.</summary>
-    public ModeProbeViewModel(IModeSolverService service, CrossSectionDefaultsStore defaults)
+    public ModeProbeViewModel(IModeSolverService service, CrossSectionDefaultsStore defaults,
+        ApplicationWorkCoordinator? applicationWork = null)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _defaults = defaults ?? throw new ArgumentNullException(nameof(defaults));
+        _work.RegisterWith(applicationWork, StopAsync);
     }
 
     // ── public API ──────────────────────────────────────────────────────────
@@ -130,6 +142,7 @@ public partial class ModeProbeViewModel : ObservableObject
     /// </summary>
     public void Open(ProbeTarget target, double panelX, double panelY)
     {
+        if (_work.IsStopping) return;
         // Cancel any in-flight solve from a previous probe — otherwise its continuation would
         // later overwrite this target's status (e.g. a stale "Solved…" over the interference
         // notice) (#691 review).
@@ -162,6 +175,12 @@ public partial class ModeProbeViewModel : ObservableObject
 
     /// <summary>Recomputes the fiber overlap when the fiber MFD is edited inline.</summary>
     partial void OnFiberMfdUmChanged(double value) => UpdateFiberOverlap();
+
+    partial void OnModeFieldImageChanged(global::Avalonia.Media.Imaging.Bitmap? oldValue,
+        global::Avalonia.Media.Imaging.Bitmap? newValue)
+    {
+        if (!ReferenceEquals(oldValue, newValue)) oldValue?.Dispose();
+    }
 
     private void ResetResult()
     {

@@ -34,8 +34,14 @@ public sealed class DeleteComponentTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) => ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        await using var edit = new AgentDocumentOperation(_session.Canvas, context);
         var id = ToolArguments.GetString(arguments, "id") ?? "";
         var vm = _session.FindComponent(id);
         if (vm == null)
@@ -44,9 +50,9 @@ public sealed class DeleteComponentTool : IAgentBridgeTool
             return AgentToolResult.Error($"Component '{id}' is locked.");
 
         var connectionsBefore = _session.Canvas.Connections.Count;
-        _session.Commands.ExecuteCommand(new DeleteComponentCommand(_session.Canvas, vm));
-        var routed = await RoutingAwaiter.RerouteAndWaitAsync(_session.Canvas);
-        _session.Canvas.InvalidateSimulation();
+        edit.Commit(() => _session.Commands.ExecuteCommand(new DeleteComponentCommand(_session.Canvas, vm)));
+        var routed = await edit.RouteAsync();
+        edit.Commit(_session.Canvas.InvalidateSimulation);
 
         return AgentToolResult.Json(new
         {

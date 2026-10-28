@@ -39,7 +39,7 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider);
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
 
         vm.IsPhotonicAndAvailable.ShouldBeTrue(
             "the shipped AND 4-bit network exposes A0–A3, B0–B3 and Y0–Y3");
@@ -65,7 +65,7 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
         vm.ProgramText = "LOAD 12\nSTORE 1\nLOAD 10\nAND 1\nSTORE 0\nHALT";
         vm.AssembleCommand.Execute(null);
 
@@ -87,7 +87,7 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
         vm.ProgramText = "LOAD 5\nNOT\nHALT";
         vm.AssembleCommand.Execute(null);
 
@@ -102,7 +102,7 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
     [Fact]
     public void NoNetwork_ToggleDisabled_AndExampleActionOffersNextStep()
     {
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         vm.IsAnyPhotonicAvailable.ShouldBeFalse();
         vm.IsPhotonicToggleEnabled.ShouldBeFalse();
@@ -122,7 +122,7 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
         vm.IsAnyPhotonicAvailable.ShouldBeTrue();
 
         provider.Clear();

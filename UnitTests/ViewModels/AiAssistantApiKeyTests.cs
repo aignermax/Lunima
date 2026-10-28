@@ -19,7 +19,7 @@ public class AiAssistantApiKeyTests
         // otherwise overwrite the developer's real Claude API key on every
         // test run (vm.ApiKey = "" as a baseline triggers persistence too).
         var tempFile = Path.Combine(Path.GetTempPath(), $"cap-test-prefs-{Guid.NewGuid()}.json");
-        var vm = new AiAssistantViewModel(Mock.Of<IAiService>(), new UserPreferencesService(tempFile));
+        var vm = new AiAssistantViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), Mock.Of<IAiService>(), new UserPreferencesService(tempFile));
         vm.ApiKey = string.Empty; // baseline
         return vm;
     }

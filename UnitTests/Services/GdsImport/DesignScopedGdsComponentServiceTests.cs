@@ -1,3 +1,4 @@
+using CAP_DataAccess.Persistence.NativeDesign;
 using CAP.Avalonia.Services.GdsImport.DesignScope;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 using CAP_DataAccess.Import.Gds;

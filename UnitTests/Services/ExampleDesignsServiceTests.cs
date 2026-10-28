@@ -34,7 +34,7 @@ public class ExampleDesignsServiceTests : IDisposable
     [Fact]
     public void EmptyExamplesDirectory_ReturnsNoExamples()
     {
-        var service = new ExampleDesignsService(_nestedBaseDirectory);
+        var service = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_nestedBaseDirectory));
 
         service.GetExamples().ShouldBeEmpty();
     }
@@ -44,7 +44,7 @@ public class ExampleDesignsServiceTests : IDisposable
     {
         File.WriteAllText(Path.Combine(_examplesDirectory, "mzi.lun"), "{}");
 
-        var service = new ExampleDesignsService(_nestedBaseDirectory);
+        var service = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_nestedBaseDirectory));
 
         var example = service.GetExamples().ShouldHaveSingleItem();
         example.Name.ShouldBe("mzi");
@@ -57,7 +57,7 @@ public class ExampleDesignsServiceTests : IDisposable
         File.WriteAllText(Path.Combine(_examplesDirectory, "Zeta.lun"), "{}");
         File.WriteAllText(Path.Combine(_examplesDirectory, "alpha.lun"), "{}");
 
-        var service = new ExampleDesignsService(_nestedBaseDirectory);
+        var service = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_nestedBaseDirectory));
 
         service.GetExamples().Select(e => e.Name).ShouldBe(new[] { "alpha", "Zeta" });
     }
@@ -67,7 +67,7 @@ public class ExampleDesignsServiceTests : IDisposable
     {
         File.WriteAllText(Path.Combine(_examplesDirectory, "readme.md"), "docs");
 
-        var service = new ExampleDesignsService(_nestedBaseDirectory);
+        var service = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_nestedBaseDirectory));
 
         service.GetExamples().ShouldBeEmpty();
     }
@@ -87,7 +87,7 @@ public class ExampleDesignsServiceTests : IDisposable
             }
             """);
 
-        var examples = new ExampleDesignsService(_nestedBaseDirectory).GetExamples();
+        var examples = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_nestedBaseDirectory)).GetExamples();
 
         examples.Select(e => e.Name).ShouldBe(new[] { "zebra", "beta", "alpha" });
         examples[0].DescriptionKey.ShouldBe("Examples.Zebra.Description");
@@ -104,7 +104,7 @@ public class ExampleDesignsServiceTests : IDisposable
             { "examples": [ { "file": "ghost.lun", "rank": 1, "descriptionKey": "Examples.Ghost.Description" } ] }
             """);
 
-        var examples = new ExampleDesignsService(_nestedBaseDirectory).GetExamples();
+        var examples = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_nestedBaseDirectory)).GetExamples();
 
         examples.ShouldHaveSingleItem().Name.ShouldBe("real");
     }
@@ -116,7 +116,7 @@ public class ExampleDesignsServiceTests : IDisposable
         File.WriteAllText(Path.Combine(_examplesDirectory, "alpha.lun"), "{}");
         WriteManifest("{ this is not json");
 
-        var examples = new ExampleDesignsService(_nestedBaseDirectory).GetExamples();
+        var examples = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_nestedBaseDirectory)).GetExamples();
 
         examples.Select(e => e.Name).ShouldBe(new[] { "alpha", "zeta" });
         examples.ShouldAllBe(e => e.DescriptionKey == null);

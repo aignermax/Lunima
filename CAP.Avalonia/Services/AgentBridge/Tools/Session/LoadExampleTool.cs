@@ -39,8 +39,15 @@ public sealed class LoadExampleTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) =>
+        ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        context?.ThrowIfStopped();
         var examples = _session.Examples.GetExamples();
         var name = ToolArguments.GetString(arguments, "name");
         if (string.IsNullOrWhiteSpace(name))
@@ -53,13 +60,27 @@ public sealed class LoadExampleTool : IAgentBridgeTool
         var fileOps = _session.FileOperations;
         if (fileOps == null)
             return AgentToolResult.Error("The main window is not ready yet.");
-        if (!await fileOps.OpenDesignAsCopyAsync(match.FilePath))
+        CAP_Core.Documents.DocumentIdentity loadedDocument = default;
+        bool CanProceed() { context?.ThrowIfStopped(); return true; }
+        void OnOpened()
+        {
+            _session.LoadedExamplePath = match.FilePath;
+            _session.Suggestions = null;
+            loadedDocument = _session.Canvas.Document.CaptureIdentity();
+        }
+        if (!await fileOps.OpenDesignAsCopyAsync(match.FilePath, CanProceed, context, OnOpened))
+        {
+            context?.ThrowIfStopped();
             return AgentToolResult.Error("The example was not opened (the user cancelled the unsaved-changes prompt, or loading failed).");
-        _session.LoadedExamplePath = match.FilePath;
-        _session.Suggestions = null;
+        }
 
         await fileOps.PostLoadRouting;
-        var routed = await RoutingAwaiter.WaitForIdleAsync(_session.Canvas);
+        context?.ThrowIfStopped();
+        var routed = await RoutingAwaiter.WaitForIdleAsync(_session.Canvas,
+            cancellationToken: context?.CancellationToken ?? default);
+        context?.ThrowIfStopped();
+        if (!_session.Canvas.Document.IsCurrentIdentity(loadedDocument))
+            return AgentToolResult.Error("The example was replaced while routing; its results are no longer current.");
         return AgentToolResult.Json(new
         {
             Loaded = Path.GetFileName(match.FilePath),

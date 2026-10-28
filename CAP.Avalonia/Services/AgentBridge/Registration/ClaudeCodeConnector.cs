@@ -1,3 +1,5 @@
+using CAP.Avalonia.Services.AgentBridge.Contracts;
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services.AgentBridge.Hosting;
 
 namespace CAP.Avalonia.Services.AgentBridge.Registration;
@@ -8,13 +10,13 @@ namespace CAP.Avalonia.Services.AgentBridge.Registration;
 /// "connection refused"), then registers it with Claude Code for the configured port and,
 /// if the user requires one, the access token.
 /// </summary>
-public sealed class ClaudeCodeConnector
+public sealed class ClaudeCodeConnector : IAgentConnection
 {
-    private readonly UserPreferencesService _preferences;
-    private readonly AgentBridgeHost _host;
+    private readonly IAgentBridgePreferences _preferences;
+    private readonly IAgentBridgeControl _host;
 
     /// <summary>Creates the connector.</summary>
-    public ClaudeCodeConnector(UserPreferencesService preferences, AgentBridgeHost host, ClaudeCodeRegistrar registrar)
+    public ClaudeCodeConnector(IAgentBridgePreferences preferences, IAgentBridgeControl host, ClaudeCodeRegistrar registrar)
     {
         _preferences = preferences;
         _host = host;
@@ -28,12 +30,20 @@ public sealed class ClaudeCodeConnector
     public string ManualCommand =>
         AgentBridgeHost.ClaudeCodeConnectCommand(_preferences.GetAgentBridgePort(), _preferences.GetRequiredAgentBridgeToken());
 
+    public Task<bool?> IsRegisteredAsync(CancellationToken cancellationToken = default) =>
+        Registrar.IsRegisteredAsync(cancellationToken);
+
     /// <summary>Enables and starts the bridge, then registers it with Claude Code.</summary>
     public async Task<ClaudeRegistrationResult> ConnectAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         _preferences.SetAgentBridgeEnabled(true);
+        cancellationToken.ThrowIfCancellationRequested();
         await _host.ApplySettingsAsync();
-        return await Registrar.RegisterAsync(
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await Registrar.RegisterAsync(
             _preferences.GetAgentBridgePort(), _preferences.GetRequiredAgentBridgeToken(), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
     }
 }

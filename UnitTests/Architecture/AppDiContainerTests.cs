@@ -26,13 +26,98 @@ namespace UnitTests.Architecture;
 /// </summary>
 public class AppDiContainerTests
 {
+    [Fact]
+    public async Task Container_PythonEnvironmentPortSharesTheSelectionOwner()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IPythonEnvironmentRegistry>()
+            .ShouldBeSameAs(sp.GetRequiredService<CAP_Core.Export.PythonEnvironmentManager.PythonEnvironmentRegistry>());
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IPythonEnvironmentHealth>()
+            .ShouldBeSameAs(sp.GetRequiredService<CAP_Core.Export.PythonEnvironmentManager.EnvironmentHealthChecker>());
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IManagedEnvironmentPackages>()
+            .ShouldBeSameAs(sp.GetRequiredService<CAP_Core.Export.PythonEnvironmentManager.ManagedEnvironmentPackageSetup>());
+    }
+
+    [Fact]
+    public async Task Container_CoordinatePortsShareTheConfiguredServices()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IGdsCoordinateExtractor>()
+            .ShouldBeSameAs(sp.GetRequiredService<GdsCoordinateExtractor>());
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IGdsCoordinateComparer>()
+            .ShouldBeSameAs(sp.GetRequiredService<GdsCoordinateComparisonService>());
+        var extraction = sp.GetRequiredService<CAP.Avalonia.ViewModels.Export.GdsCoordExtractViewModel>();
+        var comparison = sp.GetRequiredService<CAP.Avalonia.ViewModels.Diagnostics.GdsCoordinateComparisonViewModel>();
+        var extractionStatus = extraction.StatusText;
+        var comparisonStatus = comparison.ComparisonStatus;
+        await sp.GetRequiredService<CAP.Avalonia.Services.Lifetime.ApplicationWorkCoordinator>().StopAsync();
+        await extraction.ExtractCoordinatesAsync();
+        await comparison.RunComparisonAsync();
+        extraction.StatusText.ShouldBe(extractionStatus);
+        comparison.ComparisonStatus.ShouldBe(comparisonStatus);
+    }
+
     private static string NewTempPreferencesPath() =>
         Path.Combine(Path.GetTempPath(), $"lunima-di-test-{Guid.NewGuid():N}.json");
 
     [Fact]
-    public void Container_ResolvesRedistributedSolverAndPreviewServices()
+    public async Task Container_FeaturePreferencesShareThePersistedUserStore()
     {
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        var preferences = sp.GetRequiredService<CAP.Avalonia.Services.UserPreferencesService>();
+
+        sp.GetRequiredService<CAP_Core.Preferences.IPdkLibraryPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IPanelLayoutPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IPythonInterpreterPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IFdtdPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IAgentBridgePreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IAgentConnectionPromptPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IAiPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IChipSizePreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IInterconnectPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.ILanguagePreferences>().ShouldBeSameAs(preferences);
+    }
+
+    [Fact]
+    public async Task Container_GdsContractsShareInterpreterAndEnvironmentCacheOwner()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        var export = sp.GetRequiredService<GdsExportService>();
+
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IGdsScriptRunner>().ShouldBeSameAs(export);
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IGdsExportSession>().ShouldBeSameAs(export);
+        sp.GetRequiredService<CAP_Core.Export.Contracts.IPythonDiscovery>()
+            .ShouldBeSameAs(sp.GetRequiredService<PythonDiscoveryService>());
+    }
+
+    [Fact]
+    public async Task Container_HomeAndLearningPreferencesShareThePersistedUserStore()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        var preferences = sp.GetRequiredService<CAP.Avalonia.Services.UserPreferencesService>();
+
+        sp.GetRequiredService<CAP_Core.Preferences.IHomePreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.ILearningPreferences>().ShouldBeSameAs(preferences);
+        sp.GetRequiredService<CAP_Core.Preferences.IRecentProjectPreferences>().ShouldBeSameAs(preferences);
+    }
+
+    [Fact]
+    public async Task Container_LibraryAndTemplateModelsShareTheExistingStoreInstances()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+
+        sp.GetRequiredService<CAP_Core.Components.Creation.IGroupLibrary>()
+            .ShouldBeSameAs(sp.GetRequiredService<CAP_Core.Components.Creation.GroupLibraryManager>());
+        var models = sp.GetRequiredService<CAP_DataAccess.Persistence.PIR.ITemplateSMatrixStore>();
+        var store = sp.GetRequiredService<CAP.Avalonia.Services.UserSMatrixOverrideStore>();
+        models.ShouldBeSameAs(store);
+        models.Overrides.ShouldBeSameAs(store.Overrides);
+    }
+
+    [Fact]
+    public async Task Container_ResolvesRedistributedSolverAndPreviewServices()
+    {
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
 
         sp.GetRequiredService<IFdtdSMatrixService>().ShouldNotBeNull();
         sp.GetRequiredService<IModeSolverService>().ShouldNotBeNull();
@@ -42,9 +127,9 @@ public class AppDiContainerTests
     }
 
     [AvaloniaFact]
-    public void Container_GdsImportWidthProvider_ResolvesThroughTheMainViewModel()
+    public async Task Container_GdsImportWidthProvider_ResolvesThroughTheMainViewModel()
     {
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
         var import = sp.GetRequiredService<CAP.Avalonia.Services.GdsImport.GdsImportService>();
 
         // Evaluated lazily at import time: a lookup of a type the container does not hold
@@ -53,9 +138,9 @@ public class AppDiContainerTests
     }
 
     [Fact]
-    public void Container_ResolvesFdtdBackendsAndRegistry()
+    public async Task Container_ResolvesFdtdBackendsAndRegistry()
     {
-        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        await using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
 
         // The NewComponent editor path keeps the local/free backend.
         sp.GetRequiredService<IFdtdSMatrixService>()

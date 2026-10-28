@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using System.Globalization;
 using CAP.Avalonia.Services;
 using CAP_Core.Routing.InterconnectRouting;
@@ -13,7 +14,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 /// </summary>
 public partial class InterconnectSettingsViewModel : ObservableObject
 {
-    private readonly UserPreferencesService _preferences;
+    private readonly IInterconnectPreferences _preferences;
 
     /// <summary>Waveguide width in micrometers (Nazca WG_WIDTH).</summary>
     [ObservableProperty]
@@ -32,7 +33,7 @@ public partial class InterconnectSettingsViewModel : ObservableObject
     private string _statusText = "";
 
     /// <summary>Initializes the ViewModel from the persisted preferences.</summary>
-    public InterconnectSettingsViewModel(UserPreferencesService preferences)
+    public InterconnectSettingsViewModel(IInterconnectPreferences preferences)
     {
         _preferences = preferences;
         var settings = preferences.GetInterconnectSettings();

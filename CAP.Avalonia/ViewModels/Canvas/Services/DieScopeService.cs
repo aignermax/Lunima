@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Dies;
+using CAP_Core.Documents;
+using CAP_Contracts;
 
 namespace CAP.Avalonia.ViewModels.Canvas.Services;
 
@@ -118,6 +120,67 @@ public sealed class DieScopeService
     /// </summary>
     public Task PendingGridRebuild { get; private set; } = Task.CompletedTask;
 
+    private int _boundsDeferralDepth;
+    private TaskCompletionSource? _deferredBounds;
+    private DocumentOperation? _boundsOperation;
+    private ICommitPermission? _boundsPermission;
+
+    /// <summary>Admits a requested grid rebuild only after a synchronous geometry transaction completes.</summary>
+    internal BoundsDeferral DeferScopeBoundsUpdates(DocumentOperation? operation = null, ICommitPermission? permission = null)
+    {
+        if (_boundsDeferralDepth == 0)
+        {
+            _boundsOperation = operation;
+            _boundsPermission = permission;
+        }
+        _boundsDeferralDepth++;
+        return new BoundsDeferral(this);
+    }
+
+    internal sealed class BoundsDeferral(DieScopeService owner) : IDisposable
+    {
+        private DieScopeService? _owner = owner;
+        internal Task Completion { get; private set; } = Task.CompletedTask;
+        public void Dispose()
+        {
+            var current = Interlocked.Exchange(ref _owner, null);
+            if (current == null) return;
+            Completion = current._deferredBounds?.Task ?? Task.CompletedTask;
+            if (--current._boundsDeferralDepth != 0) return;
+            var completion = current._deferredBounds;
+            var operation = current._boundsOperation;
+            var permission = current._boundsPermission;
+            current._deferredBounds = null;
+            current._boundsOperation = null;
+            current._boundsPermission = null;
+            if (completion == null) return;
+            _ = current.CompleteDeferredBoundsAsync(completion, operation, permission);
+            current.PendingGridRebuild = completion.Task;
+        }
+    }
+
+    private async Task CompleteDeferredBoundsAsync(TaskCompletionSource completion,
+        DocumentOperation? operation, ICommitPermission? permission)
+    {
+        try
+        {
+            DieOutline bounds = default;
+            List<(double X, double Y, double Width, double Height)>? regions = null;
+            void CaptureBounds()
+            {
+                void Capture() { bounds = ApplyPlacementBounds(); regions = RoutingRegions(); }
+                if (operation == null) Capture();
+                else if (!operation.TryPublish(Capture)) throw new OperationCanceledException("The bounds edit no longer owns this document.");
+            }
+            if (permission == null) CaptureBounds(); else permission.Commit(CaptureBounds);
+            await _routing.ReinitializeAStarRoutingInBackgroundAsync(
+                bounds.X, bounds.Y, bounds.Right, bounds.Bottom, regions, operation, permission);
+            completion.TrySetResult();
+        }
+        catch (OperationCanceledException error) { completion.TrySetCanceled(error.CancellationToken); }
+        catch (Exception error) { completion.TrySetException(error); }
+    }
+
     /// <summary>
     /// Like <see cref="ApplyScopeBounds"/>, but only the placement bounds change right away; the
     /// routing regions and A* grid are rebuilt off the UI thread. Used after a die move, where a
@@ -125,6 +188,11 @@ public sealed class DieScopeService
     /// </summary>
     public Task ApplyScopeBoundsInBackground()
     {
+        if (_boundsDeferralDepth > 0)
+        {
+            _deferredBounds ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            return PendingGridRebuild = _deferredBounds.Task;
+        }
         var bounds = ApplyPlacementBounds();
         PendingGridRebuild = _routing.ReinitializeAStarRoutingInBackgroundAsync(
             bounds.X, bounds.Y, bounds.Right, bounds.Bottom, RoutingRegions());

@@ -9,6 +9,7 @@ using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
 using CAP_Core.Tiles;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
+using CAP_DataAccess.Import.Gds;
 using CAP_DataAccess.Import.Gds.Interpretation;
 using Shouldly;
 using UnitTests.Import.Gds;
@@ -30,12 +31,12 @@ public class GdsShapeOnlyOptOutImportTests
     {
         using var host = new GdsDesignScopeTestHost();
         var path = await WriteFixture(host);
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new GdsSourceReader()).AnalyzeAsync(path);
         var review = Review(analysis) with
         {
             Cells = [new() { CellName = "device", GeometryOnly = true }]
         };
-        await new GdsImportService(host.Scope).ImportAsync(path, "TOP",
+        await new GdsImportService(new GdsSourceReader(), host.Scope).ImportAsync(path, "TOP",
             preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes, interpretation: review);
 
         var draft = host.Scope.Sets.Single().Drafts.Single();
@@ -63,9 +64,9 @@ public class GdsShapeOnlyOptOutImportTests
     {
         using var host = new GdsDesignScopeTestHost();
         var path = await WriteFixture(host);
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new GdsSourceReader()).AnalyzeAsync(path);
         var review = Review(analysis) with { Cells = [new() { CellName = "device" }] };
-        await new GdsImportService(host.Scope).ImportAsync(path, "TOP",
+        await new GdsImportService(new GdsSourceReader(), host.Scope).ImportAsync(path, "TOP",
             preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes, interpretation: review);
         var draft = host.Scope.Sets.Single().Drafts.Single();
         draft.ImportedModelStatus.ShouldBeNull(
@@ -78,9 +79,9 @@ public class GdsShapeOnlyOptOutImportTests
     {
         using var host = new GdsDesignScopeTestHost();
         var path = await WriteFixture(host);
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new GdsSourceReader()).AnalyzeAsync(path);
         var template = ModelTemplate();
-        var service = new GdsImportService(host.Scope, () => [template]);
+        var service = new GdsImportService(new GdsSourceReader(), host.Scope, () => [template]);
         var review = Review(analysis) with
         {
             Cells = [new()

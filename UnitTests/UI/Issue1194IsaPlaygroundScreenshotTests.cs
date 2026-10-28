@@ -43,7 +43,7 @@ public class Issue1194IsaPlaygroundScreenshotTests
         var dir = PrepareOutputDirectory();
         var manifest = new List<ManifestEntry>();
 
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         vm.IsAssembled.ShouldBeTrue("the window must open with the count-to-5 sample pre-assembled");
         for (int i = 0; i < StepsBeforeCapture; i++)
             vm.StepCommand.Execute(null);
@@ -73,7 +73,7 @@ public class Issue1194IsaPlaygroundScreenshotTests
         var dir = PrepareOutputDirectory();
         var manifest = new List<ManifestEntry>();
 
-        var vm = new IsaPlaygroundViewModel();
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         vm.ProgramText = "LOAD 1\nFROB 2\nHALT";
         vm.AssembleCommand.Execute(null);
         vm.ErrorText.ShouldContain("2"); // the error must name the source line of the bad mnemonic

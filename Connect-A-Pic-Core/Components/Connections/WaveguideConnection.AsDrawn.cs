@@ -105,6 +105,18 @@ namespace CAP_Core.Components.Connections
         /// </summary>
         public AsDrawnGeometry? AttachedAsDrawnGeometry => _asDrawn?.Geometry;
 
+        // The routing snapshot immediately converts these references to immutable scalar data.
+        // Keeping the original binding matters when the current route temporarily hides polygons.
+        internal (AsDrawnGeometry? Geometry, RouteShapeSignature? Signature, RoutedPath? OriginalPath, bool Displaced)
+            CaptureImportedRouteState() => (_asDrawn?.Geometry, _asDrawn?.Route, _asDrawn?.ImportedRoute, _drawnRouteDisplacedByMove);
+
+        internal void RestoreImportedRouteState(AsDrawnGeometry? geometry, RouteShapeSignature? signature,
+            RoutedPath? originalPath, bool displaced)
+        {
+            _asDrawn = geometry == null ? null : new AsDrawnBinding(geometry, signature, originalPath);
+            _drawnRouteDisplacedByMove = displaced;
+        }
+
         /// <summary>
         /// The preserved imported geometry no longer reaches its connected pins.
         /// This is an endpoint-continuity check, not a fabrication-rule validation.

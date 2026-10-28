@@ -36,14 +36,26 @@ public partial class MainViewModel
     {
         CanvasInteraction.ComponentPlacementRefusal = t => ToolSet.CanPlace(t) ? null : PlacementRefusal(t.Name);
         CanvasInteraction.GroupPlacementRefusal = t => ToolSet.CanPlace(t) ? null : PlacementRefusal(t.Name);
-        LeftRail.SectionUnavailable += _ => WorkspaceSwitch.Current = Workspace.Layout;
+        LeftRail.SectionUnavailable += SwitchUnavailableSectionToLayout;
         WorkspaceSwitch.PropertyChanged += OnWorkspaceToolSetChanged;
-        CanvasInteraction.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(CanvasInteractionViewModel.SelectedComponent))
-                RefreshCanvasContextMenu();
-        };
+        CanvasInteraction.PropertyChanged += ContextMenuSelectionChanged;
         ApplyWorkspaceToolSet();
+    }
+
+    private void SwitchUnavailableSectionToLayout(LeftRailSection section) => WorkspaceSwitch.Current = Workspace.Layout;
+
+    private void ContextMenuSelectionChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(CanvasInteractionViewModel.SelectedComponent)) RefreshCanvasContextMenu();
+    }
+
+    private void UnwireWorkspaceToolSets()
+    {
+        LeftRail.SectionUnavailable -= SwitchUnavailableSectionToLayout;
+        WorkspaceSwitch.PropertyChanged -= OnWorkspaceToolSetChanged;
+        CanvasInteraction.PropertyChanged -= ContextMenuSelectionChanged;
+        CanvasInteraction.ComponentPlacementRefusal = null;
+        CanvasInteraction.GroupPlacementRefusal = null;
     }
 
     private void OnWorkspaceToolSetChanged(object? sender, PropertyChangedEventArgs e)

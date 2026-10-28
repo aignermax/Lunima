@@ -7,7 +7,7 @@ namespace CAP_Core.Components.Creation;
 /// Manages the library of saved ComponentGroup templates.
 /// Handles loading, saving, and instantiation of group templates.
 /// </summary>
-public class GroupLibraryManager
+public class GroupLibraryManager : IGroupLibrary
 {
     private const string DefaultLibraryFolder = "GroupLibrary";
     private const string UserGroupsSubfolder = "UserGroups";
