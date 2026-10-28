@@ -55,6 +55,10 @@
         <TextBox Text="{Binding BottomPanel.LengthMatching.ToleranceText}"
                  Width="180" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
+        <TextBlock Classes="caption" Text="{loc:Localize Routing.LengthMatch.BendRadius}" Margin="0,0,0,3"/>
+        <TextBox Text="{Binding BottomPanel.LengthMatching.BendRadiusText}"
+                 Width="180" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
         <StackPanel Orientation="Horizontal" Spacing="8">
             <Button Content="{loc:Localize Routing.LengthMatch.Apply}"
                     Command="{Binding BottomPanel.LengthMatching.ApplyCommand}"/>

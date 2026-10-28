@@ -13,6 +13,9 @@ public enum MeanderFailureReason
 
     /// <summary>No tangent-continuous route between the two poses exists at the minimum bend radius.</summary>
     EndpointsNotRoutableAtMinRadius,
+
+    /// <summary>Every meander that fits would cross, touch or crowd another route or enter a component.</summary>
+    CollidesWithRoutes,
 }
 
 /// <summary>

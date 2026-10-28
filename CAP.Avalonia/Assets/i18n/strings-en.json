@@ -2395,5 +2395,9 @@
   "GdsSelection.ExpandHint": "Expose the original child cells to move and edit them separately. Undo restores this cell.",
   "GdsSelection.Expand": "Split into source components",
   "GdsSelection.Preparing": "Reading source hierarchy…",
-  "GdsSelection.Expanded": "Source components exposed. Undo restores the original cell."
+  "GdsSelection.Expanded": "Source components exposed. Undo restores the original cell.",
+  "DesignChecks.LengthTargetNotMet": "Length target not met: {0} to {1} is {2:F1} µm long, target {3:F1} µm — no collision-free meander fits; move neighboring routes or components, or change the target.",
+  "Routing.LengthMatch.BendRadius": "Meander bend radius (µm):",
+  "Routing.LengthMatch.Error.CollidesWithRoutes": "Every meander that would add the extra length crosses or crowds another route or a component. Free up space next to the route, choose a smaller bend radius, or change the target.",
+  "Routing.LengthMatch.Error.RadiusBelowProcessMinimum": "The bend radius is below the process minimum of {0:F1} µm."
 }

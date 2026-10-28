@@ -26,9 +26,6 @@ public sealed partial class MeanderPathGenerator
         return true;
     }
 
-    private static bool IsWithinBounds(RoutedPath path, MeanderBounds bounds)
-        => path.Segments.All(s => bounds.Contains(PathSegmentBounds.Of(s), BoundsSlackMicrometers));
-
     private static bool PoseMatches(RoutedPath path, MeanderRequest request)
     {
         if (path.Segments.Count == 0)
@@ -44,23 +41,6 @@ public sealed partial class MeanderPathGenerator
             && Distance(last.EndPoint, (request.EndX, request.EndY)) <= PosePositionToleranceMicrometers
             && AngleDistanceDegrees(first.StartAngleDegrees, request.StartDirectionDegrees) <= PoseAngleToleranceDegrees
             && AngleDistanceDegrees(last.EndAngleDegrees, request.EndDirectionDegrees) <= PoseAngleToleranceDegrees;
-    }
-
-    private static int IndexOfLongestStraight(RoutedPath path)
-    {
-        int index = -1;
-        double longest = 0.0;
-        for (int i = 0; i < path.Segments.Count; i++)
-        {
-            if (path.Segments[i] is StraightSegment straight
-                && straight.LengthMicrometers > longest + GeometrySlackMicrometers)
-            {
-                index = i;
-                longest = straight.LengthMicrometers;
-            }
-        }
-
-        return index;
     }
 
     private static void ValidateArguments(MeanderRequest request)
