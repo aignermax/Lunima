@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.LengthEqualizationPanel"
+             x:DataType="vm:MainViewModel">
+
+    <!-- Equalize lengths: visible while two or more connections are selected. Gives every
+         selected route the same length (the longest by default) via meanders that keep clear
+         of everything else; one undo step. -->
+    <StackPanel IsVisible="{Binding BottomPanel.LengthEqualization.HasSeveralConnections}">
+        <Border Classes="divider" Margin="0,12,0,8"/>
+        <TextBlock Classes="subtitle" Text="{loc:Localize Routing.LengthEqualize.Title}" Margin="0,0,0,5"/>
+        <TextBlock Classes="caption secondary" Text="{Binding BottomPanel.LengthEqualization.SummaryText}"
+                   TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+        <TextBlock Classes="caption" Text="{loc:Localize Routing.LengthEqualize.TargetLength}" Margin="0,0,0,3"/>
+        <TextBox Text="{Binding BottomPanel.LengthEqualization.TargetLengthText}"
+                 Watermark="{loc:Localize Routing.LengthEqualize.TargetWatermark}"
+                 Width="180" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+        <TextBlock Classes="caption" Text="{loc:Localize Routing.LengthEqualize.MaxRadius}" Margin="0,0,0,3"/>
+        <TextBox Text="{Binding BottomPanel.LengthEqualization.MaxRadiusText}"
+                 Width="180" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+        <Button Content="{loc:Localize Routing.LengthEqualize.Apply}"
+                Command="{Binding BottomPanel.LengthEqualization.EqualizeCommand}"/>
+        <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,0"
+                     IsVisible="{Binding BottomPanel.LengthEqualization.IsBusy}"/>
+
+        <TextBlock Text="{Binding BottomPanel.LengthEqualization.StatusMessage}"
+                   Foreground="{DynamicResource Brush.Danger}" TextWrapping="Wrap" Margin="0,6,0,0"
+                   IsVisible="{Binding BottomPanel.LengthEqualization.HasErrorStatus}"/>
+        <TextBlock Text="{Binding BottomPanel.LengthEqualization.StatusMessage}"
+                   Foreground="{DynamicResource Brush.Success}" TextWrapping="Wrap" Margin="0,6,0,0"
+                   IsVisible="{Binding BottomPanel.LengthEqualization.HasSuccessStatus}"/>
+        <TextBlock Classes="caption secondary" Text="{loc:Localize Routing.LengthEqualize.Hint}"
+                   TextWrapping="Wrap" Margin="0,6,0,0"/>
+    </StackPanel>
+</UserControl>

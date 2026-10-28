@@ -235,6 +235,7 @@
                             <panels:ConnectionRoutingPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
                             <panels:ConnectionLossPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
                             <panels:LengthMatchingPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
+                            <panels:LengthEqualizationPanel/>
                             <panels:GdsLayerVisibilityPanel/>
                             <panels:RerouteImportedPanel/>
                             <panels:TruthTablePanel IsVisible="{Binding !DieProperties.IsVisible}"/>

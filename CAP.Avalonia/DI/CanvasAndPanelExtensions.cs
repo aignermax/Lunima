@@ -135,6 +135,7 @@ internal static class CanvasAndPanelExtensions
         // Bottom panel sub-ViewModels
         services.AddTransient<ConnectionRoutingViewModel>();
         services.AddTransient<LengthMatchingViewModel>();
+        services.AddTransient<LengthEqualizationViewModel>();
         services.AddTransient<ViewModels.Canvas.ConnectionLoss.ConnectionLossViewModel>();
         services.AddTransient<ViewModels.Canvas.RerouteImported.RerouteImportedRoutesViewModel>();
         services.AddTransient<ElementLockViewModel>();
