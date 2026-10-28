@@ -319,24 +319,25 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private Task SaveDesignAs() => SaveWithDialogAsync(forcePicker: true);
 
-    private async Task SaveWithDialogAsync(bool forcePicker, CAP_Contracts.ICommitPermission? permission = null)
+    /// <returns>True when the design was written to disk.</returns>
+    private async Task<bool> SaveWithDialogAsync(bool forcePicker, CAP_Contracts.ICommitPermission? permission = null)
     {
         await using var request = NativeDesignRequest.Begin(_canvas.Document, permission);
-        if (request == null) return;
+        if (request == null) return false;
         if (FileDialogService == null)
         {
             request.TryCommit(() => UpdateStatus?.Invoke("Save not available"));
-            return;
+            return false;
         }
         var filePath = forcePicker ? null : CurrentFilePath;
         if (filePath == null)
         {
             Task<string?>? picking = null;
             if (!request.TryCommit(() => picking = FileDialogService.ShowSaveFileDialogAsync(
-                    forcePicker ? "Save Design As" : "Save Design", "lun", "Lunima Files|*.lun|All Files|*.*"))) return;
+                    forcePicker ? "Save Design As" : "Save Design", "lun", "Lunima Files|*.lun|All Files|*.*"))) return false;
             filePath = await picking!;
         }
-        if (filePath != null && request.IsCurrent) await SaveToFile(filePath, request);
+        return filePath != null && request.IsCurrent && await SaveToFile(filePath, request);
     }
 
     /// <summary>
@@ -347,7 +348,7 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     public Task<bool> SaveDesignToPathAsync(string filePath, CAP_Contracts.ICommitPermission? permission = null) => SaveToFile(filePath, permission);
 
     private Task<bool> SaveToFile(string filePath, CAP_Contracts.ICommitPermission? permission = null) => _nativeIo.SaveAsync(filePath,
-        CaptureDesignForSave, saved => PublishSavedDesign(filePath, saved.UnresolvedPins), error =>
+        CaptureDesignForSave, (saved, unchanged) => PublishSavedDesign(filePath, saved.UnresolvedPins, unchanged), error =>
         {
             _errorConsole?.LogError($"Failed to save design: {error.Message}", error);
             UpdateStatus?.Invoke($"Save failed: {error.Message}");
@@ -392,10 +393,11 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         return new NativeDesignSaveData(designData, unresolvedConnectionPins);
     }
 
-    private void PublishSavedDesign(string filePath, IReadOnlyList<string> unresolvedConnectionPins)
+    private void PublishSavedDesign(string filePath, IReadOnlyList<string> unresolvedConnectionPins,
+        bool documentUnchangedSinceCapture)
     {
         CurrentFilePath = filePath;
-        HasUnsavedChanges = false;
+        if (documentUnchangedSinceCapture) HasUnsavedChanges = false;
         _recentProjects?.RecordProject(filePath);
         if (unresolvedConnectionPins.Count > 0)
         {
@@ -760,8 +762,9 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
         if (!request.IsCurrent) return false;
         if (result == SavePromptResult.Save)
         {
-            await SaveWithDialogAsync(forcePicker: false, permission: request);
-            return request.IsCurrent && !HasUnsavedChanges;
+            // Changes that landed during the write (e.g. a finished routing pass) keep the dirty
+            // flag, but the user's explicit "Save" was honoured and the action may proceed.
+            return await SaveWithDialogAsync(forcePicker: false, permission: request) && request.IsCurrent;
         }
         return result == SavePromptResult.DontSave;
     }

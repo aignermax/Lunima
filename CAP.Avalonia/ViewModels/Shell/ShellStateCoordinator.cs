@@ -68,6 +68,8 @@ internal sealed partial class ShellStateCoordinator : ObservableObject, IDisposa
         }
         if (args.PropertyName == nameof(FileOperationsViewModel.ActiveProcess))
         {
+            // Bend radii, widths and models come from the process: results computed for the old one are stale.
+            _canvas.Document.Invalidate();
             RefreshRegistry();
             _monteCarlo.RefreshTolerancesFromProcess();
             _processChanged();

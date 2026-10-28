@@ -13,12 +13,13 @@ public sealed class DocumentOperation : IDisposable, IAsyncDisposable
     private Task? _cancelling;
 
     internal DocumentOperation(DocumentSession owner, Guid document, long revision, long? scopeRevision,
-        CancellationToken cancellationToken)
+        bool revisionBound, CancellationToken cancellationToken)
     {
         _owner = owner;
         DocumentId = document;
         Revision = revision;
         ScopeRevision = scopeRevision;
+        RevisionBound = revisionBound;
         _callerToken = cancellationToken;
         _cancellation = new CancellationTokenSource();
         CancellationToken = _cancellation.Token;
@@ -28,6 +29,7 @@ public sealed class DocumentOperation : IDisposable, IAsyncDisposable
     internal Guid DocumentId { get; }
     internal long Revision { get; set; }
     internal long? ScopeRevision { get; }
+    internal bool RevisionBound { get; }
     internal Task Completion => _completion.Task;
     internal bool IsDisposed => Volatile.Read(ref _disposed) != 0;
     internal bool IsCancellationRequested => _callerToken.IsCancellationRequested || CancellationToken.IsCancellationRequested;

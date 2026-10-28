@@ -8,8 +8,12 @@ internal sealed record NativeDesignSaveData(DesignFileData Data, IReadOnlyList<s
 /// <summary>Owns native I/O until cleanup and guards every later editor update against document changes.</summary>
 internal sealed class NativeDesignIoCoordinator(DocumentSession document, INativeDesignFileStore files)
 {
+    /// <summary>
+    /// Captures and writes the design. <paramref name="publish"/> receives whether the document is
+    /// still exactly what was written, so edits made during the write stay marked as unsaved.
+    /// </summary>
     public async Task<bool> SaveAsync(string path, Func<NativeDesignSaveData> capture,
-        Action<NativeDesignSaveData> publish, Action<Exception> reportFailure,
+        Action<NativeDesignSaveData, bool> publish, Action<Exception> reportFailure,
         CAP_Contracts.ICommitPermission? permission = null)
     {
         await using var operation = TryBegin(permission?.CancellationToken ?? default);
@@ -17,11 +21,13 @@ internal sealed class NativeDesignIoCoordinator(DocumentSession document, INativ
         try
         {
             NativeDesignSaveData saved = null!;
-            if (!Publish(operation, permission, () => saved = capture())) return false;
+            DocumentRevisionStamp written = default;
+            if (!Publish(operation, permission, () => { saved = capture(); written = document.CaptureRevision(); }))
+                return false;
             // Finish an accepted write even if editing continues. Retirement waits
-            // for it; only presentation permission is revoked by document changes.
+            // for it; only document replacement revokes the follow-up presentation.
             await files.WriteAsync(path, saved.Data);
-            Publish(operation, permission, () => publish(saved));
+            Publish(operation, permission, () => publish(saved, document.IsUnchangedSince(written)));
             return true;
         }
         catch (Exception error)
@@ -35,7 +41,8 @@ internal sealed class NativeDesignIoCoordinator(DocumentSession document, INativ
         Action<DesignFileData> apply, Action<string> reportStatus, Action<Exception> reportFailure,
         CAP_Contracts.ICommitPermission? permission = null)
     {
-        await using var operation = TryBegin(permission?.CancellationToken ?? default);
+        // Revision-bound: edits made while the file is read must not be overwritten by it.
+        await using var operation = TryBegin(permission?.CancellationToken ?? default, revisionBound: true);
         if (operation == null) return false;
         try
         {
@@ -85,9 +92,9 @@ internal sealed class NativeDesignIoCoordinator(DocumentSession document, INativ
         catch (OperationCanceledException) when (!entered) { return false; }
     }
 
-    private DocumentOperation? TryBegin(CancellationToken cancellationToken = default)
+    private DocumentOperation? TryBegin(CancellationToken cancellationToken = default, bool revisionBound = false)
     {
-        try { return document.CaptureOperation(cancellationToken, scopeBound: false); }
+        try { return document.CaptureOperation(cancellationToken, scopeBound: false, revisionBound); }
         catch (OperationCanceledException) { return null; }
     }
 }

@@ -51,16 +51,27 @@ public sealed class DocumentSession
         lock (_sync) return !_retired && _commitOwner == null && identity.Value == _document;
     }
 
+    /// <summary>Whether no document mutation happened since <paramref name="stamp"/>; scope navigation is ignored.</summary>
+    public bool IsUnchangedSince(DocumentRevisionStamp stamp)
+    {
+        lock (_sync) return !_retired && stamp.Document == _document && stamp.Revision == _revision;
+    }
+
     /// <summary>Admits new work only for the document to which its feature was configured.</summary>
     public DocumentOperation CaptureOperation(DocumentIdentity identity, CancellationToken cancellationToken = default,
-        bool scopeBound = true) => CaptureOperationCore(identity, cancellationToken, scopeBound);
+        bool scopeBound = true) => CaptureOperationCore(identity, cancellationToken, scopeBound, revisionBound: true);
 
-    /// <summary>Captures publication permission. Document-wide saves may ignore view navigation.</summary>
-    public DocumentOperation CaptureOperation(CancellationToken cancellationToken = default, bool scopeBound = true) =>
-        CaptureOperationCore(null, cancellationToken, scopeBound);
+    /// <summary>
+    /// Captures publication permission. Document-wide saves may ignore view navigation. A
+    /// <paramref name="revisionBound"/> of false keeps the permission across edits and is revoked
+    /// only by document replacement: user interactions (file dialogs) act on whatever the document
+    /// is when they return, while computed results must stay revision-bound.
+    /// </summary>
+    public DocumentOperation CaptureOperation(CancellationToken cancellationToken = default, bool scopeBound = true,
+        bool revisionBound = true) => CaptureOperationCore(null, cancellationToken, scopeBound, revisionBound);
 
     private DocumentOperation CaptureOperationCore(DocumentIdentity? identity, CancellationToken cancellationToken,
-        bool scopeBound)
+        bool scopeBound, bool revisionBound)
     {
         lock (_sync)
         {
@@ -70,7 +81,7 @@ public sealed class DocumentSession
             if (_commitOwner != null) throw new InvalidOperationException("Cannot capture a partially committed document.");
             cancellationToken.ThrowIfCancellationRequested();
             var operation = new DocumentOperation(this, _document, _revision,
-                scopeBound ? _scopeRevision : null, cancellationToken);
+                scopeBound ? _scopeRevision : null, revisionBound, cancellationToken);
             _active.Add(operation);
             return operation;
         }
@@ -172,7 +183,7 @@ public sealed class DocumentSession
         && Matches(operation);
 
     private bool Matches(DocumentOperation operation) =>
-        operation.Revision == _revision && MatchesIdentity(operation);
+        (!operation.RevisionBound || operation.Revision == _revision) && MatchesIdentity(operation);
 
     private bool MatchesIdentity(DocumentOperation operation) => operation.DocumentId == _document
         && (operation.ScopeRevision == null || operation.ScopeRevision == _scopeRevision);

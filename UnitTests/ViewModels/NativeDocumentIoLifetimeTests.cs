@@ -27,7 +27,8 @@ public sealed class NativeDocumentIoLifetimeTests
             else main.Canvas.AddComponent(TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins());
             store.WriteRelease.TrySetResult();
             (await saving).ShouldBeTrue("the captured file was written successfully");
-            main.FileOperations.CurrentFilePath.ShouldBe(loadAnother ? "other.lun" : "original.lun");
+            // The written file is the current file; the edit made during the write keeps it dirty.
+            main.FileOperations.CurrentFilePath.ShouldBe(loadAnother ? "other.lun" : "captured.lun");
             main.FileOperations.HasUnsavedChanges.ShouldBe(!loadAnother);
         }
         finally

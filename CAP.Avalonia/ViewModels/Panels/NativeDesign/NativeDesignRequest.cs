@@ -30,7 +30,9 @@ internal sealed class NativeDesignRequest : ICommitPermission, IDisposable, IAsy
         void Capture()
         {
             if (canProceed?.Invoke() == false) return;
-            operation = document.CaptureOperation(caller?.CancellationToken ?? default, scopeBound: false);
+            // A background commit while a dialog is open must not silently drop the user's answer.
+            operation = document.CaptureOperation(caller?.CancellationToken ?? default, scopeBound: false,
+                revisionBound: false);
         }
         try
         {

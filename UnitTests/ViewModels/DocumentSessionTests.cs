@@ -30,6 +30,34 @@ public sealed class DocumentSessionTests
     }
 
     [Fact]
+    public void IdentityBoundOperation_SurvivesEditsAndCommitsButNotReplacement()
+    {
+        var document = new DocumentSession();
+        using var interaction = document.CaptureOperation(scopeBound: false, revisionBound: false);
+        using (var worker = document.CaptureOperation())
+            worker.TryCommitAndAdvance(() => { }).ShouldBeTrue();
+        document.Invalidate();
+        document.ChangeScope(Guid.NewGuid());
+
+        interaction.IsCurrent.ShouldBeTrue();
+        interaction.CancellationToken.IsCancellationRequested.ShouldBeFalse();
+        document.ReplaceDocument();
+        interaction.IsCurrent.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsUnchangedSince_IgnoresNavigationButDetectsEdits()
+    {
+        var document = new DocumentSession();
+        var stamp = document.CaptureRevision();
+
+        document.ChangeScope(Guid.NewGuid());
+        document.IsUnchangedSince(stamp).ShouldBeTrue();
+        document.Invalidate();
+        document.IsUnchangedSince(stamp).ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task Retirement_SealsImmediatelyAndDrainsActualOwnership()
     {
         var document = new DocumentSession();
