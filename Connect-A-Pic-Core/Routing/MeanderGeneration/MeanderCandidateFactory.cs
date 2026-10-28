@@ -1,49 +1,84 @@
+using CAP_Core.Routing.MeanderGeneration.Clearance;
+
 namespace CAP_Core.Routing.MeanderGeneration;
 
 /// <summary>
 /// One candidate route: the full path plus the pieces of it that are new geometry (judged
 /// against obstacles). <see cref="RebuiltPinToPin"/> marks a path rebuilt from the pins, whose
 /// new geometry ends at the pins themselves and therefore earns the fan-out exemption.
+/// <see cref="HostIndices"/> are the base-path straights the folds replaced.
 /// </summary>
-internal sealed record MeanderCandidate(RoutedPath Path, IReadOnlyList<RoutedPath> ChangedPieces, bool RebuiltPinToPin);
+internal sealed record MeanderCandidate(RoutedPath Path, IReadOnlyList<RoutedPath> ChangedPieces, bool RebuiltPinToPin,
+    IReadOnlyList<int> HostIndices);
 
 /// <summary>
 /// Enumerates meander candidates for a host route, most compact first: every long straight can
-/// host the fold, on either side, with several loop counts and at the center, start or end of
-/// the straight; finally the extra length is split across the two longest straights. The first
-/// candidate is the classic one (longest straight, max loops, centered, first side), so an
-/// unobstructed route gets exactly the geometry it always got. Deterministic.
+/// host the fold, on either side, with several loop counts; finally the extra length is split
+/// across the two longest straights. Without obstacles a fold sits at the center, start or end
+/// of its straight, and the first candidate is the classic one (longest straight, max loops,
+/// centered, first side), so an unobstructed route gets exactly the geometry it always got.
+/// With obstacles the fold goes wherever <see cref="FoldPlacementFinder"/> finds room along
+/// the straight, closest to its center first. Deterministic.
 /// </summary>
 internal static class MeanderCandidateFactory
 {
     private const double GeometrySlackMicrometers = 1e-6;
     private const int MaxLoopCount = 4096;
-    private const int MaxHostStraights = 6;
+    private const int MaxHostStraights = 12;
     private const int BisectionIterations = 60;
     private static readonly double[] Sides = [1.0, -1.0];
     private static readonly double[] Placements = [0.5, 0.0, 1.0];
 
-    private sealed record Fold(int Host, double Footprint, double Placement, Action<PosePathBuilder> Emit);
+    private sealed record Fold(int Host, double Footprint, double Prefix, Action<PosePathBuilder> Emit);
 
     /// <summary>Candidates absorbing <paramref name="extraMicrometers"/> into <paramref name="basePath"/>.</summary>
+    /// <param name="basePath">The route that hosts the fold.</param>
+    /// <param name="rebuiltPinToPin">True when the route was rebuilt from the pins (all of it is new geometry).</param>
+    /// <param name="extraMicrometers">Length to add.</param>
+    /// <param name="radius">Bend radius of the fold.</param>
+    /// <param name="obstacles">When given, folds are placed where they have room instead of at fixed positions.</param>
+    /// <param name="onBlocked">Called when obstacles leave a fold no room anywhere along its straight.</param>
     public static IEnumerable<MeanderCandidate> Enumerate(
-        RoutedPath basePath, bool rebuiltPinToPin, double extraMicrometers, double radius)
+        RoutedPath basePath, bool rebuiltPinToPin, double extraMicrometers, double radius,
+        MeanderObstacles? obstacles = null, Action? onBlocked = null)
     {
         var hosts = HostStraights(basePath);
         foreach (int host in hosts)
         {
-            double hostLength = basePath.Segments[host].LengthMicrometers;
-            foreach (var (footprint, emit) in Folds(hostLength, extraMicrometers, radius))
+            var segment = basePath.Segments[host];
+            foreach (var (footprint, emit) in Folds(segment.LengthMicrometers, extraMicrometers, radius))
             foreach (double side in Sides)
-            foreach (double placement in Placements)
-                yield return Assemble(basePath, rebuiltPinToPin,
-                    [new Fold(host, footprint, placement, builder => emit(builder, side))]);
+            {
+                Action<PosePathBuilder> sided = builder => emit(builder, side);
+                var prefixes = Prefixes(segment, footprint, sided, obstacles);
+                if (prefixes.Count == 0)
+                    onBlocked?.Invoke();
+                foreach (double prefix in prefixes)
+                    yield return Assemble(basePath, rebuiltPinToPin, [new Fold(host, footprint, prefix, sided)]);
+            }
         }
 
         if (hosts.Count < 2)
             yield break;
         foreach (var split in SplitAcrossTwoHosts(basePath, hosts[0], hosts[1], extraMicrometers, radius))
             yield return Assemble(basePath, rebuiltPinToPin, split);
+    }
+
+    private static IReadOnlyList<double> Prefixes(PathSegment host, double footprint, Action<PosePathBuilder> emit,
+        MeanderObstacles? obstacles)
+    {
+        double room = Math.Max(0.0, host.LengthMicrometers - footprint);
+        if (obstacles is not { IsEmpty: false })
+            return Placements.Select(placement => room * placement).ToList();
+        return FoldPlacementFinder.FreeOffsets(host, FoldAt(host, emit), footprint, room * 0.5, obstacles);
+    }
+
+    private static RoutedPath FoldAt(PathSegment host, Action<PosePathBuilder> emit)
+    {
+        var geometry = new RoutedPath();
+        double headingDeg = Math.Atan2(host.EndPoint.Y - host.StartPoint.Y, host.EndPoint.X - host.StartPoint.X) * 180.0 / Math.PI;
+        emit(new PosePathBuilder(geometry, host.StartPoint.X, host.StartPoint.Y, headingDeg));
+        return geometry;
     }
 
     private static List<int> HostStraights(RoutedPath path) => Enumerable.Range(0, path.Segments.Count)
@@ -108,10 +143,14 @@ internal static class MeanderCandidateFactory
         foreach (double secondSide in Sides)
             yield return
             [
-                new Fold(first, firstFold.Footprint, 0.5, builder => firstFold.Emit(builder, firstSide)),
-                new Fold(second, secondFold.Footprint, 0.5, builder => secondFold.Emit(builder, secondSide)),
+                new Fold(first, firstFold.Footprint, Centered(firstLength, firstFold.Footprint),
+                    builder => firstFold.Emit(builder, firstSide)),
+                new Fold(second, secondFold.Footprint, Centered(secondLength, secondFold.Footprint),
+                    builder => secondFold.Emit(builder, secondSide)),
             ];
     }
+
+    private static double Centered(double hostLength, double footprint) => Math.Max(0.0, hostLength - footprint) * 0.5;
 
     private static MeanderCandidate Assemble(RoutedPath basePath, bool rebuiltPinToPin, IReadOnlyList<Fold> folds)
     {
@@ -131,7 +170,8 @@ internal static class MeanderCandidateFactory
             piece.Segments.AddRange(result.Segments.Skip(firstNew));
             changed.Add(piece);
         }
-        return new MeanderCandidate(result, rebuiltPinToPin ? [result] : changed, rebuiltPinToPin);
+        return new MeanderCandidate(result, rebuiltPinToPin ? [result] : changed, rebuiltPinToPin,
+            folds.Select(f => f.Host).ToList());
     }
 
     private static void AppendFold(RoutedPath result, PathSegment host, Fold fold)
@@ -140,7 +180,7 @@ internal static class MeanderCandidateFactory
         double dirY = host.EndPoint.Y - host.StartPoint.Y;
         double hostLength = Math.Sqrt(dirX * dirX + dirY * dirY);
         double headingDeg = Math.Atan2(dirY, dirX) * 180.0 / Math.PI;
-        double prefix = Math.Max(0.0, hostLength - fold.Footprint) * fold.Placement;
+        double prefix = Math.Clamp(fold.Prefix, 0.0, Math.Max(0.0, hostLength - fold.Footprint));
 
         var builder = new PosePathBuilder(result, host.StartPoint.X, host.StartPoint.Y, headingDeg);
         builder.AppendStraight(prefix);

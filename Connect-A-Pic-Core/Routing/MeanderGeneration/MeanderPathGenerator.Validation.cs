@@ -7,23 +7,48 @@ namespace CAP_Core.Routing.MeanderGeneration;
 /// </summary>
 public sealed partial class MeanderPathGenerator
 {
-    private bool IsValidCandidate(RoutedPath path, MeanderRequest request, double tolerance)
+    /// <summary>
+    /// Length, poses and bounds of the whole path; the radius floor only for the new geometry —
+    /// an existing route with tighter (e.g. imported) bends may still host a fold.
+    /// </summary>
+    private bool IsValidCandidate(MeanderCandidate candidate, MeanderRequest request, double tolerance)
     {
+        var path = candidate.Path;
         if (!path.IsValid || !PoseMatches(path, request))
             return false;
         if (Math.Abs(path.TotalLengthMicrometers - request.TargetLengthMicrometers) > tolerance)
             return false;
+        if (!path.Segments.All(s => request.Bounds.Contains(PathSegmentBounds.Of(s), BoundsSlackMicrometers)))
+            return false;
 
-        foreach (var segment in path.Segments)
+        return candidate.ChangedPieces.SelectMany(piece => piece.Segments).OfType<BendSegment>()
+            .All(bend => bend.RadiusMicrometers >= request.MinBendRadiusMicrometers - RadiusSlackMicrometers);
+    }
+
+    /// <summary>
+    /// The folds keep the spacing to the rest of their own route: a loop on one leg of a U-shaped
+    /// route must not reach the other leg. The straights' direct neighbours join the fold and
+    /// are left out.
+    /// </summary>
+    private static bool KeepsClearOfItself(MeanderCandidate candidate, MeanderRequest request)
+    {
+        if (candidate.RebuiltPinToPin)
+            return !PathIntersectionDetector.HasSelfIntersection(candidate.Path);
+        if (candidate.HostIndices.Count == 0 || request.BasePath is not { } basePath)
+            return true;
+
+        var rest = new RoutedPath();
+        for (int i = 0; i < basePath.Segments.Count; i++)
         {
-            if (segment is BendSegment bend
-                && bend.RadiusMicrometers < request.MinBendRadiusMicrometers - RadiusSlackMicrometers)
-                return false;
-            if (!request.Bounds.Contains(PathSegmentBounds.Of(segment), BoundsSlackMicrometers))
-                return false;
+            if (!candidate.HostIndices.Any(host => Math.Abs(host - i) <= 1))
+                rest.Segments.Add(basePath.Segments[i]);
         }
-
-        return true;
+        if (rest.Segments.Count == 0)
+            return true;
+        double spacing = request.Obstacles?.MinSpacingMicrometers ?? 0.0;
+        double contact = request.Obstacles?.ContactClearanceMicrometers ?? 0.0;
+        var self = new MeanderObstacles([rest], [], spacing, contact);
+        return !candidate.ChangedPieces.Any(piece => MeanderCollisionChecker.Collides(piece, self, 0.0));
     }
 
     private static bool PoseMatches(RoutedPath path, MeanderRequest request)

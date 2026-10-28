@@ -34,14 +34,17 @@ public sealed partial class MeanderPathGenerator
 
         double tolerance = Math.Max(request.ToleranceMicrometers, GeometrySlackMicrometers);
         RoutedPath? nominal = BuildNominalPath(request);
-        if (nominal == null || !PoseMatches(nominal, request))
+        bool nominalUsable = nominal != null && PoseMatches(nominal, request);
+        bool hasExisting = UsableExistingRoute(request, tolerance) != null;
+        if (!nominalUsable && !hasExisting)
         {
             return MeanderResult.Failure(
                 MeanderFailureReason.EndpointsNotRoutableAtMinRadius,
                 "No tangent-continuous route between the two poses exists at the given minimum bend radius.");
         }
 
-        if (request.TargetLengthMicrometers < nominal.TotalLengthMicrometers - tolerance)
+        if (nominalUsable && !hasExisting
+            && request.TargetLengthMicrometers < nominal!.TotalLengthMicrometers - tolerance)
         {
             return MeanderResult.Failure(
                 MeanderFailureReason.TargetShorterThanDirectPath,
@@ -49,7 +52,7 @@ public sealed partial class MeanderPathGenerator
         }
 
         var rejections = new CandidateRejections();
-        foreach (var (basePath, rebuilt) in BasePaths(request, nominal, tolerance))
+        foreach (var (basePath, rebuilt) in BasePaths(request, nominalUsable ? nominal : null, tolerance))
         {
             var found = SearchBase(basePath, rebuilt, request, tolerance, rejections);
             if (found != null)
@@ -69,17 +72,36 @@ public sealed partial class MeanderPathGenerator
     }
 
     private static IEnumerable<(RoutedPath Path, bool RebuiltPinToPin)> BasePaths(
-        MeanderRequest request, RoutedPath nominal, double tolerance)
+        MeanderRequest request, RoutedPath? nominal, double tolerance)
     {
-        yield return (nominal, true);
+        var existing = UsableExistingRoute(request, tolerance);
+        if (existing != null && request.PreferExistingRoute)
+            yield return (existing, false);
+        if (nominal != null && !NominalCollides(nominal, request))
+            yield return (nominal, true);
+        if (existing != null && !request.PreferExistingRoute)
+            yield return (existing, false);
+    }
+
+    private static RoutedPath? UsableExistingRoute(MeanderRequest request, double tolerance)
+    {
         var existing = request.BasePath;
         if (existing == null || existing.Segments.Count == 0 || existing.IsBlockedFallback || !existing.IsValid)
-            yield break;
+            return null;
         if (!PoseMatches(existing, request)
             || existing.TotalLengthMicrometers > request.TargetLengthMicrometers + tolerance)
-            yield break;
-        yield return (existing, false);
+            return null;
+        return existing;
     }
+
+    /// <summary>
+    /// A rebuilt route that collides before any fold is added cannot be saved by one: a fold
+    /// only changes the straight it sits on. Skipping it spares judging every fold on it.
+    /// </summary>
+    private static bool NominalCollides(RoutedPath nominal, MeanderRequest request) =>
+        request.Obstacles is { IsEmpty: false } obstacles
+        && MeanderCollisionChecker.Collides(nominal, obstacles,
+            request.LoopRadiusMicrometers * PinFanOutExemptionRadiusFactor);
 
     private RoutedPath? SearchBase(RoutedPath basePath, bool rebuilt, MeanderRequest request,
         double tolerance, CandidateRejections rejections)
@@ -91,14 +113,15 @@ public sealed partial class MeanderPathGenerator
             // the bounds and the obstacles can still reject it.
             if (!basePath.Segments.All(s => request.Bounds.Contains(PathSegmentBounds.Of(s), BoundsSlackMicrometers)))
                 return null;
-            var unchanged = new MeanderCandidate(basePath, rebuilt ? [basePath] : [], rebuilt);
+            var unchanged = new MeanderCandidate(basePath, rebuilt ? [basePath] : [], rebuilt, []);
             return IsCollisionFree(unchanged, request, rejections) ? basePath : null;
         }
         if (extra < 0)
             return null;
 
         foreach (var candidate in MeanderCandidateFactory.Enumerate(
-                     basePath, rebuilt, extra, request.MinBendRadiusMicrometers))
+                     basePath, rebuilt, extra, request.LoopRadiusMicrometers, request.Obstacles,
+                     () => rejections.Collided = true))
         {
             if (Accept(candidate, request, tolerance, rejections))
                 return candidate.Path;
@@ -109,7 +132,8 @@ public sealed partial class MeanderPathGenerator
     private bool Accept(MeanderCandidate candidate, MeanderRequest request, double tolerance,
         CandidateRejections rejections)
     {
-        return IsValidCandidate(candidate.Path, request, tolerance) && IsCollisionFree(candidate, request, rejections);
+        return IsValidCandidate(candidate, request, tolerance) && IsCollisionFree(candidate, request, rejections)
+            && KeepsClearOfItself(candidate, request);
     }
 
     private static bool IsCollisionFree(MeanderCandidate candidate, MeanderRequest request, CandidateRejections rejections)
@@ -118,7 +142,7 @@ public sealed partial class MeanderPathGenerator
             return true;
 
         double exemption = candidate.RebuiltPinToPin
-            ? request.MinBendRadiusMicrometers * PinFanOutExemptionRadiusFactor
+            ? request.LoopRadiusMicrometers * PinFanOutExemptionRadiusFactor
             : 0.0;
         if (candidate.ChangedPieces.Any(piece => MeanderCollisionChecker.Collides(piece, obstacles, exemption)))
         {
@@ -154,7 +178,7 @@ public sealed partial class MeanderPathGenerator
             }
         }
 
-        new ManhattanRouter(request.MinBendRadiusMicrometers).Route(
+        new ManhattanRouter(request.LoopRadiusMicrometers).Route(
             request.StartX, request.StartY, request.StartDirectionDegrees,
             request.EndX, request.EndY, request.EndDirectionDegrees, path);
         return path;

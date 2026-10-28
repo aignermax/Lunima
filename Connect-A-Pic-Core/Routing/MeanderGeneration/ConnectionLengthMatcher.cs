@@ -176,13 +176,18 @@ public sealed class ConnectionLengthMatcher
         double startDirection = connection.StartPin.GetAbsoluteAngle();
         double endDirection = (connection.EndPin.GetAbsoluteAngle() + 180.0) % 360.0;
 
-        double minRadius = Math.Max(
-            meanderRadiusMicrometers ?? connection.BendRadiusMicrometers,
-            ResolveProcessFloor(connection));
+        double floor = ResolveProcessFloor(connection);
+        double loopRadius = Math.Max(meanderRadiusMicrometers ?? connection.BendRadiusMicrometers, floor);
+        double minRadius = floor > 0 ? floor : loopRadius;
 
+        // With siblings the obstacles carry every component footprint, so the bounds only cap the
+        // reach; clamping them to the nearest component as well would rule out room that exists.
         var baseBounds = CurrentRouteBounds(connection, startX, startY, endX, endY);
-        var bounds = InflateTowardObstacles(
-            baseBounds, InflationMargin(targetLengthMicrometers, minRadius), obstacleComponents);
+        double margin = InflationMargin(targetLengthMicrometers, loopRadius);
+        var bounds = siblings == null
+            ? InflateTowardObstacles(baseBounds, margin, obstacleComponents)
+            : new MeanderBounds(baseBounds.MinX - margin, baseBounds.MinY - margin,
+                baseBounds.MaxX + margin, baseBounds.MaxY + margin);
         var obstacles = siblings == null
             ? null
             : MeanderObstacleCollector.Collect(connection, siblings, obstacleComponents,
@@ -192,7 +197,7 @@ public sealed class ConnectionLengthMatcher
             startX, startY, startDirection,
             endX, endY, endDirection,
             targetLengthMicrometers, toleranceMicrometers,
-            minRadius, bounds, obstacles, connection.RoutedPath);
+            minRadius, bounds, obstacles, connection.RoutedPath, loopRadius);
     }
 
     /// <summary>
