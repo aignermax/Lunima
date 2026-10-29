@@ -673,7 +673,7 @@ public partial class WaveguideConnectionManager
                 // full re-route with ordering strategies gets a chance to untangle it.
                 // Blocked fallbacks are otherwise NOT counted as failures here: they have
                 // valid geometry and are registered as obstacles.
-                if (cascadeWorthy && CrossesAnyRoutedSibling(connection, routedSoFar))
+                if (cascadeWorthy && RouteCrossingPolicy.CrossesAnyRoutedSibling(connection, routedSoFar))
                     failedCount++;
                 routedSoFar.Add(connection);
             }
@@ -784,7 +784,7 @@ public partial class WaveguideConnectionManager
                 // as routing failures for ordering optimization. Grid obstacles cannot
                 // represent sub-cell pin pitches (flat PDK components), so the geometric
                 // check decides whether an ordering counts as clean.
-                if (connection.IsBlockedFallback || CrossesAnyRoutedSibling(connection, routedSoFar))
+                if (connection.IsBlockedFallback || RouteCrossingPolicy.CrossesAnyRoutedSibling(connection, routedSoFar))
                 {
                     failedCount++;
                     failedConnections.Add(connection);
@@ -808,18 +808,6 @@ public partial class WaveguideConnectionManager
     private static bool AllFailuresEndpointBlocked(List<WaveguideConnection> failedConnections) =>
         failedConnections.Count > 0 &&
         failedConnections.All(c => c.FailureReason == RoutingFailureReason.EndpointBlocked);
-
-    /// <summary>
-    /// True when the connection's routed geometry properly crosses any already-routed
-    /// sibling in this pass. Touching endpoints (shared fan-out regions) do not count.
-    /// </summary>
-    private static bool CrossesAnyRoutedSibling(
-        WaveguideConnection connection, List<WaveguideConnection> routedSoFar)
-    {
-        return routedSoFar.Any(other =>
-            other.RoutedPath != null &&
-            PathIntersectionDetector.Crosses(connection.RoutedPath!, other.RoutedPath));
-    }
 
     /// <summary>
     /// Generates different orderings to try.

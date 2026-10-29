@@ -70,7 +70,12 @@ public sealed class ChangeRoutingStyleCommand : IUndoableCommand
             var connection = state.Connection.Connection;
             ApplyStyle(connection, _style);
             if (_laidOutRoutes != null && _laidOutRoutes.TryGetValue(connection, out var route))
+            {
+                // A laid-out bundle is final geometry like a meander: the post-routing passes
+                // (pin-lead collapse, bend upsizing) must not reshape it wire by wire.
                 connection.RestoreCachedPath(route.DeepCopy());
+                connection.IsRouteFrozen = true;
+            }
         }
         _canvas.Groups.PublishRouteChanges(_states.Select(state => state.Connection));
         RecalculateOnce();

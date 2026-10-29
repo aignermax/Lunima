@@ -59,6 +59,53 @@ public sealed class SampledPolyline
         return false;
     }
 
+    /// <summary>
+    /// Minimum distance (µm) to <paramref name="other"/>; 0 when they cross or touch — the
+    /// verdict of <see cref="PathIntersectionDetector.MinimumDistance"/>. Chunk pairs are visited
+    /// nearest box first and the search stops once no remaining box can be closer, so long
+    /// parallel routes cost a few chunk pairs instead of every edge against every edge. A box
+    /// gap is a lower bound on every edge distance inside it, so the result equals the exhaustive one.
+    /// </summary>
+    /// <param name="other">The other sampled path.</param>
+    public double MinimumDistance(SampledPolyline other)
+    {
+        if (_points.Count < 2 || other._points.Count < 2)
+            return 0;
+        var pairs = new List<(double Gap, int A, int B)>(_chunks.Length * other._chunks.Length);
+        for (int ca = 0; ca < _chunks.Length; ca++)
+            for (int cb = 0; cb < other._chunks.Length; cb++)
+                pairs.Add((_chunks[ca].Gap(other._chunks[cb]), ca, cb));
+        pairs.Sort((x, y) => x.Gap.CompareTo(y.Gap));
+
+        double min = double.MaxValue;
+        foreach (var (gap, ca, cb) in pairs)
+        {
+            if (gap >= min)
+                break;
+            min = Math.Min(min, ChunkDistance(ca, other, cb));
+            if (min <= 0)
+                return 0;
+        }
+        return min == double.MaxValue ? 0 : min;
+    }
+
+    private double ChunkDistance(int chunkA, SampledPolyline other, int chunkB)
+    {
+        int aEnd = Math.Min(_points.Count - 1, (chunkA + 1) * ChunkEdges);
+        int bEnd = Math.Min(other._points.Count - 1, (chunkB + 1) * ChunkEdges);
+        double min = double.MaxValue;
+        for (int i = chunkA * ChunkEdges; i < aEnd; i++)
+        {
+            for (int j = chunkB * ChunkEdges; j < bEnd; j++)
+            {
+                if (PathIntersectionDetector.SegmentsIntersect(_points[i], _points[i + 1], other._points[j], other._points[j + 1]))
+                    return 0;
+                min = Math.Min(min, PathIntersectionDetector.SegmentDistance(_points[i], _points[i + 1], other._points[j], other._points[j + 1]));
+            }
+        }
+        return min;
+    }
+
     private bool ChunksIntersect(int chunkA, SampledPolyline other, int chunkB)
     {
         int aEnd = Math.Min(_points.Count - 1, (chunkA + 1) * ChunkEdges);
@@ -82,6 +129,14 @@ public sealed class SampledPolyline
         /// <summary>True when the boxes overlap or touch.</summary>
         public bool Overlaps(Box other) =>
             MinX <= other.MaxX && other.MinX <= MaxX && MinY <= other.MaxY && other.MinY <= MaxY;
+
+        /// <summary>Distance between the boxes; 0 when they overlap or touch.</summary>
+        public double Gap(Box other)
+        {
+            double dx = Math.Max(0, Math.Max(MinX - other.MaxX, other.MinX - MaxX));
+            double dy = Math.Max(0, Math.Max(MinY - other.MaxY, other.MinY - MaxY));
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
 
         /// <summary>Box over the points with indices <paramref name="first"/>..<paramref name="last"/> (inclusive).</summary>
         public static Box Of(List<(double X, double Y)> points, int first, int last)

@@ -51,7 +51,7 @@ public class BundleAutoRestyleTests
         await SetStyleAsync(canvas, routing, connections, WaveguideType.Auto);
 
         connections.ShouldAllBe(c => c.Connection.Type == WaveguideType.Auto && c.Connection.RoutedPath != null
-            && !c.Connection.IsBlockedFallback && !c.Connection.IsRouteFrozen);
+            && !c.Connection.IsBlockedFallback && c.Connection.IsRouteFrozen);
         var paths = connections.Select(c => c.Connection.RoutedPath!).ToList();
         for (int i = 0; i < paths.Count; i++)
             for (int j = i + 1; j < paths.Count; j++)
