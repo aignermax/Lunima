@@ -13,7 +13,7 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// a chip full of meanders; here a route is a single geometry. The level of detail follows the
 /// zoom: points closer than about half a screen pixel are merged, so a zoomed-out meander is a
 /// few dozen points instead of thousands. A route edited in place is noticed by its signature
-/// (segment count, end points, total length) and rebuilt.
+/// (segment count, joints, bend radii) and rebuilt.
 /// </summary>
 internal static class RouteGeometryCache
 {
@@ -22,10 +22,11 @@ internal static class RouteGeometryCache
     /// <summary>Arc sampling: at most this many degrees per chord at full detail.</summary>
     private const double MaxChordDegrees = 5.0;
     private const int MinArcChords = 8;
+    private const double HashFactor = 1.000003;
 
     private sealed record Entry(int Level, Signature Key, Geometry Geometry);
 
-    private readonly record struct Signature(int Count, double StartX, double StartY, double EndX, double EndY, double Length);
+    private readonly record struct Signature(int Count, double StartX, double StartY, double EndX, double EndY, double Hash);
 
     private static readonly ConditionalWeakTable<RoutedPath, Entry> Cache = new();
 
@@ -92,15 +93,23 @@ internal static class RouteGeometryCache
 
     private static Point End(PathSegment segment) => new(segment.EndPoint.X, segment.EndPoint.Y);
 
+    /// <summary>
+    /// Cheap fingerprint of the route: segment count, end points and a running hash of every
+    /// joint and bend radius — enough to notice an in-place edit without measuring lengths.
+    /// </summary>
     private static Signature SignatureOf(IReadOnlyList<PathSegment> segments)
     {
         if (segments.Count == 0)
             return default;
-        double length = 0;
-        foreach (var segment in segments)
-            length += segment.LengthMicrometers;
+        double hash = 0;
+        for (int i = 0; i < segments.Count; i++)
+        {
+            var (x, y) = segments[i].EndPoint;
+            double radius = segments[i] is BendSegment bend ? bend.RadiusMicrometers : 0;
+            hash = hash * HashFactor + x * (i + 1) + y * (i + 2) + radius;
+        }
         return new Signature(segments.Count, segments[0].StartPoint.X, segments[0].StartPoint.Y,
-            segments[^1].EndPoint.X, segments[^1].EndPoint.Y, length);
+            segments[^1].EndPoint.X, segments[^1].EndPoint.Y, hash);
     }
 
     private static double Distance(Point a, Point b) => Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
