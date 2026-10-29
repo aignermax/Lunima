@@ -111,6 +111,33 @@ public partial class LengthEqualizationViewModel : ObservableObject
 
     private bool CanEqualize() => !IsBusy;
 
+    /// <summary>
+    /// Drops the length lock of every selected route that has one, as one undoable step. The
+    /// routes keep their shape; they just no longer hold a length, so later edits may change it.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanEqualize))]
+    private void ReleaseLengthLock()
+    {
+        var locked = Targets().Where(t => t.Connection.TargetLengthMicrometers != null).ToList();
+        if (locked.Count == 0)
+        {
+            SetStatus(false, LocalizationService.Instance.Translate("Routing.LengthEqualize.NoneLocked"));
+            return;
+        }
+        var steps = locked.Select(t =>
+        {
+            var before = LengthMatchState.Capture(t.Connection);
+            return (IUndoableCommand)new LengthMatchCommand(t, before,
+                before with { TargetLengthMicrometers = null, ToleranceMicrometers = null }, "Release length lock");
+        }).ToList();
+        var command = new CompositeCommand($"Release length lock ({steps.Count})", steps);
+        if (_canvas.CommandManager is { } commands)
+            commands.ExecuteCommand(command);
+        else
+            command.Execute();
+        SetStatus(false, LengthEqualizationStatus.Format("Routing.LengthEqualize.Released", steps.Count));
+    }
+
     /// <summary>Gives every selected connection the common length.</summary>
     [RelayCommand(CanExecute = nameof(CanEqualize))]
     private async Task Equalize()
@@ -202,30 +229,8 @@ public partial class LengthEqualizationViewModel : ObservableObject
         return widthChanged;
     }
 
-    private void Report(LengthEqualizationResult result, double? unifiedWidth)
-    {
-        string message = Headline(result);
-        if (result.NotInBundleCount > 0)
-            message += Format("Routing.LengthEqualize.NotInBundle", result.NotInBundleCount);
-        if (unifiedWidth is { } width)
-            message += Format("Routing.LengthEqualize.WidthUnified", width);
-        SetStatus(result.FailedCount > 0, message);
-    }
-
-    private static string Headline(LengthEqualizationResult result)
-    {
-        double seconds = result.Elapsed.TotalSeconds;
-        if (result.FailedCount > 0)
-            return Format("Routing.LengthEqualize.Partial", result.MatchedCount, result.MatchedCount + result.FailedCount,
-                result.TargetLengthMicrometers, seconds, result.FailedCount);
-        if (result.ReroutedAsBundle)
-            return Format("Routing.LengthEqualize.SuccessBundle", result.MatchedCount, result.TargetLengthMicrometers,
-                result.Outcomes.Where(o => o.IsSuccess).Select(o => o.RadiusMicrometers).DefaultIfEmpty().Max(), seconds);
-        return Format("Routing.LengthEqualize.Success", result.MatchedCount, result.TargetLengthMicrometers, seconds);
-    }
-
-    private static string Format(string key, params object[] arguments) =>
-        string.Format(CultureInfo.CurrentCulture, LocalizationService.Instance.Translate(key), arguments);
+    private void Report(LengthEqualizationResult result, double? unifiedWidth) =>
+        SetStatus(result.FailedCount > 0, LengthEqualizationStatus.Describe(result, unifiedWidth));
 
     private void SetStatus(bool isError, string message)
     {
