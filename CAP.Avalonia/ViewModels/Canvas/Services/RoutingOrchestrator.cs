@@ -6,6 +6,7 @@ using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Documents;
 using CAP_Core.Routing;
+using CAP_Core.Routing.MeanderGeneration;
 using CAP_Core.Routing.Snapshots;
 using CAP_Contracts;
 
@@ -342,6 +343,7 @@ public partial class RoutingOrchestrator
                 {
                     prepared.Apply();
                     PublishCrossings(prepared);
+                    RestoreLengthTargets();
                     NotifyRouteChanges();
                     RepaintRequested?.Invoke();
                 }))
@@ -364,6 +366,20 @@ public partial class RoutingOrchestrator
             if (ReferenceEquals(_routingCts, stop)) _routingCts = null;
             if (_activePassId == passId) { IsRouting = false; StateChanged?.Invoke(); }
         }
+    }
+
+    /// <summary>
+    /// A pass may have replaced a length-matched meander (an endpoint moved, a component now
+    /// overlaps it): stretch those routes back to their recorded target, clear of the routes
+    /// just committed. A target that cannot be met stays visible as a design-check issue.
+    /// </summary>
+    private void RestoreLengthTargets()
+    {
+        var connections = _connectionManager.Connections;
+        if (connections.TrueForAll(ConnectionLengthMatcher.MeetsTarget))
+            return;
+        var components = _components.Select(view => view.Component).ToArray();
+        new ConnectionLengthMatcher(_router).ReapplyUnmetTargets(connections, components);
     }
 
     private RoutingInputSnapshot CaptureInput() => RoutingInputSnapshot.Capture(

@@ -2395,5 +2395,9 @@
   "GdsSelection.ExpandHint": "展开原始子单元，以便单独移动和编辑。撤销可恢复此单元。",
   "GdsSelection.Expand": "拆分为原始组件",
   "GdsSelection.Preparing": "正在读取源层次结构…",
-  "GdsSelection.Expanded": "已展开原始组件。撤销可恢复原始单元。"
+  "GdsSelection.Expanded": "已展开原始组件。撤销可恢复原始单元。",
+  "DesignChecks.LengthTargetNotMet": "未达到目标长度：{0} 到 {1} 长 {2:F1} µm，目标 {3:F1} µm — 无法放置无碰撞的蛇形线；请移动相邻的布线或元件，或修改目标。",
+  "Routing.LengthMatch.BendRadius": "蛇形线弯曲半径 (µm)：",
+  "Routing.LengthMatch.Error.CollidesWithRoutes": "所有能增加所需长度的蛇形线都会与其他布线或元件交叉或过近。请在布线旁腾出空间、选择更小的弯曲半径或修改目标。",
+  "Routing.LengthMatch.Error.RadiusBelowProcessMinimum": "弯曲半径低于工艺最小值 {0:F1} µm。"
 }

@@ -2395,5 +2395,9 @@
   "GdsSelection.ExpandHint": "元の子セルを個別に移動・編集できます。元に戻すと、このセルが復元されます。",
   "GdsSelection.Expand": "元のコンポーネントに分割",
   "GdsSelection.Preparing": "元の階層を読み込み中…",
-  "GdsSelection.Expanded": "元のコンポーネントを展開しました。元に戻すと元のセルが復元されます。"
+  "GdsSelection.Expanded": "元のコンポーネントを展開しました。元に戻すと元のセルが復元されます。",
+  "DesignChecks.LengthTargetNotMet": "目標長未達: {0} から {1} の長さは {2:F1} µm、目標 {3:F1} µm — 衝突しないミアンダが配置できません。隣接する配線や部品を移動するか、目標を変更してください。",
+  "Routing.LengthMatch.BendRadius": "ミアンダの曲げ半径 (µm):",
+  "Routing.LengthMatch.Error.CollidesWithRoutes": "必要な追加長を得るミアンダはすべて、他の配線または部品と交差するか近すぎます。配線の横に空きを作るか、より小さい曲げ半径を選ぶか、目標を変更してください。",
+  "Routing.LengthMatch.Error.RadiusBelowProcessMinimum": "曲げ半径がプロセス最小値 {0:F1} µm を下回っています。"
 }

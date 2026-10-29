@@ -2395,5 +2395,9 @@
   "GdsSelection.ExpandHint": "Expón las celdas originales para moverlas y editarlas por separado. Deshacer restaura esta celda.",
   "GdsSelection.Expand": "Separar en componentes originales",
   "GdsSelection.Preparing": "Leyendo la jerarquía original…",
-  "GdsSelection.Expanded": "Componentes originales separados. Deshacer restaura la celda original."
+  "GdsSelection.Expanded": "Componentes originales separados. Deshacer restaura la celda original.",
+  "DesignChecks.LengthTargetNotMet": "Longitud objetivo no alcanzada: {0} a {1} mide {2:F1} µm, objetivo {3:F1} µm — no cabe ningún meandro sin colisiones; mueva rutas o componentes vecinos o cambie el objetivo.",
+  "Routing.LengthMatch.BendRadius": "Radio de curvatura del meandro (µm):",
+  "Routing.LengthMatch.Error.CollidesWithRoutes": "Todo meandro que añadiría la longitud extra cruza o se acerca demasiado a otra ruta o a un componente. Libere espacio junto a la ruta, elija un radio menor o cambie el objetivo.",
+  "Routing.LengthMatch.Error.RadiusBelowProcessMinimum": "El radio de curvatura está por debajo del mínimo del proceso de {0:F1} µm."
 }

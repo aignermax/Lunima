@@ -5,6 +5,8 @@ using CAP_Core.Components.Connections;
 using CAP_Core.Routing;
 using Component = CAP_Core.Components.Core.Component;
 
+using CAP_Core.Routing.MeanderGeneration;
+
 namespace CAP_Core.Analysis;
 
 /// <summary>
@@ -294,6 +296,18 @@ public class DesignValidator
             Add(DesignIssueType.StyledRouteThroughComponent,
                 $"Styled route passes through a component: {startName} to {endName}",
                 "DesignChecks.StyledRouteThroughComponent");
+
+        if (!ConnectionLengthMatcher.MeetsTarget(connection))
+            issues.Add(new DesignIssue(
+                DesignIssueType.LengthTargetNotMet, connection, midX, midY,
+                string.Format(CultureInfo.InvariantCulture,
+                    "Length target not met: {0} to {1} is {2:F1} µm long, target {3:F1} µm — no collision-free meander fits; move neighboring routes or components, or change the target.",
+                    startName, endName, connection.PathLengthMicrometers, connection.TargetLengthMicrometers),
+                localizationKey: "DesignChecks.LengthTargetNotMet",
+                localizationArgs: new object[]
+                {
+                    startName, endName, connection.PathLengthMicrometers, connection.TargetLengthMicrometers!.Value
+                }));
 
         CheckPinMismatch(connection, issues);
     }

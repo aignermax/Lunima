@@ -195,8 +195,10 @@ namespace CAP_Core.Components.Connections
                 // recorded in BendRadiusOverrides) is sacred: keep it as long as its endpoints
                 // still match the pins, only refreshing the losses. Rebuilding here would
                 // silently wipe the manual edit on every unrelated recalculation. A joint move
-                // of both components is a pure translation and keeps the edits too.
-                if (HasManualPathEdits &&
+                // of both components is a pure translation and keeps the edits too. A length-matched
+                // meander is such an edit: rebuilding the styled primitive would drop its length.
+                bool keepsEditedGeometry = HasManualPathEdits || (IsRouteFrozen && TargetLengthMicrometers != null);
+                if (keepsEditedGeometry &&
                     (FrozenPathStillMatchesPins() || JointMoveRouteTranslator.TryTranslateToPins(this)))
                 {
                     UpdateLossFromPath(wavelengthNm);

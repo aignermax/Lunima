@@ -2395,5 +2395,9 @@
   "GdsSelection.ExpandHint": "Die ursprünglichen Unterzellen einzeln verschieben und bearbeiten. Rückgängig stellt diese Zelle wieder her.",
   "GdsSelection.Expand": "In ursprüngliche Bauteile aufteilen",
   "GdsSelection.Preparing": "Quellhierarchie wird gelesen…",
-  "GdsSelection.Expanded": "Ursprüngliche Bauteile freigelegt. Rückgängig stellt die ursprüngliche Zelle wieder her."
+  "GdsSelection.Expanded": "Ursprüngliche Bauteile freigelegt. Rückgängig stellt die ursprüngliche Zelle wieder her.",
+  "DesignChecks.LengthTargetNotMet": "Ziellänge nicht erreicht: {0} nach {1} ist {2:F1} µm lang, Ziel {3:F1} µm — kein kollisionsfreier Mäander passt; benachbarte Routen oder Bauteile verschieben oder das Ziel ändern.",
+  "Routing.LengthMatch.BendRadius": "Biegeradius des Mäanders (µm):",
+  "Routing.LengthMatch.Error.CollidesWithRoutes": "Jeder Mäander mit der nötigen Zusatzlänge kreuzt oder bedrängt eine andere Route oder ein Bauteil. Platz neben der Route schaffen, einen kleineren Biegeradius wählen oder das Ziel ändern.",
+  "Routing.LengthMatch.Error.RadiusBelowProcessMinimum": "Der Biegeradius liegt unter dem Prozessminimum von {0:F1} µm."
 }

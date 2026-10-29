@@ -7,7 +7,10 @@ namespace CAP_Core.Routing.MeanderGeneration;
 /// 0 = +X, counter-clockwise positive); the end direction is the direction of travel
 /// at arrival, not the pin's outward normal. The minimum bend radius
 /// carries the process floor semantics of ProcessXsection.MinRadiusUm: no arc in the
-/// result may have a smaller radius.
+/// result may have a smaller radius, and the meander's own loops use exactly this radius.
+/// <see cref="Obstacles"/> lists what the meander must keep clear of; <see cref="BasePath"/>
+/// is the connection's existing route, used as an alternative host when the compact
+/// pin-to-pin route would collide.
 /// </summary>
 public sealed record MeanderRequest(
     double StartX,
@@ -19,4 +22,6 @@ public sealed record MeanderRequest(
     double TargetLengthMicrometers,
     double ToleranceMicrometers,
     double MinBendRadiusMicrometers,
-    MeanderBounds Bounds);
+    MeanderBounds Bounds,
+    MeanderObstacles? Obstacles = null,
+    RoutedPath? BasePath = null);
