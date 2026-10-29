@@ -2399,5 +2399,22 @@
   "DesignChecks.LengthTargetNotMet": "Longitud objetivo no alcanzada: {0} a {1} mide {2:F1} µm, objetivo {3:F1} µm — no cabe ningún meandro sin colisiones; mueva rutas o componentes vecinos o cambie el objetivo.",
   "Routing.LengthMatch.BendRadius": "Radio de curvatura del meandro (µm):",
   "Routing.LengthMatch.Error.CollidesWithRoutes": "Todo meandro que añadiría la longitud extra cruza o se acerca demasiado a otra ruta o a un componente. Libere espacio junto a la ruta, elija un radio menor o cambie el objetivo.",
-  "Routing.LengthMatch.Error.RadiusBelowProcessMinimum": "El radio de curvatura está por debajo del mínimo del proceso de {0:F1} µm."
+  "Routing.LengthMatch.Error.RadiusBelowProcessMinimum": "El radio de curvatura está por debajo del mínimo del proceso de {0:F1} µm.",
+  "Routing.LengthEqualize.Title": "Igualar longitudes",
+  "Routing.LengthEqualize.Summary": "{0} conexiones · la más corta {1:F1} µm · la más larga {2:F1} µm",
+  "Routing.LengthEqualize.TargetLength": "Longitud común (µm):",
+  "Routing.LengthEqualize.TargetWatermark": "vacío = lo más corto posible",
+  "Routing.LengthEqualize.MaxRadius": "Radio máximo del meandro (µm):",
+  "Routing.LengthEqualize.Apply": "Igualar longitudes",
+  "Routing.LengthEqualize.Busy": "Igualando {0} conexiones…",
+  "Routing.LengthEqualize.Success": "{0} conexiones a {1:F1} µm ({2:F1} s).",
+  "Routing.LengthEqualize.Partial": "{0} de {1} conexiones a {2:F1} µm ({3:F1} s). {4} no encontraron espacio libre para la longitud adicional y conservan su ruta.",
+  "Routing.LengthEqualize.Error.InvalidInput": "Introduce una longitud y un radio válidos (p. ej., 1500 y 50).",
+  "Routing.LengthEqualize.Error.TargetBelowLongest": "La longitud común es menor que la ruta seleccionada más larga ({0:F1} µm); las rutas solo pueden alargarse.",
+  "Routing.LengthEqualize.Hint": "Los pines enfrentados se vuelven a trazar como un haz de arcos anidados con la longitud común más corta; las demás rutas reciben un meandro donde hay espacio. Deshacer restaura todas las rutas en un solo paso.",
+  "Routing.LengthEqualize.RerouteBundle": "Volver a trazar pines enfrentados como un haz nuevo",
+  "Routing.LengthEqualize.SuccessBundle": "{0} conexiones retrazadas como haz a {1:F1} µm, radio {2:F0} µm ({3:F1} s).",
+  "Routing.LengthEqualize.NotInBundle": " {0} conexiones seleccionadas no forman parte del haz y no se modificaron.",
+  "Routing.LengthEqualize.WidthUnified": " Todas tienen ahora {0:0.###} µm de ancho, así que igual longitud también significa igual fase.",
+  "Examples.FiberArrayFanIn.Description": "Dieciséis canales de un array de fibras convergen en una columna del chip más densa con rutas desiguales: selecciónalas todas e iguala sus longitudes con un clic."
 }

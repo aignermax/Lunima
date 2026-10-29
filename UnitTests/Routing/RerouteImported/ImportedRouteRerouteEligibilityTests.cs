@@ -43,6 +43,15 @@ public class ImportedRouteRerouteEligibilityTests
     }
 
     [Fact]
+    public void IsEligible_LengthMatched_ReturnsFalse()
+    {
+        var connection = CreateFrozenImportedConnection();
+        connection.TargetLengthMicrometers = 120;
+
+        ImportedRouteRerouteEligibility.IsEligible(connection).ShouldBeFalse();
+    }
+
+    [Fact]
     public void IsEligible_Locked_ReturnsFalse()
     {
         var connection = CreateFrozenImportedConnection();

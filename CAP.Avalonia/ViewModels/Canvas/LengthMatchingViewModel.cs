@@ -166,9 +166,9 @@ public partial class LengthMatchingViewModel : ObservableObject
         if (TargetConnection() is not { } target)
             return;
 
-        if (!TryParseMicrometers(TargetLengthText, out double targetLength) || targetLength <= 0
-            || !TryParseMicrometers(ToleranceText, out double tolerance) || tolerance < 0
-            || !TryParseMicrometers(BendRadiusText, out double radius) || radius <= 0)
+        if (!LengthInput.TryParse(TargetLengthText, out double targetLength) || targetLength <= 0
+            || !LengthInput.TryParse(ToleranceText, out double tolerance) || tolerance < 0
+            || !LengthInput.TryParse(BendRadiusText, out double radius) || radius <= 0)
         {
             SetError("Routing.LengthMatch.Error.InvalidInput");
             return;
@@ -267,17 +267,4 @@ public partial class LengthMatchingViewModel : ObservableObject
         MeanderFailureReason.CollidesWithRoutes => "Routing.LengthMatch.Error.CollidesWithRoutes",
         _ => "Routing.LengthMatch.Error.Unknown",
     };
-
-    /// <summary>
-    /// Parses a micrometer input: invariant first (the on-disk format), then the UI culture
-    /// so e.g. a German decimal comma is accepted when typing.
-    /// </summary>
-    private static bool TryParseMicrometers(string? text, out double value)
-    {
-        value = 0;
-        if (string.IsNullOrWhiteSpace(text))
-            return false;
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value)
-            || double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
-    }
 }

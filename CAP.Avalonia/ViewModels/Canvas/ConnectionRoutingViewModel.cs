@@ -71,6 +71,10 @@ public partial class ConnectionRoutingViewModel : ObservableObject
         // the singleton BottomPanelViewModel, so it lives as long as the canvas it observes.
         // If it ever becomes truly transient, add IDisposable and detach this handler.
         _canvas.Selection.SelectedConnections.CollectionChanged += (_, _) => UpdateFromSelection();
+        // Undo/redo changes the style underneath the dropdown; a stale entry would make picking
+        // that same style again a silent no-op.
+        if (_commandManager != null)
+            _commandManager.StateChanged += (_, _) => UpdateFromSelection();
     }
 
     partial void OnTargetConnectionCountChanged(int value)
