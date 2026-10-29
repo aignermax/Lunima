@@ -2419,5 +2419,10 @@
   "Routing.LengthEqualize.ReleaseLock": "解除长度锁定",
   "Routing.LengthEqualize.Released": "已解除 {0} 条路径：保持原有形状，但不再固定长度。",
   "Routing.LengthEqualize.NoneLocked": "所选路径都没有长度锁定。",
+  "Routing.LengthLock.Info": "长度锁定 {0:F1} µm · {1} 条路径",
+  "Routing.LengthLock.Violated": "长度锁定未满足：锁定 {0:F1} µm，路径为 {1:F1} µm",
+  "Routing.LengthLock.ReEqualize": "重新均衡整组（{0} 条路径）",
+  "Routing.LengthLock.ReleaseOne": "解除此路径的锁定",
+  "Routing.LengthLock.ReleaseGroup": "解除整组的锁定（{0} 条路径）",
   "Examples.FiberArrayFanIn.Description": "十六路光纤阵列通道以长度不等的路径汇入更密集的芯片列——全部选中，一键统一长度。"
 }

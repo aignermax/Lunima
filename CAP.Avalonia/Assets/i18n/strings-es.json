@@ -2419,5 +2419,10 @@
   "Routing.LengthEqualize.ReleaseLock": "Liberar bloqueo de longitud",
   "Routing.LengthEqualize.Released": "{0} rutas liberadas: conservan su forma pero ya no mantienen una longitud.",
   "Routing.LengthEqualize.NoneLocked": "Ninguna de las rutas seleccionadas tiene bloqueo de longitud.",
+  "Routing.LengthLock.Info": "Bloqueo de longitud {0:F1} µm · {1} rutas",
+  "Routing.LengthLock.Violated": "Bloqueo de longitud no cumplido: bloqueado {0:F1} µm, la ruta mide {1:F1} µm",
+  "Routing.LengthLock.ReEqualize": "Volver a igualar el grupo ({0} rutas)",
+  "Routing.LengthLock.ReleaseOne": "Liberar el bloqueo de esta ruta",
+  "Routing.LengthLock.ReleaseGroup": "Liberar el bloqueo de todo el grupo ({0} rutas)",
   "Examples.FiberArrayFanIn.Description": "Dieciséis canales de un array de fibras convergen en una columna del chip más densa con rutas desiguales: selecciónalas todas e iguala sus longitudes con un clic."
 }

@@ -153,7 +153,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         }
         DrawConnectionOverlays(context, conn, vm, isHovered, rc.Zoom, rc.Labels, hasImportedEndpointMismatch);
         if (conn.Connection.TargetLengthMicrometers != null && rc.Zoom >= ComponentRenderer.GroupOverviewZoom)
-            LengthLockOverlay.DrawBadge(context, segments, rc.Zoom);
+            LengthLockOverlay.DrawBadge(context, segments, rc.Zoom, ViewModels.Canvas.LengthLockActions.IsViolated(conn));
     }
 
     /// <summary>

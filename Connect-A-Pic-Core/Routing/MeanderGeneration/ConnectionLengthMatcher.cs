@@ -105,9 +105,16 @@ public sealed class ConnectionLengthMatcher
     /// all other routes. Connections whose target cannot be met keep their route; the design
     /// checks report them.
     /// </summary>
+    /// <param name="connections">Every connection of the design (they are also the obstacles).</param>
+    /// <param name="obstacleComponents">The design's components.</param>
+    /// <param name="isCandidate">
+    /// Limits which connections are stretched again, e.g. to the routes a pass just replaced; a
+    /// target that failed before at unchanged geometry fails again. Null tries every unmet one.
+    /// </param>
     /// <returns>The connections whose route geometry was replaced.</returns>
     public IReadOnlyList<WaveguideConnection> ReapplyUnmetTargets(
-        IReadOnlyList<WaveguideConnection> connections, IReadOnlyList<Component> obstacleComponents)
+        IReadOnlyList<WaveguideConnection> connections, IReadOnlyList<Component> obstacleComponents,
+        Func<WaveguideConnection, bool>? isCandidate = null)
     {
         ArgumentNullException.ThrowIfNull(connections);
         ArgumentNullException.ThrowIfNull(obstacleComponents);
@@ -115,6 +122,8 @@ public sealed class ConnectionLengthMatcher
         foreach (var connection in connections)
         {
             if (connection.TargetLengthMicrometers is not { } target || MeetsTarget(connection))
+                continue;
+            if (isCandidate != null && !isCandidate(connection))
                 continue;
             double tolerance = connection.LengthToleranceMicrometers ?? 0.0;
             if (ApplyTargetLength(connection, obstacleComponents, target, tolerance, connections).IsSuccess)

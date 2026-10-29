@@ -343,7 +343,7 @@ public partial class RoutingOrchestrator
                 {
                     prepared.Apply();
                     PublishCrossings(prepared);
-                    RestoreLengthTargets();
+                    RestoreLengthTargets(originalPaths);
                     NotifyRouteChanges();
                     RepaintRequested?.Invoke();
                 }))
@@ -371,15 +371,18 @@ public partial class RoutingOrchestrator
     /// <summary>
     /// A pass may have replaced a length-matched meander (an endpoint moved, a component now
     /// overlaps it): stretch those routes back to their recorded target, clear of the routes
-    /// just committed. A target that cannot be met stays visible as a design-check issue.
+    /// just committed. Only routes this pass replaced are tried — one that already failed at
+    /// unchanged geometry would fail again on every pass. A target that cannot be met stays
+    /// visible: its padlock turns to the warning colour and the design checks list it.
     /// </summary>
-    private void RestoreLengthTargets()
+    private void RestoreLengthTargets(IReadOnlyDictionary<Guid, RoutedPath?> originalPaths)
     {
         var connections = _connectionManager.Connections;
         if (connections.TrueForAll(ConnectionLengthMatcher.MeetsTarget))
             return;
         var components = _components.Select(view => view.Component).ToArray();
-        new ConnectionLengthMatcher(_router).ReapplyUnmetTargets(connections, components);
+        new ConnectionLengthMatcher(_router).ReapplyUnmetTargets(connections, components,
+            c => !originalPaths.TryGetValue(c.Id, out var before) || !ReferenceEquals(before, c.RoutedPath));
     }
 
     private RoutingInputSnapshot CaptureInput() => RoutingInputSnapshot.Capture(

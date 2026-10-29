@@ -2419,5 +2419,10 @@
   "Routing.LengthEqualize.ReleaseLock": "長さロックを解除",
   "Routing.LengthEqualize.Released": "{0} 本のルートを解除しました。形状はそのままですが、長さは固定されなくなります。",
   "Routing.LengthEqualize.NoneLocked": "選択したルートに長さロックはありません。",
+  "Routing.LengthLock.Info": "長さロック {0:F1} µm · {1} 本",
+  "Routing.LengthLock.Violated": "長さロック未達: ロック {0:F1} µm、ルートは {1:F1} µm",
+  "Routing.LengthLock.ReEqualize": "グループを再度揃える（{0} 本）",
+  "Routing.LengthLock.ReleaseOne": "このルートのロックを解除",
+  "Routing.LengthLock.ReleaseGroup": "グループ全体のロックを解除（{0} 本）",
   "Examples.FiberArrayFanIn.Description": "16 チャンネルのファイバーアレイが、長さの異なるルートでより密なチップ列へ集まります。すべて選択し、ワンクリックで長さを揃えましょう。"
 }

@@ -8,8 +8,9 @@ namespace CAP.Avalonia.Controls.Rendering;
 
 /// <summary>
 /// Canvas cues for length-locked routes (a recorded length target): a small padlock on the
-/// route, and — while one of them is selected or hovered — a glow on every route locked to the
-/// same length, so the routes that were equalized together are visible as one group.
+/// route — warning-coloured when an edit made the route lose its length — and, while one of them
+/// is selected or hovered, a glow on every route locked to the same length, so the routes that
+/// were equalized together are visible as one group. Clicking the padlock opens the lock menu.
 /// </summary>
 internal static class LengthLockOverlay
 {
@@ -35,18 +36,27 @@ internal static class LengthLockOverlay
     public static double? GroupOf(WaveguideConnectionViewModel connection) =>
         connection.Connection.TargetLengthMicrometers is { } target ? Math.Round(target, TargetDecimals) : null;
 
-    /// <summary>Draws the padlock at the middle of the route.</summary>
-    public static void DrawBadge(DrawingContext context, IReadOnlyList<PathSegment> segments, double zoom)
+    /// <summary>
+    /// Draws the padlock at the middle of the route: accent while the route holds its length,
+    /// warning-coloured once an edit made it lose it.
+    /// </summary>
+    public static void DrawBadge(DrawingContext context, IReadOnlyList<PathSegment> segments, double zoom, bool violated)
     {
         if (segments.Count == 0)
             return;
         var (x, y) = Midpoint(segments);
         double size = BadgeScreenPx / zoom;
-        DrawPadlock(context, x - size / 2, y - size / 2, size);
+        DrawPadlock(context, x - size / 2, y - size / 2, size, violated ? CanvasPalette.WarningBrush : CanvasPalette.AccentBrush);
     }
 
+    /// <summary>Radius (world units) of the padlock badge at <paramref name="zoom"/>.</summary>
+    public static double BadgeRadiusWorld(double zoom) => BadgeScreenPx / zoom / 2;
+
     /// <summary>A padlock glyph in a round backdrop, top-left at (<paramref name="x"/>, <paramref name="y"/>).</summary>
-    public static void DrawPadlock(DrawingContext context, double x, double y, double size)
+    public static void DrawPadlock(DrawingContext context, double x, double y, double size) =>
+        DrawPadlock(context, x, y, size, CanvasPalette.WarningBrush);
+
+    private static void DrawPadlock(DrawingContext context, double x, double y, double size, IBrush brush)
     {
         context.DrawEllipse(BadgeBackdrop, null, new Point(x + size / 2, y + size / 2), size / 2, size / 2);
 
@@ -55,7 +65,7 @@ internal static class LengthLockOverlay
         double bodyX = x + (size - bodyWidth) / 2;
         double bodyY = y + size * 0.5;
         double corner = bodyWidth * 0.15;
-        context.DrawRectangle(CanvasPalette.WarningBrush, null, new Rect(bodyX, bodyY, bodyWidth, bodyHeight), corner, corner);
+        context.DrawRectangle(brush, null, new Rect(bodyX, bodyY, bodyWidth, bodyHeight), corner, corner);
 
         double shackleWidth = size * 0.34;
         double shackleHeight = size * 0.24;
@@ -67,11 +77,11 @@ internal static class LengthLockOverlay
             ctx.ArcTo(new Point(shackleCenterX + shackleWidth / 2, bodyY),
                 new Size(shackleWidth / 2, shackleHeight), 0, false, SweepDirection.Clockwise);
         }
-        context.DrawGeometry(null, new Pen(CanvasPalette.WarningBrush, size * 0.09), shackle);
+        context.DrawGeometry(null, new Pen(brush, size * 0.09), shackle);
     }
 
     /// <summary>The point halfway along the route (a segment end is close enough inside a bend).</summary>
-    private static (double X, double Y) Midpoint(IReadOnlyList<PathSegment> segments)
+    public static (double X, double Y) Midpoint(IReadOnlyList<PathSegment> segments)
     {
         double half = segments.Sum(s => s.LengthMicrometers) / 2;
         foreach (var segment in segments)

@@ -63,6 +63,9 @@ public partial class LengthEqualizationViewModel : ObservableObject
     /// <summary>True when the status reports a problem.</summary>
     public bool HasErrorStatus => StatusMessage.Length > 0 && IsStatusError;
 
+    /// <summary>Length-lock actions (groups, re-equalize, release) for the canvas padlocks.</summary>
+    public LengthLockActions Locks { get; }
+
     /// <summary>Section visibility: at least two connections are selected.</summary>
     public bool HasSeveralConnections => Targets().Count >= MinimumConnections;
 
@@ -87,6 +90,7 @@ public partial class LengthEqualizationViewModel : ObservableObject
         _canvas = canvas;
         _equalizer = new LengthEqualizer(canvas.Router);
         _matcher = new CAP_Core.Routing.MeanderGeneration.ConnectionLengthMatcher(canvas.Router);
+        Locks = new LengthLockActions(canvas, this);
         // Never unsubscribed: this VM lives in the singleton BottomPanelViewModel as long as the canvas.
         _canvas.Selection.SelectedConnections.CollectionChanged += (_, _) => Refresh();
     }
@@ -118,24 +122,10 @@ public partial class LengthEqualizationViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanEqualize))]
     private void ReleaseLengthLock()
     {
-        var locked = Targets().Where(t => t.Connection.TargetLengthMicrometers != null).ToList();
-        if (locked.Count == 0)
-        {
-            SetStatus(false, LocalizationService.Instance.Translate("Routing.LengthEqualize.NoneLocked"));
-            return;
-        }
-        var steps = locked.Select(t =>
-        {
-            var before = LengthMatchState.Capture(t.Connection);
-            return (IUndoableCommand)new LengthMatchCommand(t, before,
-                before with { TargetLengthMicrometers = null, ToleranceMicrometers = null }, "Release length lock");
-        }).ToList();
-        var command = new CompositeCommand($"Release length lock ({steps.Count})", steps);
-        if (_canvas.CommandManager is { } commands)
-            commands.ExecuteCommand(command);
-        else
-            command.Execute();
-        SetStatus(false, LengthEqualizationStatus.Format("Routing.LengthEqualize.Released", steps.Count));
+        int released = Locks.Release(Targets());
+        SetStatus(false, released == 0
+            ? LocalizationService.Instance.Translate("Routing.LengthEqualize.NoneLocked")
+            : LengthEqualizationStatus.Format("Routing.LengthEqualize.Released", released));
     }
 
     /// <summary>Gives every selected connection the common length.</summary>

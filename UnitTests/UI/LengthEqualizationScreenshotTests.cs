@@ -109,6 +109,48 @@ public class LengthEqualizationScreenshotTests
         }
     }
 
+    /// <summary>
+    /// After equalizing, one end component is moved so far that its route cannot keep the locked
+    /// length: the route follows the pins and its padlock turns to the warning colour.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task CaptureViolatedLengthLock()
+    {
+        var dir = ScreenshotArtifacts.ResolvePrMediaDirectory("length-matching");
+        Directory.CreateDirectory(dir);
+        var previousLanguage = LocalizationService.Instance.ActiveLanguageCode;
+        LocalizationService.Instance.SetLanguage(SupportedLanguage.English.Code);
+
+        var vm = ShowcaseCircuit.CreateStagedViewModel();
+        vm.Canvas.CommandManager = vm.CommandManager;
+        var connections = await FiberArrayExampleBuilder.BuildAsync(vm);
+        foreach (var connection in connections)
+            vm.Canvas.Selection.SelectedConnections.Add(connection);
+        await vm.BottomPanel.LengthEqualization.EqualizeCommand.ExecuteAsync(null);
+        vm.Canvas.Selection.ClearConnectionSelection();
+        var moved = connections[^1];
+        var end = vm.Canvas.Components.First(c => c.Component == moved.Connection.EndPin.ParentComponent
+            && c.Component.PhysicalX > 1000) ?? vm.Canvas.Components.First(c => c.Component == moved.Connection.StartPin.ParentComponent);
+        vm.Canvas.MoveComponent(end, ViolatingMoveMicrometers, 0);
+        await vm.Canvas.RecalculateRoutesAsync();
+        CAP.Avalonia.ViewModels.Canvas.LengthLockActions.IsViolated(moved).ShouldBeTrue();
+        var window = ShowcaseCircuit.BootMainWindow(vm);
+        try
+        {
+            ShowcaseCircuit.SetView(window, vm, BundleRegion);
+            ShowcaseCapture.PumpRenderLoop();
+            ShowcaseCapture.CaptureWindow(window, Path.Combine(dir, "length-matching-7-lock-violated.png"));
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+            LocalizationService.Instance.SetLanguage(previousLanguage);
+        }
+    }
+
+    private const double ViolatingMoveMicrometers = 600;
+
     private static void Tangle(CAP.Avalonia.ViewModels.MainViewModel vm, IReadOnlyList<CAP_Core.Components.Connections.WaveguideConnection> routes)
     {
         const double ExtraMicrometers = 900;
