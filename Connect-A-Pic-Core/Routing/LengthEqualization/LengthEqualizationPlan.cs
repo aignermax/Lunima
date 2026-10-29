@@ -30,6 +30,11 @@ public sealed record LengthEqualizationItem(
 /// <param name="Items">The connections to equalize.</param>
 /// <param name="Routes">Every routed connection of the design (owner, route) — the obstacles.</param>
 /// <param name="Footprints">Every routing-obstacle component (owner, rectangle).</param>
+/// <param name="RequestedTargetMicrometers">The length the user asked for; null lets the solver pick the shortest common one.</param>
+/// <param name="RerouteBundle">
+/// Lay a bundle (pins facing each other, same order at both ends) out fresh instead of stretching
+/// its existing routes.
+/// </param>
 public sealed record LengthEqualizationPlan(
     double TargetLengthMicrometers,
     double ToleranceMicrometers,
@@ -38,7 +43,9 @@ public sealed record LengthEqualizationPlan(
     double ContactClearanceMicrometers,
     IReadOnlyList<LengthEqualizationItem> Items,
     IReadOnlyList<(object Owner, RoutedPath Path)> Routes,
-    IReadOnlyList<(object Owner, MeanderBounds Footprint)> Footprints);
+    IReadOnlyList<(object Owner, MeanderBounds Footprint)> Footprints,
+    double? RequestedTargetMicrometers = null,
+    bool RerouteBundle = false);
 
 /// <summary>What happened to one connection: its new route, or why none fit.</summary>
 /// <param name="Connection">The connection.</param>
@@ -46,12 +53,17 @@ public sealed record LengthEqualizationPlan(
 /// <param name="RadiusMicrometers">Meander radius the route uses (0 on failure).</param>
 /// <param name="Failure">Why no route fit; null on success.</param>
 /// <param name="BasePath">The route the plan started from, to detect edits made while solving.</param>
+/// <param name="NotInBundle">
+/// True when the selection was re-laid as a bundle and this connection is not part of it (it
+/// loops back to its own column or runs another way); it is left unchanged.
+/// </param>
 public sealed record LengthEqualizationOutcome(
     WaveguideConnection Connection,
     RoutedPath? Path,
     double RadiusMicrometers,
     MeanderFailureReason? Failure,
-    RoutedPath? BasePath)
+    RoutedPath? BasePath,
+    bool NotInBundle = false)
 {
     /// <summary>True when a route at the target length was found.</summary>
     public bool IsSuccess => Path != null;
@@ -71,6 +83,12 @@ public sealed record LengthEqualizationResult(
     /// <summary>Connections now at the target length.</summary>
     public int MatchedCount => Outcomes.Count(o => o.IsSuccess);
 
-    /// <summary>Connections no meander fit for.</summary>
-    public int FailedCount => Outcomes.Count(o => !o.IsSuccess);
+    /// <summary>Connections no route at the target fit for.</summary>
+    public int FailedCount => Outcomes.Count(o => !o.IsSuccess && !o.NotInBundle);
+
+    /// <summary>Selected connections left out because they are not part of the re-laid bundle.</summary>
+    public int NotInBundleCount => Outcomes.Count(o => o.NotInBundle);
+
+    /// <summary>True when the selection was re-laid as a bundle.</summary>
+    public bool ReroutedAsBundle { get; init; }
 }

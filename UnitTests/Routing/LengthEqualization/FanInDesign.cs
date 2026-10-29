@@ -17,7 +17,10 @@ internal static class FanInDesign
     private const double ChipOffsetYMicrometers = 200.0;
 
     /// <summary>Builds and routes <paramref name="count"/> fan-in connections on a fresh canvas.</summary>
-    public static async Task<(DesignCanvasViewModel Canvas, List<WaveguideConnectionViewModel> Connections)> CreateAsync(int count)
+    /// <param name="count">Number of channels.</param>
+    /// <param name="reverseOdd">Start every odd connection at the coupler instead of the chip.</param>
+    public static async Task<(DesignCanvasViewModel Canvas, List<WaveguideConnectionViewModel> Connections)> CreateAsync(
+        int count, bool reverseOdd = false)
     {
         var canvas = new DesignCanvasViewModel();
         var connections = new List<WaveguideConnectionViewModel>();
@@ -25,9 +28,11 @@ internal static class FanInDesign
         {
             var chip = Place(canvas, 0, ChipOffsetYMicrometers + i * ChipPitchMicrometers);
             var coupler = Place(canvas, ColumnGapMicrometers, i * FiberPitchMicrometers);
-            var connection = canvas.ConnectPins(
-                chip.PhysicalPins.First(p => p.Name == "out"),
-                coupler.PhysicalPins.First(p => p.Name == "in"));
+            var chipPin = chip.PhysicalPins.First(p => p.Name == "out");
+            var couplerPin = coupler.PhysicalPins.First(p => p.Name == "in");
+            var connection = reverseOdd && i % 2 == 1
+                ? canvas.ConnectPins(couplerPin, chipPin)
+                : canvas.ConnectPins(chipPin, couplerPin);
             connections.Add(connection!);
         }
         await canvas.RecalculateRoutesAsync();

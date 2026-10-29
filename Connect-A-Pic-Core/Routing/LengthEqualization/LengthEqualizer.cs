@@ -1,14 +1,18 @@
 using System.Diagnostics;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
+using CAP_Core.Routing.LengthEqualization.Bundle;
 using CAP_Core.Routing.MeanderGeneration;
 using CAP_Core.Routing.MeanderGeneration.Clearance;
 
 namespace CAP_Core.Routing.LengthEqualization;
 
 /// <summary>
-/// Gives a set of connections one common length: by default the longest of them, so no route
-/// has to be shortened. Each connection keeps its existing route and gets a meander folded in
+/// Gives a set of connections one common length. A bundle — pins facing each other across a
+/// channel, wires in the same order at both ends — is re-laid from scratch as nested arches at
+/// the shortest common length it allows (see <see cref="BundleRouter"/>). Otherwise, or when the
+/// bundle does not fit, the common length is by default the longest route, so none has to be
+/// shortened: each connection keeps its existing route and gets a meander folded in
 /// wherever there is room — the largest radius first, smaller ones only where the large one does
 /// not fit. Connections are processed most-missing-length first against one shared
 /// <see cref="ClearanceIndex"/> that is updated after every placement, so later meanders keep
@@ -21,6 +25,10 @@ public sealed class LengthEqualizer
     private const double RadiusStepFactor = 0.7;
     private const int MaxRadiusSteps = 4;
     private const double PinOnFootprintToleranceMicrometers = 1e-3;
+    /// <summary>Routes this short join abutting pins; there is nothing to stretch.</summary>
+    private const double AbuttingLengthMicrometers = 1e-3;
+    /// <summary>Widths equal to this many decimals (µm) count as the same.</summary>
+    private const int WidthDecimals = 3;
 
     private readonly ConnectionLengthMatcher _matcher;
     private readonly WaveguideRouter? _router;
@@ -41,13 +49,15 @@ public sealed class LengthEqualizer
     /// <param name="targetLengthMicrometers">Common length; null uses the longest of <paramref name="connections"/>.</param>
     /// <param name="maxRadiusMicrometers">Largest meander radius to try.</param>
     /// <param name="toleranceMicrometers">Accepted deviation from the target.</param>
+    /// <param name="rerouteBundle">Re-lay a bundle from scratch instead of stretching its existing routes.</param>
     public LengthEqualizationPlan Prepare(
         IReadOnlyList<WaveguideConnection> connections,
         IReadOnlyList<WaveguideConnection> allConnections,
         IReadOnlyList<Component> components,
         double? targetLengthMicrometers,
         double maxRadiusMicrometers,
-        double toleranceMicrometers)
+        double toleranceMicrometers,
+        bool rerouteBundle = false)
     {
         var usable = connections.Distinct().Where(IsUsable).ToList();
         double target = targetLengthMicrometers ?? (usable.Count == 0 ? 0 : usable.Max(c => c.PathLengthMicrometers));
@@ -62,7 +72,8 @@ public sealed class LengthEqualizer
         var footprints = obstacleComponents.Select(c => ((object)c, Footprint(c))).ToList();
         double spacing = _router?.MinWaveguideSpacingMicrometers ?? PhotonicConstants.DefaultMinWaveguideSpacingMicrometers;
         return new LengthEqualizationPlan(target, toleranceMicrometers, maxRadiusMicrometers, spacing,
-            PhotonicConstants.StandardWaveguideWidthMicrometers, items, routes, footprints);
+            PhotonicConstants.StandardWaveguideWidthMicrometers, items, routes, footprints,
+            targetLengthMicrometers, rerouteBundle);
     }
 
     /// <summary>
@@ -80,12 +91,29 @@ public sealed class LengthEqualizer
     }
 
     /// <summary>
-    /// Finds a route at the plan's target length for every item it can; pure, so it may run on a
-    /// background thread. Items are handled most-missing-length first.
+    /// Finds a route at one common length for every item it can; pure, so it may run on a
+    /// background thread. A bundle is re-laid when the plan asks for it; otherwise items are
+    /// stretched most-missing-length first.
     /// </summary>
     public static LengthEqualizationResult Solve(LengthEqualizationPlan plan, CancellationToken cancellation = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        var bundle = BundleEqualization.TrySolve(plan, Radii, cancellation);
+        var stretch = Stretch(plan, cancellation);
+        return bundle == null || Prefers(stretch, bundle) ? stretch : bundle;
+    }
+
+    /// <summary>
+    /// Meanders on the existing routes win over a re-laid bundle only when they match every
+    /// connection at a clearly shorter common length — e.g. when the existing routes run diagonally
+    /// and the bundle's axis-parallel arches would come out longer.
+    /// </summary>
+    private static bool Prefers(LengthEqualizationResult stretch, LengthEqualizationResult bundle) =>
+        stretch.FailedCount == 0 && stretch.MatchedCount >= bundle.MatchedCount
+        && stretch.TargetLengthMicrometers < bundle.TargetLengthMicrometers - stretch.ToleranceMicrometers;
+
+    private static LengthEqualizationResult Stretch(LengthEqualizationPlan plan, CancellationToken cancellation)
+    {
         var clock = Stopwatch.StartNew();
         var index = new ClearanceIndex();
         foreach (var (owner, path) in plan.Routes)
@@ -125,7 +153,7 @@ public sealed class LengthEqualizer
     }
 
     /// <summary>The largest radius first, then progressively smaller ones down to the process minimum.</summary>
-    private static IEnumerable<double> Radii(double maxRadius, double minRadius)
+    internal static IEnumerable<double> Radii(double maxRadius, double minRadius)
     {
         double radius = Math.Max(maxRadius, minRadius);
         for (int step = 0; step < MaxRadiusSteps && radius > minRadius; step++, radius *= RadiusStepFactor)
@@ -133,9 +161,22 @@ public sealed class LengthEqualizer
         yield return minRadius;
     }
 
+    /// <summary>
+    /// The width the equalized routes should share: the most common one among
+    /// <paramref name="connections"/> (the wider on a tie). Equal lengths only give equal phase
+    /// when the cross-sections match, so mixed widths are unified.
+    /// </summary>
+    public static double CommonWidth(IEnumerable<WaveguideConnection> connections) =>
+        connections.GroupBy(c => Math.Round(c.WidthMicrometers, WidthDecimals))
+            .OrderByDescending(g => g.Count()).ThenByDescending(g => g.Key)
+            .Select(g => g.First().WidthMicrometers)
+            .DefaultIfEmpty(PhotonicConstants.StandardWaveguideWidthMicrometers)
+            .First();
+
     private static bool IsUsable(WaveguideConnection connection) =>
         connection.StartPin != null && connection.EndPin != null
-        && connection.RoutedPath is { Segments.Count: > 0 } && !connection.IsBlockedFallback;
+        && connection.RoutedPath is { Segments.Count: > 0 } && !connection.IsBlockedFallback
+        && connection.PathLengthMicrometers > AbuttingLengthMicrometers;
 
     private static IReadOnlySet<object> IgnoredOwners(WaveguideConnection connection,
         IReadOnlyList<WaveguideConnection> allConnections, IReadOnlyList<Component> obstacleComponents)

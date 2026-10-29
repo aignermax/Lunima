@@ -6,8 +6,8 @@
              x:DataType="vm:MainViewModel">
 
     <!-- Equalize lengths: visible while two or more connections are selected. Gives every
-         selected route the same length (the longest by default) via meanders that keep clear
-         of everything else; one undo step. -->
+         selected route the same length: a bundle of facing pins is re-laid as nested arches,
+         other routes get meanders that keep clear of everything else; one undo step. -->
     <StackPanel IsVisible="{Binding BottomPanel.LengthEqualization.HasSeveralConnections}">
         <Border Classes="divider" Margin="0,12,0,8"/>
         <TextBlock Classes="subtitle" Text="{loc:Localize Routing.LengthEqualize.Title}" Margin="0,0,0,5"/>
@@ -22,6 +22,9 @@
         <TextBlock Classes="caption" Text="{loc:Localize Routing.LengthEqualize.MaxRadius}" Margin="0,0,0,3"/>
         <TextBox Text="{Binding BottomPanel.LengthEqualization.MaxRadiusText}"
                  Width="180" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+        <CheckBox IsChecked="{Binding BottomPanel.LengthEqualization.RerouteAsBundle}"
+                  Content="{loc:Localize Routing.LengthEqualize.RerouteBundle}" Margin="0,0,0,8"/>
 
         <Button Content="{loc:Localize Routing.LengthEqualize.Apply}"
                 Command="{Binding BottomPanel.LengthEqualization.EqualizeCommand}"/>

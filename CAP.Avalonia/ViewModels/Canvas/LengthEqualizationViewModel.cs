@@ -19,8 +19,10 @@ public partial class LengthEqualizationViewModel : ObservableObject
 {
     private const double DefaultToleranceMicrometers = 0.1;
     private const int MinimumConnections = 2;
+    /// <summary>Width differences below this (µm) are not reported as a change.</summary>
+    private const double WidthChangeMicrometers = 1e-3;
     /// <summary>Suggested largest radius (µm): gentle loops by default; the search steps down where they do not fit.</summary>
-    private const double SuggestedMaxRadiusMicrometers = 50.0;
+    private const double SuggestedMaxRadiusMicrometers = 250.0;
 
     private readonly DesignCanvasViewModel _canvas;
     private readonly LengthEqualizer _equalizer;
@@ -33,6 +35,10 @@ public partial class LengthEqualizationViewModel : ObservableObject
     /// <summary>Largest meander radius to try (µm); smaller ones are used only where it does not fit.</summary>
     [ObservableProperty]
     private string _maxRadiusText = "";
+
+    /// <summary>Re-lay a bundle of facing pins from scratch instead of stretching its existing routes.</summary>
+    [ObservableProperty]
+    private bool _rerouteAsBundle = true;
 
     /// <summary>True while the search runs.</summary>
     [ObservableProperty]
@@ -122,10 +128,11 @@ public partial class LengthEqualizationViewModel : ObservableObject
                 LocalizationService.Instance.Translate("Routing.LengthEqualize.Busy"), targets.Count));
             var plan = _equalizer.Prepare(targets.Select(t => t.Connection).ToList(),
                 _canvas.ConnectionManager.Connections.ToList(), _canvas.Components.Select(c => c.Component).ToList(),
-                targetLength, maxRadius, DefaultToleranceMicrometers);
+                targetLength, maxRadius, DefaultToleranceMicrometers, RerouteAsBundle);
             var result = await Task.Run(() => LengthEqualizer.Solve(plan));
-            Apply(result, targets);
-            Report(result);
+            double width = LengthEqualizer.CommonWidth(targets.Select(t => t.Connection));
+            bool widthChanged = Apply(result, targets, width);
+            Report(result, widthChanged ? width : null);
         }
         finally
         {
@@ -150,7 +157,7 @@ public partial class LengthEqualizationViewModel : ObservableObject
             return false;
         }
         double longest = targets.Max(t => t.Connection.PathLengthMicrometers);
-        if (typed < longest - DefaultToleranceMicrometers)
+        if (!RerouteAsBundle && typed < longest - DefaultToleranceMicrometers)
         {
             SetStatus(true, string.Format(CultureInfo.CurrentCulture,
                 LocalizationService.Instance.Translate("Routing.LengthEqualize.Error.TargetBelowLongest"), longest));
@@ -161,11 +168,14 @@ public partial class LengthEqualizationViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Records every matched route as one undoable step. A route the user changed while the
-    /// search ran is left alone: its result was computed for geometry that no longer exists.
+    /// Records every matched route as one undoable step, at the common width. A route the user
+    /// changed while the search ran is left alone: its result was computed for geometry that no
+    /// longer exists.
     /// </summary>
-    private void Apply(LengthEqualizationResult result, List<WaveguideConnectionViewModel> targets)
+    /// <returns>True when a matched route's width changed.</returns>
+    private bool Apply(LengthEqualizationResult result, List<WaveguideConnectionViewModel> targets, double width)
     {
+        bool widthChanged = false;
         var steps = new List<IUndoableCommand>();
         foreach (var outcome in result.Outcomes.Where(o => o.IsSuccess))
         {
@@ -177,32 +187,45 @@ public partial class LengthEqualizationViewModel : ObservableObject
             {
                 Path = outcome.Path, IsRouteFrozen = true, TargetLengthMicrometers = result.TargetLengthMicrometers,
                 ToleranceMicrometers = result.ToleranceMicrometers, BendRadiusMicrometers = outcome.RadiusMicrometers,
+                WidthMicrometers = width,
             };
+            widthChanged |= Math.Abs(vm.Connection.WidthMicrometers - width) > WidthChangeMicrometers;
             steps.Add(new LengthMatchCommand(vm, before, after, "Match route length"));
         }
         if (steps.Count == 0)
-            return;
+            return false;
         var command = new CompositeCommand($"Equalize route lengths ({steps.Count})", steps);
         if (_canvas.CommandManager is { } commands)
             commands.ExecuteCommand(command);
         else
             command.Execute();
+        return widthChanged;
     }
 
-    private void Report(LengthEqualizationResult result)
+    private void Report(LengthEqualizationResult result, double? unifiedWidth)
+    {
+        string message = Headline(result);
+        if (result.NotInBundleCount > 0)
+            message += Format("Routing.LengthEqualize.NotInBundle", result.NotInBundleCount);
+        if (unifiedWidth is { } width)
+            message += Format("Routing.LengthEqualize.WidthUnified", width);
+        SetStatus(result.FailedCount > 0, message);
+    }
+
+    private static string Headline(LengthEqualizationResult result)
     {
         double seconds = result.Elapsed.TotalSeconds;
-        if (result.FailedCount == 0)
-        {
-            SetStatus(false, string.Format(CultureInfo.CurrentCulture,
-                LocalizationService.Instance.Translate("Routing.LengthEqualize.Success"),
-                result.MatchedCount, result.TargetLengthMicrometers, seconds));
-            return;
-        }
-        SetStatus(true, string.Format(CultureInfo.CurrentCulture,
-            LocalizationService.Instance.Translate("Routing.LengthEqualize.Partial"),
-            result.MatchedCount, result.Outcomes.Count, result.TargetLengthMicrometers, seconds, result.FailedCount));
+        if (result.FailedCount > 0)
+            return Format("Routing.LengthEqualize.Partial", result.MatchedCount, result.MatchedCount + result.FailedCount,
+                result.TargetLengthMicrometers, seconds, result.FailedCount);
+        if (result.ReroutedAsBundle)
+            return Format("Routing.LengthEqualize.SuccessBundle", result.MatchedCount, result.TargetLengthMicrometers,
+                result.Outcomes.Where(o => o.IsSuccess).Select(o => o.RadiusMicrometers).DefaultIfEmpty().Max(), seconds);
+        return Format("Routing.LengthEqualize.Success", result.MatchedCount, result.TargetLengthMicrometers, seconds);
     }
+
+    private static string Format(string key, params object[] arguments) =>
+        string.Format(CultureInfo.CurrentCulture, LocalizationService.Instance.Translate(key), arguments);
 
     private void SetStatus(bool isError, string message)
     {

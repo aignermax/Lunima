@@ -62,13 +62,14 @@ public sealed class LengthMatchCommand : IUndoableCommand
 /// <param name="TargetLengthMicrometers">Recorded length target.</param>
 /// <param name="ToleranceMicrometers">Recorded tolerance.</param>
 /// <param name="BendRadiusMicrometers">The connection's bend radius.</param>
+/// <param name="WidthMicrometers">The waveguide width; null leaves it as it is.</param>
 public sealed record LengthMatchState(RoutedPath? Path, bool IsRouteFrozen, double? TargetLengthMicrometers,
-    double? ToleranceMicrometers, double BendRadiusMicrometers)
+    double? ToleranceMicrometers, double BendRadiusMicrometers, double? WidthMicrometers = null)
 {
     /// <summary>Captures the connection's current state.</summary>
     public static LengthMatchState Capture(WaveguideConnection connection) => new(
         connection.RoutedPath?.DeepCopy(), connection.IsRouteFrozen, connection.TargetLengthMicrometers,
-        connection.LengthToleranceMicrometers, connection.BendRadiusMicrometers);
+        connection.LengthToleranceMicrometers, connection.BendRadiusMicrometers, connection.WidthMicrometers);
 
     /// <summary>The state after clearing the target: no route, unfrozen, no target.</summary>
     public LengthMatchState Cleared() => this with
@@ -82,6 +83,8 @@ public sealed record LengthMatchState(RoutedPath? Path, bool IsRouteFrozen, doub
         connection.TargetLengthMicrometers = TargetLengthMicrometers;
         connection.LengthToleranceMicrometers = ToleranceMicrometers;
         connection.BendRadiusMicrometers = BendRadiusMicrometers;
+        if (WidthMicrometers is { } width)
+            connection.WidthMicrometers = width;
         connection.IsRouteFrozen = IsRouteFrozen;
         if (Path == null)
             connection.InvalidateRoute();

@@ -79,6 +79,7 @@ internal static class RepositoryModelNamespaces
         yield return new("CAP_Core.Routing.MeanderGeneration", RepositoryModules.Domain);
         yield return new("CAP_Core.Routing.MeanderGeneration.Clearance", RepositoryModules.Domain);
         yield return new("CAP_Core.Routing.LengthEqualization", RepositoryModules.Domain);
+        yield return new("CAP_Core.Routing.LengthEqualization.Bundle", RepositoryModules.Domain);
         yield return new("CAP_Core.Routing.MetalRouting", RepositoryModules.Domain);
         yield return new("CAP_Core.Routing.PinBreakout", RepositoryModules.Domain);
         yield return new("CAP_Core.Routing.RerouteImported", RepositoryModules.Domain);

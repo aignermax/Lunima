@@ -44,6 +44,7 @@ public class LengthEqualizationViewModelTests
     public async Task Equalize_GivesEverySelectedRouteTheLongestLength_AsOneUndoStep()
     {
         var (_, connections, commands, vm) = await CreateAsync(6);
+        vm.RerouteAsBundle = false;
         var before = connections.Select(c => c.Connection.PathLengthMicrometers).ToList();
         double longest = before.Max();
 
@@ -61,6 +62,28 @@ public class LengthEqualizationViewModelTests
 
         commands.Redo().ShouldBeTrue();
         connections.ShouldAllBe(c => Math.Abs(c.Connection.PathLengthMicrometers - longest) <= Tolerance);
+    }
+
+    [Fact]
+    public async Task Equalize_UnifiesTheWidth_AndUndoRestoresWidthAndRoutes()
+    {
+        var (_, connections, commands, vm) = await CreateAsync(6);
+        double common = connections[1].Connection.WidthMicrometers;
+        connections[0].Connection.WidthMicrometers = common + 1.5;
+        var before = connections.Select(c => c.Connection.PathLengthMicrometers).ToList();
+
+        await vm.EqualizeCommand.ExecuteAsync(null);
+
+        vm.HasSuccessStatus.ShouldBeTrue(vm.StatusMessage);
+        double length = connections[0].Connection.PathLengthMicrometers;
+        connections.ShouldAllBe(c => Math.Abs(c.Connection.PathLengthMicrometers - length) <= Tolerance);
+        connections.ShouldAllBe(c => c.Connection.WidthMicrometers == common);
+        commands.UndoCount.ShouldBe(1);
+
+        commands.Undo().ShouldBeTrue();
+        connections[0].Connection.WidthMicrometers.ShouldBe(common + 1.5);
+        for (int i = 0; i < connections.Count; i++)
+            connections[i].Connection.PathLengthMicrometers.ShouldBe(before[i], 1e-6);
     }
 
     [Fact]
