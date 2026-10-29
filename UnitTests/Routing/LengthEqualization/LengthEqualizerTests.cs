@@ -71,6 +71,22 @@ public class LengthEqualizerTests
     }
 
     [Fact]
+    public async Task Solve_NeverLoopsTighterThanTheRequestedMinimum()
+    {
+        const double minimum = 20;
+        var (canvas, connections) = await FanInDesign.CreateAsync(8);
+        var models = connections.Select(c => c.Connection).ToList();
+
+        var plan = new LengthEqualizer(canvas.Router).Prepare(models, models,
+            canvas.Components.Select(c => c.Component).ToList(), null, MaxRadius, Tolerance, minRadiusMicrometers: minimum);
+        var result = LengthEqualizer.Solve(plan);
+
+        result.Outcomes.Where(o => o.IsSuccess && o.Path!.TotalLengthMicrometers > o.BasePath!.TotalLengthMicrometers + Tolerance)
+            .ShouldAllBe(o => o.RadiusMicrometers >= minimum);
+        plan.Items.ShouldAllBe(i => i.Request.MinBendRadiusMicrometers >= minimum);
+    }
+
+    [Fact]
     public async Task Solve_IsDeterministic()
     {
         var (canvas, connections) = await FanInDesign.CreateAsync(6);

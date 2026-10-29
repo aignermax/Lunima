@@ -23,6 +23,8 @@ public partial class LengthEqualizationViewModel : ObservableObject
     private const double WidthChangeMicrometers = 1e-3;
     /// <summary>Suggested largest radius (µm): gentle loops by default; the search steps down where they do not fit.</summary>
     private const double SuggestedMaxRadiusMicrometers = 250.0;
+    /// <summary>Suggested smallest radius (µm): loops tighter than this lose noticeable light.</summary>
+    private const double SuggestedMinRadiusMicrometers = 25.0;
 
     private readonly DesignCanvasViewModel _canvas;
     private readonly LengthEqualizer _equalizer;
@@ -39,6 +41,10 @@ public partial class LengthEqualizationViewModel : ObservableObject
     /// <summary>Re-lay a bundle of facing pins from scratch instead of stretching its existing routes.</summary>
     [ObservableProperty]
     private bool _rerouteAsBundle = true;
+
+    /// <summary>Smallest radius any new loop may use (µm): below it a route is reported rather than coiled up.</summary>
+    [ObservableProperty]
+    private string _minRadiusText = "";
 
     /// <summary>True while the search runs.</summary>
     [ObservableProperty]
@@ -111,6 +117,8 @@ public partial class LengthEqualizationViewModel : ObservableObject
         double radius = Math.Max(SuggestedMaxRadiusMicrometers,
             targets.Max(t => Math.Max(t.Connection.BendRadiusMicrometers, _matcher.ResolveProcessFloor(t.Connection))));
         MaxRadiusText = radius.ToString("0.###", CultureInfo.InvariantCulture);
+        double floor = targets.Max(t => _matcher.ResolveProcessFloor(t.Connection));
+        MinRadiusText = Math.Max(SuggestedMinRadiusMicrometers, floor).ToString("0.###", CultureInfo.InvariantCulture);
     }
 
     private bool CanEqualize() => !IsBusy;
@@ -135,7 +143,8 @@ public partial class LengthEqualizationViewModel : ObservableObject
         var targets = Targets();
         if (targets.Count < MinimumConnections)
             return;
-        if (!TryReadInputs(targets, out double? targetLength, out double maxRadius))
+        if (!TryReadInputs(targets, out double? targetLength, out double maxRadius)
+            || !TryReadMinRadius(maxRadius, out double? minRadius))
             return;
 
         IsBusy = true;
@@ -145,7 +154,7 @@ public partial class LengthEqualizationViewModel : ObservableObject
                 LocalizationService.Instance.Translate("Routing.LengthEqualize.Busy"), targets.Count));
             var plan = _equalizer.Prepare(targets.Select(t => t.Connection).ToList(),
                 _canvas.ConnectionManager.Connections.ToList(), _canvas.Components.Select(c => c.Component).ToList(),
-                targetLength, maxRadius, DefaultToleranceMicrometers, RerouteAsBundle);
+                targetLength, maxRadius, DefaultToleranceMicrometers, RerouteAsBundle, minRadius);
             var result = await Task.Run(() => LengthEqualizer.Solve(plan));
             double width = LengthEqualizer.CommonWidth(targets.Select(t => t.Connection));
             bool widthChanged = Apply(result, targets, width);
@@ -156,6 +165,15 @@ public partial class LengthEqualizationViewModel : ObservableObject
             IsBusy = false;
             OnPropertyChanged(nameof(SummaryText));
         }
+    }
+
+    /// <summary>An empty field allows loops down to the process minimum.</summary>
+    private bool TryReadMinRadius(double maxRadius, out double? minRadius)
+    {
+        if (LengthInput.TryParseOptionalMinRadius(MinRadiusText, maxRadius, out minRadius))
+            return true;
+        SetStatus(true, LocalizationService.Instance.Translate("Routing.LengthEqualize.Error.MinRadius"));
+        return false;
     }
 
     private bool TryReadInputs(List<WaveguideConnectionViewModel> targets, out double? targetLength, out double maxRadius)

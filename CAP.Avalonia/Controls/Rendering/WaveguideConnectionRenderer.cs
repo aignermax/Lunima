@@ -148,8 +148,8 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         else
         {
             if (!conn.IsSelected && LengthLockOverlay.GroupOf(conn) is { } group && lockGroups.Contains(group))
-                DrawPathSegments(context, rc.Pens.LengthPeer, segments);
-            DrawPathSegments(context, pen, segments);
+                DrawRoute(context, rc.Pens.LengthPeer, conn.Connection.RoutedPath, segments, rc.Zoom);
+            DrawRoute(context, pen, conn.Connection.RoutedPath, segments, rc.Zoom);
         }
         DrawConnectionOverlays(context, conn, vm, isHovered, rc.Zoom, rc.Labels, hasImportedEndpointMismatch);
         if (conn.Connection.TargetLengthMicrometers != null && rc.Zoom >= ComponentRenderer.GroupOverviewZoom)
@@ -287,15 +287,17 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         return startDist > 1.0 || endDist > 1.0;
     }
 
-    private static void DrawPathSegments(DrawingContext context, IPen pen, IReadOnlyList<CAP_Core.Routing.PathSegment> segments)
+    /// <summary>
+    /// Draws the route as one geometry, cached per route and zoom level (see
+    /// <see cref="RouteGeometryCache"/>) — one draw call instead of one per arc chord.
+    /// </summary>
+    private static void DrawRoute(DrawingContext context, IPen pen, CAP_Core.Routing.RoutedPath? path,
+        IReadOnlyList<CAP_Core.Routing.PathSegment> segments, double zoom)
     {
-        foreach (var segment in segments)
-        {
-            if (segment is StraightSegment straight)
-                context.DrawLine(pen, new Point(straight.StartPoint.X, straight.StartPoint.Y), new Point(straight.EndPoint.X, straight.EndPoint.Y));
-            else if (segment is BendSegment bend)
-                DrawArc(context, pen, bend);
-        }
+        var geometry = path != null && ReferenceEquals(path.Segments, segments)
+            ? RouteGeometryCache.For(path, zoom)
+            : RouteGeometryCache.Build(segments, 0);
+        context.DrawGeometry(null, pen, geometry);
     }
 
     /// <summary>World-space font size for the length/loss label, before the screen-space clamp.</summary>
@@ -373,32 +375,5 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         var flow = vm.PowerFlowVisualizer.GetFlowForConnection(conn.Connection.Id);
         if (flow == null) return;
         PowerFlowRenderer.DrawPowerLabel(context, flow, new Point((conn.StartX + conn.EndX) / 2, (conn.StartY + conn.EndY) / 2 - 25));
-    }
-
-    private static void DrawArc(DrawingContext context, IPen pen, BendSegment bend)
-    {
-        int numSegments = Math.Max(8, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
-        if (numSegments == 0 || Math.Abs(bend.SweepAngleDegrees) < 0.1)
-        {
-            context.DrawLine(pen, new Point(bend.StartPoint.X, bend.StartPoint.Y), new Point(bend.EndPoint.X, bend.EndPoint.Y));
-            return;
-        }
-
-        var points = new List<Point>(numSegments + 1);
-        for (int i = 0; i <= numSegments; i++)
-        {
-            double t = i / (double)numSegments;
-            double startRad = bend.StartAngleDegrees * Math.PI / 180;
-            double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
-            double angle = startRad + sweepRad * t;
-            double sign = Math.Sign(bend.SweepAngleDegrees) == 0 ? 1 : Math.Sign(bend.SweepAngleDegrees);
-            double perpAngle = angle - Math.PI / 2 * sign;
-            points.Add(new Point(
-                bend.Center.X + bend.RadiusMicrometers * Math.Cos(perpAngle),
-                bend.Center.Y + bend.RadiusMicrometers * Math.Sin(perpAngle)));
-        }
-
-        for (int i = 0; i < points.Count - 1; i++)
-            context.DrawLine(pen, points[i], points[i + 1]);
     }
 }

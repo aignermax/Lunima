@@ -2405,6 +2405,8 @@
   "Routing.LengthEqualize.TargetLength": "Common length (µm):",
   "Routing.LengthEqualize.TargetWatermark": "empty = shortest possible",
   "Routing.LengthEqualize.MaxRadius": "Largest meander radius (µm):",
+  "Routing.LengthEqualize.MinRadius": "Smallest radius (µm):",
+  "Routing.LengthEqualize.Error.MinRadius": "The smallest radius must be a positive number no larger than the largest radius.",
   "Routing.LengthEqualize.Apply": "Equalize lengths",
   "Routing.LengthEqualize.Busy": "Equalizing {0} connections…",
   "Routing.LengthEqualize.Success": "{0} connections at {1:F1} µm ({2:F1} s).",

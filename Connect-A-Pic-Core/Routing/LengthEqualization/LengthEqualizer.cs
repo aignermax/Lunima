@@ -50,6 +50,11 @@ public sealed class LengthEqualizer
     /// <param name="maxRadiusMicrometers">Largest meander radius to try.</param>
     /// <param name="toleranceMicrometers">Accepted deviation from the target.</param>
     /// <param name="rerouteBundle">Re-lay a bundle from scratch instead of stretching its existing routes.</param>
+    /// <param name="minRadiusMicrometers">
+    /// Smallest radius any new loop or arch may use, never below the process minimum. Tiny loops
+    /// meet the length but lose light; with a minimum, a route that only fits with tighter loops
+    /// is reported instead. Null allows everything down to the process minimum.
+    /// </param>
     public LengthEqualizationPlan Prepare(
         IReadOnlyList<WaveguideConnection> connections,
         IReadOnlyList<WaveguideConnection> allConnections,
@@ -57,14 +62,15 @@ public sealed class LengthEqualizer
         double? targetLengthMicrometers,
         double maxRadiusMicrometers,
         double toleranceMicrometers,
-        bool rerouteBundle = false)
+        bool rerouteBundle = false,
+        double? minRadiusMicrometers = null)
     {
         var usable = connections.Distinct().Where(c => IsUsable(c) || (rerouteBundle && HasPins(c))).ToList();
         double target = targetLengthMicrometers ?? (usable.Count == 0 ? 0 : usable.Max(c => c.PathLengthMicrometers));
         var obstacleComponents = components.Where(c => c.IsRoutingObstacle).ToList();
         var items = usable.Select(c => new LengthEqualizationItem(
                 c,
-                Request(c, components, target, toleranceMicrometers, maxRadiusMicrometers),
+                Request(c, components, target, toleranceMicrometers, maxRadiusMicrometers, minRadiusMicrometers),
                 IgnoredOwners(c, allConnections, obstacleComponents),
                 c.PathLengthMicrometers))
             .ToList();
@@ -77,16 +83,19 @@ public sealed class LengthEqualizer
     }
 
     /// <summary>
-    /// The connection's meander request, keeping its existing route first. Without a process
-    /// floor the connection's own bend radius is the smallest radius the fallback may use.
+    /// The connection's meander request, keeping its existing route first. The smallest radius
+    /// the fallback may use is the requested minimum, never below the process floor; without
+    /// either, the connection's own bend radius.
     /// </summary>
     private MeanderRequest Request(WaveguideConnection connection, IReadOnlyList<Component> components,
-        double target, double tolerance, double maxRadius)
+        double target, double tolerance, double maxRadius, double? requestedMin)
     {
         var request = _matcher.BuildRequest(connection, components, target, tolerance,
             Array.Empty<WaveguideConnection>(), maxRadius);
         double floor = _matcher.ResolveProcessFloor(connection);
-        double minRadius = floor > 0 ? floor : Math.Min(connection.BendRadiusMicrometers, maxRadius);
+        double minRadius = requestedMin is { } min
+            ? Math.Max(Math.Min(min, maxRadius), floor)
+            : floor > 0 ? floor : Math.Min(connection.BendRadiusMicrometers, maxRadius);
         return request with { MinBendRadiusMicrometers = minRadius, PreferExistingRoute = true };
     }
 
