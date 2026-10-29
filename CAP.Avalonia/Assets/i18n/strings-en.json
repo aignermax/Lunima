@@ -2416,5 +2416,8 @@
   "Routing.LengthEqualize.SuccessBundle": "{0} connections re-laid as a bundle at {1:F1} µm, radius {2:F0} µm ({3:F1} s).",
   "Routing.LengthEqualize.NotInBundle": " {0} selected connections are not part of the bundle and were left unchanged.",
   "Routing.LengthEqualize.WidthUnified": " All now {0:0.###} µm wide, so equal length also means equal phase.",
+  "Routing.LengthEqualize.ReleaseLock": "Release length lock",
+  "Routing.LengthEqualize.Released": "{0} routes released: they keep their shape but no longer hold a length.",
+  "Routing.LengthEqualize.NoneLocked": "None of the selected routes is length-locked.",
   "Examples.FiberArrayFanIn.Description": "Sixteen fibre-array channels fan into a denser chip column with unequal routes — select them all and equalize their lengths in one click."
 }

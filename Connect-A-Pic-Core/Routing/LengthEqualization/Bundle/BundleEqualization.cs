@@ -10,8 +10,12 @@ namespace CAP_Core.Routing.LengthEqualization.Bundle;
 internal static class BundleEqualization
 {
     /// <summary>The result of re-laying the plan's bundle, or null when it has none or it does not fit.</summary>
+    /// <param name="plan">The snapshot to lay out.</param>
+    /// <param name="radii">Radii to try, largest first, from the plan's maximum down to the wires' minimum.</param>
+    /// <param name="cancellation">Stops the search.</param>
+    /// <param name="equalize">One common length for every wire; false gives each wire its shortest shape.</param>
     public static LengthEqualizationResult? TrySolve(LengthEqualizationPlan plan, Func<double, double, IEnumerable<double>> radii,
-        CancellationToken cancellation)
+        CancellationToken cancellation, bool equalize = true)
     {
         if (!plan.RerouteBundle)
             return null;
@@ -22,7 +26,7 @@ internal static class BundleEqualization
         var items = found.Wires.Select(w => w.Item).ToList();
         double minRadius = items.Max(i => plan.Items[i].Request.MinBendRadiusMicrometers);
         var solution = BundleRouter.TrySolve(plan, items, found.HeadingDegrees, found.Wires,
-            radii(plan.MaxRadiusMicrometers, minRadius), cancellation);
+            radii(plan.MaxRadiusMicrometers, minRadius), equalize, cancellation);
         if (solution == null)
             return null;
 

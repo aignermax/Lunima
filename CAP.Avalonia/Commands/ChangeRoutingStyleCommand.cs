@@ -23,18 +23,25 @@ public sealed class ChangeRoutingStyleCommand : IUndoableCommand
     private readonly DesignCanvasViewModel _canvas;
     private readonly List<ConnectionState> _states;
     private readonly WaveguideType _style;
+    private readonly IReadOnlyDictionary<WaveguideConnection, RoutedPath>? _laidOutRoutes;
 
     /// <summary>Initializes a new instance of <see cref="ChangeRoutingStyleCommand"/>.</summary>
     /// <param name="canvas">The design canvas whose routes are recalculated after each apply.</param>
     /// <param name="connections">The connections to restyle.</param>
     /// <param name="style">The routing style to apply to all of them.</param>
+    /// <param name="laidOutRoutes">
+    /// Routes already laid out for some of the connections (a bundle switched to Auto); they are
+    /// installed instead of being searched for again by the routing pass.
+    /// </param>
     public ChangeRoutingStyleCommand(
         DesignCanvasViewModel canvas,
         IEnumerable<WaveguideConnectionViewModel> connections,
-        WaveguideType style)
+        WaveguideType style,
+        IReadOnlyDictionary<WaveguideConnection, RoutedPath>? laidOutRoutes = null)
     {
         _canvas = canvas;
         _style = style;
+        _laidOutRoutes = laidOutRoutes;
         _states = connections
             .Distinct()
             .Select(c => new ConnectionState(
@@ -59,7 +66,12 @@ public sealed class ChangeRoutingStyleCommand : IUndoableCommand
     public void Execute()
     {
         foreach (var state in _states)
-            ApplyStyle(state.Connection.Connection, _style);
+        {
+            var connection = state.Connection.Connection;
+            ApplyStyle(connection, _style);
+            if (_laidOutRoutes != null && _laidOutRoutes.TryGetValue(connection, out var route))
+                connection.RestoreCachedPath(route.DeepCopy());
+        }
         _canvas.Groups.PublishRouteChanges(_states.Select(state => state.Connection));
         RecalculateOnce();
     }

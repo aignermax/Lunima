@@ -89,6 +89,17 @@ public class LengthEqualizationScreenshotTests
             connections.Max(c => c.Connection.PathLengthMicrometers).ShouldBeLessThan(tangledLongest);
             ShowcaseCapture.PumpRenderLoop();
             ShowcaseCapture.CaptureWindow(window, Path.Combine(dir, "length-matching-5-bundle-relaid.png"));
+
+            // One route selected: its padlock and the glow on every route locked to the same length.
+            vm.Canvas.Selection.SelectedConnections.Clear();
+            foreach (var connection in connections)
+                connection.IsSelected = false;
+            connections[5].IsSelected = true;
+            vm.CanvasInteraction.SelectedWaveguideConnection = connections[5];
+            Dispatcher.UIThread.RunJobs();
+            ShowcaseCircuit.SetView(window, vm, BundleRegion);
+            ShowcaseCapture.PumpRenderLoop();
+            ShowcaseCapture.CaptureWindow(window, Path.Combine(dir, "length-matching-6-lock-group.png"));
         }
         finally
         {

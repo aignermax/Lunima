@@ -24,8 +24,9 @@ internal static class BundleRouter
     public sealed record Solution(double TargetLength, double Radius, IReadOnlyList<(int Item, RoutedPath Path)> Routes);
 
     /// <summary>The bundle laid out cleanly, or null when it cannot be.</summary>
+    /// <param name="equalize">One common length for every wire; false gives each wire its shortest shape.</param>
     public static Solution? TrySolve(LengthEqualizationPlan plan, IReadOnlyList<int> items, double heading,
-        IReadOnlyList<BundleWire> wires, IEnumerable<double> radii, CancellationToken cancellation)
+        IReadOnlyList<BundleWire> wires, IEnumerable<double> radii, bool equalize, CancellationToken cancellation)
     {
         var index = ObstacleIndex(plan, items);
         double minPitch = plan.MinSpacingMicrometers + items.Max(i => plan.Items[i].Connection.WidthMicrometers);
@@ -38,7 +39,9 @@ internal static class BundleRouter
                 foreach (double lead in LeadRadii.Select(f => f * radius))
                 {
                     cancellation.ThrowIfCancellationRequested();
-                    var layout = BundleLayout.Build(wires, radius, pitch, lead, plan.RequestedTargetMicrometers);
+                    var layout = equalize
+                        ? BundleLayout.Build(wires, radius, pitch, lead, plan.RequestedTargetMicrometers)
+                        : BundleLayout.BuildShortest(wires, radius, pitch, lead);
                     if (layout == null)
                         continue;
                     var routes = Emit(plan, heading, layout);

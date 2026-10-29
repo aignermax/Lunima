@@ -26,8 +26,12 @@
         <CheckBox IsChecked="{Binding BottomPanel.LengthEqualization.RerouteAsBundle}"
                   Content="{loc:Localize Routing.LengthEqualize.RerouteBundle}" Margin="0,0,0,8"/>
 
-        <Button Content="{loc:Localize Routing.LengthEqualize.Apply}"
-                Command="{Binding BottomPanel.LengthEqualization.EqualizeCommand}"/>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Content="{loc:Localize Routing.LengthEqualize.Apply}"
+                    Command="{Binding BottomPanel.LengthEqualization.EqualizeCommand}"/>
+            <Button Content="{loc:Localize Routing.LengthEqualize.ReleaseLock}"
+                    Command="{Binding BottomPanel.LengthEqualization.ReleaseLengthLockCommand}"/>
+        </StackPanel>
         <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,0"
                      IsVisible="{Binding BottomPanel.LengthEqualization.IsBusy}"/>
 

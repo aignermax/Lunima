@@ -33,6 +33,36 @@ internal static class BundleLayout
         return best;
     }
 
+    /// <summary>
+    /// The plan in which every wire takes its shortest planar shape — a river route without a
+    /// common length — over the split with the least total length; null when no split fits.
+    /// </summary>
+    public static Plan? BuildShortest(IReadOnlyList<BundleWire> wires, double radius, double pitch, double lead)
+    {
+        Plan? best = null;
+        double bestTotal = double.MaxValue;
+        for (int split = 0; split <= wires.Count; split++)
+        {
+            if (!Separated(wires, split, pitch))
+                continue;
+            var (minus, plus) = Families(wires, split, radius, pitch, lead);
+            var minusShapes = minus.Shapes(minus.ShortestTops());
+            var plusShapes = plus.Shapes(plus.ShortestTops());
+            if (minusShapes == null || plusShapes == null)
+                continue;
+            var shapes = minusShapes.Concat(plusShapes).ToList();
+            double total = shapes.Sum(s => s.Length);
+            if (total < bestTotal - LengthSlack)
+                (best, bestTotal) = (new Plan(shapes.Max(s => s.Length), shapes), total);
+        }
+        return best;
+    }
+
+    private static (BundleFamilyPlanner Minus, BundleFamilyPlanner Plus) Families(IReadOnlyList<BundleWire> wires, int split,
+        double radius, double pitch, double lead) => (
+        new BundleFamilyPlanner(wires.Take(split).Reverse().ToList(), -1, radius, pitch, lead),
+        new BundleFamilyPlanner(wires.Skip(split).ToList(), +1, radius, pitch, lead));
+
     /// <summary>The families may not reach into each other: the split wires' across-extents keep a pitch apart.</summary>
     private static bool Separated(IReadOnlyList<BundleWire> wires, int split, double pitch)
     {
@@ -45,8 +75,7 @@ internal static class BundleLayout
 
     private static Plan? BuildSplit(IReadOnlyList<BundleWire> wires, int split, double radius, double pitch, double lead, double? target)
     {
-        var minus = new BundleFamilyPlanner(wires.Take(split).Reverse().ToList(), -1, radius, pitch, lead);
-        var plus = new BundleFamilyPlanner(wires.Skip(split).ToList(), +1, radius, pitch, lead);
+        var (minus, plus) = Families(wires, split, radius, pitch, lead);
         double shortest = Math.Max(minus.ShortestCommonLength(), plus.ShortestCommonLength());
         if (target is { } requested && requested < shortest - LengthSlack)
             return null;

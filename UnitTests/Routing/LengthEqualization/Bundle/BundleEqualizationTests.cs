@@ -92,6 +92,26 @@ public class BundleEqualizationTests
     }
 
     [Fact]
+    public async Task LayOutBundle_WithoutRoutes_GivesEveryWireItsShortestPlanarShape()
+    {
+        var (canvas, connections) = await FanInDesign.CreateAsync(10);
+        var models = connections.Select(c => c.Connection).ToList();
+        double common = Relay(canvas, models).TargetLengthMicrometers;
+        foreach (var model in models)
+            model.InvalidateRoute();
+
+        var result = LengthEqualizer.LayOutBundle(Plan(canvas, models));
+
+        result.ShouldNotBeNull();
+        result.MatchedCount.ShouldBe(models.Count);
+        result.Outcomes.ShouldAllBe(o => o.Path!.TotalLengthMicrometers <= common + Tolerance);
+        result.Outcomes.Select(o => o.Path!.TotalLengthMicrometers).Distinct().Count().ShouldBeGreaterThan(1);
+        foreach (var outcome in result.Outcomes)
+            AssertJoinsItsPins(outcome.Connection, outcome.Path!);
+        AssertClear(result.Outcomes.Select(o => o.Path!).ToList(), canvas.Router.MinWaveguideSpacingMicrometers);
+    }
+
+    [Fact]
     public async Task RequestedLength_IsMetByEveryWire()
     {
         var (canvas, connections) = await FanInDesign.CreateAsync(6);

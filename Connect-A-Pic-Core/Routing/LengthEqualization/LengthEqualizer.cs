@@ -59,7 +59,7 @@ public sealed class LengthEqualizer
         double toleranceMicrometers,
         bool rerouteBundle = false)
     {
-        var usable = connections.Distinct().Where(IsUsable).ToList();
+        var usable = connections.Distinct().Where(c => IsUsable(c) || (rerouteBundle && HasPins(c))).ToList();
         double target = targetLengthMicrometers ?? (usable.Count == 0 ? 0 : usable.Max(c => c.PathLengthMicrometers));
         var obstacleComponents = components.Where(c => c.IsRoutingObstacle).ToList();
         var items = usable.Select(c => new LengthEqualizationItem(
@@ -111,6 +111,20 @@ public sealed class LengthEqualizer
     private static bool Prefers(LengthEqualizationResult stretch, LengthEqualizationResult bundle) =>
         stretch.FailedCount == 0 && stretch.MatchedCount >= bundle.MatchedCount
         && stretch.TargetLengthMicrometers < bundle.TargetLengthMicrometers - stretch.ToleranceMicrometers;
+
+    /// <summary>
+    /// Lays the bundle among the plan's connections out as planar arches, each wire at its
+    /// shortest shape (or at the plan's requested common length) — the fast, crossing-free route
+    /// for facing pin columns that the general router would search for one wire at a time. Needs
+    /// no existing routes. Connections outside the bundle come back with
+    /// <see cref="LengthEqualizationOutcome.NotInBundle"/>; null when there is no bundle or it does
+    /// not fit cleanly.
+    /// </summary>
+    public static LengthEqualizationResult? LayOutBundle(LengthEqualizationPlan plan, CancellationToken cancellation = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        return BundleEqualization.TrySolve(plan, Radii, cancellation, equalize: plan.RequestedTargetMicrometers != null);
+    }
 
     private static LengthEqualizationResult Stretch(LengthEqualizationPlan plan, CancellationToken cancellation)
     {
@@ -172,6 +186,9 @@ public sealed class LengthEqualizer
             .Select(g => g.First().WidthMicrometers)
             .DefaultIfEmpty(PhotonicConstants.StandardWaveguideWidthMicrometers)
             .First();
+
+    private static bool HasPins(WaveguideConnection connection) =>
+        connection.StartPin != null && connection.EndPin != null;
 
     private static bool IsUsable(WaveguideConnection connection) =>
         connection.StartPin != null && connection.EndPin != null

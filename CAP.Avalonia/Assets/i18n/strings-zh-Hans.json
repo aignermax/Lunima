@@ -2416,5 +2416,8 @@
   "Routing.LengthEqualize.SuccessBundle": "{0} 条连接已作为线束重新布线，长度 {1:F1} µm，半径 {2:F0} µm（{3:F1} 秒）。",
   "Routing.LengthEqualize.NotInBundle": " 有 {0} 条选中的连接不属于该线束，保持不变。",
   "Routing.LengthEqualize.WidthUnified": " 现在宽度均为 {0:0.###} µm，因此长度相同也意味着相位相同。",
+  "Routing.LengthEqualize.ReleaseLock": "解除长度锁定",
+  "Routing.LengthEqualize.Released": "已解除 {0} 条路径：保持原有形状，但不再固定长度。",
+  "Routing.LengthEqualize.NoneLocked": "所选路径都没有长度锁定。",
   "Examples.FiberArrayFanIn.Description": "十六路光纤阵列通道以长度不等的路径汇入更密集的芯片列——全部选中，一键统一长度。"
 }

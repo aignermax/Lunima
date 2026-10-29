@@ -207,9 +207,10 @@ public partial class LengthMatchingViewModel : ObservableObject
     /// normal router rebuild it (the stale meander geometry must be discarded first, or the
     /// incremental router would keep it). A connection without a length target is left
     /// untouched: routes frozen for other reasons (e.g. GDS-imported geometry) must not be
-    /// unfrozen and re-routed — that would silently discard their path.
+    /// unfrozen and re-routed — that would silently discard their path. The button stays usable
+    /// while that reroute is still running, so the next route can be cleared right away.
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task Clear()
     {
         if (TargetConnection() is not { } target)

@@ -147,12 +147,31 @@ public partial class ConnectionRoutingViewModel : ObservableObject
         if (targets.Count == 0)
             return;
 
+        if (value == WaveguideType.Auto && targets.Count >= BundleAutoRouting.MinimumConnections)
+        {
+            _ = ApplyAutoAsync(targets);
+            return;
+        }
+        Execute(new ChangeRoutingStyleCommand(_canvas, targets, value), targets);
+    }
+
+    /// <summary>
+    /// Auto for several connections: a bundle of facing pins is laid out at once, off the UI
+    /// thread, instead of being searched for wire by wire; the routing pass routes only the rest.
+    /// </summary>
+    private async Task ApplyAutoAsync(List<WaveguideConnectionViewModel> targets)
+    {
+        var routes = await BundleAutoRouting.TryLayOutAsync(_canvas, targets);
+        Execute(new ChangeRoutingStyleCommand(_canvas, targets, WaveguideType.Auto, routes), targets);
+    }
+
+    private void Execute(ChangeRoutingStyleCommand command, List<WaveguideConnectionViewModel> targets)
+    {
         // ONE command for the whole batch, so a single Ctrl+Z restores every connection.
         // Width/radius stay each connection's own values (its model defaults) — deliberately
         // NOT stamped with the InterconnectSettings export defaults: their 50 µm bend radius
         // is a Nazca header constant, and writing it onto the connection made the A* route
         // unusably wide after switching back to Auto (it feeds the router's minimum).
-        var command = new ChangeRoutingStyleCommand(_canvas, targets, value);
         if (_commandManager != null)
             _commandManager.ExecuteCommand(command);
         else

@@ -51,13 +51,18 @@ internal sealed class BundleFamilyPlanner
     /// Top lines (in w) giving every wire <paramref name="target"/> where nesting allows; wires
     /// nesting pushes beyond it come out longer, which the caller resolves by raising the target.
     /// </summary>
-    public double[] Tops(double target)
+    public double[] Tops(double target) => Nest(wire => TopFor(wire, target));
+
+    /// <summary>Top lines giving every wire its shortest shape the nesting allows (no common length).</summary>
+    public double[] ShortestTops() => Nest(Base);
+
+    private double[] Nest(Func<BundleWire, double> wanted)
     {
         var tops = new double[_innerFirst.Count];
         for (int k = 0; k < tops.Length; k++)
         {
             var wire = _innerFirst[k];
-            double top = TopFor(wire, target);
+            double top = wanted(wire);
             if (k > 0 && (Detours(wire, top) || Detours(_innerFirst[k - 1], tops[k - 1])))
                 top = Math.Max(top, tops[k - 1] + _pitch);
             tops[k] = top;

@@ -53,6 +53,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             RenderCulling.ComputeViewportWorld(vm.PanX, vm.PanY, rc.Bounds, rc.Zoom), rc.Zoom);
 
         var hovered = rc.InteractionState.HoveredConnection;
+        var lockGroups = LengthLockOverlay.ActiveGroups(vm, hovered);
         foreach (var conn in vm.Connections)
         {
             if (WaveguideFilteringHelper.IsConnectionInternalToAnyGroup(conn.Connection, allGroups))
@@ -71,7 +72,8 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             IssuedConnectionCount++;
             using (dimDieWires && ViewModels.Canvas.DieSurface.DieWireStyle.IsOnOneDie(conn.Connection)
                        ? context.PushOpacity(ComponentRenderer.LockedDieContentOpacity) : (IDisposable?)null)
-                DrawWaveguideConnection(context, conn, vm, ReferenceEquals(conn, hovered), rc, segments, asDrawn, cullRect, _blockedMarkers);
+                DrawWaveguideConnection(context, conn, vm, ReferenceEquals(conn, hovered), rc, segments, asDrawn, cullRect, _blockedMarkers,
+                    lockGroups);
         }
 
         if (vm.ShowPowerFlow && rc.InteractionState.HoveredConnection != null)
@@ -103,7 +105,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
     private static void DrawWaveguideConnection(DrawingContext context, WaveguideConnectionViewModel conn,
         DesignCanvasViewModel vm, bool isHovered, CanvasRenderContext rc,
         IReadOnlyList<CAP_Core.Routing.PathSegment> segments, AsDrawnGeometry? asDrawn, Rect cullRect,
-        BlockedConnectionMarkerRenderer blockedMarkers)
+        BlockedConnectionMarkerRenderer blockedMarkers, IReadOnlySet<double> lockGroups)
     {
         bool hasImportedEndpointMismatch = asDrawn is not null
             && conn.Connection.StartPin is not null && conn.Connection.EndPin is not null
@@ -145,9 +147,13 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         }
         else
         {
+            if (!conn.IsSelected && LengthLockOverlay.GroupOf(conn) is { } group && lockGroups.Contains(group))
+                DrawPathSegments(context, rc.Pens.LengthPeer, segments);
             DrawPathSegments(context, pen, segments);
         }
         DrawConnectionOverlays(context, conn, vm, isHovered, rc.Zoom, rc.Labels, hasImportedEndpointMismatch);
+        if (conn.Connection.TargetLengthMicrometers != null && rc.Zoom >= ComponentRenderer.GroupOverviewZoom)
+            LengthLockOverlay.DrawBadge(context, segments, rc.Zoom);
     }
 
     /// <summary>
