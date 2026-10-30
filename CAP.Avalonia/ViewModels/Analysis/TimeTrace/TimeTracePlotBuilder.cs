@@ -33,6 +33,9 @@ internal static class TimeTracePlotBuilder
 
     private const double SeriesStrokeThickness = 1.5;
 
+    /// <summary>The in-plot legend is shown only up to this many visible curves; beyond it the legend would cover the plot.</summary>
+    public const int MaxLegendEntries = 8;
+
     // Light colours readable on the dark (#1e1e1e) panel background. Matches
     // the palette feel of the ONA chart while staying distinct per series.
     private static readonly OxyColor[] Palette =
@@ -128,6 +131,13 @@ internal static class TimeTracePlotBuilder
         return model;
     }
 
+    /// <summary>Shows the in-plot legend only while the visible curve count is readable.</summary>
+    public static void ApplyLegendPolicy(PlotModel model, int visibleCurves)
+    {
+        foreach (var legend in model.Legends)
+            legend.IsLegendVisible = visibleCurves > 0 && visibleCurves <= MaxLegendEntries;
+    }
+
     /// <summary>Creates an empty, dark-themed time-trace plot model with labelled axes.</summary>
     public static PlotModel CreateEmptyPlotModel()
     {
@@ -139,14 +149,12 @@ internal static class TimeTracePlotBuilder
             TitleColor = PlotForeground,
             PlotAreaBorderColor = PlotAxisline,
         };
-        // The per-pin checkbox list below the chart (TimeDomainPanel.axaml) is the only
-        // series-visibility control; an in-plot legend duplicated it as clickable buttons
-        // cluttering the chart (field feedback, round 5 finding 1). Kept (not removed) so a
-        // future need for the in-plot legend is a one-line flip, not a re-derivation.
+        // Legend visibility follows ApplyLegendPolicy (hidden for many curves).
         model.Legends.Add(new Legend
         {
             LegendPosition = LegendPosition.RightTop,
             LegendTextColor = PlotForeground,
+            LegendPlacement = LegendPlacement.Outside,
             IsLegendVisible = false,
         });
         model.Axes.Add(CreateAxis(AxisPosition.Bottom,

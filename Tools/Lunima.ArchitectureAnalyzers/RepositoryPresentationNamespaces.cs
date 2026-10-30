@@ -19,6 +19,7 @@ internal static class RepositoryPresentationNamespaces
         yield return new("CAP.Avalonia.Controls.Canvas.BendHandles", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Controls.Canvas.ComponentPreview", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Controls.Canvas.CrossingDrag", RepositoryModules.Presentation);
+        yield return new("CAP.Avalonia.Controls.Canvas.LengthLock", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Controls.Canvas.CutTool", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Controls.Canvas.GateView", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Controls.Canvas.LibraryDrop", RepositoryModules.Presentation);

@@ -285,7 +285,10 @@ public partial class WaveguideRouter
         budget.CancelAfter(MaxRouteDuration);
         try
         {
-            return RouteCore(startPin, endPin, budget.Token);
+            var path = RouteCore(startPin, endPin, budget.Token);
+            path.SearchTimedOut = path.IsBlockedFallback && budget.IsCancellationRequested
+                && !cancellationToken.IsCancellationRequested;
+            return path;
         }
         finally
         {

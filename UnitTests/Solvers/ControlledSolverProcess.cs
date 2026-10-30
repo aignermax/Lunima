@@ -98,6 +98,7 @@ internal sealed class ControlledSolverProcess : IAsyncDisposable
             }
             catch (FileNotFoundException) { return true; }
             catch (DirectoryNotFoundException) { return true; }
+            catch (IOException) { return true; }
         }
         var factory = ProcessLaunchFactory.CreateDefault();
         factory.TryBuild("ps", new[] { "-o", "stat=", "-p", pid.ToString(System.Globalization.CultureInfo.InvariantCulture) },

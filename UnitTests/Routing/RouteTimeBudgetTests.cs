@@ -49,6 +49,25 @@ public class RouteTimeBudgetTests
     }
 
     [Fact]
+    public async Task TimedOutWire_IsNotRememberedAsUnroutable_SoALaterPassRetriesIt()
+    {
+        var (canvas, connection) = await DetourAsync(TimeSpan.Zero);
+        await canvas.RecalculateRoutesAsync();
+        await canvas.RecalculateRoutesAsync();
+
+        var path = connection.Connection.RoutedPath.ShouldNotBeNull();
+        if (path.IsBlockedFallback)
+            path.SearchTimedOut.ShouldBeTrue();
+        canvas.ConnectionManager.UnroutableWires.IsRemembered(connection.Connection).ShouldBeFalse(
+            "running out of time proves nothing about the wire");
+
+        canvas.Router.MaxRouteDuration = WaveguideRouter.DefaultMaxRouteDuration;
+        canvas.ConnectionManager.RequestReroute(connection.Connection);
+        await canvas.RecalculateRoutesAsync();
+        connection.Connection.IsBlockedFallback.ShouldBeFalse();
+    }
+
+    [Fact]
     public void Clone_KeepsTheBudget()
     {
         var canvas = new DesignCanvasViewModel();

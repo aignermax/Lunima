@@ -17,4 +17,19 @@ internal static class LengthInput
         return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value)
             || double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
     }
+
+    /// <summary>
+    /// An optional smallest radius: empty means none (null); otherwise a positive number no
+    /// larger than <paramref name="maxRadius"/>.
+    /// </summary>
+    public static bool TryParseOptionalMinRadius(string? text, double maxRadius, out double? minRadius)
+    {
+        minRadius = null;
+        if (string.IsNullOrWhiteSpace(text))
+            return true;
+        if (!TryParse(text, out double value) || value <= 0 || value > maxRadius)
+            return false;
+        minRadius = value;
+        return true;
+    }
 }

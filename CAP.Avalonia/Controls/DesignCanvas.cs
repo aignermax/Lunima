@@ -8,6 +8,7 @@ using CAP.Avalonia.Controls.Canvas.BendHandles;
 using CAP.Avalonia.Controls.Canvas.CrossingDrag;
 using CAP.Avalonia.Controls.Canvas.CutTool;
 using CAP.Avalonia.Controls.Canvas.GateView;
+using CAP.Avalonia.Controls.Canvas.LengthLock;
 using CAP.Avalonia.Controls.Canvas.LibraryDrop;
 using CAP.Avalonia.Controls.Canvas.SegmentShiftHandles;
 using CAP.Avalonia.Controls.Handlers;
@@ -383,6 +384,8 @@ public partial class DesignCanvas : Control
             // Segment midpoint handles rank right below bend handles (#791): a bend grab wins
             // when the two handles overlap, but both win over selection / component drag.
             new SegmentShiftGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom),
+            // A click on a length-lock padlock opens its menu rather than selecting the route.
+            new LengthLockGestureRecognizer(() => Zoom, (connection, main) => LengthLockMenu.Open(this, connection, main)),
             new PanGestureRecognizer(_interactionState, InvalidateVisual),
             new CutToolGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom),
             _gateConnectionGesture,

@@ -651,7 +651,8 @@ public partial class WaveguideConnectionManager
             connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
             RefreshStyledObstacleCollision(connection, router);
             progressCallback?.Invoke();
-            bool provenUnroutable = retriedBlocked.Contains(connection) && IsBlockedAtUnchangedPins(connection);
+            bool provenUnroutable = retriedBlocked.Contains(connection) && IsBlockedAtUnchangedPins(connection)
+                && !HitRouteTimeBudget(connection);
             if (provenUnroutable)
                 UnroutableWires.Remember(connection);
             // Neither a wire that failed again with unchanged pins (an earlier pass already
