@@ -63,6 +63,13 @@ public class RoutedPath
     public RoutingFailureReason FailureReason { get; set; } = RoutingFailureReason.None;
 
     /// <summary>
+    /// True when this blocked fallback exists only because the router's time budget ran out
+    /// (<see cref="WaveguideRouter.MaxRouteDuration"/>), not because no path exists. Such a wire
+    /// must not be remembered as unroutable: on a faster run or a less busy machine it may route.
+    /// </summary>
+    public bool SearchTimedOut { get; set; }
+
+    /// <summary>
     /// True when this Auto route was produced by the direct/S-bend-first policy (issue #860):
     /// a smooth styled geometry verified against the obstacle grid, not an A* grid path.
     /// The pin-lead collapse pass skips such routes — their entry/exit stubs are intended
@@ -119,6 +126,7 @@ public class RoutedPath
             IsInvalidGeometry = IsInvalidGeometry,
             IsPlaceholderGeometry = IsPlaceholderGeometry,
             FailureReason = FailureReason,
+            SearchTimedOut = SearchTimedOut,
             ViolatesProcessMinBendRadius = ViolatesProcessMinBendRadius,
             PassesThroughComponent = PassesThroughComponent,
             IsDirectStyledRoute = IsDirectStyledRoute,

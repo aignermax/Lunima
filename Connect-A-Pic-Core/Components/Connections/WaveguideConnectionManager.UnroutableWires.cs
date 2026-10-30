@@ -121,6 +121,10 @@ public partial class WaveguideConnectionManager
     private bool IsKnownUnroutable(WaveguideConnection connection) =>
         IsBlockedAtUnchangedPins(connection) && UnroutableWires.IsRemembered(connection);
 
+    /// <summary>True when the wire's fallback comes from the router's time budget, not from a proven dead end.</summary>
+    private static bool HitRouteTimeBudget(WaveguideConnection connection) =>
+        connection.RoutedPath?.SearchTimedOut == true;
+
     /// <summary>True when the wire is blocked and its placeholder still ends at both pins.</summary>
     private static bool IsBlockedAtUnchangedPins(WaveguideConnection connection)
     {
@@ -159,7 +163,7 @@ public partial class WaveguideConnectionManager
             return;
         foreach (var connection in SnapshotConnections())
         {
-            if (failures.Contains(connection.Id) && IsBlockedAtUnchangedPins(connection))
+            if (failures.Contains(connection.Id) && IsBlockedAtUnchangedPins(connection) && !HitRouteTimeBudget(connection))
                 UnroutableWires.Remember(connection);
         }
     }
