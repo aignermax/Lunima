@@ -22,15 +22,12 @@
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.M}"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>
   </Style>
+  <!-- Hover is an immediate background swap: a brush fade starts at Transparent (#00FFFFFF)
+       and flashes light grey, and every fade frame repaints the card behind it. -->
   <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter,
                    ToggleButton /template/ ContentPresenter#PART_ContentPresenter,
                    RepeatButton /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Transitions">
-      <Transitions>
-        <BrushTransition Property="Background" Duration="0:0:0.12"/>
-        <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
-      </Transitions>
-    </Setter>
+    <Setter Property="Transitions" Value="{x:Null}"/>
   </Style>
   <Style Selector="Button:pressed">
     <Setter Property="RenderTransform" Value="scale(0.97)"/>
