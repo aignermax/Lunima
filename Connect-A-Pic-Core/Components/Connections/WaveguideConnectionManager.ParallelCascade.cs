@@ -105,7 +105,7 @@ public partial class WaveguideConnectionManager
             if (proxy.IsPathValid && proxy.RoutedPath != null)
             {
                 grid.AddWaveguideObstacle(proxy.Id, proxy.RoutedPath.Segments, ObstacleWidthFor(proxy));
-                if (proxy.IsBlockedFallback || CrossesAnyRoutedSibling(proxy, routedSoFar))
+                if (proxy.IsBlockedFallback || RouteCrossingPolicy.CrossesAnyRoutedSibling(proxy, routedSoFar))
                 {
                     failedProxies.Add(proxy);
                 }

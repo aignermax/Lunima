@@ -40,22 +40,8 @@ public static class PathIntersectionDetector
     /// touch, or run on top of each other. Intended for routes between distinct pin
     /// pairs (no shared endpoints); use it to assert crossing-freedom and clearance.
     /// </summary>
-    public static double MinimumDistance(RoutedPath first, RoutedPath second)
-    {
-        var a = SamplePolyline(first);
-        var b = SamplePolyline(second);
-        double min = double.MaxValue;
-        for (int i = 0; i < a.Count - 1; i++)
-        {
-            for (int j = 0; j < b.Count - 1; j++)
-            {
-                if (SegmentsIntersect(a[i], a[i + 1], b[j], b[j + 1]))
-                    return 0;
-                min = Math.Min(min, SegmentDistance(a[i], a[i + 1], b[j], b[j + 1]));
-            }
-        }
-        return min == double.MaxValue ? 0 : min;
-    }
+    public static double MinimumDistance(RoutedPath first, RoutedPath second) =>
+        SampledPolyline.From(first).MinimumDistance(SampledPolyline.From(second));
 
     /// <summary>
     /// Minimum distance (µm) from a point to the path's sampled polyline. Works for any
@@ -278,7 +264,7 @@ public static class PathIntersectionDetector
         => (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
 
     /// <summary>Minimum distance between two non-crossing segments (endpoint-to-segment).</summary>
-    private static double SegmentDistance(
+    internal static double SegmentDistance(
         (double X, double Y) p1, (double X, double Y) p2,
         (double X, double Y) q1, (double X, double Y) q2)
     {

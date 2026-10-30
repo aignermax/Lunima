@@ -106,16 +106,17 @@ public partial class WaveguideConnectionManager
     private bool TryCollectSiblingGuards(WaveguideConnection connection,
         IReadOnlyList<WaveguideConnection> connections, RoutedPath original,
         Dictionary<RoutedPath, BoundingBox> boxCache,
-        out List<RoutedPath> nearSiblings, out List<double> clearanceBefore,
+        out List<SampledPolyline> nearSiblings, out List<double> clearanceBefore,
         out List<DegenerateSiblingGuard> degenerateGuards)
     {
-        nearSiblings = new List<RoutedPath>();
+        nearSiblings = new List<SampledPolyline>();
         clearanceBefore = new List<double>();
         degenerateGuards = new List<DegenerateSiblingGuard>();
 
         double reach = PinStraightCollapser.TotalPinLead(original) * DiagonalShiftFactor
             + _router.MinWaveguideSpacingMicrometers + CollapseSearchMarginMicrometers;
         var box = BoxFor(original, boxCache);
+        var sampledOriginal = SampledPolyline.From(original);
 
         foreach (var other in connections)
         {
@@ -136,10 +137,11 @@ public partial class WaveguideConnectionManager
                 continue;
             }
 
-            double distance = PathIntersectionDetector.MinimumDistance(original, sibling);
+            var sampledSibling = SampledPolyline.From(sibling);
+            double distance = sampledOriginal.MinimumDistance(sampledSibling);
             if (distance < SiblingTouchToleranceMicrometers)
                 return false;
-            nearSiblings.Add(sibling);
+            nearSiblings.Add(sampledSibling);
             clearanceBefore.Add(distance);
         }
         return true;
@@ -153,7 +155,7 @@ public partial class WaveguideConnectionManager
     /// distance, whichever is smaller — no-worsening) away.
     /// </summary>
     private bool IsCollapseAcceptable(RoutedPath trial,
-        IReadOnlyList<RoutedPath> nearSiblings, IReadOnlyList<double> clearanceBefore,
+        IReadOnlyList<SampledPolyline> nearSiblings, IReadOnlyList<double> clearanceBefore,
         IReadOnlyList<DegenerateSiblingGuard> degenerateGuards)
     {
         if (PathIntersectionDetector.HasSelfIntersection(trial))
@@ -161,9 +163,10 @@ public partial class WaveguideConnectionManager
         if (_router.IsPathBlockedByComponents(trial.Segments))
             return false;
 
+        var sampledTrial = SampledPolyline.From(trial);
         for (int i = 0; i < nearSiblings.Count; i++)
         {
-            if (PathIntersectionDetector.MinimumDistance(trial, nearSiblings[i])
+            if (sampledTrial.MinimumDistance(nearSiblings[i])
                 < clearanceBefore[i] - SiblingTouchToleranceMicrometers)
                 return false;
         }
