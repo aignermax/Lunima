@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using CAP_Core.Export.Processes;
 
 namespace CAP.Avalonia.Services.AgentBridge.Registration;
 
@@ -30,40 +31,65 @@ public static class CliProcessRunner
     public static async Task<CliRunResult> RunAsync(
         ProcessStartInfo startInfo, TimeSpan timeout, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         startInfo.RedirectStandardOutput = true;
         startInfo.RedirectStandardError = true;
         startInfo.RedirectStandardInput = true;
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        limit.CancelAfter(timeout);
 
-        Process? process;
+        OwnedProcess process;
         try
         {
-            process = Process.Start(startInfo);
+            cancellationToken.ThrowIfCancellationRequested();
+            var prepared = WindowsBatchCommand.Prepare(startInfo);
+            cancellationToken.ThrowIfCancellationRequested();
+            process = OwnedProcess.Start(prepared);
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             return new CliRunResult(StartFailedExitCode, ex.Message);
         }
-        if (process == null)
-            return new CliRunResult(StartFailedExitCode, "The process did not start.");
 
-        using (process)
+        await using var owner = process;
+        // Pipe readers belong to this invocation, not to the canceled request token.
+        // Retirement terminates the owned process group before awaiting their actual EOF.
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        var interrupted = false;
+        try
         {
             process.StandardInput.Close();
-            var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
-            var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
-            using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            limit.CancelAfter(timeout);
-            try
-            {
-                await process.WaitForExitAsync(limit.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                process.Kill(entireProcessTree: true);
-                return new CliRunResult(TimedOutExitCode, string.Create(CultureInfo.InvariantCulture, $"Timed out after {timeout.TotalSeconds:F0} s."));
-            }
-            var output = ((await stdout).Trim() + Environment.NewLine + (await stderr).Trim()).Trim();
-            return new CliRunResult(process.ExitCode, output);
+            await process.WaitForExitAsync(limit.Token);
         }
+        catch (OperationCanceledException) when (limit.IsCancellationRequested) { interrupted = true; }
+        finally { await RetireAsync(process, stdout, stderr); }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (interrupted)
+            return new CliRunResult(TimedOutExitCode,
+                string.Create(CultureInfo.InvariantCulture, $"Timed out after {timeout.TotalSeconds:F0} s."));
+        var output = ((await stdout).Trim() + Environment.NewLine + (await stderr).Trim()).Trim();
+        cancellationToken.ThrowIfCancellationRequested();
+        return new CliRunResult(process.ExitCode, output);
+    }
+
+    private static async Task RetireAsync(OwnedProcess process, Task<string> stdout, Task<string> stderr)
+    {
+        try { await process.StopAsync(); }
+        catch
+        {
+            // A native retirement failure must be reported, but cannot leave readers abandoned.
+            // Dispose closes the owned endpoints even when its repeated StopAsync reports failure.
+            try { await process.DisposeAsync(); }
+            finally
+            {
+                try { await Task.WhenAll(stdout, stderr); }
+                catch { /* Observe pipe closure errors while preserving the retirement failure. */ }
+            }
+            throw;
+        }
+        await Task.WhenAll(stdout, stderr);
     }
 }

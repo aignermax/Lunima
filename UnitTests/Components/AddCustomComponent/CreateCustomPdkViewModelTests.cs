@@ -33,7 +33,7 @@ public class CreateCustomPdkViewModelTests : IDisposable
     };
 
     private CreateCustomPdkViewModel CreateVm(UserPdkStore store, IReadOnlyList<ProcessDefinition>? processes = null) =>
-        new(store, processes ?? new[] { ExistingProcess() }, new ProcessManagementViewModel(Mock.Of<IFileDialogService>()));
+        new(store, processes ?? new[] { ExistingProcess() }, new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>()));
 
     public void Dispose()
     {
@@ -165,7 +165,7 @@ public class CreateCustomPdkViewModelTests : IDisposable
         var store = CreateStore();
         var vm = new CreateCustomPdkViewModel(
             store, new[] { ExistingProcess() },
-            new ProcessManagementViewModel(Mock.Of<IFileDialogService>()),
+            new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>()),
             reservedBundledPdkNames: new[] { "CornerStone SiN" });
         vm.SelectedExistingProcess = vm.AvailableProcesses[0];
         vm.PdkName = "cornerstone sin"; // case-insensitive

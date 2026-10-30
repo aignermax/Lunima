@@ -20,6 +20,9 @@ public sealed class ConnectionLengthMatcher
     /// </summary>
     private const double ObstacleClearanceMicrometers = 1.0;
 
+    /// <summary>Floating-point slack (µm) when comparing a routed length against its target.</summary>
+    private const double TargetComparisonSlackMicrometers = 1e-6;
+
     private readonly WaveguideRouter? _router;
     private readonly MeanderPathGenerator _generator = new();
 
@@ -38,19 +41,32 @@ public sealed class ConnectionLengthMatcher
     /// Stretches the connection's route to <paramref name="targetLengthMicrometers"/>
     /// ± <paramref name="toleranceMicrometers"/>. On success the route geometry is
     /// replaced and frozen (later recalculations keep it while the endpoints stay put)
-    /// and the target/tolerance are recorded on the connection. On failure the
-    /// connection is left untouched and the returned <see cref="MeanderResult"/>
-    /// carries the typed reason.
+    /// and the target/tolerance — plus the meander radius when one was given — are recorded
+    /// on the connection. On failure the connection is left untouched and the returned
+    /// <see cref="MeanderResult"/> carries the typed reason.
     /// </summary>
     /// <param name="connection">The connection whose route is stretched.</param>
     /// <param name="obstacleComponents">
-    /// The design's components, used to bound the free area around the current route.
+    /// The design's components: they bound the free area around the current route and the
+    /// meander may not enter any of them except the connection's own endpoint components.
+    /// </param>
+    /// <param name="targetLengthMicrometers">Target geometric length (µm).</param>
+    /// <param name="toleranceMicrometers">Accepted deviation (µm).</param>
+    /// <param name="siblings">
+    /// The design's connections; the meander keeps the router's spacing to their routes and
+    /// never crosses or touches one. Null ignores other routes.
+    /// </param>
+    /// <param name="meanderRadiusMicrometers">
+    /// Bend radius of the meander loops; null uses the connection's own bend radius. Never
+    /// below the process floor (<see cref="ResolveProcessFloor"/>).
     /// </param>
     public MeanderResult ApplyTargetLength(
         WaveguideConnection connection,
         IReadOnlyList<Component> obstacleComponents,
         double targetLengthMicrometers,
-        double toleranceMicrometers)
+        double toleranceMicrometers,
+        IEnumerable<WaveguideConnection>? siblings = null,
+        double? meanderRadiusMicrometers = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(obstacleComponents);
@@ -61,8 +77,8 @@ public sealed class ConnectionLengthMatcher
                 "The connection has no endpoint pins to derive poses from.");
         }
 
-        var request = BuildRequest(
-            connection, obstacleComponents, targetLengthMicrometers, toleranceMicrometers);
+        var request = BuildRequest(connection, obstacleComponents, targetLengthMicrometers,
+            toleranceMicrometers, siblings, meanderRadiusMicrometers);
         if (request.Bounds.MaxX <= request.Bounds.MinX || request.Bounds.MaxY <= request.Bounds.MinY)
         {
             return MeanderResult.Failure(
@@ -78,21 +94,86 @@ public sealed class ConnectionLengthMatcher
         connection.IsRouteFrozen = true;
         connection.TargetLengthMicrometers = targetLengthMicrometers;
         connection.LengthToleranceMicrometers = toleranceMicrometers;
+        if (meanderRadiusMicrometers is { } radius)
+            connection.BendRadiusMicrometers = radius;
         return result;
+    }
+
+    /// <summary>
+    /// Re-establishes every recorded length target the current geometry no longer meets — e.g.
+    /// after an endpoint move unfroze the meander and the router replaced it — keeping clear of
+    /// all other routes. Connections whose target cannot be met keep their route; the design
+    /// checks report them.
+    /// </summary>
+    /// <param name="connections">Every connection of the design (they are also the obstacles).</param>
+    /// <param name="obstacleComponents">The design's components.</param>
+    /// <param name="isCandidate">
+    /// Limits which connections are stretched again, e.g. to the routes a pass just replaced; a
+    /// target that failed before at unchanged geometry fails again. Null tries every unmet one.
+    /// </param>
+    /// <returns>The connections whose route geometry was replaced.</returns>
+    public IReadOnlyList<WaveguideConnection> ReapplyUnmetTargets(
+        IReadOnlyList<WaveguideConnection> connections, IReadOnlyList<Component> obstacleComponents,
+        Func<WaveguideConnection, bool>? isCandidate = null)
+    {
+        ArgumentNullException.ThrowIfNull(connections);
+        ArgumentNullException.ThrowIfNull(obstacleComponents);
+        var changed = new List<WaveguideConnection>();
+        foreach (var connection in connections)
+        {
+            if (connection.TargetLengthMicrometers is not { } target || MeetsTarget(connection))
+                continue;
+            if (isCandidate != null && !isCandidate(connection))
+                continue;
+            double tolerance = connection.LengthToleranceMicrometers ?? 0.0;
+            if (ApplyTargetLength(connection, obstacleComponents, target, tolerance, connections).IsSuccess)
+                changed.Add(connection);
+        }
+        return changed;
+    }
+
+    /// <summary>
+    /// True when the connection has no length target, or its routed length is within the
+    /// recorded tolerance of it.
+    /// </summary>
+    public static bool MeetsTarget(WaveguideConnection connection)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        if (connection.TargetLengthMicrometers is not { } target)
+            return true;
+        if (connection.RoutedPath is not { Segments.Count: > 0 })
+            return false;
+        double tolerance = Math.Max(connection.LengthToleranceMicrometers ?? 0.0, TargetComparisonSlackMicrometers);
+        return Math.Abs(connection.PathLengthMicrometers - target) <= tolerance;
+    }
+
+    /// <summary>
+    /// The process minimum bend radius (µm) for the connection's pin pair; 0 when no router
+    /// supplies one.
+    /// </summary>
+    public double ResolveProcessFloor(WaveguideConnection connection)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        if (_router == null || connection.StartPin == null || connection.EndPin == null)
+            return 0.0;
+        return _router.ResolveProcessFloorFor(connection.StartPin, connection.EndPin);
     }
 
     /// <summary>
     /// Derives the meander request for a connection: poses from the pin positions and
     /// directions (the end direction is the direction of travel at arrival — the end
-    /// pin's outward normal reversed), the minimum bend radius from the connection's
-    /// process cross-section, and the bounding rectangle from the current route's
-    /// bounding box inflated toward the nearest component obstacle on each side.
+    /// pin's outward normal reversed), the bend radius from the request or the connection
+    /// (never below the process floor), the bounding rectangle from the current route's
+    /// bounding box inflated toward the nearest component obstacle on each side, and the
+    /// obstacles the meander must keep clear of.
     /// </summary>
     public MeanderRequest BuildRequest(
         WaveguideConnection connection,
         IReadOnlyList<Component> obstacleComponents,
         double targetLengthMicrometers,
-        double toleranceMicrometers)
+        double toleranceMicrometers,
+        IEnumerable<WaveguideConnection>? siblings = null,
+        double? meanderRadiusMicrometers = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(obstacleComponents);
@@ -104,19 +185,28 @@ public sealed class ConnectionLengthMatcher
         double startDirection = connection.StartPin.GetAbsoluteAngle();
         double endDirection = (connection.EndPin.GetAbsoluteAngle() + 180.0) % 360.0;
 
-        double minRadius = Math.Max(
-            connection.BendRadiusMicrometers,
-            _router?.ResolveProcessFloorFor(connection.StartPin, connection.EndPin) ?? 0.0);
+        double floor = ResolveProcessFloor(connection);
+        double loopRadius = Math.Max(meanderRadiusMicrometers ?? connection.BendRadiusMicrometers, floor);
+        double minRadius = floor > 0 ? floor : loopRadius;
 
+        // With siblings the obstacles carry every component footprint, so the bounds only cap the
+        // reach; clamping them to the nearest component as well would rule out room that exists.
         var baseBounds = CurrentRouteBounds(connection, startX, startY, endX, endY);
-        var bounds = InflateTowardObstacles(
-            baseBounds, InflationMargin(targetLengthMicrometers, minRadius), obstacleComponents);
+        double margin = InflationMargin(targetLengthMicrometers, loopRadius);
+        var bounds = siblings == null
+            ? InflateTowardObstacles(baseBounds, margin, obstacleComponents)
+            : new MeanderBounds(baseBounds.MinX - margin, baseBounds.MinY - margin,
+                baseBounds.MaxX + margin, baseBounds.MaxY + margin);
+        var obstacles = siblings == null
+            ? null
+            : MeanderObstacleCollector.Collect(connection, siblings, obstacleComponents,
+                _router?.MinWaveguideSpacingMicrometers ?? PhotonicConstants.DefaultMinWaveguideSpacingMicrometers);
 
         return new MeanderRequest(
             startX, startY, startDirection,
             endX, endY, endDirection,
             targetLengthMicrometers, toleranceMicrometers,
-            minRadius, bounds);
+            minRadius, bounds, obstacles, connection.RoutedPath, loopRadius);
     }
 
     /// <summary>

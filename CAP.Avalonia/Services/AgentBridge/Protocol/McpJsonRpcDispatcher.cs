@@ -12,6 +12,15 @@ namespace CAP.Avalonia.Services.AgentBridge.Protocol;
 /// </summary>
 public sealed class McpJsonRpcDispatcher
 {
+    /// <summary>Starts a fresh tool-admission generation.</summary>
+    public void OpenAdmission() => _catalog.OpenAdmission();
+
+    /// <summary>Closes tool admission and awaits accepted calls.</summary>
+    public Task CloseAdmissionAsync() => _catalog.CloseAdmissionAsync();
+
+    /// <summary>Cancellation callback diagnostics from the drained tool generation.</summary>
+    public AggregateException? CancellationError => _catalog.CancellationError;
+
     /// <summary>Protocol revisions this server speaks, newest first.</summary>
     public static readonly IReadOnlyList<string> SupportedProtocolVersions =
         new[] { "2025-06-18", "2025-03-26", "2024-11-05" };
@@ -126,7 +135,7 @@ public sealed class McpJsonRpcDispatcher
             ? a
             : EmptyArguments;
         token.ThrowIfCancellationRequested();
-        var result = await _catalog.InvokeAsync(name, arguments);
+        var result = await _catalog.InvokeAsync(name, arguments, token);
         return JsonRpcMessages.Result(id, ToJson(result));
     }
 

@@ -17,7 +17,7 @@ namespace CAP.Avalonia.ViewModels.ComponentRegistry.RegistryBrowser;
 /// </summary>
 public partial class RegistryBrowserViewModel
 {
-    private readonly RegistryDownloadService? _downloadService;
+    private readonly IRegistryAdoption? _downloadService;
 
     /// <summary>True while a download is in flight.</summary>
     [ObservableProperty]
@@ -58,7 +58,8 @@ public partial class RegistryBrowserViewModel
     }
 
     private bool CanDownloadSelected() =>
-        _downloadService != null
+        !_work.IsStopping
+        && _downloadService != null
         && !IsDownloading
         && SelectedComponent != null
         && Details.Manifest != null
@@ -83,18 +84,20 @@ public partial class RegistryBrowserViewModel
 
     /// <summary>Adopts the selected component into the local Registry PDK.</summary>
     [RelayCommand(CanExecute = nameof(CanDownloadSelected))]
-    private void Download() => DownloadTask = DownloadCoreAsync(disputedConfirmed: false);
+    private void Download() => DownloadTask = _work.RunAsync(stop => DownloadCoreAsync(false, stop));
 
     /// <summary>Confirms adoption of a disputed artifact after the warning was shown.</summary>
     [RelayCommand]
     private void ConfirmDisputedDownload()
     {
+        if (!PendingDisputedConfirm || _work.IsStopping) return;
         PendingDisputedConfirm = false;
-        DownloadTask = DownloadCoreAsync(disputedConfirmed: true);
+        DownloadTask = _work.RunAsync(stop => DownloadCoreAsync(true, stop));
     }
 
-    private async Task DownloadCoreAsync(bool disputedConfirmed)
+    private async Task DownloadCoreAsync(bool disputedConfirmed, CancellationToken stop)
     {
+        if (!CanDownloadSelected()) return;
         var manifest = Details.Manifest;
         var manifestPath = Details.ManifestPath;
         var choice = manifest is null ? null : RegistryArtifactSelector.Select(manifest);
@@ -116,8 +119,8 @@ public partial class RegistryBrowserViewModel
         IsDownloading = true;
         try
         {
-            var result = await _downloadService.DownloadAsync(manifestPath, manifest, choice);
-            if (!ReferenceEquals(Details.Manifest, manifest))
+            var result = await _downloadService.DownloadAsync(manifestPath, manifest, choice, stop);
+            if (_work.IsStopping || stop.IsCancellationRequested || !ReferenceEquals(Details.Manifest, manifest))
                 return;
             DownloadIsError = !result.IsSuccess;
             var successKey = result.ReplacedExisting ? "Registry.DownloadedReplaced" : "Registry.Downloaded";
@@ -131,7 +134,7 @@ public partial class RegistryBrowserViewModel
         {
             // A message for a component the user has meanwhile navigated away
             // from would be misleading — drop it silently.
-            if (!ReferenceEquals(Details.Manifest, manifest))
+            if (_work.IsStopping || stop.IsCancellationRequested || !ReferenceEquals(Details.Manifest, manifest))
                 return;
             DownloadIsError = true;
             DownloadMessage = string.Format(CultureInfo.InvariantCulture,
@@ -139,7 +142,7 @@ public partial class RegistryBrowserViewModel
         }
         finally
         {
-            IsDownloading = false;
+            if (!_work.IsStopping) IsDownloading = false;
         }
     }
 

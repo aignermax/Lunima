@@ -22,8 +22,33 @@ namespace CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 /// ViewModel for the ONA (Optical Network Analyzer) wavelength-sweep panel.
 /// Sweeps the simulation across a wavelength range and plots insertion loss vs wavelength.
 /// </summary>
-public partial class OnaSweepViewModel : ObservableObject
+public partial class OnaSweepViewModel : ObservableObject, IAsyncDisposable
 {
+    /// <summary>Retires sweep work before the analysis owner is released.</summary>
+    public Task StopAsync() => _retirement ??= RetireAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private readonly Services.Lifetime.ShellWorkScope _work = new();
+    private Task? _retirement;
+    private long _configurationVersion;
+    private CAP_Core.Documents.DocumentIdentity? _configuredDocument;
+    private Component? _configuredAnalyzer;
+
+    private async Task RetireAsync()
+    {
+        try { await _work.StopAsync(); }
+        finally
+        {
+            _canvas = null;
+            _configuredDocument = null;
+            _configuredAnalyzer = null;
+            Analyzer = null;
+            FileDialogService = null;
+            OpenWindowAsync = null;
+            _pinNameMap.Clear();
+            _lastResult = null;
+            OnPropertyChanged(nameof(HasResult));
+        }
+    }
     [ObservableProperty] private int _startNm = 1500;
     [ObservableProperty] private int _endNm = 1600;
     [ObservableProperty] private int _stepCount = 100;
@@ -49,9 +74,10 @@ public partial class OnaSweepViewModel : ObservableObject
         : "ONA Sweep";
 
     private readonly ErrorConsoleService? _errorConsole;
+    private readonly IWavelengthSweepRunner _runner;
     private DesignCanvasViewModel? _canvas;
     private WavelengthSweepResult? _lastResult;
-    private CancellationTokenSource? _sweepCts;
+    private AnalysisSweepOperation? _activeSweep;
     private Dictionary<Guid, string> _pinNameMap = new();
 
     /// <summary>File dialog service for CSV export. Set by MainViewModel.</summary>
@@ -65,22 +91,47 @@ public partial class OnaSweepViewModel : ObservableObject
     public Func<Component, Task>? OpenWindowAsync { get; set; }
 
     /// <summary>Initializes a new instance of <see cref="OnaSweepViewModel"/>.</summary>
-    public OnaSweepViewModel(ErrorConsoleService? errorConsole = null)
+    public OnaSweepViewModel(ErrorConsoleService? errorConsole = null,
+        IWavelengthSweepRunner? runner = null, Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
     {
         _errorConsole = errorConsole;
+        _runner = runner ?? new WavelengthSweepRunner();
+        _work.RegisterWith(applicationWork, StopAsync);
     }
 
     /// <summary>Provides the canvas reference needed to build the simulation grid.</summary>
     public void Configure(DesignCanvasViewModel canvas)
     {
+        if (_work.IsStopping) return;
+        _configurationVersion++;
+        _activeSweep?.Cancel();
         _canvas = canvas;
+        _configuredAnalyzer = Analyzer;
+        _configuredDocument = Analyzer != null ? canvas.Document.CaptureIdentity() : null;
+    }
+
+    private bool IsConfiguredAnalyzerCurrent()
+    {
+        if (_configuredDocument is not { } identity) return Analyzer == null;
+        if (_canvas == null || !_canvas.Document.IsCurrentIdentity(identity)
+            || !ReferenceEquals(_configuredAnalyzer, Analyzer)) return false;
+        var hierarchy = CAP_Core.Analysis.Hierarchy.DesignHierarchy.From(
+            _canvas.Groups.RootComponents.Select(view => view.Component));
+        return hierarchy.Leaves.Any(component => ReferenceEquals(component, Analyzer))
+            || hierarchy.Groups.Any(component => ReferenceEquals(component, Analyzer));
     }
 
     /// <summary>Runs a wavelength sweep and updates the insertion-loss plot.</summary>
     [RelayCommand]
-    private async Task RunSweep()
+    private Task RunSweep() => _work.RunAsync(RunSweepCoreAsync);
+
+    private async Task RunSweepCoreAsync(CancellationToken stop)
     {
-        if (_canvas == null || IsSweeping) return;
+        if (_canvas == null || IsSweeping || !IsConfiguredAnalyzerCurrent()) return;
+        var canvas = _canvas;
+        var configuration = _configurationVersion;
+        var analyzer = Analyzer;
+        AnalysisSweepOperation? operation = null;
 
         IsSweeping = true;
         StatusText = LocalizationService.Instance.Translate("Analysis.Ona.Preparing");
@@ -90,6 +141,10 @@ public partial class OnaSweepViewModel : ObservableObject
 
         try
         {
+            operation = new AnalysisSweepOperation(_work, canvas.Document,
+                () => configuration == _configurationVersion && ReferenceEquals(analyzer, Analyzer)
+                    && IsConfiguredAnalyzerCurrent(),
+                stop, stop, _configuredDocument);
             var config = new WavelengthSweepConfiguration(StartNm, EndNm, StepCount);
             var (gridManager, portManager) = BuildSimulationGrid();
             if (gridManager == null)
@@ -112,14 +167,15 @@ public partial class OnaSweepViewModel : ObservableObject
                 return;
             }
 
-            var builder = new SystemMatrixBuilder(gridManager);
-            var sweeper = new WavelengthSweeper(builder, portManager);
-            _sweepCts?.Dispose();
-            _sweepCts = new CancellationTokenSource();
+            _activeSweep = operation;
 
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Ona.Running"), StepCount);
-            _lastResult = await sweeper.RunSweepAsync(config, gridManager, _sweepCts.Token);
+            var result = await _runner.RunAsync(config, gridManager, portManager, operation.Token);
+            operation.ThrowIfObsolete();
+            operation.TryPublish(() =>
+            {
+            _lastResult = result;
             OnPropertyChanged(nameof(HasResult));
 
             if (_lastResult.Warnings.Count > 0)
@@ -132,13 +188,16 @@ public partial class OnaSweepViewModel : ObservableObject
             UpdatePlotModel(_lastResult);
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Ona.Complete"), _lastResult.DataPoints.Count);
+            });
         }
         catch (OperationCanceledException)
         {
+            if (operation?.IsContextCurrent != true) return;
             StatusText = LocalizationService.Instance.Translate("Analysis.Ona.Cancelled");
         }
         catch (Exception ex)
         {
+            if (operation?.CanPublish != true) return;
             _errorConsole?.LogError($"ONA sweep failed: {ex.Message}", ex);
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Sweep.Failed"), ex.Message);
@@ -146,8 +205,8 @@ public partial class OnaSweepViewModel : ObservableObject
         finally
         {
             IsSweeping = false;
-            _sweepCts?.Dispose();
-            _sweepCts = null;
+            if (ReferenceEquals(_activeSweep, operation)) _activeSweep = null;
+            if (operation != null) await operation.DisposeAsync();
         }
     }
 
@@ -155,7 +214,7 @@ public partial class OnaSweepViewModel : ObservableObject
     [RelayCommand]
     private void CancelSweep()
     {
-        _sweepCts?.Cancel();
+        _activeSweep?.Cancel();
     }
 
     /// <summary>
@@ -163,9 +222,10 @@ public partial class OnaSweepViewModel : ObservableObject
     /// component, via the <see cref="OpenWindowAsync"/> delegate.
     /// </summary>
     [RelayCommand]
-    private async Task OpenWindow()
+    private Task OpenWindow() => _work.RunAsync(async stop =>
     {
-        if (OpenWindowAsync == null) return;
+        var openWindow = OpenWindowAsync;
+        if (openWindow == null) return;
         var selected = _canvas?.SelectedComponent?.Component;
         if (selected == null || !selected.IsAnalysisTool)
         {
@@ -173,17 +233,24 @@ public partial class OnaSweepViewModel : ObservableObject
                 "Select an ONA Analyzer component on the canvas before opening the sweep window.");
             return;
         }
-        await OpenWindowAsync(selected);
-    }
+        // The delegate owns its UI operation; keep it in the feature's drain
+        // until it actually returns, even though this API has no cancel token.
+        await openWindow(selected);
+    });
 
     /// <summary>Exports the last sweep result as CSV.</summary>
     [RelayCommand]
-    private async Task ExportCsv()
+    private Task ExportCsv() => _work.RunAsync(ExportCsvCoreAsync);
+
+    private async Task ExportCsvCoreAsync(CancellationToken stop)
     {
         if (_lastResult == null) return;
 
         try
         {
+            // Export the result the user selected, including its labels. A new
+            // sweep may finish while the picker is open and replace panel state.
+            var content = _lastResult.GenerateCsvContent(ResolvePinName);
             string? path = null;
             if (FileDialogService != null)
             {
@@ -191,19 +258,27 @@ public partial class OnaSweepViewModel : ObservableObject
                     "Export ONA Results", "csv", "CSV Files|*.csv|All Files|*.*");
             }
 
+            if (_work.IsStopping || stop.IsCancellationRequested) return;
             if (path == null) { StatusText = LocalizationService.Instance.Translate("Analysis.Common.ExportCancelled"); return; }
 
-            await File.WriteAllTextAsync(path, _lastResult.GenerateCsvContent(ResolvePinName));
+            await WriteCsvAsync(path, content, stop);
+            if (_work.IsStopping || stop.IsCancellationRequested) return;
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Common.ExportedTo"), Path.GetFileName(path));
         }
+        catch (OperationCanceledException) when (_work.IsStopping || stop.IsCancellationRequested) { }
         catch (Exception ex)
         {
+            if (_work.IsStopping || stop.IsCancellationRequested) return;
             _errorConsole?.LogError($"ONA export failed: {ex.Message}", ex);
             StatusText = string.Format(
                 LocalizationService.Instance.Translate("Analysis.Common.ExportFailed"), ex.Message);
         }
     }
+
+    /// <summary>Writes an accepted CSV export and completes after its file work has finished.</summary>
+    protected virtual Task WriteCsvAsync(string path, string content, CancellationToken cancellationToken) =>
+        File.WriteAllTextAsync(path, content, cancellationToken);
 
     private (GridManager? gridManager, PhysicalExternalPortManager portManager) BuildSimulationGrid()
     {

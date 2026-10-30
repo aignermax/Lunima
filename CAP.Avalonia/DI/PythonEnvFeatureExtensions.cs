@@ -1,6 +1,7 @@
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 using CAP_Core.Export;
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export.PythonEnvironmentManager;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,7 +24,13 @@ internal static class PythonEnvFeatureExtensions
         services.AddSingleton<UvBootstrapper>();
         services.AddSingleton<NazcaPackageInstaller>();
         services.AddSingleton<PythonDiscoveryService>();
+        services.AddSingleton<IPythonDiscovery>(sp => sp.GetRequiredService<PythonDiscoveryService>());
         services.AddSingleton<EnvironmentHealthChecker>();
+        services.AddSingleton<IPythonEnvironmentHealth>(sp => sp.GetRequiredService<EnvironmentHealthChecker>());
+        services.AddSingleton(new ManagedPythonEnvironmentOptions(UvBootstrapper.EnvironmentsBaseDir,
+            UvBootstrapper.DefaultPythonVersion));
+        services.AddSingleton<ManagedEnvironmentPackageSetup>();
+        services.AddSingleton<IManagedEnvironmentPackages>(sp => sp.GetRequiredService<ManagedEnvironmentPackageSetup>());
         services.AddSingleton<IManagedPythonProvisioner, ManagedPythonProvisioner>();
         services.AddSingleton<PythonStartupViewModel>();
 
@@ -42,18 +49,21 @@ internal static class PythonEnvFeatureExtensions
             return registry;
         });
 
+        services.AddSingleton<IPythonEnvironmentRegistry>(sp => sp.GetRequiredService<PythonEnvironmentRegistry>());
+
         services.AddSingleton<PythonEnvironmentManagerViewModel>(sp =>
             new PythonEnvironmentManagerViewModel(
-                sp.GetRequiredService<PythonEnvironmentRegistry>(),
-                sp.GetRequiredService<UvBootstrapper>(),
-                sp.GetRequiredService<NazcaPackageInstaller>(),
-                sp.GetRequiredService<EnvironmentHealthChecker>(),
-                sp.GetRequiredService<PythonDiscoveryService>(),
+                sp.GetRequiredService<IPythonEnvironmentRegistry>(),
+                sp.GetRequiredService<IManagedEnvironmentPackages>(),
+                sp.GetRequiredService<ManagedPythonEnvironmentOptions>(),
+                sp.GetRequiredService<IPythonEnvironmentHealth>(),
+                sp.GetRequiredService<IPythonDiscovery>(),
+                sp.GetRequiredService<IManagedPythonProvisioner>(),
                 // The active interpreter path is the shared preference the registry callback
                 // keeps in sync — reuse it to mark the active system interpreter (issue #645).
                 () => sp.GetRequiredService<UserPreferencesService>().GetCustomPythonPath(),
-                sp.GetRequiredService<IManagedPythonProvisioner>(),
-                sp.GetRequiredService<PythonStartupViewModel>()));
+                sp.GetRequiredService<PythonStartupViewModel>(),
+                sp.GetRequiredService<Services.Lifetime.ApplicationWorkCoordinator>()));
 
         return services;
     }

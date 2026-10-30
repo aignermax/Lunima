@@ -1,5 +1,4 @@
-using System.Diagnostics;
-using System.IO.Compression;
+using CAP_Core.Export.Processes;
 using System.Runtime.InteropServices;
 
 namespace CAP_Core.Export.PythonEnvironmentManager;
@@ -26,9 +25,7 @@ public class UvBootstrapper
 
     private static readonly string ToolsDir = Path.Combine(AppDataDir, "tools");
 
-    private static readonly string LocalUvExe = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-        ? Path.Combine(ToolsDir, "uv.exe")
-        : Path.Combine(ToolsDir, "uv");
+    private static readonly HttpClient DownloadClient = new() { Timeout = TimeSpan.FromMinutes(10) };
 
     private readonly ProcessLaunchFactory _launchFactory;
 
@@ -45,7 +42,8 @@ public class UvBootstrapper
 
     /// <summary>
     /// Resolves the path to the <c>uv</c> executable: checks PATH first, then the
-    /// local tools directory, then downloads it if not found anywhere.
+    /// verified versioned tools directory, then downloads a pinned release if needed.
+    /// An existing user-managed PATH installation remains the user's chosen tool.
     /// </summary>
     /// <param name="progress">Receives human-readable status updates.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -60,16 +58,10 @@ public class UvBootstrapper
             return pathUv;
         }
 
-        if (File.Exists(LocalUvExe))
-        {
-            progress?.Report($"Using cached uv at {LocalUvExe}");
-            return LocalUvExe;
-        }
-
-        progress?.Report("uv not found — downloading...");
-        await DownloadUvAsync(progress, ct);
-        progress?.Report("uv downloaded successfully.");
-        return LocalUvExe;
+        var installer = new VerifiedUvInstaller(DownloadClient, ToolsDir);
+        var path = await installer.EnsureAsync(UvReleaseCatalog.Current, progress, ct).ConfigureAwait(false);
+        progress?.Report($"Verified uv {UvReleaseCatalog.Version} is ready.");
+        return path;
     }
 
     /// <summary>
@@ -127,103 +119,6 @@ public class UvBootstrapper
         return File.Exists(uvDefault) ? uvDefault : null;
     }
 
-    private static async Task DownloadUvAsync(IProgress<string>? progress, CancellationToken ct)
-    {
-        var url = GetUvDownloadUrl();
-        Directory.CreateDirectory(ToolsDir);
-
-        var tempFile = Path.GetTempFileName();
-        try
-        {
-            using var http = new HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "Lunima/1.0");
-
-            progress?.Report($"Downloading uv from {url}...");
-            await using var stream = await http.GetStreamAsync(url, ct);
-            await using var file = File.Create(tempFile);
-            await stream.CopyToAsync(file, ct);
-        }
-        catch (Exception ex)
-        {
-            File.Delete(tempFile);
-            if (ex is OperationCanceledException)
-                throw;
-            throw new InvalidOperationException(
-                $"Failed to download uv: {ex.Message}\nInstall uv manually from https://docs.astral.sh/uv/", ex);
-        }
-
-        ExtractUvBinary(tempFile, progress);
-        File.Delete(tempFile);
-
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            File.SetUnixFileMode(LocalUvExe,
-                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
-                UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
-                UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
-    }
-
-    private static void ExtractUvBinary(string archivePath, IProgress<string>? progress)
-    {
-        progress?.Report("Extracting uv binary...");
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            using var zip = ZipFile.OpenRead(archivePath);
-            var entry = zip.Entries.FirstOrDefault(e =>
-                e.Name.Equals("uv.exe", StringComparison.OrdinalIgnoreCase))
-                ?? throw new InvalidOperationException("uv.exe not found in downloaded archive.");
-            entry.ExtractToFile(LocalUvExe, overwrite: true);
-        }
-        else
-        {
-            ExtractFromTarGz(archivePath, "uv", LocalUvExe);
-        }
-    }
-
-    private static void ExtractFromTarGz(string archivePath, string entryName, string destPath)
-    {
-        using var fs = File.OpenRead(archivePath);
-        using var gz = new System.IO.Compression.GZipStream(fs, CompressionMode.Decompress);
-        using var tar = new System.Formats.Tar.TarReader(gz);
-
-        while (tar.GetNextEntry() is { } entry)
-        {
-            if (!Path.GetFileName(entry.Name).Equals(entryName, StringComparison.Ordinal))
-                continue;
-            entry.ExtractToFile(destPath, overwrite: true);
-            return;
-        }
-
-        throw new InvalidOperationException(
-            $"'{entryName}' not found in downloaded archive.");
-    }
-
-    private static string GetUvDownloadUrl()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip";
-
-        var isArm = RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            return isArm
-                ? "https://github.com/astral-sh/uv/releases/latest/download/uv-aarch64-apple-darwin.tar.gz"
-                : "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-apple-darwin.tar.gz";
-
-        return isArm
-            ? "https://github.com/astral-sh/uv/releases/latest/download/uv-aarch64-unknown-linux-musl.tar.gz"
-            : "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-musl.tar.gz";
-    }
-
-    /// <summary>Stops owned subprocesses synchronously when desktop shutdown cancels setup.</summary>
-    internal static CancellationTokenRegistration KillOnCancellation(Process process, CancellationToken token) =>
-        token.Register(() =>
-        {
-            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-            catch (InvalidOperationException) { /* already exited/disposed */ }
-            catch (System.ComponentModel.Win32Exception) { /* already exiting */ }
-        });
-
     /// <summary>
     /// Runs a process built via <paramref name="launchFactory"/> and captures its output.
     /// A user cancellation throws <see cref="OperationCanceledException"/>; a pure timeout
@@ -239,25 +134,9 @@ public class UvBootstrapper
         if (!launchFactory.TryBuild(fileName, arguments, null, null, out var startInfo, out var buildError))
             throw new InvalidOperationException($"Cannot launch '{fileName}': {buildError}");
 
-        startInfo.RedirectStandardOutput = true;
-        startInfo.RedirectStandardError = true;
-
-        using var process = new Process { StartInfo = startInfo };
-        ct.ThrowIfCancellationRequested();
-        process.Start();
-        var outputTask = process.StandardOutput.ReadToEndAsync(ct);
-        var errorTask = process.StandardError.ReadToEndAsync(ct);
-
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        using var shutdown = KillOnCancellation(process, cts.Token);
-        cts.CancelAfter(timeoutMs);
-        try { await process.WaitForExitAsync(cts.Token); }
-        catch (OperationCanceledException)
-        {
-            ct.ThrowIfCancellationRequested();
-            return (-1, string.Empty, "Operation timed out.");
-        }
-
-        return (process.ExitCode, await outputTask, await errorTask);
+        var result = await OwnedProcessCapture.RunAsync(startInfo, TimeSpan.FromMilliseconds(timeoutMs), ct)
+            .ConfigureAwait(false);
+        return result.TimedOut ? (-1, string.Empty, "Operation timed out.")
+            : (result.ExitCode, result.Output, result.Error);
     }
 }

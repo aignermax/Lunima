@@ -48,14 +48,14 @@ public class RunProgramTourViewModelTests
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
         var logic = new LogicPanelViewModel(new FakeLogicRunClock(), provider);
-        var playground = new IsaPlaygroundViewModel(provider);
+        var playground = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
         playground.IsPhotonicAddAvailable.ShouldBeTrue("the published 4-bit adder must enable the photonic toggle");
         return (logic, playground, new RunProgramTourViewModel(logic, MakeDock(), playground));
     }
 
     private static AnalysisDockViewModel MakeDock() =>
         new(new TimeDomainViewModel(), new EyeDiagramViewModel(),
-            new WavelengthSpectrumViewModel(), new AnalysisOutputPanelViewModel(),
+            new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()), new AnalysisOutputPanelViewModel(),
             new MonteCarloViewModel(), new CircuitOptimizationViewModel(new CommandManager()));
 
     [Fact]

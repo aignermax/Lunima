@@ -40,7 +40,7 @@ public class CreateCustomPdkTemplateTests : IDisposable
     };
 
     private CreateCustomPdkViewModel CreateVm(UserPdkStore store, ProcessDefinition template) =>
-        new(store, new[] { template }, new ProcessManagementViewModel(Mock.Of<IFileDialogService>()));
+        new(store, new[] { template }, new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>()));
 
     public void Dispose()
     {

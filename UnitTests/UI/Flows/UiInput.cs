@@ -20,6 +20,10 @@ internal static class UiInput
     public static IEnumerable<T> Descendants<T>(Visual root) where T : Visual =>
         root.GetVisualDescendants().OfType<T>();
 
+    /// <summary>Finds a rendered control across nested view namescopes.</summary>
+    public static T? Named<T>(Visual root, string name) where T : Control =>
+        Descendants<T>(root).FirstOrDefault(control => control.Name == name);
+
     /// <summary>
     /// Finds a Button by its literal string Content, optionally scoped to the row whose
     /// DataContext is <paramref name="dataContext"/> (e.g. the ✏ of one library template).

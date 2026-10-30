@@ -31,9 +31,7 @@ public partial class MainViewModel
     /// assembly (each die answers for its own parts), the design-level process otherwise.
     /// </summary>
     public ActiveProcessSelection? CanvasScopeProcess =>
-        Canvas.Dies.ActiveDie is { } die ? die.ProcessBinding
-        : Canvas.Dies.IsAssemblyRoot ? null
-        : FileOperations.ActiveProcess;
+        _processContext.CanvasScopeProcess;
 
     /// <summary>
     /// Status-bar process chip for a die assembly: the open or selected die's process, else
@@ -118,16 +116,31 @@ public partial class MainViewModel
             Canvas.Surface.LastWorkedDie = die;
             UpdateDieScope();
         };
-        CanvasInteraction.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(CanvasInteraction.SelectedWaveguideConnection))
-                DieLinkProperties.Show(CanvasInteraction.SelectedWaveguideConnection?.Connection);
-        };
-        CommandManager.StateChanged += (_, _) =>
-        {
-            DieProperties.Reload();
-            DieLinkProperties.Reload();
-        };
+        CanvasInteraction.PropertyChanged += DieConnectionChanged;
+        CommandManager.StateChanged += DieHistoryChanged;
+    }
+
+    private void DieConnectionChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(CanvasInteraction.SelectedWaveguideConnection))
+            DieLinkProperties.Show(CanvasInteraction.SelectedWaveguideConnection?.Connection);
+    }
+
+    private void DieHistoryChanged(object? sender, EventArgs args)
+    {
+        DieProperties.Reload();
+        DieLinkProperties.Reload();
+    }
+
+    private void UnwireDies()
+    {
+        Canvas.DiesChanged -= OnDiesChanged;
+        Canvas.PropertyChanged -= OnCanvasPropertyChangedForDies;
+        CanvasInteraction.PropertyChanged -= DieConnectionChanged;
+        CommandManager.StateChanged -= DieHistoryChanged;
+        Canvas.ChipDie.ProcessSource = null;
+        ViewportControl.FitsWholeAssembly = null;
+        CanvasInteraction.SelectionPointChanged = null;
     }
 
     /// <summary>

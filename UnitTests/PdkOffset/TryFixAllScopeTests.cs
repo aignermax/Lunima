@@ -79,7 +79,7 @@ public class TryFixAllScopeTests : IDisposable
                 It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(render);
 
-        var vm = new PdkOffsetEditorViewModel(
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             new PdkLoader(), new PdkJsonSaver(), manager, nazca.Object)
         {
             UiThreadMarshaller = action => { action(); return Task.CompletedTask; }

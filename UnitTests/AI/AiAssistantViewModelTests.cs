@@ -210,5 +210,5 @@ public class AiAssistantViewModelTests
     // has its own test (see UnitTests/AI/*ToolTests.cs + AiToolRegistryTests.cs).
 
     private AiAssistantViewModel CreateViewModel()
-        => new AiAssistantViewModel(_mockAiService.Object, _preferencesService);
+        => new AiAssistantViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), _mockAiService.Object, _preferencesService);
 }

@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Update;
 using CAP.Avalonia.ViewModels.Update;
+using CAP_Core.Update;
+using CAP_DataAccess.Updates;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CAP.Avalonia.DI;
@@ -22,14 +24,15 @@ internal static class UpdateFeatureExtensions
             new ProductInfoHeaderValue("ConnectAPICPro", "1.0"));
         services.AddSingleton(httpClient);
 
-        services.AddSingleton(sp => new UpdateChecker(
+        services.AddSingleton<IReleaseCatalog>(sp => new UpdateChecker(
             sp.GetRequiredService<HttpClient>(),
             owner: "aignermax",
             // Repo was renamed Connect-A-PIC-Pro -> Lunima; query the current name directly rather
             // than relying on GitHub's rename redirect (which breaks if the old name is reclaimed).
             repo: "Lunima"));
-        services.AddSingleton(sp => new UpdateDownloader(
+        services.AddSingleton<IUpdatePreparation>(sp => new UpdateDownloader(
             sp.GetRequiredService<HttpClient>()));
+        services.AddSingleton<IUpdatePreferences>(sp => sp.GetRequiredService<UserPreferencesService>());
         services.AddSingleton<IUrlLauncher, PlatformShellLauncher>();
         services.AddSingleton<DetachedUpdaterLauncher>();
         services.AddSingleton<IInstaller, SelfUpdateInstaller>();

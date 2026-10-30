@@ -66,17 +66,18 @@ public partial class WaveguideConnectionManager
     /// spacing), and keeps every degenerate neighbour at its required clearance.
     /// </summary>
     private bool IsUpsizeAcceptable(RoutedPath working,
-        IReadOnlyList<RoutedPath> nearSiblings, IReadOnlyList<double> clearanceBefore,
+        IReadOnlyList<SampledPolyline> nearSiblings, IReadOnlyList<double> clearanceBefore,
         IReadOnlyList<DegenerateSiblingGuard> degenerateGuards)
     {
         if (PathIntersectionDetector.HasSelfIntersection(working))
             return false;
 
+        var sampledWorking = SampledPolyline.From(working);
         for (int i = 0; i < nearSiblings.Count; i++)
         {
             double required = Math.Min(
                 _router.MinWaveguideSpacingMicrometers, clearanceBefore[i]);
-            if (PathIntersectionDetector.MinimumDistance(working, nearSiblings[i])
+            if (sampledWorking.MinimumDistance(nearSiblings[i])
                 < required - SiblingTouchToleranceMicrometers)
                 return false;
         }

@@ -62,7 +62,7 @@ public class ShowcaseWindowScreenshotTests
         if (!ShowcaseCapture.Enabled) return;
         await ShowcaseCapture.WithEnglishUiAsync(() =>
         {
-            var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+            var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>());
             var process = ShowcaseProcess.CreateSinProcess();
             vm.Load(process);
             vm.StatusText = string.Format(
@@ -131,7 +131,7 @@ public class ShowcaseWindowScreenshotTests
 
         var extractor = new ComponentGeometryExtractor(
             ShowcaseProcess.MmiPreviewRenderer(), ShowcaseProcess.MmiPreviewRenderer());
-        var vm = new NewComponentViewModel(extractor, Mock.Of<IFdtdSMatrixService>(), store,
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, Mock.Of<IFdtdSMatrixService>(), store,
             new List<ProcessDefinition> { process });
         vm.LoadForEdit(new ComponentTemplate
         {

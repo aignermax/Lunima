@@ -138,6 +138,7 @@ public class TruthTableViewModelRegisterTests
     {
         var canvas = new DesignCanvasViewModel();
         var component = new ComponentViewModel(group);
+        canvas.Components.Add(component);
         canvas.Selection.SelectSingle(component);
         var vm = new TruthTableViewModel();
         vm.ConfigureForSelection(component, canvas);

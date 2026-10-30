@@ -296,6 +296,6 @@ internal static class FormatAdapterTestHelpers
         return new CAP.Avalonia.ViewModels.Export.VerilogAExportViewModel(
             exporterMock.Object,
             writerMock.Object,
-            canvasMock.Object);
+            canvasMock.Object, Mock.Of<IUrlLauncher>());
     }
 }

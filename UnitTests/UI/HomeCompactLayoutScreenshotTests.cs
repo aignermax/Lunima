@@ -44,7 +44,7 @@ public sealed class HomeCompactLayoutScreenshotTests : IDisposable
             File.WriteAllText(path, "{}");
             recents.RecordProject(path);
         }
-        var home = new HomeViewModel(recents, preferences, new ExampleDesignsService());
+        var home = new HomeViewModel(recents, preferences, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         var window = new Window { Width = 1280, Height = LaptopWindowHeight, Content = new HomeView { DataContext = home } };
         try
         {

@@ -215,7 +215,7 @@ public partial class LeftPanelViewModel
     /// </summary>
     internal bool RevertShadowForkToBundled(PdkInfoViewModel fork)
     {
-        var store = _addCustomComponentDeps?.UserPdkStore;
+        var store = _userPdkLibrary;
         if (store is null || fork.IsBundled || fork.FilePath is null)
             return false;
         if (!_bundledPdkCatalog.TryGetValue(fork.Name, out var origin))
@@ -265,7 +265,7 @@ public partial class LeftPanelViewModel
     public BundledRevertResult RestoreTemplateToBundledOriginal(ComponentTemplate template)
     {
         var pdkInfo = PdkManager.LoadedPdks.FirstOrDefault(p => p.Name == template.PdkSource);
-        var userPdkStore = _addCustomComponentDeps?.UserPdkStore;
+        var userPdkStore = _userPdkLibrary;
         if (pdkInfo is null || pdkInfo.IsBundled || pdkInfo.FilePath is null || userPdkStore is null)
             return BundledRevertResult.NotARevertCase;
 
@@ -307,7 +307,7 @@ public partial class LeftPanelViewModel
     /// even when the rewrite fails, so a failed revert never degrades into a delete.
     /// </summary>
     private bool TryRevertComponentToBundled(
-        PdkInfoViewModel pdkInfo, CAP_DataAccess.Components.AddCustomComponent.UserPdkStore store, ComponentTemplate template) =>
+        PdkInfoViewModel pdkInfo, CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary store, ComponentTemplate template) =>
         RevertComponentToBundled(pdkInfo, store, template) != BundledRevertResult.NotARevertCase;
 
     /// <summary>
@@ -317,7 +317,7 @@ public partial class LeftPanelViewModel
     /// collapses into one "handled, do not delete" answer.
     /// </summary>
     private BundledRevertResult RevertComponentToBundled(
-        PdkInfoViewModel pdkInfo, CAP_DataAccess.Components.AddCustomComponent.UserPdkStore store, ComponentTemplate template)
+        PdkInfoViewModel pdkInfo, CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary store, ComponentTemplate template)
     {
         if (pdkInfo.FilePath is null)
             return BundledRevertResult.NotARevertCase;
@@ -343,6 +343,7 @@ public partial class LeftPanelViewModel
         }
 
         ReplaceLibraryTemplateWithBundledDefinition(pdkInfo, template, counterpart);
+        PdkManager.NotifyDefinitionsChanged();
         ReapplyActiveProcessAfterPdkChange();
         FilterComponents();
         // A revert changes physics like an editor save: placed instances must adopt the restored

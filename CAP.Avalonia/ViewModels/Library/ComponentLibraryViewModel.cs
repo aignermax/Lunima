@@ -12,7 +12,7 @@ namespace CAP.Avalonia.ViewModels.Library;
 /// </summary>
 public partial class ComponentLibraryViewModel : ObservableObject
 {
-    private readonly GroupLibraryManager _libraryManager;
+    private readonly IGroupLibrary _libraryManager;
 
     [ObservableProperty]
     private string _statusText = LocalizationService.Instance.Translate("Library.NoGroupsLoaded");
@@ -37,7 +37,7 @@ public partial class ComponentLibraryViewModel : ObservableObject
     /// Initializes the component library ViewModel.
     /// </summary>
     /// <param name="libraryManager">The group library manager service.</param>
-    public ComponentLibraryViewModel(GroupLibraryManager libraryManager)
+    public ComponentLibraryViewModel(IGroupLibrary libraryManager)
     {
         _libraryManager = libraryManager;
         LoadGroups();
@@ -197,5 +197,5 @@ public partial class ComponentLibraryViewModel : ObservableObject
     /// <summary>
     /// Gets the underlying library manager for advanced operations.
     /// </summary>
-    public GroupLibraryManager GetLibraryManager() => _libraryManager;
+    public IGroupLibrary GetLibraryManager() => _libraryManager;
 }

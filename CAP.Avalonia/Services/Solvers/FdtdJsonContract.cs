@@ -54,7 +54,7 @@ public static class FdtdJsonContract
         if (string.IsNullOrWhiteSpace(stdout))
             return FdtdSMatrixResult.Fail("FDTD solver produced no output.", rawStderr: stderr);
 
-        var jsonLine = SubprocessJsonRunner.ExtractTrailingJsonLine(stdout);
+        var jsonLine = CAP_Core.Solvers.Protocol.TrailingJsonObject.Extract(stdout);
         if (jsonLine == null)
             return FdtdSMatrixResult.Fail(
                 $"No JSON found in FDTD solver output: {Truncate(stdout, 300)}", rawStderr: stderr);

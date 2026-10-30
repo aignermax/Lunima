@@ -1,3 +1,4 @@
+using CAP_Core.Export;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,12 +20,12 @@ public class BackendCodeAutoloadTests : IDisposable
 
     private NewComponentViewModel Build()
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
         var fdtd = new Mock<IFdtdSMatrixService>();
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
-        return new NewComponentViewModel(extractor, fdtd.Object, store,
+        return new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd.Object, store,
             new List<ProcessDefinition> { new() { Name = "P" } });
     }
 

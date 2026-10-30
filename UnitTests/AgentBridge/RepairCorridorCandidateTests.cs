@@ -53,7 +53,7 @@ public class RepairCorridorCandidateTests
         var d = AddWaveguide(canvas, "wgD", 2000, 2000);
         var blocked = canvas.ConnectPins(d.Component.PhysicalPins.Single(p => p.Name == "out"),
             c.Component.PhysicalPins.Single(p => p.Name == "in"))!.Connection;
-        var session = new AgentDesignSession(canvas, new CommandManager(), () => null, new ExampleDesignsService());
+        var session = new AgentDesignSession(canvas, new CommandManager(), () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         var candidates = new RepairCandidateGenerator(session, blocked).Generate();
 
@@ -89,7 +89,7 @@ public class RepairCorridorCandidateTests
         var wire = canvas.ConnectPins(a.Component.PhysicalPins.Single(p => p.Name == "out"),
             b.Component.PhysicalPins.Single(p => p.Name == "in"))!.Connection;
         await canvas.RecalculateRoutesAsync();
-        var session = new AgentDesignSession(canvas, new CommandManager(), () => null, new ExampleDesignsService());
+        var session = new AgentDesignSession(canvas, new CommandManager(), () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
         return new RepairCandidateGenerator(session, wire).Generate().Select(x => x.Kind + ":" + x.Description).ToArray();
     }
 

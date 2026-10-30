@@ -42,7 +42,7 @@ namespace CAP_Core.Analysis.MeasuredSpectrum
             if (sweep == null) throw new ArgumentNullException(nameof(sweep));
             var lossDb = sweep.GetInsertionLossSeriesForPin(pinId);
             var wavelengths = sweep.GetWavelengthValues();
-            var linear = lossDb.Select(MeasuredSpectrumCsvReader.DecibelToLinear).ToArray();
+            var linear = lossDb.Select(PowerConversion.DecibelToLinear).ToArray();
             return new MeasuredSpectrum(wavelengths, linear, $"Sweep pin {pinId.ToString("N")[..8]}");
         }
     }

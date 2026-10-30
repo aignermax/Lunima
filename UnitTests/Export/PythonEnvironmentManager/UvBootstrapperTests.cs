@@ -11,25 +11,30 @@ namespace UnitTests.Export.PythonEnvironmentManager;
 public class UvBootstrapperTests
 {
     [Fact]
-    public void ShutdownCancellation_KillsOwnedProcessWithoutAwaitingAnyContinuation()
+    public void ManagedDownload_UsesReviewedVersionRatherThanMutableLatest()
     {
+        var url = UvReleaseCatalog.Current.Url;
+        url.ShouldNotContain("/latest/");
+        url.ShouldContain("/download/0.13.5/");
+    }
+
+    [SkippableFact]
+    public async Task ShutdownCancellation_RetiresOwnedProcessBeforeTheInvocationCompletes()
+    {
+        await using var child = await UnitTests.Solvers.ControlledSolverProcess.CreateAsync("time.sleep(60)");
         using var cancellation = new CancellationTokenSource();
-        var start = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = OperatingSystem.IsWindows() ? "ping.exe" : "sleep",
-            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true
-        };
-        foreach (var arg in OperatingSystem.IsWindows() ? new[] { "-n", "30", "127.0.0.1" } : new[] { "30" })
-            start.ArgumentList.Add(arg);
-        using var child = System.Diagnostics.Process.Start(start)!;
+        var running = UvBootstrapper.RunProcessAsync(Factory, child.PythonExecutable,
+            ["-u", child.ScriptPath], cancellation.Token, timeoutMs: 30_000);
         try
         {
-            using var registration = UvBootstrapper.KillOnCancellation(child, cancellation.Token);
+            await child.WaitForStartedAsync();
             cancellation.Cancel();
-            // No async continuation is pumped between cancellation and this assertion.
-            child.WaitForExit(2000).ShouldBeTrue();
+            // Cancellation requests cleanup; the awaited invocation owns its completion.
+            await Should.ThrowAsync<OperationCanceledException>(() =>
+                running.WaitAsync(UnitTests.Solvers.ControlledSolverProcess.GuardTimeout));
+            child.ShouldHaveExited();
         }
-        finally { if (!child.HasExited) child.Kill(entireProcessTree: true); }
+        finally { await OwnedToolProcessScenarios.CleanupAsync(child, running); }
     }
 
     private static readonly ProcessLaunchFactory Factory = ProcessLaunchFactory.CreateDefault();

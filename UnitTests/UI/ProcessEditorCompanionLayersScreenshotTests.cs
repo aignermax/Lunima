@@ -28,7 +28,7 @@ public class ProcessEditorCompanionLayersScreenshotTests
     {
         LocalizationService.Instance.SetLanguage(SupportedLanguage.English.Code);
         var demo = new PdkLoader().LoadFromFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PDKs", "demo-pdk.json"));
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>());
         vm.Load(demo.Process!);
         vm.CompanionLayers.ShouldHaveSingleItem().Name.ShouldBe("SHALLOW_TRENCH");
 

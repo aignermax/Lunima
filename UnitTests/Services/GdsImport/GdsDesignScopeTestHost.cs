@@ -43,7 +43,9 @@ public sealed class GdsDesignScopeTestHost : IDisposable
         GdsCacheDirectory = Path.Combine(
             Path.GetTempPath(), "lunima-test-gds-cache-" + Guid.NewGuid().ToString("N"));
         Scope = new DesignScopedGdsComponentService(
-            RegisterPdk, RemovePdk, GdsCacheDirectory, userPdkStore, pdkLoader);
+            RegisterPdk, RemovePdk, GdsCacheDirectory,
+            userPdkStore ?? new UserPdkStore(Path.Combine(GdsCacheDirectory, "legacy-pdks"), new PdkJsonSaver(), pdkLoader ?? new PdkLoader()),
+            pdkLoader ?? new PdkLoader());
     }
 
     /// <summary>Creates an import service on this host's design scope.</summary>
@@ -52,7 +54,7 @@ public sealed class GdsDesignScopeTestHost : IDisposable
     /// </param>
     public GdsImportService CreateService(
         Func<IReadOnlyList<ComponentTemplate>>? templateProvider = null) =>
-        new(Scope, templateProvider ?? (() => Templates.ToList()));
+        new(new CAP_DataAccess.Import.Gds.GdsSourceReader(), Scope, templateProvider ?? (() => Templates.ToList()));
 
     private void RegisterPdk(string pdkName, IReadOnlyList<PdkComponentDraft> drafts)
     {

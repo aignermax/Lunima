@@ -47,7 +47,7 @@ public class LearningPathFlowTests
         Assert.True(hint.IsPlaying);
         Assert.False(hint.IsHitTestVisible);
         Capture(host.Window, width, language + "-return-hint");
-        var help = host.Window.FindControl<Button>("ResumeVisualGuideButton")!;
+        var help = UiInput.Named<Button>(host.Window, "ResumeVisualGuideButton")!;
         UiInput.Click(host.Window, help); UiInput.RunJobs();
         Assert.True(host.Vm.LearningPath.IsVisible);
         Assert.False(hint.IsPlaying);

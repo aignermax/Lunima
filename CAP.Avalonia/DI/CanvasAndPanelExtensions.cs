@@ -54,6 +54,9 @@ internal static class CanvasAndPanelExtensions
         });
         services.AddSingleton<ViewportControlViewModel>();
 
+        services.AddSingleton<GdsPreviewDiskCache>();
+        services.AddSingleton<IGdsPreviewCache>(sp => sp.GetRequiredService<GdsPreviewDiskCache>());
+
         // GDS preview render service — shared by the canvas overlay and the
         // component-library thumbnails. Uses the Nazca backend for Nazca components and the
         // gdsfactory backend for gdsfactory-native components (CornerStone SiN etc., #570).
@@ -61,8 +64,11 @@ internal static class CanvasAndPanelExtensions
         {
             var previews = new GdsPreviewRenderService(
                 sp.GetRequiredService<NazcaComponentPreviewService>(),
-                sp.GetRequiredService<GdsFactoryComponentPreviewService>());
-            sp.GetRequiredService<UserPreferencesService>().PythonInterpreterActivated += previews.RetryFailedPreviews;
+                sp.GetRequiredService<IGdsPreviewCache>(),
+                sp.GetRequiredService<GdsFactoryComponentPreviewService>(),
+                sp.GetService<Services.Lifetime.ApplicationWorkCoordinator>());
+            previews.OwnEnvironmentBindings(new PreviewEnvironmentBindings(previews,
+                sp.GetRequiredService<UserPreferencesService>(), sp.GetRequiredService<PdkManagerViewModel>()));
             previews.ReportPreviewFailure = message => sp.GetService<CAP_Core.ErrorConsoleService>()?
                 .LogWarning($"Component preview: {message}");
             // Resolved lazily: the left panel itself shows previews through this service.
@@ -93,6 +99,8 @@ internal static class CanvasAndPanelExtensions
         services.AddTransient<ViewModels.Analysis.LogicAnalysis.TruthTableViewModel>();
         services.AddTransient<ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel>();
         services.AddTransient<ViewModels.Analysis.CircuitOptimization.CircuitOptimizationViewModel>();
+        services.AddSingleton<CAP_Core.Analysis.CircuitOptimization.ICircuitOptimizationRunner,
+            CAP_Core.Analysis.CircuitOptimization.CircuitOptimizationRunner>();
         services.AddTransient<OnaSweepViewModel>();
         services.AddTransient<RoutingDiagnosticsViewModel>();
         services.AddTransient<DesignValidationViewModel>();
@@ -106,6 +114,8 @@ internal static class CanvasAndPanelExtensions
         services.AddTransient<PdkConsistencyViewModel>();
         services.AddTransient<TimeDomainViewModel>();
         services.AddTransient<EyeDiagramViewModel>();
+        services.AddSingleton<CAP_Core.Analysis.MeasuredSpectrum.IMeasuredSpectrumSource,
+            CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource>();
         services.AddTransient<WavelengthSpectrumViewModel>();
         services.AddTransient<MonteCarloViewModel>();
         services.AddTransient<AnalysisOutputPanelViewModel>();
@@ -125,6 +135,7 @@ internal static class CanvasAndPanelExtensions
         // Bottom panel sub-ViewModels
         services.AddTransient<ConnectionRoutingViewModel>();
         services.AddTransient<LengthMatchingViewModel>();
+        services.AddTransient<LengthEqualizationViewModel>();
         services.AddTransient<ViewModels.Canvas.ConnectionLoss.ConnectionLossViewModel>();
         services.AddTransient<ViewModels.Canvas.RerouteImported.RerouteImportedRoutesViewModel>();
         services.AddTransient<ElementLockViewModel>();

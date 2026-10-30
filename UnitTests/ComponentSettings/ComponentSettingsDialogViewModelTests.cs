@@ -15,7 +15,7 @@ namespace UnitTests.ComponentSettings;
 public class ComponentSettingsDialogViewModelTests
 {
     private static ComponentSettingsDialogViewModel NewVm() =>
-        new(Mock.Of<IFileDialogService>());
+        new(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), Mock.Of<IFileDialogService>());
 
     private static Dictionary<string, ComponentSMatrixData> MakeStore(
         string key,
@@ -207,7 +207,7 @@ public class ComponentSettingsDialogViewModelTests
         fileDialog
             .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((string?)null);
-        var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), fileDialog.Object);
         vm.Configure("comp_1", "comp_1", "My Component", store);
         var entryCountBefore = vm.SMatrixEntries.Count;
 
@@ -229,7 +229,7 @@ public class ComponentSettingsDialogViewModelTests
             fileDialog
                 .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(tmp);
-            var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
+            var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), fileDialog.Object);
             vm.Configure("comp_1", "comp_1", "My Component", store);
 
             vm.LoadFromFileCommand.Execute(null);

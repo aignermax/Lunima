@@ -7,7 +7,7 @@ namespace CAP.Avalonia.Services.Solvers;
 
 /// <summary>
 /// Builds an <see cref="FdtdSMatrixRequest"/> for a placed component by rendering
-/// its geometry (reusing <see cref="NazcaComponentPreviewService"/>, the same
+/// its geometry (reusing <see cref="IPdkGeometryRenderer"/>, the same
 /// single-component renderer the PDK Offset Editor uses — or the gdsfactory
 /// renderer for gdsfactory-native components like CornerStone) and turning the
 /// rendered polygons and pin stubs into FDTD geometry and ports. Lunima knows
@@ -26,14 +26,14 @@ public class ComponentFdtdRequestFactory
     /// </summary>
     public const int DefaultSiliconLayer = 1;
 
-    private readonly NazcaComponentPreviewService _preview;
-    private readonly GdsFactoryComponentPreviewService? _gdsFactoryPreview;
+    private readonly IPdkGeometryRenderer _preview;
+    private readonly IPdkGeometryRenderer? _gdsFactoryPreview;
     private readonly double _portWidthUm;
     private readonly int _siliconLayer;
 
     public ComponentFdtdRequestFactory(
-        NazcaComponentPreviewService preview,
-        GdsFactoryComponentPreviewService? gdsFactoryPreview = null,
+        IPdkGeometryRenderer preview,
+        IPdkGeometryRenderer? gdsFactoryPreview = null,
         double portWidthUm = DefaultPortWidthUm,
         int siliconLayer = DefaultSiliconLayer)
     {

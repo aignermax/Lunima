@@ -1,83 +1,67 @@
-using System.Collections.Concurrent;
-
 namespace CAP_Core.Analysis.LogicAnalysis.GateView;
 
 /// <summary>
-/// Gives every gate of a <see cref="GateViewGraph"/> its schematic symbol by extracting
-/// its truth table — the same extraction the logic network runs, with the persisted
-/// roles and threshold — and classifying it. Gates with equal
-/// <see cref="GateStructureSignature"/>s share one extraction, and results stay cached
-/// across rebuilds, so a design of hundreds of copies of a few cells classifies in a
-/// handful of simulations. The extraction runs on a deep copy of the group: the view
-/// never touches the design it shows.
+/// Classifies detached gate physics and reuses equivalent captured definitions across rebuilds.
+/// Live graph bindings are updated only by the caller after the worker has returned.
 /// </summary>
 public sealed class GateFunctionClassifier
 {
     private readonly TruthTableExtractor _extractor;
-    private readonly ConcurrentDictionary<string, GateSymbolKind> _cache = new();
+    private readonly GateClassificationCache _cache = new();
 
-    /// <summary>Creates a classifier; tests may inject the extractor.</summary>
-    public GateFunctionClassifier(TruthTableExtractor? extractor = null)
-    {
+    /// <summary>Creates a classifier with an optional optical extraction worker.</summary>
+    public GateFunctionClassifier(TruthTableExtractor? extractor = null) =>
         _extractor = extractor ?? new TruthTableExtractor();
-    }
 
-    /// <summary>Number of distinct gate structures classified so far (test seam).</summary>
+    /// <summary>Number of captured physics identities currently retained.</summary>
     public int CachedStructureCount => _cache.Count;
 
-    /// <summary>
-    /// Sets <see cref="GateViewNode.Kind"/> on every gate. Registers and gates whose
-    /// extraction fails keep their structural symbol; a failure never aborts the view.
-    /// </summary>
-    /// <param name="graph">The graph whose nodes are classified in place.</param>
-    /// <param name="wavelengthNm">Laser wavelength the tables are extracted at.</param>
-    /// <param name="cancellationToken">Cancels between gates.</param>
-    public async Task ClassifyAsync(GateViewGraph graph, int wavelengthNm, CancellationToken cancellationToken = default)
+    /// <summary>Captures every gate before dispatch and applies classification on the caller continuation.</summary>
+    public async Task ClassifyAsync(GateViewGraph graph, int wavelengthNm,
+        CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        foreach (var node in graph.Nodes)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (node.IsRegister)
-                continue;
-            var signature = GateStructureSignature.Of(node.Group, wavelengthNm);
-            if (!_cache.TryGetValue(signature, out var kind))
-            {
-                kind = await ExtractKindAsync(node, wavelengthNm, cancellationToken);
-                _cache[signature] = kind;
-            }
-            if (kind != GateSymbolKind.Unknown)
-                node.Kind = kind;
-        }
+        var snapshot = GateViewClassificationSnapshot.Capture(graph, wavelengthNm, cancellationToken);
+        var kinds = await Task.Run(() => ClassifyAsync(snapshot, cancellationToken), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        Apply(graph, kinds);
     }
 
-    private async Task<GateSymbolKind> ExtractKindAsync(GateViewNode node, int wavelengthNm, CancellationToken cancellationToken)
+    /// <summary>Worker-only classification: inputs and results contain no live group or pin bindings.</summary>
+    public async Task<IReadOnlyDictionary<string, GateSymbolKind>> ClassifyAsync(
+        GateViewClassificationSnapshot snapshot, CancellationToken cancellationToken = default)
     {
-        var assignment = node.Group.TruthTablePinAssignment!;
-        if (assignment.InputPinNames.Count is 0 or > TruthTableExtractor.MaxLogicInputs)
-            return node.Kind;
-        try
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var result = new Dictionary<string, GateSymbolKind>(snapshot.Gates.Length);
+        foreach (var gate in snapshot.Gates)
         {
-            var copy = node.Group.DeepCopy();
-            var table = await _extractor.ExtractAsync(
-                copy,
-                assignment.InputPinNames,
-                assignment.OutputPinNames,
-                assignment.BiasPinNames,
-                assignment.Threshold,
-                wavelengthNm,
-                cancellationToken);
-            return GateSymbolClassifier.FromTruthTable(table, isRegister: false);
+            cancellationToken.ThrowIfCancellationRequested();
+            var kind = gate.Fallback;
+            if (gate.Physics is { } physics)
+            {
+                try
+                {
+                    var signature = physics.ClassificationIdentity();
+                    if (!_cache.TryGet(signature, out kind))
+                    {
+                        var table = await _extractor.ExtractCapturedAsync(physics, cancellationToken).ConfigureAwait(false);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        kind = GateSymbolClassifier.FromTruthTable(table, isRegister: false);
+                        _cache.Set(signature, kind);
+                    }
+                    if (kind == GateSymbolKind.Unknown) kind = gate.Fallback;
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception) { kind = gate.Fallback; }
+            }
+            result.Add(gate.Id, kind);
         }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception)
-        {
-            // A gate that cannot simulate (incomplete edit, missing model) keeps its
-            // structural symbol — the Logic tab reports the actual error on build.
-            return node.Kind;
-        }
+        return result;
+    }
+
+    /// <summary>Attaches worker values to the caller's already-admitted graph.</summary>
+    public static void Apply(GateViewGraph graph, IReadOnlyDictionary<string, GateSymbolKind> kinds)
+    {
+        foreach (var node in graph.Nodes)
+            if (kinds.TryGetValue(node.GateId, out var kind)) node.Kind = kind;
     }
 }

@@ -23,6 +23,13 @@ public static class CanvasSimulationBuilder
     /// </summary>
     public static ILightCalculator? TryBuild(DesignCanvasViewModel canvas)
     {
+        var grid = TryBuildGrid(canvas);
+        return grid == null ? null : new GridLightCalculator(new SystemMatrixBuilder(grid), grid);
+    }
+
+    /// <summary>Builds the same simulation inputs for synchronous capture before optimization.</summary>
+    public static GridManager? TryBuildGrid(DesignCanvasViewModel canvas)
+    {
         if (canvas.Components.Count == 0 || canvas.Connections.Count == 0)
             return null;
 
@@ -37,7 +44,7 @@ public static class CanvasSimulationBuilder
         var gridManager = GridManager.CreateForSimulation(
             tileManager, canvas.ConnectionManager, portManager);
 
-        return new GridLightCalculator(new SystemMatrixBuilder(gridManager), gridManager);
+        return gridManager;
     }
 
     private static bool ConfigureLightSources(

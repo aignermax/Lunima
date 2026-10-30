@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Headless;

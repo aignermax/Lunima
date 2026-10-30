@@ -44,7 +44,7 @@ public class Ram2x4UiStackJourneyTests
     {
         var preferencesPath = NewTempFilePath("prefs", "json");
         var savePath = NewTempFilePath("ram2x4-roundtrip", "lun");
-        using var provider = ProductionContainerTestHelper.BuildWithTempPreferences(preferencesPath);
+        await using var provider = ProductionContainerTestHelper.BuildWithTempPreferences(preferencesPath);
         try
         {
             var mainVm = provider.GetRequiredService<MainViewModel>();

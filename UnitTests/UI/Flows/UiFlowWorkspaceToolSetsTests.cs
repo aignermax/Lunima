@@ -59,10 +59,10 @@ public class UiFlowWorkspaceToolSetsTests
 
     private static Button Segment(Window win, string label)
     {
-        var bar = win.FindControl<Border>("WorkspaceSwitchBar").ShouldNotBeNull();
+        var bar = UiInput.Named<Border>(win, "WorkspaceSwitchBar").ShouldNotBeNull();
         return UiInput.Descendants<Button>(bar).First(b => Equals(b.Content, label));
     }
 
     private static T Named<T>(Window win, string name) where T : Control =>
-        win.FindControl<T>(name).ShouldNotBeNull($"{name} must exist");
+        UiInput.Named<T>(win, name).ShouldNotBeNull($"{name} must exist");
 }

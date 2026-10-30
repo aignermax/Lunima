@@ -1,14 +1,9 @@
+using CAP.Avalonia.Services.AgentBridge.Contracts;
 using System.Diagnostics;
 using CAP.Avalonia.Services.AgentBridge.Hosting;
 using ProcessLaunchFactory = CAP_Core.Export.ProcessLaunchFactory;
 
 namespace CAP.Avalonia.Services.AgentBridge.Registration;
-
-/// <summary>Outcome of registering or unregistering the bridge with Claude Code.</summary>
-/// <param name="Success">Whether the <c>claude</c> CLI reported success.</param>
-/// <param name="CliFound">False when the <c>claude</c> CLI is not installed (the caller shows the manual command).</param>
-/// <param name="Output">What the CLI printed, or why nothing ran.</param>
-public sealed record ClaudeRegistrationResult(bool Success, bool CliFound, string Output);
 
 /// <summary>
 /// Registers the agent bridge as the user-scope MCP server <c>lunima</c> in Claude Code by
@@ -49,7 +44,9 @@ public sealed class ClaudeCodeRegistrar
     /// </summary>
     public async Task<ClaudeRegistrationResult> RegisterAsync(int port, string? token, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var cli = FindCli();
+        cancellationToken.ThrowIfCancellationRequested();
         if (cli == null)
             return NotFound();
 
@@ -61,7 +58,9 @@ public sealed class ClaudeCodeRegistrar
     /// <summary>Removes the <c>lunima</c> registration for the current user (best effort).</summary>
     public async Task<ClaudeRegistrationResult> UnregisterAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var cli = FindCli();
+        cancellationToken.ThrowIfCancellationRequested();
         if (cli == null)
             return NotFound();
 
@@ -72,7 +71,9 @@ public sealed class ClaudeCodeRegistrar
     /// <summary>Whether Claude Code already knows <c>lunima</c>; null when the CLI is missing.</summary>
     public async Task<bool?> IsRegisteredAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var cli = FindCli();
+        cancellationToken.ThrowIfCancellationRequested();
         if (cli == null)
             return null;
         var result = await RunAsync(cli, new[] { "mcp", "get", AgentBridgeHost.McpServerName }, cancellationToken);
@@ -87,9 +88,15 @@ public sealed class ClaudeCodeRegistrar
 
     private async Task<CliRunResult> RunAsync(string cli, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
-        if (!_launchFactory.TryBuild(cli, arguments, HomeDirectory(), HomeEnvironment(), out var startInfo, out var error))
+        cancellationToken.ThrowIfCancellationRequested();
+        var prepared = _launchFactory.TryBuild(cli, arguments, HomeDirectory(), HomeEnvironment(), out var startInfo, out var error);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!prepared)
             return new CliRunResult(CliProcessRunner.StartFailedExitCode, error ?? "Could not build the process.");
-        return await _run(startInfo, CallTimeout, cancellationToken);
+        var result = await _run(startInfo, CallTimeout, cancellationToken);
+        // In particular, a canceled remove must never admit the following add process.
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
     }
 
     private static string? HomeDirectory()

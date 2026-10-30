@@ -1,3 +1,5 @@
+using CAP_DataAccess.Components.ComponentDraftMapper;
+using CAP_Core.Preferences;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CAP_Core.Export;
@@ -10,15 +12,15 @@ namespace CAP.Avalonia.Services;
 /// Handles module name extraction, PYTHONPATH setup, and conversion to PDK JSON format.
 /// Issue #476: PDK Import Wizard with Python/Nazca parser and AI-assisted error correction.
 /// </summary>
-public class PdkImportService
+public class PdkImportService : IPdkImportWorkflow
 {
-    private readonly UserPreferencesService _preferences;
+    private readonly IPythonInterpreterPreferences _preferences;
     private readonly CAP_Core.Export.ProcessLaunchFactory _launchFactory;
 
     /// <summary>Initializes a new <see cref="PdkImportService"/>.</summary>
     /// <param name="preferences">User preferences service for Python path resolution.</param>
     /// <param name="launchFactory">Factory for launching the Nazca parser subprocess.</param>
-    public PdkImportService(UserPreferencesService preferences, CAP_Core.Export.ProcessLaunchFactory? launchFactory = null)
+    public PdkImportService(IPythonInterpreterPreferences preferences, CAP_Core.Export.ProcessLaunchFactory? launchFactory = null)
     {
         _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
         _launchFactory = launchFactory ?? CAP_Core.Export.ProcessLaunchFactory.CreateDefault();

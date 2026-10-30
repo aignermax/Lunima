@@ -38,14 +38,14 @@ public class LibraryEditActionTests : IDisposable
         AddCustomComponentDependencies? deps = null;
         if (userPdkStore != null)
         {
-            var nazca = new Mock<IComponentPreviewRenderer>();
-            var gds = new Mock<IComponentPreviewRenderer>();
+            var nazca = new Mock<IPdkGeometryRenderer>();
+            var gds = new Mock<IPdkGeometryRenderer>();
             var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
-            deps = new AddCustomComponentDependencies(extractor, Fdtd: null, UserPdkStore: userPdkStore);
+            deps = new AddCustomComponentDependencies(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, Fdtd: null, UserPdkStore: userPdkStore);
         }
 
-        return new LeftPanelViewModel(
-            canvas, libraryManager, pdkLoader, preferencesService,
+        return new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
+            canvas, libraryManager, pdkLoader, preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),

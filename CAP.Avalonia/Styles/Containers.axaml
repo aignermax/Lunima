@@ -23,12 +23,6 @@
   </Style>
   <Style Selector="Border.card.interactive">
     <Setter Property="Cursor" Value="Hand"/>
-    <Setter Property="Transitions">
-      <Transitions>
-        <BrushTransition Property="Background" Duration="0:0:0.12"/>
-        <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
-      </Transitions>
-    </Setter>
   </Style>
   <Style Selector="Border.card.interactive:pointerover">
     <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
@@ -108,6 +102,10 @@
   <Style Selector="ListBoxItem">
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.S}"/>
     <Setter Property="Padding" Value="8,4"/>
+  </Style>
+  <Style Selector="ListBoxItem /template/ ContentPresenter#PART_ContentPresenter,
+                   ComboBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Transitions" Value="{x:Null}"/>
   </Style>
   <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>

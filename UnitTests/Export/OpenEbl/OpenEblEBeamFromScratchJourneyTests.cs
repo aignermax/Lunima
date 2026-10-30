@@ -1,3 +1,5 @@
+using CAP_Core.Export.Contracts;
+using CAP_Core.Export.OpenEbl;
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
@@ -210,14 +212,14 @@ public class OpenEblEBeamFromScratchJourneyTests
     private static FileOperationsViewModel CreateFileOperations(
         DesignCanvasViewModel canvas, IReadOnlyList<ComponentTemplate> templates)
     {
-        var fileOps = new FileOperationsViewModel(
+        var fileOps = new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(templates),
-            new GdsExportViewModel(new GdsExportService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: new ErrorConsoleService());
         fileOps.FileDialogService = new Mock<IFileDialogService>().Object;

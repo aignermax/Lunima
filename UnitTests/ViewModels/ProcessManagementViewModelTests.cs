@@ -1,4 +1,5 @@
 using System.IO;
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using System.Linq;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
@@ -26,7 +27,7 @@ public class ProcessManagementViewModelTests
     [Fact]
     public void Load_PopulatesCollectionsAndSetsHasProcess()
     {
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>());
         var process = new ProcessDefinition
         {
             Name = "P1",
@@ -59,7 +60,8 @@ public class ProcessManagementViewModelTests
             dialog.Setup(d => d.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
                   .ReturnsAsync(Path.Combine(dir, "table_layers.csv"));
 
-            var vm = new ProcessManagementViewModel(dialog.Object);
+            var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), dialog.Object,
+                new IProcessImporter[] { new UpdkYamlProcessImporter(), new NazcaCsvProcessImporter() });
             await vm.ImportFromPdkCommand.ExecuteAsync(null);
 
             vm.HasProcess.ShouldBeTrue();
@@ -73,7 +75,7 @@ public class ProcessManagementViewModelTests
     [Fact]
     public void Merge_AccumulatesComplementaryImports_AndEnrichesXsections()
     {
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>());
 
         // uPDK-style: cross-section width, no layers.
         vm.Merge(new ProcessDefinition
@@ -103,7 +105,8 @@ public class ProcessManagementViewModelTests
         dialog.Setup(d => d.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
               .ReturnsAsync((string?)null);
 
-        var vm = new ProcessManagementViewModel(dialog.Object);
+        var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), dialog.Object,
+                new IProcessImporter[] { new UpdkYamlProcessImporter(), new NazcaCsvProcessImporter() });
         await vm.ImportFromPdkCommand.ExecuteAsync(null);
 
         vm.HasProcess.ShouldBeFalse();
@@ -112,7 +115,7 @@ public class ProcessManagementViewModelTests
     [Fact]
     public void SetAvailablePresets_OnlyListsPdksWithAProcessBlock()
     {
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>());
         var withProcess = new PdkDraft { Name = "SiEPIC EBeam PDK", Process = new ProcessDefinition { Name = "SOI-220" } };
         var withoutProcess = new PdkDraft { Name = "Analysis Tools", Process = null };
 
@@ -125,7 +128,7 @@ public class ProcessManagementViewModelTests
     [Fact]
     public void SelectingAPreset_LoadsItsProcessIntoTheEditor()
     {
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>());
         var preset = new PdkDraft
         {
             Name = "CornerStone SiN 300nm",

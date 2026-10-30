@@ -104,7 +104,7 @@ public class IsaPlaygroundPhotonicDataMemoryTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_adderFixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider);
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
 
         vm.IsPhotonicDataMemoryAvailable.ShouldBeFalse("the 4-bit adder exposes no RAM signals");
         vm.IsPhotonicAddAvailable.ShouldBeTrue("the adder regression: ADD still offered");
@@ -150,7 +150,7 @@ public class IsaPlaygroundPhotonicDataMemoryTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_ramFixture.Network);
-        return new IsaPlaygroundViewModel(provider);
+        return new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
     }
 
     private static void RunToHalt(IsaPlaygroundViewModel vm)

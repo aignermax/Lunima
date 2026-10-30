@@ -23,6 +23,9 @@ public sealed class LiveSimulationScheduler
     private readonly TimeSpan _debounce;
     private CancellationTokenSource? _pendingCts;
     private Task _latest = Task.CompletedTask;
+    private Task _cancellation = Task.CompletedTask;
+    private Task? _retirement;
+    private bool _stopping;
 
     /// <summary>Initializes the scheduler.</summary>
     /// <param name="isSimulationOn">Whether the live simulation is switched on; off means requests are ignored.</param>
@@ -53,12 +56,12 @@ public sealed class LiveSimulationScheduler
     /// </summary>
     public void Request()
     {
-        if (!_isSimulationOn())
+        if (_stopping || !_isSimulationOn())
             return;
         CancelPending();
         var cts = new CancellationTokenSource();
         _pendingCts = cts;
-        _latest = RunAfterDebounceAsync(_latest, cts.Token);
+        _latest = RunAfterDebounceAsync(_latest, cts);
     }
 
     /// <summary>A routing pass ended: the routes are final, so the simulation catches up.</summary>
@@ -73,6 +76,21 @@ public sealed class LiveSimulationScheduler
     {
         IsWaitingForRouting = false;
         CancelPending();
+    }
+
+    /// <summary>Retires this scheduler and drains its outstanding run.</summary>
+    public Task StopAsync()
+    {
+        if (_retirement != null) return _retirement;
+        _stopping = true;
+        Cancel();
+        return _retirement = DrainAsync();
+    }
+
+    private async Task DrainAsync()
+    {
+        await WhenSettledAsync();
+        await _cancellation;
     }
 
     /// <summary>
@@ -92,19 +110,21 @@ public sealed class LiveSimulationScheduler
 
     private void CancelPending()
     {
-        _pendingCts?.Cancel();
+        if (_pendingCts is { } pending)
+            _cancellation = _cancellation.IsCompletedSuccessfully
+                ? pending.CancelAsync() : Task.WhenAll(_cancellation, pending.CancelAsync());
         _pendingCts = null;
     }
 
-    private async Task RunAfterDebounceAsync(Task previous, CancellationToken token)
+    private async Task RunAfterDebounceAsync(Task previous, CancellationTokenSource source)
     {
-        await DebounceAsync(token);
-        // Even a superseded request waits for its predecessor: the next run chains on this
-        // task, so finishing early would let two simulations overlap.
-        await WaitQuietlyAsync(previous);
+        var token = source.Token;
         try
         {
-            if (token.IsCancellationRequested || !_isSimulationOn())
+            await DebounceAsync(token);
+            // Superseded requests still wait for their predecessor, preventing overlap.
+            await WaitQuietlyAsync(previous);
+            if (_stopping || token.IsCancellationRequested || !_isSimulationOn())
                 return;
             if (_isRouting())
             {
@@ -117,6 +137,13 @@ public sealed class LiveSimulationScheduler
         catch (OperationCanceledException)
         {
             // Superseded by a newer request or switched off — the newer run owns the result.
+        }
+        finally
+        {
+            if (ReferenceEquals(_pendingCts, source)) _pendingCts = null;
+            // Cancellation callbacks may still be unwinding after the simulated job exits.
+            try { await _cancellation; }
+            finally { source.Dispose(); }
         }
     }
 

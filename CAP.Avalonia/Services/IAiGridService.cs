@@ -1,3 +1,5 @@
+using CAP_Contracts;
+
 namespace CAP.Avalonia.Services;
 
 /// <summary>
@@ -25,11 +27,18 @@ public interface IAiGridService
     /// </summary>
     Task<string> CreateConnectionAsync(string fromComponentId, string toComponentId);
 
+    /// <summary>Creates and routes under explicit external publication permission.</summary>
+    Task<string> CreateConnectionAsync(string fromComponentId, string toComponentId,
+        CancellationToken cancellationToken, ICommitPermission permission);
+
     /// <summary>
     /// Runs the S-Matrix simulation for the current canvas state.
     /// Returns a status message with the result.
     /// </summary>
     Task<string> RunSimulationAsync();
+
+    /// <summary>Runs detached physics under explicit external publication permission.</summary>
+    Task<string> RunSimulationAsync(CancellationToken cancellationToken, ICommitPermission permission);
 
     /// <summary>
     /// Returns the current light propagation values (loss, path length) for all connections.

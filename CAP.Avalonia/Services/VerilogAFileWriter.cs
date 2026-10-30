@@ -11,7 +11,7 @@ namespace CAP.Avalonia.Services;
 /// the root. The test bench's <c>pre_osdi components/&lt;name&gt;.osdi</c>
 /// paths resolve directly if the user compiles OSDI files in-place.
 /// </summary>
-public class VerilogAFileWriter
+public class VerilogAFileWriter : IVerilogAExportWriter
 {
     private const string ComponentsSubdir = "components";
 

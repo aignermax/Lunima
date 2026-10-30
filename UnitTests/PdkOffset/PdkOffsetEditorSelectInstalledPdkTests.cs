@@ -61,7 +61,7 @@ public class PdkOffsetEditorSelectInstalledPdkTests
         var manager = new PdkManagerViewModel();
         manager.RegisterPdk("Registry PDK", tempFile, isBundled: false, componentCount: 2);
 
-        var vm = new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), manager);
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), manager);
         return (vm, manager, tempFile);
     }
 
@@ -155,7 +155,7 @@ public class PdkOffsetEditorSelectInstalledPdkTests
         // Register a PDK with null file path (e.g. a hypothetical in-memory PDK)
         manager.RegisterPdk("No-Path PDK", filePath: null, isBundled: true, componentCount: 0);
 
-        var vm = new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), manager);
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), manager);
 
         vm.SelectedInstalledPdk = vm.AvailablePdks[0];
 
@@ -194,7 +194,7 @@ public class PdkOffsetEditorSelectInstalledPdkTests
             var manager = new PdkManagerViewModel();
             manager.RegisterPdk("Registry PDK", tempFile, isBundled: false, componentCount: 2);
 
-            var vm = new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), manager);
+            var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), manager);
             vm.SelectedInstalledPdk = vm.AvailablePdks[0];
 
             // Select the Waveguide (missing offset) and apply an offset
@@ -222,7 +222,7 @@ public class PdkOffsetEditorSelectInstalledPdkTests
     public void AvailablePdks_UpdatesWhenManagerGetsNewPdk()
     {
         var manager = new PdkManagerViewModel();
-        var vm = new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), manager);
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), new PdkLoader(), new PdkJsonSaver(), manager);
 
         vm.AvailablePdks.Count.ShouldBe(0);
 

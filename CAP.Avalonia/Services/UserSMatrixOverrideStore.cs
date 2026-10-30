@@ -1,3 +1,4 @@
+using CAP_Contracts.Logger;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using CAP_Core;
@@ -20,13 +21,13 @@ namespace CAP.Avalonia.Services;
 /// Keys follow the same shape as the project-scoped store:
 /// <c>"{pdkSource}::{templateName}"</c>, e.g. <c>"siepic-ebeam-pdk::2x2 MMI Coupler"</c>.
 /// </summary>
-public class UserSMatrixOverrideStore
+public class UserSMatrixOverrideStore : ITemplateSMatrixStore
 {
     private const string FileName = "sparam-overrides.json";
     private const string AppFolderName = "Lunima";
 
     private readonly string _filePath;
-    private readonly ErrorConsoleService? _errorConsole;
+    private readonly IDiagnosticSink? _errorConsole;
     private readonly Dictionary<string, ComponentSMatrixData> _overrides = new();
 
     /// <summary>
@@ -48,7 +49,7 @@ public class UserSMatrixOverrideStore
     /// Creates a store backed by the standard application-data location.
     /// Loads existing overrides from disk if the file is present.
     /// </summary>
-    public UserSMatrixOverrideStore(ErrorConsoleService? errorConsole = null)
+    public UserSMatrixOverrideStore(IDiagnosticSink? errorConsole = null)
         : this(BuildDefaultFilePath(), errorConsole)
     {
     }
@@ -56,7 +57,7 @@ public class UserSMatrixOverrideStore
     /// <summary>
     /// Test-friendly constructor that accepts an explicit file path.
     /// </summary>
-    public UserSMatrixOverrideStore(string filePath, ErrorConsoleService? errorConsole = null)
+    public UserSMatrixOverrideStore(string filePath, IDiagnosticSink? errorConsole = null)
     {
         _filePath = filePath;
         _errorConsole = errorConsole;
@@ -80,7 +81,7 @@ public class UserSMatrixOverrideStore
 
     /// <summary>
     /// Persists the current in-memory state to <see cref="FilePath"/>.
-    /// Failures are surfaced via <see cref="ErrorConsoleService"/>; the
+    /// Failures are surfaced via <see cref="IDiagnosticSink"/>; the
     /// in-memory state is preserved so the caller can retry.
     /// </summary>
     public void Save()

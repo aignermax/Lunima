@@ -1,3 +1,4 @@
+using CAP_DataAccess.Updates;
 using System.IO;
 using System.Net.Http;
 using CAP.Avalonia.Commands;
@@ -49,7 +50,13 @@ public static class MainViewModelTestHelper
         UpdateViewModel? updateViewModel = null,
         GdsPreviewRenderService? previewService = null,
         CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
-        CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null)
+        CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
+        CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore? designFiles = null,
+        GdsExportViewModel? gdsExportViewModel = null,
+        MonteCarloViewModel? monteCarloViewModel = null,
+        TimeDomainViewModel? transientViewModel = null,
+        EyeDiagramViewModel? eyeViewModel = null,
+        CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel? truthTableViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -67,20 +74,20 @@ public static class MainViewModelTestHelper
             new UnitTests.ComponentRegistry.RegistryClient.RegistryTestHarness().CreateClient());
         // A caller-supplied LeftPanel (UI-flow tests) must share canvas/prefs with the rest of the VM.
         leftPanel ??= CreateLeftPanelViewModel(canvas, libraryManager, pdkLoader, preferencesService, commandManager, registryBrowser);
-        var rightPanel = CreateRightPanelViewModel(canvas, preferencesService, logicNetworkProvider);
-        var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager);
+        var rightPanel = CreateRightPanelViewModel(canvas, preferencesService, logicNetworkProvider, truthTableViewModel);
+        var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager, monteCarloViewModel, transientViewModel, eyeViewModel);
 
         var errorConsoleService = new CAP_Core.ErrorConsoleService();
-        var gdsExportVm = new GdsExportViewModel(new GdsExportService(), errorConsoleService);
+        var gdsExportVm = gdsExportViewModel ?? new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService(), errorConsoleService);
         var updateVm = updateViewModel ?? new UpdateViewModel(
             new UpdateChecker(new HttpClient(), "aignermax", "Connect-A-PIC-Pro"),
             new UpdateDownloader(new HttpClient()),
             preferencesService,
             Mock.Of<IUrlLauncher>(),
             Mock.Of<IInstaller>());
-        var photonTorchVm = new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas);
-        var verilogAVm = new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas);
-        var gdsFactoryVm = new GdsFactoryExportViewModel(canvas, new GdsExportService(), errorConsole: errorConsoleService);
+        var photonTorchVm = new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new PhotonTorchExporter(), canvas);
+        var verilogAVm = new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas, Mock.Of<IUrlLauncher>());
+        var gdsFactoryVm = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), canvas, new GdsExportService(), errorConsole: errorConsoleService);
         // Test-isolated design-scoped GDS components (#830): registers imported
         // sets on the LeftPanel and caches .gds bytes in a unique temp dir so a
         // UI-flow import never touches the developer's real cache or PDKs.
@@ -89,20 +96,32 @@ public static class MainViewModelTestHelper
             capturedLeftPanel.RegisterDesignScopedPdk,
             capturedLeftPanel.RemoveDesignScopedPdk,
             Path.Combine(Path.GetTempPath(), $"cap-test-gds-cache-{Guid.NewGuid()}"));
+        var gdsSource = new CAP_DataAccess.Import.Gds.GdsSourceReader();
         var gdsImportButton = new CAP.Avalonia.ViewModels.GdsImport.GdsImportButtonViewModel(
             new CAP.Avalonia.Services.GdsImport.GdsImportService(
-                designScope,
+                gdsSource, designScope,
                 () => capturedLeftPanel.AllTemplates.ToList()),
             new CAP.Avalonia.Services.GdsImport.GdsPlacementExecutor(
                 canvas, commandManager, () => capturedLeftPanel.AllTemplates.ToList()),
             errorConsoleService);
 
+        var examples = new ExampleDesignsService(new FileExampleCatalog());
+        var recentProjects = new RecentProjectsService(preferencesService);
+        isaPlayground ??= new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel(examples);
+        var home = new CAP.Avalonia.ViewModels.Home.HomeViewModel(recentProjects, preferencesService, examples);
+
         return new MainViewModel(
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            home,
+            CAP.Avalonia.ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters.Create(
+                canvas, rightPanel, bottomPanel, commandManager, isaPlayground),
+            designFiles ?? new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             simulationService,
             new SimpleNazcaExporter(),
             new CAP_Core.Export.SaxExporter(),
             commandManager,
+            preferencesService,
             preferencesService,
             new GroupPreviewGenerator(),
             Mock.Of<IInputDialogService>(),
@@ -113,7 +132,7 @@ public static class MainViewModelTestHelper
             rightPanel,
             bottomPanel,
             new ViewportControlViewModel(canvas),
-            new PdkOffsetEditorViewModel(pdkLoader, new PdkJsonSaver(), new PdkManagerViewModel()),
+            new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), pdkLoader, new PdkJsonSaver(), new PdkManagerViewModel()),
             photonTorchVm,
             verilogAVm,
             gdsFactoryVm,
@@ -122,10 +141,13 @@ public static class MainViewModelTestHelper
             // tests don't contaminate each other or the developer's real file.
             new CAP.Avalonia.Services.UserSMatrixOverrideStore(
                 Path.Combine(Path.GetTempPath(), $"sparam-overrides-test-{Guid.NewGuid()}.json")),
-            previewService ?? new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")),
+            previewService ?? new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py"), new GdsPreviewDiskCache()),
             registryBrowser,
             gdsImportButton,
-            designScopedGdsComponents: designScope, pythonStartup: pythonStartup, isaPlayground: isaPlayground);
+            designScopedGdsComponents: designScope,
+            pythonStartup: pythonStartup,
+            hierarchyExpansion: new CAP.Avalonia.Services.GdsImport.GdsHierarchyExpansionService(gdsSource, designScope),
+            recentProjectsService: recentProjects);
     }
 
     /// <summary>
@@ -146,20 +168,23 @@ public static class MainViewModelTestHelper
         preferencesService ??= new UserPreferencesService(
             Path.Combine(Path.GetTempPath(), $"cap-test-prefs-{Guid.NewGuid()}.json"));
 
-        var leftPanel = new LeftPanelViewModel(
+        var isolatedUserPdkRoot = Path.Combine(Path.GetTempPath(), $"cap-test-userpdks-{Guid.NewGuid()}");
+        var leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             canvas,
             libraryManager,
             pdkLoader,
-            preferencesService,
+            preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
-            registryBrowser: registryBrowser);
+            registryBrowser: registryBrowser,
+            userPdkLibrary: new CAP_DataAccess.Components.AddCustomComponent.UserPdkStore(
+                isolatedUserPdkRoot, new CAP_DataAccess.Components.ComponentDraftMapper.PdkJsonSaver(), pdkLoader));
 
         // Isolate from the developer's real user-PDK folder: the startup reload must scan an
         // empty temp dir, otherwise template counts/status texts become machine-dependent
         // (UiFlowTestHost already isolates this way; CI is green only because its folder is empty).
-        var isolatedUserPdkRoot = Path.Combine(Path.GetTempPath(), $"cap-test-userpdks-{Guid.NewGuid()}");
+
         Directory.CreateDirectory(isolatedUserPdkRoot);
         leftPanel.UserPdkStartupRootOverride = isolatedUserPdkRoot;
 
@@ -172,7 +197,8 @@ public static class MainViewModelTestHelper
     public static RightPanelViewModel CreateRightPanelViewModel(
         DesignCanvasViewModel? canvas = null,
         UserPreferencesService? preferencesService = null,
-        CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null)
+        CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null,
+        CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel? truthTableViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         preferencesService ??= new UserPreferencesService(
@@ -191,11 +217,11 @@ public static class MainViewModelTestHelper
             new CompressLayoutViewModel(),
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
-            new PdkConsistencyViewModel(),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
+            new PdkConsistencyViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader()),
+            new AiAssistantViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), Mock.Of<IAiService>(), preferencesService),
             new OnaSweepViewModel(),
             new CAP.Avalonia.ViewModels.Export.Netlist.NetlistViewModel(),
-            new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel(),
+            truthTableViewModel ?? new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
                 builtNetworkProvider: logicNetworkProvider),
             // Production provider order (CanvasAndPanelExtensions): most specific
@@ -215,7 +241,10 @@ public static class MainViewModelTestHelper
     /// </summary>
     public static BottomPanelViewModel CreateBottomPanelViewModel(
         DesignCanvasViewModel? canvas = null,
-        CommandManager? commandManager = null)
+        CommandManager? commandManager = null,
+        MonteCarloViewModel? monteCarloViewModel = null,
+        TimeDomainViewModel? transientViewModel = null,
+        EyeDiagramViewModel? eyeViewModel = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -230,11 +259,11 @@ public static class MainViewModelTestHelper
             new ElementLockViewModel(),
             new ErrorConsoleViewModel(errorConsoleService),
             new AnalysisDockViewModel(
-                new TimeDomainViewModel(),
-                new EyeDiagramViewModel(),
-                new WavelengthSpectrumViewModel(),
+                transientViewModel ?? new TimeDomainViewModel(),
+                eyeViewModel ?? new EyeDiagramViewModel(),
+                new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()),
                 new AnalysisOutputPanelViewModel(),
-                new MonteCarloViewModel(),
+                monteCarloViewModel ?? new MonteCarloViewModel(),
                 new CAP.Avalonia.ViewModels.Analysis.CircuitOptimization.CircuitOptimizationViewModel(new CommandManager())));
     }
 }

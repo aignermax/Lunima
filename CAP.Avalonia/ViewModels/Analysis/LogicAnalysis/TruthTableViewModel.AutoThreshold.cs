@@ -37,7 +37,7 @@ public partial class TruthTableViewModel
     [RelayCommand]
     private async Task UseSuggestedThreshold()
     {
-        if (SuggestedThreshold is not { } suggested)
+        if (_work.IsStopping || SuggestedThreshold is not { } suggested)
             return;
         Threshold = suggested;
         await ExtractCommand.ExecuteAsync(null);
@@ -45,32 +45,38 @@ public partial class TruthTableViewModel
 
     /// <summary>Opens the Logic tab, where the extracted gate can be built into a network.</summary>
     [RelayCommand]
-    private void OpenInLogic() => OpenLogicRequested?.Invoke();
+    private void OpenInLogic() { if (!_work.IsStopping) OpenLogicRequested?.Invoke(); }
 
     /// <summary>Computes the largest-gap suggestion for a freshly extracted table.</summary>
-    private void SuggestThreshold(TruthTable table)
+    private void SuggestThreshold(TruthTable table, AnalysisSweepOperation operation)
     {
         var samples = table.Rows
             .SelectMany(row => row.Outputs.Values)
             .Select(value => new GatePowerSample(value.Power, null))
             .ToList();
         var suggestion = _thresholdAdvisor.Suggest(samples);
-        SuggestedThreshold = suggestion.LevelsOverlap ? null : suggestion.Threshold;
-        ThresholdSuggestionText = suggestion.LevelsOverlap
+        PublishStep(operation, () => SuggestedThreshold = suggestion.LevelsOverlap ? null : suggestion.Threshold);
+        PublishStep(operation, () => ThresholdSuggestionText = suggestion.LevelsOverlap
             ? Translate("TruthTable.NoThresholdGap")
             : string.Format(CultureInfo.InvariantCulture, Translate("MakeGate.Suggestion"),
-                suggestion.Threshold, suggestion.MarginDb);
-        RefreshCanUseSuggestedThreshold();
+                suggestion.Threshold, suggestion.MarginDb));
+        PublishStep(operation, RefreshCanUseSuggestedThreshold);
     }
 
-    private void ClearThresholdSuggestion()
+    private void ClearThresholdSuggestion(Func<bool> isCurrent)
     {
         SuggestedThreshold = null;
+        if (!isCurrent()) return;
         ThresholdSuggestionText = "";
+        if (!isCurrent()) return;
         CanUseSuggestedThreshold = false;
     }
 
-    partial void OnThresholdChanged(double value) => RefreshCanUseSuggestedThreshold();
+    partial void OnThresholdChanged(double value)
+    {
+        if (!_revertingPinCheck) _work.Invalidate();
+        RefreshCanUseSuggestedThreshold();
+    }
 
     private void RefreshCanUseSuggestedThreshold() =>
         CanUseSuggestedThreshold = SuggestedThreshold is { } suggested && Math.Abs(suggested - Threshold) > ThresholdTolerance;

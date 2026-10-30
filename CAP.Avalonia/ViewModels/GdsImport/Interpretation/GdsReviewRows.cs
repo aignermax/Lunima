@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Services.GdsImport;
 using CAP.Avalonia.Services.Localization;
+using CAP_Core.Components.PinKinds;
 using CAP_DataAccess.Import.Gds;
 using CAP_DataAccess.Import.Gds.LayerPicker;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -105,15 +106,64 @@ public sealed partial class GdsCellReviewRow : ObservableObject
     public GdsBoundingBox Bounds { get; }
     public GdsLayerGeometryScene Scene { get; }
     public ObservableCollection<GdsPortReviewRow> Ports { get; } = new();
-    [ObservableProperty] private string _displayName;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PassThroughSummaryText))]
+    [NotifyPropertyChangedFor(nameof(GeometryOnlySummaryText))]
+    private string _displayName;
     [ObservableProperty] private bool _expandChildren;
     [ObservableProperty] private bool _includeInGroup;
-    [ObservableProperty] private GdsModelCandidate? _selectedModel;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPassThroughAssumed))]
+    [NotifyPropertyChangedFor(nameof(PassThroughSummaryText))]
+    [NotifyPropertyChangedFor(nameof(IsShapeOnly))]
+    [NotifyPropertyChangedFor(nameof(GeometryOnlySummaryText))]
+    private GdsModelCandidate? _selectedModel;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPassThroughAssumed))]
+    [NotifyPropertyChangedFor(nameof(PassThroughSummaryText))]
+    [NotifyPropertyChangedFor(nameof(IsShapeOnly))]
+    [NotifyPropertyChangedFor(nameof(GeometryOnlySummaryText))]
+    private bool _geometryOnly;
     [ObservableProperty] private bool _detectionLimited;
     public bool PortsEdited { get; set; }
     public GdsCellReviewRow(string name, bool canExpand, GdsLayerGeometryScene scene)
     {
         CellName = name; _displayName = name; CanExpand = canExpand; Scene = scene; Bounds = scene.Bounds;
+    }
+    /// <summary>Choosing a model retracts the explicit shape-only decision — the model wins.</summary>
+    partial void OnSelectedModelChanged(GdsModelCandidate? value)
+    {
+        if (value != null) GeometryOnly = false;
+    }
+    /// <summary>
+    /// True when this cell keeps no mapped model and its ports qualify for the
+    /// lossless 2-pin pass-through default — the assumed model the review must
+    /// surface instead of applying it silently. Ports feed the import's own rule
+    /// (<see cref="GdsImportService.IsPassThroughEligible(IEnumerable{string?})"/>)
+    /// through the same review→draft conversion (<see cref="GdsPortReviewRow.ToPin"/>)
+    /// that <c>BuildInterpretation</c> persists, so hint and import can never drift.
+    /// An explicit shape-only decision (<see cref="GeometryOnly"/>) opts out.
+    /// </summary>
+    public bool IsPassThroughAssumed => !GeometryOnly && SelectedModel == null &&
+        GdsImportService.IsPassThroughEligible(Ports.Select(p =>
+            p.ToPin().IsElectrical == true ? PinKindHelper.ElectricalKindName : (string?)null));
+    /// <summary>True when the reviewer explicitly declined every model, pass-through included.</summary>
+    public bool IsShapeOnly => GeometryOnly && SelectedModel == null;
+    /// <summary>Summary-stage line naming this cell's assumed pass-through model; empty when mapped or ineligible.</summary>
+    public string PassThroughSummaryText => IsPassThroughAssumed
+        ? string.Format(LocalizationService.Instance.Translate("GdsReview.PassThroughSummaryRow"), DisplayName)
+        : "";
+    /// <summary>Summary-stage line naming this cell's explicit shape-only decision; empty otherwise.</summary>
+    public string GeometryOnlySummaryText => IsShapeOnly
+        ? $"{DisplayName}: {LocalizationService.Instance.Translate("GdsReview.GeometryOnly")}"
+        : "";
+    /// <summary>Re-raises the model-decision hints after port edits; collection and kind changes don't notify the row.</summary>
+    public void NotifyPassThroughChanged()
+    {
+        OnPropertyChanged(nameof(IsPassThroughAssumed));
+        OnPropertyChanged(nameof(PassThroughSummaryText));
+        OnPropertyChanged(nameof(IsShapeOnly));
+        OnPropertyChanged(nameof(GeometryOnlySummaryText));
     }
     public override string ToString() => CellName;
 }

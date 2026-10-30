@@ -33,10 +33,10 @@ public class Rung5IsaPlaygroundJourneyTests
     [Fact]
     public async Task FourBitAdderCountTo5_PhotonicAdd_SurvivesSaveLoad_MziFallsBackToGoldenAlu()
     {
-        using var container = BuildContainer();
+        await using var container = BuildContainer();
         var networkProvider = container.GetRequiredService<BuiltLogicNetworkProvider>();
         var playground = container.GetRequiredService<IsaPlaygroundViewModel>();
-        var examples = new ExampleDesignsService().GetExamples();
+        var examples = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples();
 
         // Step 1: open the shipped 4-bit adder the way the Home Examples tile does.
         var canvas = new DesignCanvasViewModel();

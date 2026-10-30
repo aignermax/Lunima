@@ -16,6 +16,7 @@ public partial class WaveguideConnectionManager
     public WaveguideConnectionManager(WaveguideRouter router)
     {
         _router = router;
+        _contentionRepair = new(router, SnapshotConnections, ObstacleWidthFor, IsCrossingParticipant);
     }
 
     public List<WaveguideConnection> Connections { get; } = new();
@@ -560,7 +561,7 @@ public partial class WaveguideConnectionManager
     /// <summary>
     /// Tolerance for checking if path endpoints still match pin positions (in µm).
     /// </summary>
-    private const double EndpointToleranceMicrometers = 1.0;
+    private const double EndpointToleranceMicrometers = CrossingRoutePolicy.EndpointToleranceMicrometers;
 
     /// <summary>
     /// Incremental routing: preserves existing valid routes, only re-routes broken or new connections.
@@ -595,7 +596,7 @@ public partial class WaveguideConnectionManager
             // neither walls in other wires nor counts as a sibling they could cross.
             if (IsKnownUnroutable(connection))
                 continue;
-            if (IsSettledPiece(connection))
+            if (CrossingRoutePolicy.IsSettledPiece(connection))
             {
                 validConnections.Add(connection);
                 continue;
@@ -650,7 +651,8 @@ public partial class WaveguideConnectionManager
             connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
             RefreshStyledObstacleCollision(connection, router);
             progressCallback?.Invoke();
-            bool provenUnroutable = retriedBlocked.Contains(connection) && IsBlockedAtUnchangedPins(connection);
+            bool provenUnroutable = retriedBlocked.Contains(connection) && IsBlockedAtUnchangedPins(connection)
+                && !HitRouteTimeBudget(connection);
             if (provenUnroutable)
                 UnroutableWires.Remember(connection);
             // Neither a wire that failed again with unchanged pins (an earlier pass already
@@ -672,7 +674,7 @@ public partial class WaveguideConnectionManager
                 // full re-route with ordering strategies gets a chance to untangle it.
                 // Blocked fallbacks are otherwise NOT counted as failures here: they have
                 // valid geometry and are registered as obstacles.
-                if (cascadeWorthy && CrossesAnyRoutedSibling(connection, routedSoFar))
+                if (cascadeWorthy && RouteCrossingPolicy.CrossesAnyRoutedSibling(connection, routedSoFar))
                     failedCount++;
                 routedSoFar.Add(connection);
             }
@@ -783,7 +785,7 @@ public partial class WaveguideConnectionManager
                 // as routing failures for ordering optimization. Grid obstacles cannot
                 // represent sub-cell pin pitches (flat PDK components), so the geometric
                 // check decides whether an ordering counts as clean.
-                if (connection.IsBlockedFallback || CrossesAnyRoutedSibling(connection, routedSoFar))
+                if (connection.IsBlockedFallback || RouteCrossingPolicy.CrossesAnyRoutedSibling(connection, routedSoFar))
                 {
                     failedCount++;
                     failedConnections.Add(connection);
@@ -807,18 +809,6 @@ public partial class WaveguideConnectionManager
     private static bool AllFailuresEndpointBlocked(List<WaveguideConnection> failedConnections) =>
         failedConnections.Count > 0 &&
         failedConnections.All(c => c.FailureReason == RoutingFailureReason.EndpointBlocked);
-
-    /// <summary>
-    /// True when the connection's routed geometry properly crosses any already-routed
-    /// sibling in this pass. Touching endpoints (shared fan-out regions) do not count.
-    /// </summary>
-    private static bool CrossesAnyRoutedSibling(
-        WaveguideConnection connection, List<WaveguideConnection> routedSoFar)
-    {
-        return routedSoFar.Any(other =>
-            other.RoutedPath != null &&
-            PathIntersectionDetector.Crosses(connection.RoutedPath!, other.RoutedPath));
-    }
 
     /// <summary>
     /// Generates different orderings to try.

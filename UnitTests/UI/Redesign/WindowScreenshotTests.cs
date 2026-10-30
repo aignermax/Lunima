@@ -85,7 +85,7 @@ public class WindowScreenshotTests
 
         var window = new ProcessManagementWindow
         {
-            DataContext = new ProcessManagementViewModel(Mock.Of<IFileDialogService>()),
+            DataContext = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>()),
         };
         window.Show();
         try

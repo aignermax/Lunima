@@ -1,3 +1,4 @@
+using CAP_DataAccess.Persistence.NativeDesign;
 namespace CAP.Avalonia.Services.GdsImport.LayerVisibility;
 
 /// <summary>

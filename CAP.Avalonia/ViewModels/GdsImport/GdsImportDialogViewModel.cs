@@ -284,7 +284,7 @@ public partial class GdsImportDialogViewModel : ObservableObject
 
         try
         {
-            var analysis = await GdsImportService.AnalyzeAsync(GdsFilePath, token);
+            var analysis = await _importService.AnalyzeAsync(GdsFilePath, token);
             _analyzedLibrary = analysis.Library;
             _reviewSourceBytes = analysis.SourceBytes;
             _reviewSourceHash = analysis.SourceSha256;

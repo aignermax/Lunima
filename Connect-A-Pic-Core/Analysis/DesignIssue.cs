@@ -153,7 +153,14 @@ public enum DesignIssueType
     /// error: a waveguide cannot cross a die edge — dies connect only through facing edge
     /// couplers (a die-to-die link).
     /// </summary>
-    CrossDieWaveguide
+    CrossDieWaveguide,
+
+    /// <summary>
+    /// A connection carries a length target (length matching) its routed geometry does not
+    /// meet within the recorded tolerance — e.g. no collision-free meander fits after a move.
+    /// The interferometer the target was set for will be out of balance.
+    /// </summary>
+    LengthTargetNotMet
 }
 
 /// <summary>

@@ -51,7 +51,7 @@ public class HomeViewModelTests : IDisposable
     // Hermetic: examples rooted in an empty temp dir so the repo's real
     // examples/ folder can't leak into these tests via the walk-up discovery.
     private HomeViewModel CreateHomeViewModel() =>
-        new(_recentProjects, _preferences, new ExampleDesignsService(_emptyExamplesBase));
+        new(_recentProjects, _preferences, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_emptyExamplesBase)));
 
     [Fact]
     public void Constructor_StartsVisible()

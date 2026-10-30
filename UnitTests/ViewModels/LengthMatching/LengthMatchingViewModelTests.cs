@@ -1,5 +1,6 @@
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Routing;
 using CAP_Core.Routing.MeanderGeneration;
@@ -178,10 +179,13 @@ public class LengthMatchingViewModelTests
         double directLength = connVm.Connection.PathLengthMicrometers;
 
         var vm = new LengthMatchingViewModel(canvas) { SelectedConnection = connVm };
+        vm.HasLengthTarget.ShouldBeFalse("nothing to reset before a target exists");
         vm.TargetLengthText = (directLength * 3)
             .ToString(System.Globalization.CultureInfo.InvariantCulture);
+        vm.BendRadiusText = "20";
         vm.ApplyCommand.Execute(null);
         connVm.Connection.IsRouteFrozen.ShouldBeTrue();
+        vm.HasLengthTarget.ShouldBeTrue();
 
         await vm.ClearCommand.ExecuteAsync(null);
 
@@ -189,7 +193,10 @@ public class LengthMatchingViewModelTests
         connVm.Connection.LengthToleranceMicrometers.ShouldBeNull();
         connVm.Connection.IsRouteFrozen.ShouldBeFalse(
             "clearing hands the route back to the normal router");
+        connVm.Connection.BendRadiusMicrometers.ShouldBe(WaveguideConnection.DefaultBendRadiusMicrometers,
+            "the meander's radius must not constrain later routes");
         connVm.Connection.RoutedPath.ShouldNotBeNull("Clear triggers a canvas re-route");
+        vm.HasLengthTarget.ShouldBeFalse("the reset button disappears once everything is reset");
         vm.IsStatusError.ShouldBeFalse();
         vm.HasSuccessStatus.ShouldBeTrue();
     }

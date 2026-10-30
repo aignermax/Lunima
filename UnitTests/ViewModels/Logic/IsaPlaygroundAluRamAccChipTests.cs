@@ -97,7 +97,7 @@ public class IsaPlaygroundAluRamAccChipTests : IClassFixture<AluRamAccChipExampl
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        return new IsaPlaygroundViewModel(provider);
+        return new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
     }
 
     /// <summary>The golden model's per-step trace of the same program, formatted as the VM renders it.</summary>
@@ -137,7 +137,7 @@ public class IsaPlaygroundAluRamChipAccStaysGreyTests : IClassFixture<AluRamChip
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(_fixture.Network);
-        var vm = new IsaPlaygroundViewModel(provider);
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
 
         vm.IsPhotonicAccumulatorAvailable.ShouldBeFalse(
             "the ALU + RAM chip has no ACC.D0–ACC.D3 register, so the accumulator stays electronic");

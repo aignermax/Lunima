@@ -42,7 +42,7 @@ public class HomePinSearchTests : IDisposable
 
     // Hermetic: examples rooted in an empty temp dir (see HomeViewModelTests).
     private HomeViewModel CreateHomeViewModel() =>
-        new(_recentProjects, _preferences, new ExampleDesignsService(_emptyExamplesBase));
+        new(_recentProjects, _preferences, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_emptyExamplesBase)));
 
     [Fact]
     public void RecentList_ShowsPinnedEntriesFirst()

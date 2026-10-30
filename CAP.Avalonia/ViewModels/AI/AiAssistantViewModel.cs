@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using Avalonia.Threading;
@@ -18,7 +19,7 @@ namespace CAP.Avalonia.ViewModels.AI;
 public partial class AiAssistantViewModel : ObservableObject
 {
     private readonly IAiService _aiService;
-    private readonly UserPreferencesService _preferencesService;
+    private readonly IAiPreferences _preferencesService;
     private readonly IAiToolRegistry? _toolRegistry;
     private readonly IUrlLauncher _urlLauncher;
     private CancellationTokenSource? _cancellationSource;
@@ -49,15 +50,15 @@ public partial class AiAssistantViewModel : ObservableObject
     /// Initializes the ViewModel, loads persisted API key, and shows a welcome message.
     /// </summary>
     public AiAssistantViewModel(
+        IUrlLauncher urlLauncher,
         IAiService aiService,
-        UserPreferencesService preferencesService,
-        IAiToolRegistry? toolRegistry = null,
-        IUrlLauncher? urlLauncher = null)
+        IAiPreferences preferencesService,
+        IAiToolRegistry? toolRegistry = null)
     {
         _aiService = aiService;
         _preferencesService = preferencesService;
         _toolRegistry = toolRegistry;
-        _urlLauncher = urlLauncher ?? PlatformShellLauncher.CreateDefault();
+        _urlLauncher = urlLauncher;
 
         var savedKey = _preferencesService.GetAiApiKey();
         if (!string.IsNullOrEmpty(savedKey))

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CAP_DataAccess.Persistence.NativeDesign;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Export;
@@ -25,6 +26,48 @@ public class FileOperationsActiveProcessTests
     public FileOperationsActiveProcessTests()
     {
         _library = new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LoadDesign_ProcessWarningObservesAssignedSelection(bool hasStoredSelection)
+    {
+        var (vm, _) = CreateFileOperationsSetup();
+        var path = Path.Combine(Path.GetTempPath(), $"test_process_warning_{Guid.NewGuid():N}.lun");
+        var document = new DesignFileData
+        {
+            FormatVersion = "2.0",
+            ActiveProcess = hasStoredSelection ? new ActiveProcessData
+            {
+                DisplayName = "Missing process",
+                MemberPdkNames = new List<string> { "Unavailable PDK" }
+            } : null,
+            Components = new List<ComponentData>
+            {
+                new() { TemplateName = "Missing component", PdkSource = "Unavailable PDK", Identifier = "missing_1" }
+            }
+        };
+        ActiveProcessSelection? observedSelection = null;
+        string? warning = null;
+        vm.OnProcessMigrationWarning = message =>
+        {
+            warning = message;
+            observedSelection = vm.ActiveProcess;
+        };
+        try
+        {
+            await new NativeDesignFileStore().WriteAsync(path, document);
+            (await vm.LoadDesignFromPathAsync(path)).ShouldBeTrue();
+            warning.ShouldNotBeNullOrEmpty();
+            observedSelection.ShouldNotBeNull();
+            observedSelection.ShouldBeSameAs(vm.ActiveProcess);
+        }
+        finally
+        {
+            (vm as IDisposable)?.Dispose();
+            if (File.Exists(path)) File.Delete(path);
+        }
     }
 
     [Fact]
@@ -198,13 +241,24 @@ public class FileOperationsActiveProcessTests
         var canvas = new DesignCanvasViewModel();
         var commandManager = new CommandManager();
         var nazcaExporter = new SimpleNazcaExporter();
-        var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService());
+        var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService());
         var photonTorchExport = new PhotonTorchExportViewModel(
-            new CAP_Core.Export.PhotonTorchExporter(), canvas);
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            new CAP_Core.Export.PhotonTorchExporter(),
+            canvas);
 
         var vm = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, new CAP_Core.Export.SaxExporter(), _library,
-            gdsExport, photonTorchExport, null!, errorConsole);
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+            canvas,
+            commandManager,
+            nazcaExporter,
+            new CAP_Core.Export.SaxExporter(),
+            _library,
+            gdsExport,
+            photonTorchExport,
+            null!,
+            errorConsole);
 
         return (vm, canvas);
     }

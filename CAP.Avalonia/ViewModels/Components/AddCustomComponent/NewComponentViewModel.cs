@@ -5,6 +5,7 @@ using Avalonia.Media.Imaging;
 using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.Services.AddCustomComponent;
 using CAP.Avalonia.Services.Solvers;
+using CAP.Avalonia.Services.Lifetime;
 using CAP_Core.Solvers.Fdtd;
 using CAP_DataAccess.Components.AddCustomComponent;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
@@ -14,8 +15,38 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace CAP.Avalonia.ViewModels.Components.AddCustomComponent;
 
-public partial class NewComponentViewModel : ObservableObject, IDisposable
+public partial class NewComponentViewModel : ObservableObject, IDisposable, IAsyncDisposable
 {
+    /// <summary>Retires editor work and awaits preview, solver and cloud cleanup.</summary>
+    public Task StopAsync() => _retirement ??= RetireAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private readonly ShellWorkScope _work = new();
+    private Task? _retirement;
+
+    private async Task RetireAsync()
+    {
+        var work = _work.StopAsync();
+        ClearPendingCloudJob();
+        SaveCommand.NotifyCanExecuteChanged();
+        ComputeSMatrixCommand.NotifyCanExecuteChanged();
+        if (BackendSelection != null) BackendSelection.PropertyChanged -= OnBackendSelectionChanged;
+        try { await Task.WhenAll(work, BackendSelection?.StopAsync() ?? Task.CompletedTask); }
+        finally
+        {
+            PreviewBitmap?.Dispose();
+            PreviewBitmap = null;
+            _lastPreview = null;
+            _computedModel = null;
+            HasPreview = false;
+            HasSMatrix = false;
+            Saved = null;
+            PickPyFile = null;
+            PickSMatrixFile = null;
+            ShowStoredSMatrices = null;
+            ConfirmOverwrite = null;
+            CreateNewPdk = null;
+        }
+    }
     private const int PreviewBitmapPixels = 512;
 
     private static readonly IReadOnlyList<GeometryBackend> _availableBackends =
@@ -23,7 +54,7 @@ public partial class NewComponentViewModel : ObservableObject, IDisposable
 
     private readonly ComponentGeometryExtractor _extractor;
     private readonly IFdtdSMatrixService? _fdtd;
-    private readonly UserPdkStore _store;
+    private readonly IUserPdkLibrary _store;
     private readonly CAP_Core.ErrorConsoleService? _errorConsole;
 
     private GeometryExtractResult? _lastPreview;
@@ -65,20 +96,24 @@ public partial class NewComponentViewModel : ObservableObject, IDisposable
     public Func<string, string, Task<bool>>? ConfirmOverwrite { get; set; }
 
     public NewComponentViewModel(
+        CAP_DataAccess.Import.ISParameterImportCatalog importCatalog,
         ComponentGeometryExtractor extractor,
         IFdtdSMatrixService? fdtd,
-        UserPdkStore store,
+        IUserPdkLibrary store,
         IReadOnlyList<ProcessDefinition> processes,
         CAP_Core.ErrorConsoleService? errorConsole = null,
         Services.Solvers.FdtdBackendRegistry? fdtdBackendRegistry = null,
-        Services.IUrlLauncher? urlLauncher = null)
+        Services.IUrlLauncher? urlLauncher = null,
+        Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
     {
+        _sMatrixImporters = importCatalog ?? throw new ArgumentNullException(nameof(importCatalog));
         _extractor = extractor;
         _fdtd = fdtd;
         _store = store;
         _errorConsole = errorConsole;
         Processes = processes;
-        InitFdtdBackendSelection(fdtdBackendRegistry, urlLauncher);
+        _work.RegisterWith(applicationWork, StopAsync);
+        InitFdtdBackendSelection(fdtdBackendRegistry, urlLauncher, applicationWork);
 
         RefreshPdkChoices();
         if (AvailableCustomPdks.Count > 0)
@@ -124,30 +159,42 @@ public partial class NewComponentViewModel : ObservableObject, IDisposable
     private GeometryReference BuildReference() => GeometryReference.RawCode(SelectedBackend, Code);
 
     [RelayCommand]
-    private async Task LoadCodeFromFile()
+    private Task LoadCodeFromFile() => _work.RunAsync(async stop =>
     {
-        if (PickPyFile is null) return;
-        var content = await PickPyFile();
-        if (content is not null) Code = content;
-    }
+        if (IsBusy || PickPyFile is null) return;
+        IsBusy = true;
+        try
+        {
+            var content = await PickPyFile();
+            if (!_work.IsStopping && !stop.IsCancellationRequested && content is not null) Code = content;
+        }
+        finally { IsBusy = false; }
+    });
 
     [RelayCommand]
-    private async Task RunPreview()
+    private Task RunPreview() => _work.RunAsync(RunPreviewCoreAsync);
+
+    private async Task RunPreviewCoreAsync(System.Threading.CancellationToken ct)
     {
         if (IsBusy) return;
         IsBusy = true;
         try
         {
             InvalidatePreview();
-            await EnsurePreviewAsync();
+            await EnsurePreviewAsync(ct);
         }
+        catch (OperationCanceledException) when (_work.IsStopping || ct.IsCancellationRequested) { }
         finally
         {
             IsBusy = false;
         }
     }
 
-    private async Task<bool> EnsurePreviewAsync()
+    private Task<bool> EnsurePreviewAsync(System.Threading.CancellationToken caller = default) =>
+        _work.RunAsync(stop => EnsurePreviewCoreAsync(caller, stop));
+
+    private async Task<bool> EnsurePreviewCoreAsync(System.Threading.CancellationToken caller,
+        System.Threading.CancellationToken stop)
     {
         if (_lastPreview is { Success: true })
         {
@@ -155,7 +202,11 @@ public partial class NewComponentViewModel : ObservableObject, IDisposable
         }
 
         var reference = BuildReference();
-        var result = await _extractor.ExtractAsync(reference);
+        using var cancellation = System.Threading.CancellationTokenSource.CreateLinkedTokenSource(caller, stop);
+        var result = await _extractor.ExtractAsync(reference, cancellation.Token);
+        _work.ThrowIfStopping();
+        caller.ThrowIfCancellationRequested();
+        cancellation.Token.ThrowIfCancellationRequested();
         _lastPreview = result;
         HasPreview = result.Success;
         PreviewBitmap = result.Success

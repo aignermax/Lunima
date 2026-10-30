@@ -10,7 +10,7 @@ namespace CAP.Avalonia.ViewModels.Panels.PdkTrash;
 
 public partial class PdkTrashViewModel : ObservableObject
 {
-    private readonly PdkTrashService _trash;
+    private readonly IPdkTrash _trash;
     private readonly ErrorConsoleService? _errorConsole;
 
     public ObservableCollection<PdkTrashEntryViewModel> Entries { get; } = new();
@@ -23,7 +23,7 @@ public partial class PdkTrashViewModel : ObservableObject
 
     public Action<PdkTrashRestoreResult>? OnRestored { get; set; }
 
-    public PdkTrashViewModel(PdkTrashService trash, ErrorConsoleService? errorConsole = null)
+    public PdkTrashViewModel(IPdkTrash trash, ErrorConsoleService? errorConsole = null)
     {
         _trash = trash ?? throw new ArgumentNullException(nameof(trash));
         _errorConsole = errorConsole;

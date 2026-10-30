@@ -50,6 +50,14 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(IsGateSectionVisible));
     }
 
+    private void UnwireWorkspaceContext()
+    {
+        RightPanel.TruthTable.PropertyChanged -= OnTruthTablePropertyChanged;
+        WorkspaceSwitch.PropertyChanged -= OnWorkspaceContextChanged;
+        LeftRail.PropertyChanged -= OnLeftRailChanged;
+        SystemOverview.ChipletActivated = null;
+    }
+
     private void OnTruthTablePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(TruthTableViewModel.IsGroupSelected))

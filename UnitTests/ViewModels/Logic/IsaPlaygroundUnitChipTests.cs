@@ -43,7 +43,7 @@ public class IsaPlaygroundUnitChipTests
     [Fact]
     public void Chips_AreNamedAluZRamAccPc_InMachineOrder()
     {
-        var vm = new IsaPlaygroundViewModel(new BuiltLogicNetworkProvider());
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),new BuiltLogicNetworkProvider());
 
         vm.UnitChips.Select(chip => chip.UnitName)
             .ShouldBe(new[] { "ALU", "Z", "RAM", "ACC", "PC" });
@@ -52,7 +52,7 @@ public class IsaPlaygroundUnitChipTests
     [Fact]
     public void NoNetwork_ToggleOff_AllChipsElectronic()
     {
-        var vm = new IsaPlaygroundViewModel(new BuiltLogicNetworkProvider());
+        var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),new BuiltLogicNetworkProvider());
 
         vm.IsPhotonicToggleEnabled.ShouldBeFalse("no accepted network, no toggle");
         AssertChips(vm, alu: false, z: false, ram: false, acc: false, pc: false);
@@ -105,7 +105,7 @@ public class IsaPlaygroundUnitChipTests
     {
         var provider = new BuiltLogicNetworkProvider();
         provider.Publish(network);
-        return new IsaPlaygroundViewModel(provider);
+        return new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider);
     }
 
     private static void AssertChips(

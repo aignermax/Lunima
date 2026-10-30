@@ -13,6 +13,8 @@ namespace CAP_Core.Analysis.CircuitOptimization
         /// <inheritdoc/>
         public string Name { get; }
 
+        internal PinPowerObjective CopyForSnapshot() => new(_pinIds.ToArray(), Name, _maximize);
+
         /// <summary>Creates the objective for a set of monitored pins.</summary>
         /// <param name="pinIds">Pin GUIDs whose powers are summed into the score.</param>
         /// <param name="name">Display name for the ranking.</param>

@@ -226,7 +226,7 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
                 var drawn = canvasTargets.Select((target, index) => new DrawnRouteSnapshot(
                     target, connectionStates[index].OldPath, connectionStates[index].OldAsDrawn)).ToList();
                 UnfreezeTargets(canvasTargets);
-                await _canvas.RecalculateRoutesAsync();
+                await ImportedRoutingRequest.RunAsync(_canvas, canvasTargets, () => stopped);
                 kept = KeepDrawnRouteWhereBlocked(drawn);
                 stateCommand.RootTopology?.CaptureAfter();
             }

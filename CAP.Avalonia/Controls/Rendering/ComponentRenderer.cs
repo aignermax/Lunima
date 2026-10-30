@@ -37,7 +37,6 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
     /// the names of its children are left out.</summary>
     internal const double GroupOverviewZoom = 0.25;
 
-    private static readonly IBrush LockIconBackdrop = CanvasPalette.SurfaceBrush;
     private static readonly IBrush DimmedChildNameBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray300, 0x80));
 
     /// <inheritdoc/>
@@ -312,30 +311,7 @@ public sealed partial class ComponentRenderer : ICanvasRenderer
     private static void DrawLockIcon(DrawingContext context, ComponentViewModel comp, double zoom)
     {
         double iconSize = Math.Clamp(Math.Min(comp.Width, comp.Height) * 0.25, 12, 24);
-        double iconX = comp.X + comp.Width - iconSize - 4;
-        double iconY = comp.Y + comp.Height - iconSize - 4;
-
-        context.DrawEllipse(LockIconBackdrop, null,
-            new Point(iconX + iconSize / 2, iconY + iconSize / 2), iconSize / 2, iconSize / 2);
-
-        double bodyWidth = iconSize * 0.5;
-        double bodyHeight = iconSize * 0.4;
-        double bodyX = iconX + (iconSize - bodyWidth) / 2;
-        double bodyY = iconY + iconSize * 0.5;
-        double corner = bodyWidth * 0.15;
-        context.DrawRectangle(CanvasPalette.WarningBrush, null, new Rect(bodyX, bodyY, bodyWidth, bodyHeight), corner, corner);
-
-        double shackleWidth = iconSize * 0.34;
-        double shackleHeight = iconSize * 0.24;
-        double shackleCenterX = iconX + iconSize / 2;
-        var shackleGeometry = new StreamGeometry();
-        using (var ctx = shackleGeometry.Open())
-        {
-            ctx.BeginFigure(new Point(shackleCenterX - shackleWidth / 2, bodyY), false);
-            ctx.ArcTo(new Point(shackleCenterX + shackleWidth / 2, bodyY),
-                new Size(shackleWidth / 2, shackleHeight), 0, false, SweepDirection.Clockwise);
-        }
-        context.DrawGeometry(null, new Pen(CanvasPalette.WarningBrush, iconSize * 0.09), shackleGeometry);
+        LengthLockOverlay.DrawPadlock(context, comp.X + comp.Width - iconSize - 4, comp.Y + comp.Height - iconSize - 4, iconSize);
     }
 
     private static bool IsComponentDimmedInEditMode(ComponentViewModel comp, DesignCanvasViewModel vm)

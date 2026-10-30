@@ -12,6 +12,9 @@ namespace CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.MakeGate;
 /// </summary>
 public partial class MakeGateViewModel
 {
+    private Func<bool>? _resultPublicationGuard;
+    private bool _simulationAdmitted;
+    private bool CanPublishResult => _resultPublicationGuard?.Invoke() != false;
     /// <summary>
     /// Threshold handed to the extractor. The rows are re-classified locally against
     /// the suggested or user threshold afterwards, so its value only has to be valid.
@@ -27,9 +30,11 @@ public partial class MakeGateViewModel
 
     /// <summary>Runs the truth-table extraction for the chosen pin roles.</summary>
     [RelayCommand]
-    private async Task Simulate()
+    private Task Simulate() => _session.RunAsync(SimulateCoreAsync);
+
+    private async Task SimulateCoreAsync(CancellationToken stop)
     {
-        if (IsProcessing || _group == null)
+        if (_simulationAdmitted || IsProcessing || _group == null || !IsActive || !_session.IsConfiguredCurrent)
             return;
         var problem = ValidatePins();
         if (problem != null)
@@ -38,12 +43,25 @@ public partial class MakeGateViewModel
             return;
         }
 
-        ResetResult();
-        _simulateCts = new CancellationTokenSource();
-        IsProcessing = true;
-        StatusText = Translate("MakeGate.Simulating");
+        AnalysisSweepOperation? operation = null;
+        _simulationAdmitted = true;
         try
         {
+            operation = _session.Begin(stop);
+            if (operation == null) return;
+            var version = _session.Version;
+            await _publication.PublishAsync(() =>
+            {
+                operation.ThrowIfObsolete();
+                ResetResultDisplay(version);
+                operation.ThrowIfObsolete();
+                IsProcessing = true;
+                operation.ThrowIfObsolete();
+                StatusText = Translate("MakeGate.Simulating");
+                operation.ThrowIfObsolete();
+            });
+            operation.ThrowIfObsolete();
+            var shortNames = Pins.ToDictionary(pin => pin.PinName, FinalName);
             var table = await _extractor.ExtractAsync(
                 _group,
                 InputRows.Select(p => p.PinName).ToList(),
@@ -51,28 +69,35 @@ public partial class MakeGateViewModel
                 BiasRows.Select(p => p.PinName).ToList(),
                 ExtractionThreshold,
                 ResolveWavelengthNm(),
-                _simulateCts.Token);
-            ShowResult(table);
+                operation.Token);
+            await _publication.PublishAsync(() =>
+                operation.TryPublish(() => ShowResult(table, shortNames, () => operation.CanPublish)));
         }
         catch (OperationCanceledException)
         {
-            StatusText = Translate("MakeGate.Cancelled");
+            if (operation?.IsContextCurrent == true) StatusText = Translate("MakeGate.Cancelled");
         }
         catch (Exception ex)
         {
-            StatusText = string.Format(Translate("MakeGate.Failed"), ex.Message);
+            if (operation?.CanPublish == true)
+                StatusText = string.Format(Translate("MakeGate.Failed"), ex.Message);
         }
         finally
         {
-            IsProcessing = false;
-            _simulateCts?.Dispose();
-            _simulateCts = null;
+            _simulationAdmitted = false;
+            try { if (operation != null) IsProcessing = false; }
+            finally { await _session.CompleteAsync(operation); }
         }
     }
 
     /// <summary>Cancels a running simulation.</summary>
     [RelayCommand]
-    private void CancelSimulation() => _simulateCts?.Cancel();
+    private void CancelSimulation()
+    {
+        if (!IsProcessing || !_session.IsConfiguredCurrent) return;
+        _session.Cancel();
+        StatusText = Translate("MakeGate.Cancelled");
+    }
 
     /// <summary>
     /// Checks the roles and names: 1 to <see cref="TruthTableExtractor.MaxLogicInputs"/>
@@ -99,22 +124,36 @@ public partial class MakeGateViewModel
         pin.Role == GatePinRole.Unused || string.IsNullOrWhiteSpace(pin.Name) ? pin.PinName : pin.Name.Trim();
 
     /// <summary>Builds one power-bar row per input pattern and output, then suggests the threshold.</summary>
-    private void ShowResult(TruthTable table)
+    private void ShowResult(TruthTable table, IReadOnlyDictionary<string, string> shortNames, Func<bool> canPublish)
     {
-        _table = table;
-        Rows.Clear();
-        var shortNames = Pins.ToDictionary(p => p.PinName, FinalName);
-        var fullScale = table.Rows.SelectMany(r => r.Outputs.Values).Select(v => v.Power).DefaultIfEmpty(0).Max();
-        foreach (var row in table.Rows)
+        var previous = _resultPublicationGuard;
+        _resultPublicationGuard = canPublish;
+        try
         {
-            var bits = string.Join(" ", table.InputPinNames.Select(name => row.InputBits[name] ? "1" : "0"));
-            foreach (var output in table.OutputPinNames)
-                Rows.Add(new GateResultRowViewModel(bits, shortNames[output], row.Outputs[output].Power, fullScale));
+            if (!CanPublishResult) return;
+            _table = table;
+            Rows.Clear();
+            if (!CanPublishResult) return;
+            var fullScale = table.Rows.SelectMany(r => r.Outputs.Values).Select(v => v.Power).DefaultIfEmpty(0).Max();
+            foreach (var row in table.Rows)
+            {
+                var bits = string.Join(" ", table.InputPinNames.Select(name => row.InputBits[name] ? "1" : "0"));
+                foreach (var output in table.OutputPinNames)
+                {
+                    if (!CanPublishResult) return;
+                    Rows.Add(new GateResultRowViewModel(bits, shortNames[output], row.Outputs[output].Power, fullScale));
+                }
+            }
+            if (!CanPublishResult) return;
+            HasResult = true;
+            if (!CanPublishResult) return;
+            StatusText = string.Format(Translate("MakeGate.SimulatedRows"), table.Rows.Count);
+            if (!CanPublishResult) return;
+            ApplyFunctionExpectations();
+            if (!CanPublishResult) return;
+            ApplySuggestedThreshold();
         }
-        HasResult = true;
-        StatusText = string.Format(Translate("MakeGate.SimulatedRows"), table.Rows.Count);
-        ApplyFunctionExpectations();
-        ApplySuggestedThreshold();
+        finally { _resultPublicationGuard = previous; }
     }
 
     /// <summary>The active laser's wavelength, falling back to the standard red wavelength.</summary>

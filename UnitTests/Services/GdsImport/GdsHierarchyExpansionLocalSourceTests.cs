@@ -20,7 +20,7 @@ public class GdsHierarchyExpansionLocalSourceTests(ITestOutputHelper output)
         var source = Environment.GetEnvironmentVariable("LUNIMA_GDS_EXPANSION_SOURCE");
         if (string.IsNullOrWhiteSpace(source)) return;
         using var host = new GdsDesignScopeTestHost();
-        var analysis = await GdsImportService.AnalyzeAsync(source);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(source);
         var outcome = await host.CreateService().ImportAsync(source, analysis.TopCellCandidates.First(),
             preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes);
         var plan = GdsPlacementPlan.FromOutcome(outcome);
@@ -36,7 +36,7 @@ public class GdsHierarchyExpansionLocalSourceTests(ITestOutputHelper output)
         var original = placement.CreatedViewModel!;
         var originalPolygons = Fingerprints([original.Component]);
         var originalPorts = original.Component.PhysicalPins.Select(Port).ToList();
-        var service = new GdsHierarchyExpansionService(host.Scope);
+        var service = new GdsHierarchyExpansionService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope);
         var metrics = new List<string>();
         var clock = Stopwatch.StartNew();
         var command = await service.PrepareAsync(canvas, original);

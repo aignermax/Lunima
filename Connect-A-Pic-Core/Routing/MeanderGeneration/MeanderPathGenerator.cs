@@ -3,8 +3,9 @@ namespace CAP_Core.Routing.MeanderGeneration;
 /// <summary>
 /// Stretches the route between two poses (point + tangent direction) to a prescribed
 /// geometric length: the nominal smooth route is computed first, then the extra length
-/// is folded into its longest straight section — as hairpin loops for large extras, or
-/// as a double S-bend trim for extras smaller than one loop. The result uses the same
+/// is folded into one of its straight sections — as hairpin loops for large extras, or
+/// as a double S-bend trim for extras smaller than one loop — choosing the first fold
+/// (see <see cref="MeanderCandidateFactory"/>) that stays clear of the obstacles. The result uses the same
 /// <see cref="StraightSegment"/>/<see cref="BendSegment"/> primitives the waveguide
 /// router produces, so it can be handed to the exporters unchanged.
 /// Pure and deterministic: identical inputs yield an identical path.
@@ -16,13 +17,15 @@ public sealed partial class MeanderPathGenerator
     private const double PosePositionToleranceMicrometers = 1e-4;
     private const double PoseAngleToleranceDegrees = 1e-4;
     private const double RadiusSlackMicrometers = 1e-9;
-    private const int MaxLoopCount = 4096;
-    private const int BisectionIterations = 60;
+    /// <summary>Pin fan-out zone (in bend radii) where sub-spacing proximity to neighbors is tolerated, as in the router.</summary>
+    private const double PinFanOutExemptionRadiusFactor = 3.0;
 
     /// <summary>
     /// Generates a path from the start pose to the end pose whose geometric length is
     /// within tolerance of the target, all bends at or above the minimum radius, fully
-    /// inside the bounds — or a typed failure explaining why that is impossible.
+    /// inside the bounds and clear of the request's obstacles — or a typed failure
+    /// explaining why that is impossible. The compact pin-to-pin route is tried first; when
+    /// every fold on it collides, the connection's existing route hosts the fold instead.
     /// </summary>
     public MeanderResult Generate(MeanderRequest request)
     {
@@ -31,51 +34,122 @@ public sealed partial class MeanderPathGenerator
 
         double tolerance = Math.Max(request.ToleranceMicrometers, GeometrySlackMicrometers);
         RoutedPath? nominal = BuildNominalPath(request);
-        if (nominal == null || !PoseMatches(nominal, request))
+        bool nominalUsable = nominal != null && PoseMatches(nominal, request);
+        bool hasExisting = UsableExistingRoute(request, tolerance) != null;
+        if (!nominalUsable && !hasExisting)
         {
             return MeanderResult.Failure(
                 MeanderFailureReason.EndpointsNotRoutableAtMinRadius,
                 "No tangent-continuous route between the two poses exists at the given minimum bend radius.");
         }
 
-        double nominalLength = nominal.TotalLengthMicrometers;
-        if (request.TargetLengthMicrometers < nominalLength - tolerance)
+        if (nominalUsable && !hasExisting
+            && request.TargetLengthMicrometers < nominal!.TotalLengthMicrometers - tolerance)
         {
             return MeanderResult.Failure(
                 MeanderFailureReason.TargetShorterThanDirectPath,
                 "The target length is shorter than the direct route between the poses.");
         }
 
-        if (!IsWithinBounds(nominal, request.Bounds))
+        var rejections = new CandidateRejections();
+        foreach (var (basePath, rebuilt) in BasePaths(request, nominalUsable ? nominal : null, tolerance))
         {
-            return MeanderResult.Failure(
-                MeanderFailureReason.BoundsTooSmallForMeander,
-                "The bounding rectangle does not contain the direct route between the poses.");
+            var found = SearchBase(basePath, rebuilt, request, tolerance, rejections);
+            if (found != null)
+                return MeanderResult.Success(found);
         }
 
-        if (Math.Abs(request.TargetLengthMicrometers - nominalLength) <= tolerance)
-            return MeanderResult.Success(nominal);
+        return rejections.Collided
+            ? MeanderResult.Failure(MeanderFailureReason.CollidesWithRoutes,
+                "Every meander with the required extra length would cross, touch or crowd another route or enter a component.")
+            : MeanderResult.Failure(MeanderFailureReason.BoundsTooSmallForMeander,
+                "No meander with the required extra length fits inside the bounding rectangle at the given minimum bend radius.");
+    }
 
-        double extra = request.TargetLengthMicrometers - nominalLength;
-        int hostIndex = IndexOfLongestStraight(nominal);
-        if (hostIndex < 0)
+    private sealed class CandidateRejections
+    {
+        public bool Collided { get; set; }
+    }
+
+    private static IEnumerable<(RoutedPath Path, bool RebuiltPinToPin)> BasePaths(
+        MeanderRequest request, RoutedPath? nominal, double tolerance)
+    {
+        var existing = UsableExistingRoute(request, tolerance);
+        if (existing != null && request.PreferExistingRoute)
+            yield return (existing, false);
+        if (nominal != null && !NominalCollides(nominal, request))
+            yield return (nominal, true);
+        if (existing != null && !request.PreferExistingRoute)
+            yield return (existing, false);
+    }
+
+    private static RoutedPath? UsableExistingRoute(MeanderRequest request, double tolerance)
+    {
+        var existing = request.BasePath;
+        if (existing == null || existing.Segments.Count == 0 || existing.IsBlockedFallback || !existing.IsValid)
+            return null;
+        if (!PoseMatches(existing, request)
+            || existing.TotalLengthMicrometers > request.TargetLengthMicrometers + tolerance)
+            return null;
+        return existing;
+    }
+
+    /// <summary>
+    /// A rebuilt route that collides before any fold is added cannot be saved by one: a fold
+    /// only changes the straight it sits on. Skipping it spares judging every fold on it.
+    /// </summary>
+    private static bool NominalCollides(RoutedPath nominal, MeanderRequest request) =>
+        request.Obstacles is { IsEmpty: false } obstacles
+        && MeanderCollisionChecker.Collides(nominal, obstacles,
+            request.LoopRadiusMicrometers * PinFanOutExemptionRadiusFactor);
+
+    private RoutedPath? SearchBase(RoutedPath basePath, bool rebuilt, MeanderRequest request,
+        double tolerance, CandidateRejections rejections)
+    {
+        double extra = request.TargetLengthMicrometers - basePath.TotalLengthMicrometers;
+        if (Math.Abs(extra) <= tolerance)
         {
-            return MeanderResult.Failure(
-                MeanderFailureReason.BoundsTooSmallForMeander,
-                "The direct route has no straight section that could host a meander.");
+            // Already the right length (possibly an empty path between coincident poses): only
+            // the bounds and the obstacles can still reject it.
+            if (!basePath.Segments.All(s => request.Bounds.Contains(PathSegmentBounds.Of(s), BoundsSlackMicrometers)))
+                return null;
+            var unchanged = new MeanderCandidate(basePath, rebuilt ? [basePath] : [], rebuilt, []);
+            return IsCollisionFree(unchanged, request, rejections) ? basePath : null;
         }
+        if (extra < 0)
+            return null;
 
-        foreach (double side in new[] { 1.0, -1.0 })
+        foreach (var candidate in MeanderCandidateFactory.Enumerate(
+                     basePath, rebuilt, extra, request.LoopRadiusMicrometers, request.Obstacles,
+                     () => rejections.Collided = true))
         {
-            RoutedPath? candidate = TryBuildMeander(nominal, hostIndex, extra,
-                request.MinBendRadiusMicrometers, side);
-            if (candidate != null && IsValidCandidate(candidate, request, tolerance))
-                return MeanderResult.Success(candidate);
+            if (Accept(candidate, request, tolerance, rejections))
+                return candidate.Path;
         }
+        return null;
+    }
 
-        return MeanderResult.Failure(
-            MeanderFailureReason.BoundsTooSmallForMeander,
-            "No meander with the required extra length fits inside the bounding rectangle at the given minimum bend radius.");
+    private bool Accept(MeanderCandidate candidate, MeanderRequest request, double tolerance,
+        CandidateRejections rejections)
+    {
+        return IsValidCandidate(candidate, request, tolerance) && IsCollisionFree(candidate, request, rejections)
+            && KeepsClearOfItself(candidate, request);
+    }
+
+    private static bool IsCollisionFree(MeanderCandidate candidate, MeanderRequest request, CandidateRejections rejections)
+    {
+        if (request.Obstacles is not { IsEmpty: false } obstacles)
+            return true;
+
+        double exemption = candidate.RebuiltPinToPin
+            ? request.LoopRadiusMicrometers * PinFanOutExemptionRadiusFactor
+            : 0.0;
+        if (candidate.ChangedPieces.Any(piece => MeanderCollisionChecker.Collides(piece, obstacles, exemption)))
+        {
+            rejections.Collided = true;
+            return false;
+        }
+        return true;
     }
 
     private static RoutedPath BuildNominalPath(MeanderRequest request)
@@ -104,109 +178,9 @@ public sealed partial class MeanderPathGenerator
             }
         }
 
-        new ManhattanRouter(request.MinBendRadiusMicrometers).Route(
+        new ManhattanRouter(request.LoopRadiusMicrometers).Route(
             request.StartX, request.StartY, request.StartDirectionDegrees,
             request.EndX, request.EndY, request.EndDirectionDegrees, path);
         return path;
-    }
-
-    private static RoutedPath? TryBuildMeander(
-        RoutedPath nominal, int hostIndex, double extraMicrometers, double radius, double side)
-    {
-        double hostLength = nominal.Segments[hostIndex].LengthMicrometers;
-        double loopMinExtra = (2.0 * Math.PI - 4.0) * radius;
-
-        if (extraMicrometers >= loopMinExtra)
-        {
-            int byLength = (int)Math.Floor(extraMicrometers / loopMinExtra);
-            int byRoom = (int)Math.Floor((hostLength + GeometrySlackMicrometers) / (4.0 * radius));
-            int loops = Math.Min(Math.Min(byLength, byRoom), MaxLoopCount);
-            if (loops >= 1)
-            {
-                double height = (extraMicrometers / loops - loopMinExtra) / 2.0;
-                return Assemble(nominal, hostIndex, loops * 4.0 * radius,
-                    builder => EmitLoops(builder, loops, height, radius, side));
-            }
-        }
-
-        // Extra smaller than one hairpin loop (or no room for one): a double S-bend
-        // leaves the host axis and returns to it, absorbing exactly 4r·(sweep − sin sweep)
-        // — which reaches loopMinExtra at sweep = 90°, so the two shapes meet seamlessly.
-        if (extraMicrometers > loopMinExtra)
-            return null;
-
-        double sweepDeg = SolveDoubleSBendSweepDegrees(extraMicrometers, radius);
-        double footprint = 4.0 * radius * Math.Sin(sweepDeg * Math.PI / 180.0);
-        if (footprint > hostLength + GeometrySlackMicrometers)
-            return null;
-
-        return Assemble(nominal, hostIndex, footprint, builder =>
-        {
-            builder.AppendArc(sweepDeg * side, radius);
-            builder.AppendArc(-sweepDeg * side, radius);
-            builder.AppendArc(-sweepDeg * side, radius);
-            builder.AppendArc(sweepDeg * side, radius);
-        });
-    }
-
-    private static RoutedPath Assemble(
-        RoutedPath nominal, int hostIndex, double meanderFootprint, Action<PosePathBuilder> emitMeander)
-    {
-        var host = nominal.Segments[hostIndex];
-        double dirX = host.EndPoint.X - host.StartPoint.X;
-        double dirY = host.EndPoint.Y - host.StartPoint.Y;
-        double hostLength = Math.Sqrt(dirX * dirX + dirY * dirY);
-        dirX /= hostLength;
-        dirY /= hostLength;
-        double headingDeg = Normalize360(Math.Atan2(dirY, dirX) * 180.0 / Math.PI);
-
-        double prefix = Math.Max(0.0, (hostLength - meanderFootprint) / 2.0);
-        var result = new RoutedPath();
-        for (int i = 0; i < hostIndex; i++)
-            result.Segments.Add(nominal.Segments[i]);
-
-        var builder = new PosePathBuilder(result, host.StartPoint.X, host.StartPoint.Y, headingDeg);
-        builder.AppendStraight(prefix);
-        emitMeander(builder);
-        builder.AppendStraight(hostLength - prefix - meanderFootprint);
-
-        for (int i = hostIndex + 1; i < nominal.Segments.Count; i++)
-            result.Segments.Add(nominal.Segments[i]);
-        return result;
-    }
-
-    private static void EmitLoops(
-        PosePathBuilder builder, int loops, double heightMicrometers, double radius, double side)
-    {
-        for (int i = 0; i < loops; i++)
-        {
-            builder.AppendArc(90.0 * side, radius);
-            builder.AppendStraight(heightMicrometers);
-            builder.AppendArc(-180.0 * side, radius);
-            builder.AppendStraight(heightMicrometers);
-            builder.AppendArc(90.0 * side, radius);
-        }
-    }
-
-    /// <summary>
-    /// Sweep for the four arcs of a double S-bend (out and back to the host axis) so
-    /// that its length exceeds the straight chord it replaces by exactly
-    /// <paramref name="extraMicrometers"/>: extra = 4r·(sweep − sin sweep) is strictly
-    /// monotone, so bisection converges.
-    /// </summary>
-    private static double SolveDoubleSBendSweepDegrees(double extraMicrometers, double radius)
-    {
-        double lo = 0.0;
-        double hi = Math.PI / 2.0;
-        for (int i = 0; i < BisectionIterations; i++)
-        {
-            double mid = (lo + hi) / 2.0;
-            if (4.0 * radius * (mid - Math.Sin(mid)) < extraMicrometers)
-                lo = mid;
-            else
-                hi = mid;
-        }
-
-        return (lo + hi) / 2.0 * 180.0 / Math.PI;
     }
 }

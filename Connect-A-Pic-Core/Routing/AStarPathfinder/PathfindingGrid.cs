@@ -34,6 +34,10 @@ public partial class PathfindingGrid
 
     // Cell states: 0 = free, 1 = blocked by component, 2 = blocked by waveguide, 3 = blocked by frozen path (permanent)
     private byte[,] _cells;
+    private readonly OutlineRasterCache _outlineRasters = new();
+    internal int OutlineRasterizationCount => _outlineRasters.RasterizationCount;
+    internal System.Collections.Immutable.ImmutableArray<OutlineRasterEntry> CaptureOutlineRasters() => _outlineRasters.Capture();
+    internal void SeedOutlineRasters(System.Collections.Immutable.ImmutableArray<OutlineRasterEntry> entries) => _outlineRasters.Seed(entries);
 
     // Track which components own which cells (for selective invalidation)
     private readonly Dictionary<Component, IEnumerable<(int x, int y)>> _componentCells = new();
@@ -261,8 +265,7 @@ public partial class PathfindingGrid
     /// </summary>
     private void AddSingleComponentObstacle(Component component)
     {
-        if (!component.IsRoutingObstacle)
-            return;
+        if (!component.IsRoutingObstacle) { _outlineRasters.Remove(component.Id); return; }
 
         double padding = ObstaclePaddingMicrometers;
         double x1 = component.PhysicalX - padding;
@@ -319,9 +322,8 @@ public partial class PathfindingGrid
         OutlineRasterRows? outlineBody = null, outlinePadded = null;
         if (component.OutlinePolygons is { Count: > 0 })
         {
-            var polygons = OutlineCollisionGeometry.Transform(component).ToArray();
-            outlineBody = OutlineRasterRows.Build(polygons, this, 0);
-            outlinePadded = OutlineRasterRows.Build(polygons, this, padding);
+            var polygons = OutlineCollisionGeometry.TransformFresh(component).ToArray();
+            (outlineBody, outlinePadded) = _outlineRasters.GetOrBuild(component.Id, polygons, this, padding);
             foreach (var (pin, cells) in pinCorridors)
             {
                 var (px, py) = pin.GetAbsolutePosition();
@@ -339,7 +341,7 @@ public partial class PathfindingGrid
         {
             _componentCells[component] = footprint;
         }
-        RegisterComponentOwnership(footprint, pinCorridors);
+        _componentOwnership.Register(footprint, pinCorridors);
 
         // Mark pin reservation zones — soft penalty area around each pin.
         // Routes can pass through but A* prefers to avoid them.
@@ -359,6 +361,7 @@ public partial class PathfindingGrid
     /// </summary>
     public void RemoveComponentObstacle(Component component)
     {
+        _outlineRasters.Remove(component);
         // Handle ComponentGroup specially - remove obstacles for all children
         if (component is ComponentGroup group)
         {
@@ -384,7 +387,7 @@ public partial class PathfindingGrid
                 }
             }
         }
-        UnregisterComponentOwnership(component, cells);
+        _componentOwnership.Unregister(component);
         UnregisterPinZones(component);
         // A freed cell may have held a waveguide obstacle (state 2) that a later
         // waveguide registration claimed — invalidate derived caches regardless.
@@ -424,7 +427,7 @@ public partial class PathfindingGrid
                         }
                     }
                 }
-                UnregisterComponentOwnership(child, cells);
+                _componentOwnership.Unregister(child);
                 UnregisterPinZones(child);
             }
         }
@@ -537,11 +540,8 @@ public partial class PathfindingGrid
                 // Only clear component obstacles (1), NOT waveguide obstacles (2)
                 if (IsInBounds(gx, gy) && _cells[gx, gy] == 1)
                 {
-                    lock (_ownershipLock)
-                    {
-                        if (AnyClaim(gx, gy, (owner, body) => body && owner.OutlinePolygons is { Count: > 0 }, out _))
-                            continue;
-                    }
+                    if (_componentOwnership.HasOutlineBodyClaim(gx, gy))
+                        continue;
                     clearedCells[(gx, gy)] = _cells[gx, gy];
                     _cells[gx, gy] = 0;
                 }
@@ -631,6 +631,7 @@ public partial class PathfindingGrid
             _waveguideCells.Clear();
             _waveguideEndpoints.Clear();
             _waveguideGeometry.Clear();
+            _waveguideShapes.Clear();
             _waveguideHalfWidths.Clear();
             _waveguideCellBounds.Clear();
         }
@@ -639,14 +640,12 @@ public partial class PathfindingGrid
             Array.Clear(_pinZoneRefGrid);
             _componentPinZones.Clear();
         }
-        ClearOwnership();
+        _componentOwnership.Clear();
         ResetBreakoutReservationBookkeeping();
         WaveguideVersion++;
-
-        foreach (var component in components)
-        {
-            AddComponentObstacle(component);
-        }
+        _outlineRasters.BeginRebuild();
+        try { foreach (var component in components) AddComponentObstacle(component); }
+        finally { _outlineRasters.EndRebuild(); }
         BlockCellsOutsideAllowedRegions();
     }
 
@@ -720,6 +719,7 @@ public partial class PathfindingGrid
         {
             _waveguideCells[connectionId] = cells;
             _waveguideGeometry[connectionId] = segmentList;
+            _waveguideShapes[connectionId] = new WaveguideObstacleShape(segmentList, waveguideWidth);
             _waveguideHalfWidths[connectionId] = halfWidth;
             RecordWaveguideCellBounds(connectionId, cells);
             _waveguideEndpoints[connectionId] = (
@@ -744,6 +744,7 @@ public partial class PathfindingGrid
             _waveguideCells.Remove(connectionId);
             _waveguideEndpoints.Remove(connectionId);
             _waveguideGeometry.Remove(connectionId);
+            _waveguideShapes.Remove(connectionId);
             _waveguideHalfWidths.Remove(connectionId);
             _waveguideCellBounds.Remove(connectionId);
             stillCovered = CellsStillCoveredByOtherWaveguides(cells);
@@ -771,6 +772,7 @@ public partial class PathfindingGrid
             _waveguideCells.Clear();
             _waveguideEndpoints.Clear();
             _waveguideGeometry.Clear();
+            _waveguideShapes.Clear();
             _waveguideHalfWidths.Clear();
             _waveguideCellBounds.Clear();
         }

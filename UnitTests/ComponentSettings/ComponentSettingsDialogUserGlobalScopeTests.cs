@@ -58,7 +58,7 @@ public class ComponentSettingsDialogUserGlobalScopeTests : IDisposable
             .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(_tempSparamPath);
 
-        var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), fileDialog.Object);
         bool onChangedFired = false;
         vm.Configure(
             entityKey: "siepic-ebeam-pdk::2x2 MMI Coupler",
@@ -89,7 +89,7 @@ public class ComponentSettingsDialogUserGlobalScopeTests : IDisposable
         // user-global from project scope, so a future UI change that drops
         // the suffix would silently confuse the user. Pin the suffix.
         var userStore = new UserSMatrixOverrideStore(_tempStorePath);
-        var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), Mock.Of<IFileDialogService>());
 
         vm.Configure(
             entityKey: "siepic-ebeam-pdk::2x2 MMI Coupler",
@@ -105,7 +105,7 @@ public class ComponentSettingsDialogUserGlobalScopeTests : IDisposable
     public void Configure_ProjectScope_DoesNotAnnounceUserScope()
     {
         var store = new Dictionary<string, ComponentSMatrixData>();
-        var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), Mock.Of<IFileDialogService>());
 
         vm.Configure(
             entityKey: "comp_1",
@@ -138,7 +138,7 @@ public class ComponentSettingsDialogUserGlobalScopeTests : IDisposable
             });
         userStore.Save();
 
-        var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), Mock.Of<IFileDialogService>());
         vm.Configure(
             entityKey: "siepic-ebeam-pdk::2x2 MMI Coupler",
             smatrixKey: "siepic-ebeam-pdk::2x2 MMI Coupler",

@@ -317,6 +317,9 @@ jobs:
     name: Create Release
     needs: [build, build-msi, build-macos]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Configure required reviewers and protected release refs before provisioning the key.
+    environment: release-signing
     permissions:
       contents: write
     steps:
@@ -329,29 +332,21 @@ jobs:
           # the v0.9.0 notes listed a single commit instead of the whole release.
           fetch-depth: 0
 
+      - name: Setup publisher tooling
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pinned signing dependencies
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r scripts/release/requirements.txt
+
+      - name: Verify signing tooling with disposable test keys
+        run: python -m unittest discover -s scripts/release/tests -p 'test_*.py' -v
+
       - name: Compute release info
         id: info
-        run: |
-          version=$(grep '<Version>' CAP.Desktop/CAP.Desktop.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | xargs)
-
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            tag="${{ github.event.client_payload.tag }}"
-            version="${{ github.event.client_payload.version }}"
-            echo "Using dispatched release info: $tag ($version)"
-          elif [ "${{ github.ref_type }}" = "tag" ]; then
-            tag="${{ github.ref_name }}"
-            echo "Using pushed tag: $tag"
-          else
-            tag="v${version}-build.${{ github.run_number }}"
-            echo "Creating manual build tag: $tag"
-          fi
-
-          echo "version=$version" >> $GITHUB_OUTPUT
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-
-          if [ "$tag" != "v$version" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            echo "::warning::Tag '$tag' does not match csproj version 'v$version'"
-          fi
+        run: python -m scripts.release.prepare_release
 
       - name: Download Windows build
         uses: actions/download-artifact@v4
@@ -390,8 +385,47 @@ jobs:
           cd win-x64 && zip -r ../Lunima-${{ steps.info.outputs.version }}-win-x64.zip . && cd ..
           cd linux-x64 && tar czf ../Lunima-${{ steps.info.outputs.version }}-linux-x64.tar.gz . && cd ..
 
+      - name: Stage the exact release inventory
+        env:
+          RELEASE_VERSION: ${{ steps.info.outputs.version }}
+        run: |
+          python - <<'PY'
+          import os, shutil
+          from pathlib import Path
+          from scripts.release.sign_manifest import expected_assets, artifact_inventory
+          version = os.environ['RELEASE_VERSION']
+          target = Path('release-assets')
+          target.mkdir()
+          for name in expected_assets(version):
+              directory = 'msi' if name.endswith('.msi') else 'dmg' if name.endswith('.dmg') else 'zip' if '-osx-' in name else '.'
+              source = Path(directory) / name
+              if source.is_symlink() or not source.is_file():
+                  raise ValueError('Expected a regular build artifact')
+              shutil.copyfile(source, target / name)
+          artifact_inventory(target, version)
+          PY
+
+      - name: Sign stable publisher manifest
+        if: steps.info.outputs.stable == 'true'
+        env:
+          # Only this step receives the secret. Never echo it, pass it as argv, or write it to disk.
+          LUNIMA_RELEASE_SIGNING_KEY_PEM: ${{ secrets.LUNIMA_RELEASE_SIGNING_KEY_PEM }}
+          KEY_ID: ${{ vars.LUNIMA_RELEASE_SIGNING_KEY_ID }}
+          RELEASE_VERSION: ${{ steps.info.outputs.version }}
+          RELEASE_TAG: ${{ steps.info.outputs.tag }}
+          SOURCE_COMMIT: ${{ steps.info.outputs.commit }}
+          EXPECTED_COMMIT: ${{ steps.info.outputs.expected_commit }}
+          TAG_COMMIT: ${{ steps.info.outputs.tag_commit }}
+        run: |
+          python -m scripts.release.sign_manifest --directory release-assets \
+            --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --commit "$SOURCE_COMMIT" \
+            --expected-commit "$EXPECTED_COMMIT" --tag-commit "$TAG_COMMIT" \
+            --key-id "$KEY_ID" --output release-assets/release-manifest.json
+
       - name: Generate Changelog
         id: changelog
+        env:
+          SOURCE_COMMIT: ${{ steps.info.outputs.commit }}
         run: |
           # Get the previous release tag: the highest semantic-version tag (vMAJOR.MINOR.PATCH)
           # that is NOT the current one. The old "head -2 | tail -1" assumed the current tag was
@@ -407,7 +441,7 @@ jobs:
 
           # Get commits since last release tag
           if [ -n "$PREV_TAG" ]; then
-            COMMITS=$(git log $PREV_TAG..$CURR_TAG --pretty=format:"- %s" --no-merges)
+            COMMITS=$(git log "$PREV_TAG..$SOURCE_COMMIT" --pretty=format:"- %s" --no-merges)
           else
             COMMITS=$(git log --pretty=format:"- %s" --no-merges | head -20)
           fi
@@ -459,7 +493,12 @@ jobs:
         with:
           tag_name: ${{ steps.info.outputs.tag }}
           name: Lunima v${{ steps.info.outputs.version }}
+          target_commitish: ${{ steps.info.outputs.commit }}
+          prerelease: ${{ steps.info.outputs.stable != 'true' }}
+          fail_on_unmatched_files: true
           body: |
+            ${{ steps.info.outputs.stable == 'true' && 'Publisher-authenticated release: release-manifest.json binds all seven artifacts to this source commit.' || 'Manual build / prerelease: no stable publisher manifest; manual download only. Automatic updates will not install this build.' }}
+
             ${{ steps.changelog.outputs.changelog }}
 
             ## 📦 Installation
@@ -492,12 +531,6 @@ jobs:
             No .NET installation required for portable versions — everything is included.
 
             ---
-            **Commit:** ${{ github.sha }}
+            **Commit:** ${{ steps.info.outputs.commit }}
           files: |
-            msi/Lunima-Setup-${{ steps.info.outputs.version }}.msi
-            Lunima-${{ steps.info.outputs.version }}-win-x64.zip
-            Lunima-${{ steps.info.outputs.version }}-linux-x64.tar.gz
-            dmg/Lunima-${{ steps.info.outputs.version }}-osx-arm64.dmg
-            dmg/Lunima-${{ steps.info.outputs.version }}-osx-x64.dmg
-            zip/Lunima-${{ steps.info.outputs.version }}-osx-arm64.zip
-            zip/Lunima-${{ steps.info.outputs.version }}-osx-x64.zip
+            release-assets/*

@@ -40,8 +40,15 @@ public sealed class SaveDesignTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) =>
+        ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        context?.ThrowIfStopped();
         var fileOps = _session.FileOperations;
         if (fileOps == null)
             return AgentToolResult.Error("The main window is not ready yet.");
@@ -55,15 +62,17 @@ public sealed class SaveDesignTool : IAgentBridgeTool
         if (Path.GetDirectoryName(target) is { } directory && !Directory.Exists(directory))
             return AgentToolResult.Error($"The folder '{directory}' does not exist.");
 
-        if (!await fileOps.SaveDesignToPathAsync(target))
-            return AgentToolResult.Error($"Saving to '{target}' failed (see Lunima's error console).");
-
+        var componentCount = _session.Canvas.Components.Count;
         var report = ConnectionSnapshot.Report(_session);
+        var written = await fileOps.SaveDesignToPathAsync(target, context);
+        context?.ThrowIfStopped();
+        if (!written)
+            return AgentToolResult.Error($"Saving to '{target}' failed (see Lunima's error console).");
         return AgentToolResult.Json(new
         {
             Saved = target,
             Bytes = new FileInfo(target).Length,
-            ComponentCount = _session.Canvas.Components.Count,
+            ComponentCount = componentCount,
             report.ConnectionCount,
             report.BlockedCount,
         });

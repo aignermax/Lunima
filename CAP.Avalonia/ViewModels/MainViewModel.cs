@@ -23,52 +23,111 @@ using CAP_Core.Export;
 using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP_Core.Components.Process;
 using CAP_DataAccess.Persistence.PIR;
+using CAP_Core.Preferences;
 
 namespace CAP.Avalonia.ViewModels;
 
 /// <summary>
-/// Main ViewModel that orchestrates all panel ViewModels.
-/// Refactored to ~250 lines following CLAUDE.md guidelines.
-/// Delegates responsibilities to specialized panel ViewModels.
+/// Shell bindings and commands; feature coordinators own process, selection, checks and learning workflows.
 /// </summary>
-public partial class MainViewModel : ObservableObject
+public partial class MainViewModel : ObservableObject, IDisposable, Services.Lifetime.IApplicationShellLifetime
 {
+    private readonly Shell.ProcessRoutingContext _processContext;
+    private readonly Shell.SelectionPanelCoordinator _selectionPanels;
+    private readonly Shell.LibraryInteractionCoordinator _libraryInteraction;
+    private readonly Shell.DesignCheckRunCoordinator _designChecks;
+    private readonly Shell.DesignCheckInteractionCoordinator _designCheckInteraction;
+    private readonly Onboarding.LearningJourneys.LearningJourneysCoordinator _learning;
+    private readonly Shell.ProjectProcessCoordinator _projectProcess;
+    private readonly Shell.PersistentAnalysisDocumentBinding _analysisDocumentBinding;
+    private readonly Shell.ShellActivationCoordinator _activation;
+    private readonly Shell.ShellStateCoordinator _shellState;
+    private IDisposable? _localizationSubscription;
+    private Task? _retirement;
+    private readonly Services.Lifetime.ShellWorkScope _work = new();
+    private readonly Services.Lifetime.CallbackBindings _bindings = new();
+    private readonly bool _ownsLayerVisibility;
+    private bool _disposed;
+
+    public Onboarding.LearningPath.LearningPathViewModel LearningPath => _learning.Path;
+    public Onboarding.FirstStepsTutorial.ManufacturingTourViewModel ManufacturingTour => _learning.Manufacturing;
+    public bool ShowLearningSuccess { get => _learning.ShowSuccess; set => _learning.Guidance.ShowSuccess = value; }
+
+    private void LearningStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs change)
+    {
+        if (change.PropertyName == nameof(Onboarding.LearningJourneys.LearningJourneysCoordinator.ShowSuccess))
+            OnPropertyChanged(nameof(ShowLearningSuccess));
+    }
+
+    private void DesignCheckStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs change)
+    {
+        if (change.PropertyName == nameof(Shell.DesignCheckRunCoordinator.IsRunning))
+            OnPropertyChanged(nameof(IsRunningDesignChecks));
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _ = StopAsync();
+        _shellState.PropertyChanged -= ShellStateChanged;
+        _shellState.Dispose();
+        _localizationSubscription?.Dispose();
+        UnwireDies();
+        UnwireWorkspaces();
+        UnwireWorkspaceContext();
+        UnwireWorkspacePresentation();
+        UnwireWorkspaceToolSets();
+        UnwireMakeGate();
+        CanvasInteraction.PropertyChanged -= OnInteractionModeChangedForGateView;
+        RightPanel.Logic.PropertyChanged -= OnLogicPanelChangedForRun;
+        StatusBar.Dispose();
+        BlockedConnections.Dispose();
+        GatesPanel.Dispose();
+        _bindings.Dispose();
+        if (_ownsLayerVisibility) LayerVisibility.Dispose();
+        _selectionPanels.Dispose();
+        _libraryInteraction.Dispose();
+        _designCheckInteraction.Dispose();
+        _designChecks.PropertyChanged -= DesignCheckStateChanged;
+        _learning.PropertyChanged -= LearningStateChanged;
+        _learning.Dispose();
+        CanvasInteraction.Dispose();
+        Canvas.DisposeDocumentBindings();
+        FileOperations.Dispose();
+    }
+
+    public Task ActivateAsync(CancellationToken cancellationToken = default) => _activation.ActivateAsync(cancellationToken);
+    public Task StopAsync() => _retirement ??= Task.WhenAll(
+        _activation.StopAsync(), _liveSimulation.StopAsync(), _work.StopAsync(),
+        Canvas.Document.RetireAsync(), ModeProbe?.StopAsync() ?? Task.CompletedTask,
+        _designChecks.StopAsync(), GateView.StopAsync(), RunHint.StopAsync(), Update.StopAsync(),
+        RightPanel.OnaAnalysis.StopAsync(), BottomPanel.Analysis.Spectrum.StopAsync(), RightPanel.Logic.StopAsync(),
+        RightPanel.TruthTable.StopAsync(), RightPanel.Sweep.StopAsync(), RightPanel.MakeGate.StopAsync(), RightPanel.CompressLayout.StopAsync(),
+        BottomPanel.Analysis.Transient.StopAsync(), BottomPanel.Analysis.Eye.StopAsync(),
+        BottomPanel.Analysis.Optimization.StopAsync(), BottomPanel.Analysis.MonteCarlo.StopAsync(),
+        FileOperations.GdsExport.StopAsync(), GdsFactoryExport.StopAsync());
+    public async ValueTask DisposeAsync() { try { await StopAsync(); } finally { Dispose(); } }
+
     [ObservableProperty]
     private DesignCanvasViewModel _canvas;
 
     [ObservableProperty]
     private string _statusText = LocalizationService.Instance.Translate("Status.Ready");
 
-    /// <summary>
-    /// The last status set from a string-table key, with the text it produced — lets a live
-    /// language switch re-translate the status bar when (and only when) it still shows that
-    /// text, so transient messages (e.g. migration warnings) are never clobbered.
-    /// </summary>
+    /// <summary>Re-translate keyed status only while its original text remains visible, preserving transient messages.</summary>
     private (string Key, object[] Args, string Formatted)? _lastLocalizedStatus =
         ("Status.Ready", [], LocalizationService.Instance.Translate("Status.Ready"));
 
-    /// <summary>Application name shown in the window title.</summary>
-    private const string AppTitle = "Lunima";
+    /// <summary>Open-file name and dirty marker, or Untitled for an unsaved design.</summary>
+    public string WindowTitle { get => _shellState.WindowTitle; set => _shellState.WindowTitle = value; }
 
-    /// <summary>Display name for a dirty design that has never been saved.</summary>
-    private const string UntitledProjectName = "Untitled";
+    private void ShellStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs change)
+    {
+        if (change.PropertyName == nameof(Shell.ShellStateCoordinator.WindowTitle)) OnPropertyChanged(nameof(WindowTitle));
+    }
 
-    /// <summary>Dirty-state marker appended to the file name in the window title.</summary>
-    private const string DirtyMarker = "*";
-
-    /// <summary>
-    /// Window title derived from the open file and unsaved-changes state:
-    /// "Lunima", "Untitled* — Lunima", "name.lun — Lunima", or "name.lun* — Lunima".
-    /// </summary>
-    [ObservableProperty]
-    private string _windowTitle = AppTitle;
-
-    /// <summary>
-    /// Human-readable label for the design's active fabrication process (issue #570),
-    /// e.g. "Process: Generic SOI 220 nm" or "Playground — not manufacturable". Kept in
-    /// sync with <see cref="FileOperationsViewModel.ActiveProcess"/> by
-    /// <see cref="RefreshProcessIndicator"/>. Bound by the toolbar indicator chip.
-    /// </summary>
+    /// <summary>Toolbar label refreshed from the active design or die process.</summary>
     [ObservableProperty]
     private string _activeProcessLabel = LocalizationService.Instance.Translate("Process.NoneSelected");
 
@@ -76,10 +135,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _activeProcessTip = LocalizationService.Instance.Translate("StatusBar.ActiveProcessTip");
 
-    /// <summary>
-    /// True when the active process is Playground (mixing PDKs allowed, chip not
-    /// manufacturable). Drives the warning styling on the toolbar indicator chip.
-    /// </summary>
+    /// <summary>Enables the toolbar warning when the process permits mixing PDKs.</summary>
     [ObservableProperty]
     private bool _isPlayground;
 
@@ -87,10 +143,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private CAP.Avalonia.ViewModels.Analysis.SimulationMode _simulationMode = CAP.Avalonia.ViewModels.Analysis.SimulationMode.Cw;
 
-    /// <summary>
-    /// Zero-based index view of <see cref="SimulationMode"/> (0 = Cw, 1 = Transient) for the
-    /// toolbar <c>ComboBox</c>, which binds <c>SelectedIndex</c> directly with no converter.
-    /// </summary>
+    /// <summary>Toolbar ComboBox index: CW = 0, transient = 1.</summary>
     public int SimulationModeIndex
     {
         get => (int)SimulationMode;
@@ -112,9 +165,7 @@ public partial class MainViewModel : ObservableObject
     public Commands.CommandManager CommandManager { get; }
     public SimulationService Simulation { get; }
 
-    /// <summary>
-    /// ViewModel for canvas interaction (selection, placement, connections).
-    /// </summary>
+    /// <summary>Owned canvas interaction facade for selection, placement and connections.</summary>
     public CanvasInteractionViewModel CanvasInteraction { get; }
 
     /// <summary>Selection actions that expose embedded imported GDS children.</summary>
@@ -129,132 +180,58 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Status-bar warning field: blocked connections and the jump to the next one.</summary>
     public Shell.BlockedConnectionsViewModel BlockedConnections { get; private set; } = null!;
 
-    /// <summary>
-    /// ViewModel for file operations (save, load, export).
-    /// </summary>
+    /// <summary>Owned project persistence and export facade.</summary>
     public FileOperationsViewModel FileOperations { get; }
 
-    /// <summary>
-    /// ViewModel for the Home screen (recent projects, new/open project)
-    /// shown as the main window's startup state.
-    /// </summary>
+    /// <summary>Startup and recent-project navigation.</summary>
     public HomeViewModel Home { get; }
 
-    /// <summary>
-    /// Step engine for the "Learn Lunima" first-steps tour (issue #1080).
-    /// Started from the Home screen's Learn card; observes the shared canvas.
-    /// </summary>
-    public ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel Tutorial { get; }
+    public ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel Tutorial => _learning.Chapters.Tutorial;
 
-    /// <summary>
-    /// Step engine for the "Watch it compute" tour (issue #1143). Started from
-    /// the Home screen's second tour card; observes the Logic panel of the
-    /// Counter example it opens.
-    /// </summary>
-    public ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel WatchTour { get; }
+    public ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel WatchTour => _learning.Chapters.Watch;
 
-    /// <summary>
-    /// Step engine for the "Your first gate" tour. Started from the Home screen's
-    /// second tour card; observes the canvas, the Make-gate steps and the Logic
-    /// panel while the gate-kit example it opens becomes a NAND gate.
-    /// </summary>
-    public ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel FirstGateTour { get; }
+    public ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel FirstGateTour => _learning.Chapters.FirstGate;
 
-    /// <summary>
-    /// The dismissible "Connect Claude Code" info bar (null in headless contexts without the
-    /// agent bridge). Checked once after startup, next to the update check.
-    /// </summary>
+    /// <summary>Optional startup prompt for connecting the agent bridge.</summary>
     public ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? ClaudeConnectPrompt { get; }
 
-    /// <summary>
-    /// Step engine for the "Run a program on your chip" tour (issue #1267).
-    /// Started from the Home screen's third tour card; observes the Logic panel
-    /// and the ISA playground of the 4-bit adder example it opens.
-    /// </summary>
-    public ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel RunProgramTour { get; }
+    public ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel RunProgramTour => _learning.Chapters.Program;
 
-    /// <summary>
-    /// Step engine for the "Connect two chiplets" tour (issue #1288). Started
-    /// from the Home screen's fourth tour card; observes the canvas and the
-    /// Design Checks of the Two-Chiplets edge-coupler example it opens.
-    /// </summary>
-    public ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel ConnectChipletsTour { get; }
+    public ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel ConnectChipletsTour => _learning.Chapters.Chiplets;
 
-    /// <summary>
-    /// Step engine for the "Store a number in light" tour (issue #1422). Started
-    /// from the Home screen's fifth tour card; observes the Logic panel of the
-    /// RAM 2x4 example it opens.
-    /// </summary>
-    public ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel StoreNumberTour { get; }
+    public ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel StoreNumberTour => _learning.Chapters.Memory;
 
-    /// <summary>
-    /// Design file passed on the command line, resolved by
-    /// <see cref="Services.DesignFileArguments.FindDesignFile"/> in App startup.
-    /// Consumed once by the main window's Loaded handler; takes precedence
-    /// over the reopen-last-project preference. Null when no file was passed.
-    /// </summary>
+    /// <summary>One-shot command-line design path; takes precedence over reopening the last project.</summary>
     public string? StartupDesignFile { get; set; }
 
-    /// <summary>
-    /// ViewModel for viewport control (zoom, pan, navigation).
-    /// </summary>
+    /// <summary>Canvas viewport navigation and zoom.</summary>
     public ViewportControlViewModel ViewportControl { get; }
 
-    /// <summary>
-    /// ViewModel for the mode-slice probe flyout (issue #691); null when the mode-solver
-    /// feature is not registered (e.g. lightweight test construction).
-    /// </summary>
+    /// <summary>Optional mode-solver probe flyout.</summary>
     public ViewModels.Solvers.ModeProbe.ModeProbeViewModel? ModeProbe { get; }
 
-    /// <summary>
-    /// ViewModel for the left sidebar panel (component library, PDK management).
-    /// </summary>
+    /// <summary>Component library and PDK management panel.</summary>
     public LeftPanelViewModel LeftPanel { get; }
 
-    /// <summary>
-    /// ViewModel behind the library panel's "Import GDS" button (issue #808):
-    /// picks the .gds file and opens the import dialog. Deliberately NOT part of
-    /// <see cref="LeftPanelViewModel"/> — GDS import is a self-contained flow that
-    /// only reads the panel's template list and registration callback.
-    /// </summary>
+    /// <summary>Self-contained GDS import flow exposed by the library button.</summary>
     public ViewModels.GdsImport.GdsImportButtonViewModel GdsImport { get; }
 
-    /// <summary>
-    /// ViewModel for the right sidebar panel (analysis, diagnostics, validation).
-    /// </summary>
+    /// <summary>Analysis, diagnostics and validation panels.</summary>
     public RightPanelViewModel RightPanel { get; }
 
-    /// <summary>
-    /// ViewModel for the bottom panel (waveguide length, element locking, status).
-    /// </summary>
+    /// <summary>Analysis dock and connection property panels.</summary>
     public BottomPanelViewModel BottomPanel { get; }
 
-    /// <summary>
-    /// Browser for the open photonic component registry (issue #656), hosted in
-    /// its own "Component Registry" tool window (opened from the Component
-    /// Library header and the Tools flyout; see <c>MainWindow</c>).
-    /// </summary>
+    /// <summary>Photonic component registry browser shown in its own tool window.</summary>
     public ViewModels.ComponentRegistry.RegistryBrowser.RegistryBrowserViewModel Registry { get; }
 
-    /// <summary>
-    /// ViewModel for software update checking. Shared with the Settings window.
-    /// The update banner in the main window binds to this property.
-    /// </summary>
+    /// <summary>Update status shared by the main banner and Settings.</summary>
     public UpdateViewModel Update { get; }
 
-    /// <summary>
-    /// Delegate wired by <see cref="CAP.Avalonia.Views.MainWindow"/> to open
-    /// the Settings window. The optional page-type argument asks the window
-    /// to pre-select a specific <c>ISettingsPage</c> by runtime type (used by
-    /// shortcut buttons like "Set API key in Settings" in the AI panel);
-    /// pass <c>null</c> for default behavior.
-    /// </summary>
+    /// <summary>View callback opening Settings at the optional page type; null selects the default page.</summary>
     public Func<Type?, Task>? ShowSettingsWindowAsync { get; set; }
 
-    /// <summary>
-    /// ViewModel for the unified Export menu flyout.
-    /// Holds all registered <see cref="IExportFormat"/> implementations.
-    /// </summary>
+    /// <summary>Unified menu over the registered export formats.</summary>
     public ExportMenuViewModel ExportMenu { get; }
 
     /// <summary>PhotonTorch format — exposes <c>ShowOptionsDialogAsync</c> for code-behind wiring.</summary>
@@ -285,61 +262,40 @@ public partial class MainViewModel : ObservableObject
 
     private readonly Services.IUrlLauncher _urlLauncher;
 
-    /// <summary>
-    /// True while a simulation run is in flight. Exposed for the toolbar busy
-    /// indicator (issue #1150); the heavy computation runs off-thread via
-    /// <see cref="SimulationService.RunAsync"/>.
-    /// </summary>
+    /// <summary>Toolbar busy indicator while asynchronous simulation is running.</summary>
     [ObservableProperty]
     private bool _isSimulating;
 
-    /// <summary>
-    /// ViewModel for the PDK Component Offset Editor window.
-    /// Exposed so the code-behind can pass the FileDialogService.
-    /// </summary>
+    /// <summary>PDK offset editor shared with the view-layer dialog wiring.</summary>
     public PdkOffsetEditorViewModel PdkOffsetEditor { get; }
 
-    /// <summary>
-    /// Service that fetches and caches GDS polygon previews for canvas components.
-    /// Exposed so <see cref="CAP.Avalonia.Controls.DesignCanvas"/> can wire up a
-    /// repaint callback and pass the service into the render context.
-    /// </summary>
+    /// <summary>Canvas geometry preview service and repaint notifications.</summary>
     public GdsPreviewRenderService GdsPreviewRenderService { get; }
 
-    /// <summary>
-    /// Adaptive crossing-insertion wiring (Issue #553). Held so the binder —
-    /// which attaches the crossing-insertion service to the canvas — lives for
-    /// the application lifetime. Null in tests that bypass DI.
-    /// </summary>
+    /// <summary>Optional application-lifetime crossing-insertion binder; DI owns its lifetime.</summary>
     public ViewModels.Canvas.CrossingInsertion.CrossingInsertionCanvasBinder? CrossingInsertionBinder { get; }
 
-    /// <summary>
-    /// Bottom-panel error console service. Exposed so view-layer wiring helpers
-    /// (e.g. <see cref="CAP.Avalonia.Views.Dialogs.ExportDialogWiring"/>) can persist
-    /// failures that would otherwise only flash through the ephemeral status bar.
-    /// </summary>
+    /// <summary>Persistent error reporting shared by panels and view-layer dialog wiring.</summary>
     public ErrorConsoleService ErrorConsole { get; }
 
-    /// <summary>
-    /// Chip-size ViewModel. Singleton — same instance is bound by the Settings window
-    /// page and consulted here for save/load and design-checks bounds.
-    /// </summary>
+    /// <summary>Chip bounds shared by Settings, persistence and design checks.</summary>
     public ViewModels.Canvas.ChipSizeViewModel ChipSize { get; }
 
-    /// <summary>
-    /// Per-layer visibility of imported GDS geometry (issue #858). The canvas
-    /// render context consults its <c>State</c>; the Imported Layers panel binds
-    /// to its rows; settings are persisted per design in the .lun file.
-    /// </summary>
+    /// <summary>Per-design imported-layer visibility shared by canvas rendering and the Layers panel.</summary>
     public ViewModels.GdsImport.LayerVisibility.GdsLayerVisibilityViewModel LayerVisibility { get; }
 
     public MainViewModel(
+        Services.IUrlLauncher urlLauncher,
+        HomeViewModel homeViewModel,
+        ViewModels.Onboarding.LearningJourneys.LearningJourneyChapters learningChapters,
+        CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore designFiles,
         DesignCanvasViewModel canvas,
         SimulationService simulationService,
         SimpleNazcaExporter nazcaExporter,
         SaxExporter saxExporter,
         Commands.CommandManager commandManager,
-        UserPreferencesService preferencesService,
+        IRecentProjectPreferences recentProjectPreferences,
+        ILearningPreferences learningPreferences,
         Services.GroupPreviewGenerator previewGenerator,
         Services.IInputDialogService inputDialogService,
         ErrorConsoleService errorConsoleService,
@@ -354,29 +310,21 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Export.VerilogAExportViewModel verilogAExport,
         ViewModels.Export.GdsFactoryExportViewModel gdsFactoryExport,
         ViewModels.Canvas.ChipSizeViewModel chipSize,
-        Services.UserSMatrixOverrideStore userSMatrixOverrideStore,
+        ITemplateSMatrixStore userSMatrixOverrideStore,
         GdsPreviewRenderService gdsPreviewRenderService,
         ViewModels.ComponentRegistry.RegistryBrowser.RegistryBrowserViewModel registryBrowser,
         ViewModels.GdsImport.GdsImportButtonViewModel gdsImportButton,
-        Services.IUrlLauncher? urlLauncher = null,
         Services.IAiGridService? aiGridService = null,
         Services.RecentProjectsService? recentProjectsService = null,
-        HomeViewModel? homeViewModel = null,
         ViewModels.Canvas.CrossingInsertion.CrossingInsertionCanvasBinder? crossingInsertionBinder = null,
         ViewModels.Solvers.ModeProbe.ModeProbeViewModel? modeProbe = null,
         Services.GdsImport.DesignScope.DesignScopedGdsComponentService? designScopedGdsComponents = null,
         ViewModels.GdsImport.LayerVisibility.GdsLayerVisibilityViewModel? layerVisibility = null,
-        ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel? tutorialViewModel = null,
-        ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel? watchComputeTourViewModel = null,
-        ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
-        ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel? runProgramTourViewModel = null,
-        ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null,
-        ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel? storeNumberTourViewModel = null,
-        ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel? firstGateTourViewModel = null,
         ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? claudeConnectPrompt = null,
-        ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null)
+        ViewModels.Export.PythonEnvironmentManager.PythonStartupViewModel? pythonStartup = null,
+        Services.GdsImport.GdsHierarchyExpansionService? hierarchyExpansion = null)
     {
-        _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
+        _urlLauncher = urlLauncher;
         // Injected for activation: constructing the binder wires the adaptive
         // crossing-insertion service (Issue #553) into the canvas' connection manager.
         CrossingInsertionBinder = crossingInsertionBinder;
@@ -396,161 +344,74 @@ public partial class MainViewModel : ObservableObject
         LeftPanel = leftPanel;
         RightPanel = rightPanel;
         BottomPanel = bottomPanel;
+        _analysisDocumentBinding = new Shell.PersistentAnalysisDocumentBinding(
+            canvas, bottomPanel.Analysis, rightPanel.CompressLayout);
         Registry = registryBrowser;
 
         GdsImport = gdsImportButton;
 
         CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService, errorConsoleService);
 
-        var recentProjects = recentProjectsService ?? new Services.RecentProjectsService(preferencesService);
-        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, saxExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchExport, verilogAExport, errorConsoleService, userSMatrixOverrideStore, recentProjects: recentProjects);
+        var recentProjects = recentProjectsService ?? new Services.RecentProjectsService(recentProjectPreferences);
+        FileOperations = new FileOperationsViewModel(_urlLauncher, designFiles, _canvas, commandManager, nazcaExporter, saxExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchExport, verilogAExport, errorConsoleService, userSMatrixOverrideStore, recentProjects: recentProjects);
+        var files = FileOperations;
+        _processContext = new Shell.ProcessRoutingContext(Canvas, LeftPanel, () => files.ActiveProcess);
         // Design-scoped GDS imports (#830): save embeds them in the .lun, load
         // restores/migrates them, New Project clears them.
         FileOperations.DesignScopedGdsComponents = designScopedGdsComponents;
         ImportedHierarchy = new GdsImport.GdsHierarchyActionsViewModel(_canvas, commandManager,
-            designScopedGdsComponents is null ? null : new Services.GdsImport.GdsHierarchyExpansionService(designScopedGdsComponents))
+            designScopedGdsComponents is null ? null : hierarchyExpansion ??
+                throw new ArgumentNullException(nameof(hierarchyExpansion), "A design-scoped import requires hierarchy expansion."))
         { ReportStatus = text => StatusText = text };
         // Per-layer visibility of imported GDS geometry (#858): edits mark the
         // design dirty, and save/load/new-project round-trip through the .lun.
         LayerVisibility = layerVisibility ?? new ViewModels.GdsImport.LayerVisibility.GdsLayerVisibilityViewModel(_canvas);
-        LayerVisibility.SettingsEdited = () => FileOperations.HasUnsavedChanges = true;
+        _ownsLayerVisibility = layerVisibility == null;
+        _bindings.Bind(() => LayerVisibility.SettingsEdited, value => LayerVisibility.SettingsEdited = value,
+            () => FileOperations.HasUnsavedChanges = true);
         FileOperations.LayerVisibility = LayerVisibility;
         ViewportControl = viewportControl;
 
         // Home screen: shown at startup; delegates project I/O to FileOperations
         // and dismisses itself once a project is opened or created.
-        Home = homeViewModel ?? new HomeViewModel(recentProjects, preferencesService);
-        Home.NewProjectRequested = async () => await FileOperations.NewProjectCommand.ExecuteAsync(null);
-        Home.OpenProjectRequested = async () => await FileOperations.LoadDesignCommand.ExecuteAsync(null);
-        Home.OpenProjectFromPathRequested = FileOperations.LoadDesignFromPathAsync;
-        Home.OpenExampleRequested = FileOperations.OpenDesignAsCopyAsync;
+        Home = homeViewModel;
+        _bindings.Bind(() => Home.NewProjectRequested, value => Home.NewProjectRequested = value,
+            async () => await FileOperations.NewProjectCommand.ExecuteAsync(null));
+        _bindings.Bind(() => Home.OpenProjectRequested, value => Home.OpenProjectRequested = value,
+            async () => await FileOperations.LoadDesignCommand.ExecuteAsync(null));
+        _bindings.Bind(() => Home.OpenProjectFromPathRequested, value => Home.OpenProjectFromPathRequested = value, FileOperations.LoadDesignFromPathAsync);
+        _bindings.Bind(() => Home.OpenExampleRequested, value => Home.OpenExampleRequested = value, FileOperations.OpenDesignAsCopyAsync);
         WorkspaceSwitch = InitializeWorkspaces();
         InitializeWorkspaceContext();
         InitializeWorkspacePresentation();
         InitializeGateView();
         InitializeRunHint();
         InitializeWorkspaceToolSets();
-        Home.LearnTutorialRequested = StartVisualTutorialAsync;
-        Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
-        Home.RunProgramTourRequested = StartRunProgramTourAsync;
-        Home.ConnectChipletsTourRequested = StartConnectChipletsTourAsync;
-        Home.StoreNumberTourRequested = StartStoreNumberTourAsync;
-        FileOperations.ProjectOpened = OnProjectOpened;
-
-        Tutorial = tutorialViewModel ?? new ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel(canvas);
-        Tutorial.AttachInteraction(CanvasInteraction, LeftPanel.FilteredTemplates);
-        Tutorial.AttachWorkspace(WorkspaceSwitch);
-        InitializeVisualLearning(preferencesService);
-        // The tour must observe the panel instance the user actually clicks.
-        WatchTour = watchComputeTourViewModel
-            ?? new ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
-        WatchTour.AttachWorkspace(WorkspaceSwitch);
-        // Same for the ISA playground: the tour must observe the singleton the
-        // playground window shows, not a private instance.
-        RunProgramTour = runProgramTourViewModel
-            ?? new ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel(
-                RightPanel.Logic, BottomPanel.Analysis,
-                isaPlayground ?? new ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel());
-        // The chiplet tour observes the canvas, the Design Checks the window shows
-        // and the shared undo history (its "do it for me" move must be undoable).
-        ConnectChipletsTour = connectChipletsTourViewModel
-            ?? new ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel(
-                Canvas, RightPanel.DesignValidation, BottomPanel.Analysis, CommandManager);
-        ConnectChipletsTour.AttachVisualContext(WorkspaceSwitch, LeftRail);
-        // The tour must observe the panel instance the user actually clicks.
-        StoreNumberTour = storeNumberTourViewModel
-            ?? new ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
-        StoreNumberTour.AttachWorkspace(WorkspaceSwitch);
-        // The gate tour observes the Make-gate steps and Logic panel the window shows.
-        FirstGateTour = firstGateTourViewModel
-            ?? new ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel(
-                Canvas, RightPanel.MakeGate, RightPanel.Logic, CommandManager);
-        Home.FirstGateTourRequested = StartFirstGateTourAsync;
-        FirstGateTour.AttachUi(WorkspaceSwitch, BottomPanel.Analysis, CanvasInteraction);
-        FirstGateTour.RevealGateRequested = SelectGroupAndOpenMakeGate;
+        var chapters = learningChapters;
+        chapters.Attach(CanvasInteraction, LeftPanel, WorkspaceSwitch, LeftRail, BottomPanel, SelectGroupAndOpenMakeGate);
+        _learning = new Onboarding.LearningJourneys.LearningJourneysCoordinator(chapters, Canvas, FileOperations,
+            Home, _processContext, WorkspaceSwitch, ViewportControl, LeftRail, learningPreferences);
+        _learning.PropertyChanged += LearningStateChanged;
+        _projectProcess = new Shell.ProjectProcessCoordinator(FileOperations, _processContext, _learning.Guidance);
+        _bindings.Bind(() => FileOperations.ProjectOpened, value => FileOperations.ProjectOpened = value, OnProjectOpened);
         WireMakeGate();
-
-        // Keep the window title in sync with the open file and dirty state
-        FileOperations.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(FileOperationsViewModel.CurrentFilePath)
-                or nameof(FileOperationsViewModel.HasUnsavedChanges))
-            {
-                UpdateWindowTitle();
-            }
-        };
 
         // Build the unified Export menu (add new IExportFormat here for new formats)
         PhotonTorchExportFormat = new PhotonTorchExportFormat();
         VerilogAExportFormat = new VerilogAExportFormat(verilogAExport);
         GdsFactoryExportFormat = new GdsFactoryExportFormat();
         GdsFactoryExport = gdsFactoryExport;
-        // By-value member PDKs for the active process (issue placement-livemembers, #732): a
-        // custom PDK registered after the process was saved is missing from its persisted
-        // MemberPdkNames snapshot but may still be the same process by value — this recomputes
-        // the allowed set live against the current catalog, same as the library-filter lock.
-        // Shared by the placement guards below AND the metal-spec providers, so placement and
-        // export agree on membership.
-        Func<IReadOnlyCollection<string>?> getLiveMemberPdkNames = () =>
-            CanvasScopeProcess is { } activeProcess ? LeftPanel.ResolveLiveMemberPdkNames(activeProcess) : null;
 
-        // Electrical metal routing spec (#682): trace width / layers / crossing policy come
-        // from the active process's metal cross-section; both exporters share one provider.
-        // The live member set replaces the stale snapshot so a live-allowed custom PDK's metal
-        // xsection / bridge policy reaches the export (review Finding 0).
-        Func<CAP_Core.Routing.MetalRouting.MetalRoutingSpec> metalSpecProvider = () =>
-            CAP_DataAccess.Components.ComponentDraftMapper.MetalRoutingSpecFactory.FromActiveProcess(
-                CanvasScopeProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
-        FileOperations.MetalRoutingSpecProvider = metalSpecProvider;
-        GdsFactoryExport.MetalRoutingSpecProvider = metalSpecProvider;
-        // Process companion layers (cladding / trench / keep-out bands) of routed waveguides:
-        // the canvas renderer and the Nazca export both read this one per-connection source.
-        var companionLayers = new Services.WaveguideCompanions.WaveguideCompanionLayerProvider(
-            () => LeftPanel.AllTemplates,
-            () => LeftPanel.GetLoadedPdkDrafts(),
-            () => CAP_DataAccess.Components.ComponentDraftMapper.WaveguideCompanionSpecResolver.FromActiveProcess(
-                FileOperations.ActiveProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames()));
-        _canvas.WaveguideCompanionSpecProvider = companionLayers.Resolve;
-        // Minimum waveguide bend radius (#574): an in-canvas bend-handle drag (and its undo/redo
-        // command) must not shrink a bend below what the active process allows. Same
-        // active-process + live-member lookup as the metal spec; falls back to the absolute
-        // minimum when no process is resolvable (playground / no declared optical minimum).
-        Func<double> resolveMinBendRadiusMicrometers = () =>
-            CAP_DataAccess.Components.ComponentDraftMapper.WaveguideBendRadiusResolver.Resolve(
-                CanvasScopeProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
-        CanvasInteraction.GetMinBendRadiusMicrometers = resolveMinBendRadiusMicrometers;
-        // The same process minimum floors the automatic routing and the styled curves:
-        // the orchestrator refreshes the router before every routing pass, so AUTO cannot
-        // bend tighter than the active process allows.
-        _canvas.Routing.GetProcessMinBendRadiusMicrometers = resolveMinBendRadiusMicrometers;
-        // Metal traces are curved like waveguides (#854): the metal spec's bend radius floors
-        // the router for electrical connections and its trace width pads their grid obstacles.
-        // The bend-handle drag clamp for metal traces uses the same source.
-        _canvas.Routing.GetMetalRoutingSpec = metalSpecProvider;
-        CanvasInteraction.GetMetalMinBendRadiusMicrometers =
-            () => metalSpecProvider().MinBendRadiusMicrometers;
-        // Per-connection process floor (issue #937): on a multi-process canvas each
-        // connection is floored by its own endpoint components' PDK process (the stricter
-        // chiplet governs a cross-chiplet route), not by one canvas-wide value. The factory
-        // runs on the UI thread at pass start and snapshots the library and drafts, so the
-        // provider the router calls per connection on the routing thread never touches live
-        // ViewModel collections. Unresolvable endpoints (built-ins, groups, PDK-less drafts)
-        // yield null and the canvas-wide floor above governs.
-        _canvas.Routing.BuildConnectionProcessFloorProvider = () =>
-        {
-            var templates = LeftPanel.AllTemplates.ToList();
-            var drafts = LeftPanel.GetLoadedPdkDrafts().ToList();
-            return (startPin, endPin) =>
-                CAP_DataAccess.Components.ComponentDraftMapper.WaveguideBendRadiusResolver.ResolveForEndpointPdkNames(
-                    PdkSourceOf(startPin), PdkSourceOf(endPin), drafts);
-
-            string? PdkSourceOf(CAP_Core.Components.Core.PhysicalPin pin) =>
-                pin.ParentComponent is { } component
-                    ? ViewModels.Library.ComponentPdkSourceResolver.Resolve(component, templates)
-                    : null;
-        };
+        FileOperations.MetalRoutingSpecProvider = _processContext.MetalSpec;
+        GdsFactoryExport.MetalRoutingSpecProvider = _processContext.MetalSpec;
+        Canvas.WaveguideCompanionSpecProvider = _processContext.CompanionLayers.Resolve;
+        CanvasInteraction.GetMinBendRadiusMicrometers = _processContext.MinBendRadius;
+        Canvas.Routing.GetProcessMinBendRadiusMicrometers = _processContext.MinBendRadius;
+        Canvas.Routing.GetMetalRoutingSpec = _processContext.MetalSpec;
+        CanvasInteraction.GetMetalMinBendRadiusMicrometers = () => _processContext.MetalSpec().MinBendRadiusMicrometers;
+        Canvas.Routing.BuildConnectionProcessFloorProvider = _processContext.BuildConnectionFloorProvider;
         // Let a Nazca export that hits gdsfactory-native components hand off to the gdsfactory export.
-        FileOperations.RequestGdsFactoryExport = () => GdsFactoryExport.Export();
+        _bindings.Bind(() => FileOperations.RequestGdsFactoryExport, value => FileOperations.RequestGdsFactoryExport = value, () => GdsFactoryExport.Export());
         ExportMenu = new ExportMenuViewModel(new IExportFormat[]
         {
             new NazcaExportFormat(FileOperations.ExportNazcaCommand),
@@ -565,21 +426,21 @@ public partial class MainViewModel : ObservableObject
         });
 
         // Wire up status callbacks
-        CanvasInteraction.UpdateStatus = UpdateStatusText;
-        FileOperations.UpdateStatus = UpdateStatusText;
-        ViewportControl.UpdateStatus = UpdateStatusText;
-        LeftPanel.UpdateStatus = UpdateStatusText;
-        GdsImport.UpdateStatus = UpdateStatusText;
+        _bindings.Bind(() => CanvasInteraction.UpdateStatus, value => CanvasInteraction.UpdateStatus = value, UpdateStatusText);
+        _bindings.Bind(() => FileOperations.UpdateStatus, value => FileOperations.UpdateStatus = value, UpdateStatusText);
+        _bindings.Bind(() => ViewportControl.UpdateStatus, value => ViewportControl.UpdateStatus = value, UpdateStatusText);
+        _bindings.Bind(() => LeftPanel.UpdateStatus, value => LeftPanel.UpdateStatus = value, UpdateStatusText);
+        _bindings.Bind(() => GdsImport.UpdateStatus, value => GdsImport.UpdateStatus = value, UpdateStatusText);
         // A .gds/.gdsii pick in the File→Open dialog routes into the GDS import
         // flow (FileOperations owns no import knowledge beyond the callback).
         FileOperations.OpenGdsImportRequested = GdsImport.OpenGdsImportDialogForFileAsync;
         // Key-preserving sink: lets a live UI language switch re-translate the startup
         // "Loaded N component types" status while it is still showing.
-        LeftPanel.UpdateLocalizedStatus = SetLocalizedStatus;
+        _bindings.Bind(() => LeftPanel.UpdateLocalizedStatus, value => LeftPanel.UpdateLocalizedStatus = value, SetLocalizedStatus);
 
         // A saved component definition takes effect type-wide: push the new PDK S-matrices
         // into already-placed instances; explicit overrides keep winning.
-        LeftPanel.TemplateDefinitionSaved = FileOperations.RefreshInstancesFromTemplate;
+        _bindings.Bind(() => LeftPanel.TemplateDefinitionSaved, value => LeftPanel.TemplateDefinitionSaved = value, FileOperations.RefreshInstancesFromTemplate);
 
         // Offset-editor fork-on-save: saving a bundled PDK writes the user's copy into
         // user-pdks; the library must swap to (shadow with) that fork, same as the
@@ -590,27 +451,7 @@ public partial class MainViewModel : ObservableObject
         // and new placements pick up the saved values without a restart.
         PdkOffsetEditor.UserPdkSaved = LeftPanel.RefreshRegisteredPdkAfterExternalSave;
 
-        // Single-process enforcement (issues #570/#653/#737): every placement surface —
-        // manual placement/paste, saved group templates, and the AI assistant — shares ONE
-        // policy context, so the active process, the process-agnostic tool PDKs, and the
-        // library-based PDK-source resolver (groups/pasted copies carry no source of their
-        // own, so children are resolved against the loaded library) can never diverge.
-        var placementContext = new PlacementPolicyContext(
-            // Inside a die its process and enabled PDKs decide; elsewhere the design's process.
-            getActiveProcess: () => Canvas.Dies.ActiveDie?.ProcessBinding ?? FileOperations.ActiveProcess,
-            getProcessAgnosticPdkNames: () => LeftPanel.GetProcessAgnosticPdkNames(),
-            resolveComponentPdkSource: component =>
-                ViewModels.Library.ComponentPdkSourceResolver.Resolve(component, LeftPanel.AllTemplates),
-            resolveLiveMemberPdkNames: () =>
-                Canvas.Dies.ActiveDie is { ProcessBinding: { } dieProcess } activeDie
-                    ? LeftPanel.DieScopePdkNames(dieProcess, activeDie.Die?.EnabledPdkNames)
-                    : FileOperations.ActiveProcess is { } activeProcess
-                        ? LeftPanel.ResolveLiveMemberPdkNames(activeProcess)
-                        : null,
-            // Per-chiplet scoping (issue #935): the live catalog lets the policy derive a
-            // group's chiplet process binding from its children.
-            getProcessCatalog: () => ProcessCatalog.BuildGroups(LeftPanel.GetLoadedPdkProcessEntries()));
-
+        var placementContext = _processContext.Placement;
         CanvasInteraction.PlacementContext = placementContext;
         InitializeDies();
         _canvas.Clipboard.PdkSourceResolver = placementContext.ResolveComponentPdkSource;
@@ -620,73 +461,40 @@ public partial class MainViewModel : ObservableObject
             aiGrid.PlacementContext = placementContext;
         }
 
-        // Feed the design's active process (#570) into the registry browser so
-        // components from a different fabrication process are flagged (#656).
-        // Playground accepts everything, so it clears the filter.
-        Registry.ActiveProcessId = RegistryProcessIdFor(FileOperations.ActiveProcess);
-        FileOperations.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(FileOperationsViewModel.ActiveProcess))
-                Registry.ActiveProcessId = RegistryProcessIdFor(FileOperations.ActiveProcess);
-        };
-
         // Let the export guard open the Settings window (e.g. on the Python-Environments
         // page when Nazca is missing); ShowSettingsWindowAsync is wired later by MainWindow.
-        FileOperations.ShowSettingsWindow = async pageType =>
+        _bindings.Bind(() => FileOperations.ShowSettingsWindow, value => FileOperations.ShowSettingsWindow = value, async pageType =>
         {
             if (ShowSettingsWindowAsync != null)
                 await ShowSettingsWindowAsync(pageType);
-        };
-
-        // Wire up canvas status updates to bottom panel
-        _canvas.PropertyChanged += (s, e) =>
-        {
-            if (e.PropertyName == nameof(DesignCanvasViewModel.RoutingStatusText))
-            {
-                var routingText = _canvas.RoutingStatusText;
-                if (!string.IsNullOrEmpty(routingText))
-                {
-                    UpdateStatusText(routingText);
-                }
-            }
-        };
+        });
 
         // Analysis-output picker (#754): the dock header button and both analysis tabs
         // can switch the canvas into the eyedropper picker mode.
         Action activateOutputPicker = () => CanvasInteraction.SetPickAnalysisOutputModeCommand.Execute(null);
-        BottomPanel.Analysis.Output.PickRequested = activateOutputPicker;
-        BottomPanel.Analysis.Eye.RequestOutputPicker = activateOutputPicker;
-        BottomPanel.Analysis.Transient.RequestOutputPicker = activateOutputPicker;
+        _bindings.Bind(() => BottomPanel.Analysis.Output.PickRequested, value => BottomPanel.Analysis.Output.PickRequested = value, activateOutputPicker);
+        _bindings.Bind(() => BottomPanel.Analysis.Eye.RequestOutputPicker, value => BottomPanel.Analysis.Eye.RequestOutputPicker = value, activateOutputPicker);
+        _bindings.Bind(() => BottomPanel.Analysis.Transient.RequestOutputPicker, value => BottomPanel.Analysis.Transient.RequestOutputPicker = value, activateOutputPicker);
 
         // Monte-Carlo fabrication variance: the sigma inputs pre-fill from the
         // tolerances declared by the active PDK process.
-        BottomPanel.Analysis.MonteCarlo.ActiveProcessProvider = () => ScopeDie?.ProcessBinding ?? FileOperations.ActiveProcess;
-        BottomPanel.Analysis.MonteCarlo.RefreshTolerancesFromProcess();
-        FileOperations.PropertyChanged += (s, e) =>
-        {
-            if (e.PropertyName == nameof(FileOperationsViewModel.ActiveProcess))
-                BottomPanel.Analysis.MonteCarlo.RefreshTolerancesFromProcess();
-        };
+        _bindings.Bind(() => BottomPanel.Analysis.MonteCarlo.ActiveProcessProvider, value => BottomPanel.Analysis.MonteCarlo.ActiveProcessProvider = value,
+            () => ScopeDie?.ProcessBinding ?? FileOperations.ActiveProcess);
 
-        // Wire up callbacks
-        CanvasInteraction.OnSelectionChanged = comp =>
-        {
-            ImportedHierarchy.ConfigureForSelection(comp);
-            RightPanel.Sweep.ConfigureForComponent(comp, Canvas);
-            RightPanel.TruthTable.ConfigureForSelection(comp, Canvas);
-            RightPanel.MakeGate.ConfigureForSelection(comp, Canvas);
-            BottomPanel.Analysis.Optimization.RefreshFromCanvas();
-            LeftPanel.HierarchyPanel.SyncSelectionFromCanvas(comp);
-        };
-
+        _selectionPanels = new Shell.SelectionPanelCoordinator(Canvas, CanvasInteraction,
+            LeftPanel, RightPanel, BottomPanel, ImportedHierarchy);
+        _libraryInteraction = new Shell.LibraryInteractionCoordinator(LeftPanel, CanvasInteraction,
+            text => StatusText = text,
+            (text, error) => BottomPanel.ErrorConsole.Log(text, CAP_Contracts.Logger.LogLevel.Error, error));
         // Mode-slice probe (issue #691): clicking an element in Probe mode opens the
         // non-modal flyout at the click point, auto-filled from PDK/connection data.
         ModeProbe = modeProbe;
         if (ModeProbe != null)
         {
-            ModeProbe.GetActiveProcessFingerprint = () => (ScopeDie?.ProcessBinding ?? FileOperations.ActiveProcess)?.Fingerprint;
-            ModeProbe.GetSimulationWavelengthNm = () =>
-                Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm;
+            _bindings.Bind(() => ModeProbe.GetActiveProcessFingerprint, value => ModeProbe.GetActiveProcessFingerprint = value,
+                () => (ScopeDie?.ProcessBinding ?? FileOperations.ActiveProcess)?.Fingerprint);
+            _bindings.Bind(() => ModeProbe.GetSimulationWavelengthNm, value => ModeProbe.GetSimulationWavelengthNm = value,
+                () => Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm);
             CanvasInteraction.ProbeRequested = (target, canvasX, canvasY) =>
             {
                 // Canvas → control pixels, so the flyout opens where the user clicked.
@@ -696,147 +504,33 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Wire rename from hierarchy panel through undo-aware command manager
-        LeftPanel.HierarchyPanel.RenameComponent = (component, newName) =>
+        _bindings.Bind(() => LeftPanel.HierarchyPanel.RenameComponent, value => LeftPanel.HierarchyPanel.RenameComponent = value, (component, newName) =>
         {
             var cmd = new Commands.RenameComponentCommand(component, newName);
             CommandManager.ExecuteCommand(cmd);
             LeftPanel.HierarchyPanel.RefreshNode(component);
-        };
+        });
 
-        CanvasInteraction.ClearLeftPanelGroupSelection = () =>
-        {
-            LeftPanel.SelectedGroupTemplate = null;
-        };
-
-        CanvasInteraction.ClearComponentTemplateSelection = () =>
-        {
-            CanvasInteraction.SelectedTemplate = null;
-        };
-
-        // Wire up mode changes and template selection to keep UI in sync
-        CanvasInteraction.PropertyChanged += (s, e) =>
-        {
-            if (e.PropertyName == nameof(CanvasInteraction.CurrentMode))
-            {
-                var mode = CanvasInteraction.CurrentMode;
-                // Deselect templates when switching away from placement modes
-                if (mode != InteractionMode.PlaceComponent && mode != InteractionMode.PlaceGroupTemplate)
-                {
-                    LeftPanel.SelectedGroupTemplate = null;
-                    // Note: SelectedTemplate is automatically cleared via CanvasInteraction.OnCurrentModeChanged
-                }
-            }
-            else if (e.PropertyName == nameof(CanvasInteraction.SelectedTemplate))
-            {
-                // When a component template is selected, deselect group template in left panel
-                if (CanvasInteraction.SelectedTemplate != null)
-                {
-                    LeftPanel.SelectedGroupTemplate = null;
-                }
-            }
-            else if (e.PropertyName == nameof(CanvasInteraction.SelectedGroupTemplate))
-            {
-                // When a group template is selected, deselect component template
-                // (SelectedTemplate is bound to MainViewModel.SelectedTemplate which wraps CanvasInteraction.SelectedTemplate,
-                // so it will automatically update the UI ListBox)
-            }
-            else if (e.PropertyName == nameof(CanvasInteraction.SelectedWaveguideConnection))
-            {
-                // Feed the selected connection into the routing options panel (issue #574).
-                BottomPanel.ConnectionRouting.SelectedConnection =
-                    CanvasInteraction.SelectedWaveguideConnection;
-                // ... and into the imported-route re-route panel.
-                BottomPanel.RerouteImported.SelectedConnection =
-                    CanvasInteraction.SelectedWaveguideConnection;
-                // ... and into the length-matching panel.
-                BottomPanel.LengthMatching.SelectedConnection =
-                    CanvasInteraction.SelectedWaveguideConnection;
-                // ... and into the insertion-loss breakdown.
-                BottomPanel.ConnectionLoss.SelectedConnection =
-                    CanvasInteraction.SelectedWaveguideConnection;
-            }
-        };
-
-        // Wire up group template selection from left panel to canvas interaction
-        LeftPanel.OnGroupTemplateSelected = template =>
-        {
-            // Ensure TemplateGroup is loaded before setting as selected
-            if (template.TemplateGroup == null && !string.IsNullOrEmpty(template.FilePath))
-            {
-                // Try to load the template group data from disk
-                try
-                {
-                    if (System.IO.File.Exists(template.FilePath))
-                    {
-                        var json = System.IO.File.ReadAllText(template.FilePath);
-                        var fileData = System.Text.Json.JsonSerializer.Deserialize<CAP_Core.Components.Creation.GroupLibraryFileData>(json);
-
-                        if (fileData != null && !string.IsNullOrWhiteSpace(fileData.GroupData))
-                        {
-                            var group = CAP_Core.Components.Creation.GroupTemplateSerializer.Deserialize(fileData.GroupData);
-                            if (group != null)
-                            {
-                                template.TemplateGroup = group;
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    StatusText = string.Format(LocalizationService.Instance.Translate("Status.TemplateLoadFailed"), template.Name, ex.Message);
-                    BottomPanel.ErrorConsole.Log($"Failed to load template '{template.Name}': {ex.Message}", CAP_Contracts.Logger.LogLevel.Error, ex);
-                    return;
-                }
-
-                if (template.TemplateGroup == null)
-                {
-                    StatusText = string.Format(LocalizationService.Instance.Translate("Status.TemplateCorrupted"), template.Name);
-                    return;
-                }
-            }
-            CanvasInteraction.SelectedGroupTemplate = template;
-        };
-
-        WireDesignValidation();
+        _designChecks = new Shell.DesignCheckRunCoordinator(Canvas, LeftPanel, _processContext,
+            RightPanel.DesignValidation, ChipSize, text => StatusText = text);
+        _designChecks.PropertyChanged += DesignCheckStateChanged;
+        _designCheckInteraction = new Shell.DesignCheckInteractionCoordinator(Canvas, CommandManager,
+            RightPanel.DesignValidation, ViewportControl.NavigateCanvasTo, _designChecks.RunAsync);
         WireHierarchyPanel();
         WireShell();
         WireFileOperations();
-        WireCommandManager();
-        InitializeLearningPath(preferencesService);
+        _shellState = new Shell.ShellStateCoordinator(FileOperations, Canvas, CommandManager,
+            Registry, BottomPanel.Analysis.MonteCarlo, RefreshProcessIndicator, UpdateStatusText,
+            () => { UndoCommand.NotifyCanExecuteChanged(); RedoCommand.NotifyCanExecuteChanged(); });
+        _shellState.PropertyChanged += ShellStateChanged;
+
 
         // Initialize panels
         LeftPanel.Initialize();
         RightPanel.Initialize();
 
-        // Trigger startup update check after a brief delay to avoid blocking startup
-        _ = TriggerStartupUpdateCheckAsync();
-    }
-
-    /// <summary>
-    /// Waits briefly for the UI to finish loading, then checks for updates in the background.
-    /// </summary>
-    private async Task TriggerStartupUpdateCheckAsync()
-    {
-        await Task.Delay(2000);
-        await Update.CheckForUpdatesOnStartupAsync();
-        if (ClaudeConnectPrompt != null)
-            await ClaudeConnectPrompt.CheckOnStartupAsync();
-    }
-
-    private void WireCommandManager()
-    {
-        // Wire CommandManager to notify RelayCommands when CanUndo/CanRedo changes
-        CommandManager.PropertyChanged += (s, e) =>
-        {
-            if (e.PropertyName == nameof(Commands.CommandManager.CanUndo))
-            {
-                UndoCommand.NotifyCanExecuteChanged();
-            }
-            else if (e.PropertyName == nameof(Commands.CommandManager.CanRedo))
-            {
-                RedoCommand.NotifyCanExecuteChanged();
-            }
-        };
+        _activation = new Shell.ShellActivationCoordinator(Update, FileOperations.GdsExport,
+            ClaudeConnectPrompt, PythonStartup, ErrorConsole);
     }
 
     private void UpdateStatusText(string text)
@@ -859,24 +553,10 @@ public partial class MainViewModel : ObservableObject
         UpdateStatusText(RightPanel.Netlist.StatusText);
     }
 
-    /// <summary>
-    /// Maps the design's active process to the id the registry browser compares
-    /// component processes against. Playground and "no process yet" return null,
-    /// which disables mismatch flagging.
-    /// </summary>
-    private static string? RegistryProcessIdFor(ActiveProcessSelection? selection) =>
-        selection == null || selection.IsPlayground ? null : selection.DisplayName;
-
     private void WireShell()
     {
         StatusBar = new Shell.StatusBarViewModel(Canvas, CanvasInteraction, LocalizationService.Instance);
         BlockedConnections = new Shell.BlockedConnectionsViewModel(Canvas, CanvasInteraction, ViewportControl.NavigateCanvasTo);
-        Tutorial.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(Tutorial.CurrentTargetName) or nameof(Tutorial.IsActive)
-                && Tutorial.IsActive)
-                LeftRail.RevealTourTarget(Tutorial.CurrentTargetName);
-        };
     }
 
     private void WireHierarchyPanel()
@@ -886,60 +566,28 @@ public partial class MainViewModel : ObservableObject
         // OpenComponentSettings is wired by MainWindow.axaml.cs (view layer) so it can open the dialog window.
     }
 
-    private void WireDesignValidation()
-    {
-        RightPanel.DesignValidation.NavigateToPosition = ViewportControl.NavigateCanvasTo;
-        RightPanel.DesignValidation.HighlightConnection = (connection) =>
-        {
-            foreach (var conn in Canvas.Connections)
-            {
-                conn.IsSelected = conn.Connection == connection;
-            }
-        };
-
-        // "Align chiplet" one-click fix (issue #1248): snap the finding's end chiplet
-        // into butt-coupling through the undoable group move, then re-run the checks.
-        var alignmentService = new ChipletAlignmentService(Canvas, CommandManager);
-        RightPanel.DesignValidation.AlignChipletHandler = async connection =>
-        {
-            double wavelengthNm = Canvas.Components.FirstOrDefault(c => c.IsLightSource)
-                ?.LaserConfig?.WavelengthNm ?? CAP_Core.Components.ComponentHelpers.StandardWaveLengths.RedNM;
-            var refusal = alignmentService.TryAlign(connection, wavelengthNm);
-            if (refusal == null)
-            {
-                await RunDesignChecks();
-                return null;
-            }
-            return LocalizationService.Instance.Translate($"DesignChecks.Align.Refused.{refusal}");
-        };
-    }
-
     private void WireFileOperations()
     {
-        FileOperations.PhotonTorchExport.UpdateStatus = UpdateStatusText;
+        _bindings.Bind(() => FileOperations.PhotonTorchExport.UpdateStatus, value => FileOperations.PhotonTorchExport.UpdateStatus = value, UpdateStatusText);
         FileOperations.RebuildHierarchy = LeftPanel.HierarchyPanel.RebuildTree;
 
         // Single-process wiring (issue #570): supply the live PDK catalog for the
         // New-Design picker and legacy-file migration, route migration warnings to
         // the status bar, and keep the toolbar indicator in sync with the active process.
-        FileOperations.ProcessCatalogProvider = BuildProcessCatalog;
-        FileOperations.ProcessAgnosticPdkNamesProvider = () => LeftPanel.GetProcessAgnosticPdkNames();
+        FileOperations.ProcessCatalogProvider = _processContext.BuildCatalog;
+        _bindings.Bind(() => FileOperations.ProcessAgnosticPdkNamesProvider, value => FileOperations.ProcessAgnosticPdkNamesProvider = value,
+            () => LeftPanel.GetProcessAgnosticPdkNames());
         // Migration/revalidation warnings must survive the next status update — the
         // status bar is overwritten by the load-complete message an instant later.
-        FileOperations.OnProcessMigrationWarning = warning =>
+        _bindings.Bind(() => FileOperations.OnProcessMigrationWarning, value => FileOperations.OnProcessMigrationWarning = value, warning =>
         {
             UpdateStatusText(warning);
             ErrorConsole.LogWarning(warning);
-        };
-        FileOperations.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(FileOperations.ActiveProcess)) RefreshProcessIndicator();
-        };
-
+        });
         // Re-read the VM-side one-time translations when the UI language switches (field bug
         // round 5). Filtered to ActiveLanguageCode because SetLanguage raises several
         // notifications ("Item"/"Item[]" for the AXAML indexer bindings) per switch.
-        LocalizationWeakSubscription.Subscribe(this, static (self, e) =>
+        _localizationSubscription = LocalizationWeakSubscription.Subscribe(this, static (self, e) =>
         {
             if (e.PropertyName == nameof(LocalizationService.ActiveLanguageCode))
                 self.OnUiLanguageChanged();
@@ -953,33 +601,20 @@ public partial class MainViewModel : ObservableObject
             var (vpWidth, vpHeight) = ViewportControl.GetViewportSize?.Invoke() ?? (w, h);
             ViewportControl.ZoomToFit(vpWidth, vpHeight);
         };
-        FileOperations.ZoomToFitAfterLoad = zoomToFitToViewport;
-        GdsImport.ZoomToFitAfterImport = zoomToFitToViewport;
+        _bindings.Bind(() => FileOperations.ZoomToFitAfterLoad, value => FileOperations.ZoomToFitAfterLoad = value, zoomToFitToViewport);
+        _bindings.Bind(() => GdsImport.ZoomToFitAfterImport, value => GdsImport.ZoomToFitAfterImport = value, zoomToFitToViewport);
         // An import that outgrew the chip already resized the canvas; this syncs
         // the chip-size settings panel (same pattern as ApplyChipSizeAfterLoad).
         GdsImport.ApplyChipSizeAfterImport = ChipSize.ApplyFromMicrometers;
 
         // Restore chip size from saved file without overwriting the user preference default
-        FileOperations.ApplyChipSizeAfterLoad = (widthUm, heightUm) =>
-            ChipSize.ApplyFromMicrometers(widthUm, heightUm);
+        FileOperations.ApplyChipSizeAfterLoad = ChipSize.ApplyFromMicrometers;
 
         // Re-sync the Spectrum tab's coherent-interference toggle with the flag
         // just restored from the loaded file (the canvas survives loads, so the
         // panel's one-time Configure never sees the new value).
-        FileOperations.CoherentModeRestoredAfterLoad = () =>
-            BottomPanel.Analysis.Spectrum.SyncCoherentToggleFromCanvas();
+        FileOperations.CoherentModeRestoredAfterLoad = BottomPanel.Analysis.Spectrum.SyncCoherentToggleFromCanvas;
 
-        // Auto-check Python/Nazca environment on startup
-        // If no custom path is set, trigger auto-discovery
-        var gdsExport = FileOperations.GdsExport;
-        if (string.IsNullOrEmpty(gdsExport.CustomPythonPath))
-        {
-            _ = gdsExport.SearchForPythonAsync();
-        }
-        else
-        {
-            _ = gdsExport.CheckEnvironmentAsync();
-        }
     }
 
     /// <summary>
@@ -992,7 +627,7 @@ public partial class MainViewModel : ObservableObject
         var p = FileOperations.ActiveProcess;
         UpdateActiveProcessLabel(p);
         LeftPanel.ApplyActiveProcess(p);
-        if (Tutorial?.IsActive == true && !HasLearningProcess)
+        if (Tutorial?.IsActive == true && !_learning.Guidance.HasLearningProcess)
             Tutorial.Skip();
     }
 
@@ -1102,106 +737,6 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveDesign() => await FileOperations.SaveDesignCommand.ExecuteAsync(null);
 
-    /// <summary>
-    /// Starts the "Watch it compute" tour on the shipped Counter example (Home
-    /// tour card, issue #1143). The example opens as an untitled copy through
-    /// the same loader the Examples list uses; when the user cancels the
-    /// unsaved-changes prompt (or the example is not installed), the tour does
-    /// not start and the current design stays open.
-    /// </summary>
-    private async Task StartWatchComputeTourAsync()
-    {
-        var navigation = _learningNavigationVersion;
-        var counterPath = Home.Examples
-            .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
-                == ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel.CounterExampleFileName)
-            ?.FilePath;
-        if (counterPath == null || !await FileOperations.OpenDesignAsCopyAsync(counterPath, () => navigation == _learningNavigationVersion))
-            return;
-        if (navigation != _learningNavigationVersion) return;
-
-        WatchTour.Start();
-        FitStartedLearningJourney(() => WatchTour.IsActive);
-    }
-
-    /// <summary>
-    /// Starts the "Run a program on your chip" tour on the shipped 4-bit adder
-    /// example (Home tour card, issue #1267). The example opens as an untitled
-    /// copy through the same loader the Examples list uses; when the user
-    /// cancels the unsaved-changes prompt (or the example is not installed),
-    /// the tour does not start and the current design stays open.
-    /// </summary>
-    private async Task StartRunProgramTourAsync()
-    {
-        var navigation = _learningNavigationVersion;
-        var adderPath = Home.Examples
-            .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
-                == ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel.AdderExampleFileName)
-            ?.FilePath;
-        if (adderPath == null || !await FileOperations.OpenDesignAsCopyAsync(adderPath, () => navigation == _learningNavigationVersion))
-            return;
-        if (navigation != _learningNavigationVersion) return;
-
-        RunProgramTour.Start();
-        FitStartedLearningJourney(() => RunProgramTour.IsActive);
-    }
-
-    /// <summary>
-    /// Home → "Connect two chiplets" (issue #1288): loads the shipped
-    /// Two-Chiplets edge-coupler example as an untitled copy through the same
-    /// loader the Examples list uses; when the user cancels the
-    /// unsaved-changes prompt (or the example is not installed), the tour does
-    /// not start and the current design stays open.
-    /// </summary>
-    private async Task StartConnectChipletsTourAsync()
-    {
-        var navigation = _learningNavigationVersion;
-        var chipletsPath = Home.Examples
-            .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
-                == ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel.ExampleFileName)
-            ?.FilePath;
-        if (chipletsPath == null || !await FileOperations.OpenDesignAsCopyAsync(chipletsPath, () => navigation == _learningNavigationVersion))
-            return;
-        if (navigation != _learningNavigationVersion) return;
-
-        ConnectChipletsTour.Start();
-    }
-
-    /// <summary>
-    /// Starts the "Store a number in light" tour on the shipped RAM 2x4 example
-    /// (Home tour card, issue #1422). The example opens as an untitled copy
-    /// through the same loader the Examples list uses; when the user cancels the
-    /// unsaved-changes prompt (or the example is not installed), the tour does
-    /// not start and the current design stays open.
-    /// </summary>
-    private async Task StartStoreNumberTourAsync()
-    {
-        var navigation = _learningNavigationVersion;
-        var ramPath = Home.Examples
-            .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
-                == ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel.RamExampleFileName)
-            ?.FilePath;
-        if (ramPath == null || !await FileOperations.OpenDesignAsCopyAsync(ramPath, () => navigation == _learningNavigationVersion))
-            return;
-        if (navigation != _learningNavigationVersion) return;
-
-        StoreNumberTour.Start();
-        FitStartedLearningJourney(() => StoreNumberTour.IsActive);
-    }
-
-    /// <summary>
-    /// Recomputes <see cref="WindowTitle"/> from the current file path and dirty state.
-    /// </summary>
-    private void UpdateWindowTitle()
-    {
-        var marker = FileOperations.HasUnsavedChanges ? DirtyMarker : "";
-        WindowTitle = FileOperations.CurrentFilePath is { } path
-            ? $"{System.IO.Path.GetFileName(path)}{marker} — {AppTitle}"
-            : FileOperations.HasUnsavedChanges
-                ? $"{UntitledProjectName}{marker} — {AppTitle}"
-                : AppTitle;
-    }
-
     /// <summary>Shows the Home screen (recent projects, new/open) over the editor.</summary>
     [RelayCommand]
     private void ShowHome() => Home.Show();
@@ -1212,76 +747,11 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadDesign() => await FileOperations.LoadDesignCommand.ExecuteAsync(null);
 
-    /// <summary>
-    /// Starts a new design: first clears the canvas via
-    /// <see cref="FileOperationsViewModel.NewProjectCommand"/> — which prompts to save
-    /// unsaved changes and silently no-ops if the user cancels that prompt — and only
-    /// once the canvas is confirmed empty does it ask which fabrication process to lock
-    /// the fresh design to (or Playground), issue #570. This ordering is required so a
-    /// picked process is never applied to a design that failed to clear (the exact
-    /// data-integrity bug the process lock exists to prevent). Cancelling the process
-    /// picker after a successful clear simply leaves the new, empty design with no
-    /// process set. When no picker is wired (headless/test contexts), the canvas is
-    /// cleared and no process is set.
-    /// </summary>
     [RelayCommand]
-    private async Task NewProject()
-    {
-        // TryNewProjectAsync reports cancellation explicitly. An empty canvas is NOT a
-        // usable success signal: the canvas can already be empty while the user cancels
-        // the unsaved-changes prompt, and showing the picker then would overwrite the
-        // process of a design the user explicitly chose to keep (issue #570).
-        _choosingNewProjectProcess = true;
-        try
-        {
-            if (!await FileOperations.TryNewProjectAsync()) return;
-            await PickAndApplyProcessAsync();
-        }
-        finally { _choosingNewProjectProcess = false; }
-        if (HasLearningProcess && _guidancePreferences?.GetGuidedLearningEnabled() == true)
-            StartVisualLearning();
-    }
+    private Task NewProject() => _projectProcess.NewProjectAsync();
 
-    /// <summary>
-    /// Prompts once at startup for the fabrication process (the same picker as New Design),
-    /// unless a design that already carries a process was loaded first. Invoked by the view
-    /// after the window opens (issue #570). Dismissing the picker starts in Playground.
-    /// </summary>
-    public async Task PromptForInitialProcessAsync()
-    {
-        if (_choosingNewProjectProcess || _preparingLearningProject || FileOperations.ActiveProcess != null)
-            return;   // a design (with its process) is already established
-
-        await PickAndApplyProcessAsync();
-    }
-
-    /// <summary>
-    /// Builds the live process catalog from the loaded PDKs. Single definition shared by
-    /// the New-Design/startup picker and the file-load migration path, so the two can
-    /// never diverge on how the catalog is constructed.
-    /// </summary>
-    private IReadOnlyList<ProcessGroup> BuildProcessCatalog() =>
-        ProcessCatalog.BuildGroups(LeftPanel.GetLoadedPdkProcessEntries());
-
-    /// <summary>
-    /// Shows the process picker and applies the result to the design. Dismissing the picker
-    /// defaults to Playground (not manufacturable) rather than leaving the process undefined,
-    /// so the design is always in a known state (issue #570). No-op when no picker is wired
-    /// (headless/tests), leaving the process unset.
-    /// </summary>
-    private async Task PickAndApplyProcessAsync()
-    {
-        if (ShowProcessSelectionAsync == null)
-            return;
-
-        var groups = BuildProcessCatalog();
-        var selection = await ShowProcessSelectionAsync(groups);
-        // markDirty: false — picking the baseline process of a fresh, empty design is
-        // not an unsaved change; marking it dirty made every launch (and every File→New)
-        // answer a spurious "Save changes?" prompt for an untouched design.
-        FileOperations.SetActiveProcess(selection ?? ActiveProcessSelection.Playground(), markDirty: false);
-    }
-
+    /// <summary>Prompts for a baseline process only if no design or learning flow has established one.</summary>
+    public Task PromptForInitialProcessAsync() => _projectProcess.PromptInitiallyAsync();
     [RelayCommand]
     private async Task ExportNazca() => await FileOperations.ExportNazcaCommand.ExecuteAsync(null);
 
@@ -1310,7 +780,11 @@ public partial class MainViewModel : ObservableObject
     /// contexts, in which case <see cref="NewProject"/> skips the dialog and
     /// proceeds without locking a process.
     /// </summary>
-    public Func<IReadOnlyList<ProcessGroup>, Task<ActiveProcessSelection?>>? ShowProcessSelectionAsync { get; set; }
+    public Func<IReadOnlyList<ProcessGroup>, Task<ActiveProcessSelection?>>? ShowProcessSelectionAsync
+    {
+        get => _projectProcess.ShowPicker;
+        set => _projectProcess.ShowPicker = value;
+    }
 
     [RelayCommand]
     private void OpenPdkHelp()
@@ -1381,7 +855,9 @@ public partial class MainViewModel : ObservableObject
     private bool CanRedo() => CommandManager.CanRedo;
 
     [RelayCommand]
-    private async Task RunSimulation()
+    private Task RunSimulation() => _work.RunAsync(RunSimulationCoreAsync);
+
+    private async Task RunSimulationCoreAsync(CancellationToken cancellationToken)
     {
         if (IsSimulating) return;
 
@@ -1401,7 +877,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Always runs; the on/off toggle lives in RunWorkspace / TogglePowerOverlay (L, P).
-        await ExecuteSimulation();
+        await ExecuteSimulation(cancellationToken);
     }
 
     /// <summary>
@@ -1411,7 +887,15 @@ public partial class MainViewModel : ObservableObject
     /// blocked circuit) switches the simulation off instead of leaving a stale overlay,
     /// and a live run that finds a simulation already running is re-queued.
     /// </summary>
-    private async Task ExecuteSimulation(CancellationToken cancellationToken = default, bool isLiveRun = false)
+    private Task ExecuteSimulation(CancellationToken cancellationToken = default, bool isLiveRun = false) =>
+        _work.RunAsync(async stop =>
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(stop, cancellationToken);
+            await ExecuteSimulationCoreAsync(linked.Token, isLiveRun, cancellationToken);
+        });
+
+    private async Task ExecuteSimulationCoreAsync(CancellationToken cancellationToken, bool isLiveRun,
+        CancellationToken caller)
     {
         if (IsSimulating)
         {
@@ -1424,6 +908,10 @@ public partial class MainViewModel : ObservableObject
         {
             StatusText = LocalizationService.Instance.Translate("Status.RunningSimulation");
             var result = await Simulation.RunAsync(Canvas, cancellationToken);
+            _work.ThrowIfStopping();
+            caller.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
+            if (result.IsSuperseded) return;
 
             if (result.Success)
             {
@@ -1435,7 +923,7 @@ public partial class MainViewModel : ObservableObject
                 ReportSimulationFailure(result.ErrorMessage ?? "Simulation failed", isLiveRun);
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (_work.IsStopping || caller.IsCancellationRequested || cancellationToken.IsCancellationRequested)
         {
             // Superseded by a newer live run, which reports its own outcome.
         }
@@ -1461,534 +949,8 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Runs the design checks off the UI thread (issue #1150, 100 ms budget): the canvas
-    /// snapshots and PDK/DRC inputs are gathered here, the validator passes execute on a
-    /// worker via <see cref="Diagnostics.DesignValidationViewModel.RunValidationAsync"/>,
-    /// and the status-bar commit happens after the await — back on the UI thread. The
-    /// <see cref="IsRunningDesignChecks"/> flag drives the busy indicator while the run
-    /// is in flight.
-    /// </summary>
     [RelayCommand]
-    private async Task RunDesignChecks()
-    {
-        if (IsRunningDesignChecks) return;
-        IsRunningDesignChecks = true;
-        // Status-bar busy indicator for the backgrounded run (issue #1150): the user
-        // sees the validation is in flight instead of a frozen status bar.
-        StatusText = LocalizationService.Instance.Translate("Status.RunningDesignChecks");
-        try
-        {
-            var connections = Canvas.Connections
-                .Select(c => c.Connection)
-                .ToList();
+    private Task RunDesignChecks() => _designChecks.RunAsync();
 
-            var groups = Canvas.Components
-                .Select(c => c.Component)
-                .OfType<CAP_Core.Components.Core.ComponentGroup>()
-                .ToList();
-
-            var allComponents = Canvas.Components
-                .Select(c => c.Component)
-                .ToList();
-
-            // PDK-process compatibility (issue #570 follow-up, LC-T4): resolve each placed
-            // component's PDK source the same way the placement/paste guards do — the snapshot
-            // TemplatePdkSource captured when it was placed, falling back to a live library match
-            // (see ComponentClipboard/FileOperationsViewModel for the same fallback) — so a process
-            // edit that diverges a PDK from the design's active process is flagged for review even
-            // though the already-placed components themselves are never touched or deleted.
-            var pdkSourceByComponent = Canvas.Components.ToDictionary(
-                c => c.Component,
-                c => c.TemplatePdkSource ?? CanvasInteraction.PlacementContext.ResolveComponentPdkSource(c.Component));
-            // Group children carry no template snapshot of their own; the PDK check walks
-            // them at every nesting depth, so resolve them through the live library too.
-            foreach (var nested in groups.SelectMany(g => g.GetAllComponentsRecursive()))
-                pdkSourceByComponent.TryAdd(nested, CanvasInteraction.PlacementContext.ResolveComponentPdkSource(nested));
-
-            // Under a real process lock the allowed set is the lock-derived membership; without one
-            // (Playground/no selection) nothing is locked, so GetProcessCompatiblePdkNames() equals
-            // all loaded PDK names and only a component whose PDK isn't loaded at all (e.g.
-            // trash-deleted while its placed instances were kept, as PdkDelete_Click promises) gets
-            // flagged — with a "not loaded" wording instead of a process-mismatch message that would
-            // reference a process that doesn't exist (PR #739 review, both directions).
-            // The design-level process governs single-die designs only; inside a die its own
-            // process does, and at an assembly's root each die checks its parts itself.
-            var scopeProcess = CanvasScopeProcess;
-            var processLockActive = scopeProcess is { IsPlayground: false };
-            var compatiblePdkNames = LeftPanel.PdkManager.GetProcessCompatiblePdkNames();
-
-            // DRC-lite per connection (issue #936): each connection's width and spacing
-            // limits come from its OWN endpoint components' PDK processes — the stricter
-            // chiplet governs a cross-chiplet route, same rule as the router's bend floor
-            // (#937) — so a two-process canvas (only possible in Playground, #935) is
-            // checked per chiplet instead of silently skipping every PDK-dependent rule,
-            // and a locked multi-member process no longer checks the other members against
-            // the first member PDK's limits. PDKs that declare no minimum stay silent
-            // (#926). Library and drafts are snapshotted here on the UI thread (same
-            // pattern as the #937 floor provider); connections whose endpoints don't
-            // resolve to a PDK (built-ins) yield null and fall back to the lock-derived
-            // canvas-wide values below, exactly like the #937 floor. Frozen group paths
-            // carry no pins to resolve an owning process from, so they also keep the
-            // canvas-wide spacing (0 in Playground = off, as before).
-            var drcTemplates = LeftPanel.AllTemplates.ToList();
-            var drcDrafts = LeftPanel.GetLoadedPdkDrafts().ToList();
-            string? DrcPdkSourceOf(PhysicalPin? pin) =>
-                pin?.ParentComponent is { } component
-                    ? ComponentPdkSourceResolver.Resolve(component, drcTemplates)
-                    : null;
-            Func<CAP_Core.Components.Connections.WaveguideConnection, CAP_Core.Analysis.ConnectionDrcRules?> connectionDrcRuleProvider =
-                connection => ConnectionDrcRuleResolver.ResolveForEndpointPdkNames(
-                    DrcPdkSourceOf(connection.StartPin), DrcPdkSourceOf(connection.EndPin), drcDrafts);
-
-            double minWaveguideSpacingMicrometers = 0;
-            IReadOnlyList<CAP_Core.Analysis.WaveguideMinWidthRule>? minWaveguideWidthRules = null;
-            if (processLockActive)
-            {
-                var memberProcess = LeftPanel.ResolveLiveMemberPdkNames(scopeProcess!)
-                    .Select(name => drcDrafts.FirstOrDefault(
-                        d => string.Equals(d.Name, name, StringComparison.OrdinalIgnoreCase))?.Process)
-                    .FirstOrDefault(p => p is not null);
-                minWaveguideSpacingMicrometers = memberProcess.GetMinWaveguideSpacingMicrometersOrDefault();
-                minWaveguideWidthRules = memberProcess.GetMinWaveguideWidthRules();
-            }
-
-            bool usesDieBounds = Canvas.Dies.IsAssemblyRoot || Canvas.Dies.ActiveDie != null;
-            await RightPanel.DesignValidation.RunValidationAsync(
-                connections,
-                groups,
-                allComponents,
-                // A die assembly (and the inside of one of its dies) is bounded per die by the
-                // die checks; the single-chip bounds check only applies to single-die designs.
-                usesDieBounds ? 0 : ChipSize.CurrentWidthMicrometers,
-                usesDieBounds ? 0 : ChipSize.CurrentHeightMicrometers,
-                pdkSourceByComponent,
-                LeftPanel.GetProcessAgnosticPdkNames(),
-                compatiblePdkNames,
-                processLockActive,
-                minWaveguideSpacingMicrometers: minWaveguideSpacingMicrometers,
-                minWaveguideWidthRules: minWaveguideWidthRules,
-                connectionDrcRuleProvider: connectionDrcRuleProvider,
-                wavelengthNm: Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm);
-
-            StatusText = RightPanel.DesignValidation.StatusText;
-            Canvas.ViewSettings.SetDesignCheckFindings(RightPanel.DesignValidation.AllFindings);
-        }
-        finally
-        {
-            IsRunningDesignChecks = false;
-        }
-    }
-
-    /// <summary>
-    /// True while <see cref="RunDesignChecks"/> has a validation pass in flight. Bound
-    /// by the toolbar button to show a busy state and prevent re-entry (issue #1150).
-    /// </summary>
-    [ObservableProperty]
-    private bool _isRunningDesignChecks;
-}
-
-// Data classes for serialization (used by FileOperationsViewModel)
-
-/// <summary>
-/// Root data structure for a .lun design file (Photonic Intermediate Representation).
-/// Version 2.0 stores S-matrix data, simulation results, metadata, and external references.
-/// Legacy v1 files (FormatVersion missing or different) load with a loud warning in the
-/// error console and get upgraded to v2.0 on the next save.
-/// </summary>
-public class DesignFileData
-{
-    /// <summary>
-    /// File format version. "2.0" is the current format. Other values trigger a loud
-    /// warning during load; missing PIR sections remain empty until the next save.
-    /// </summary>
-    public string? FormatVersion { get; set; }
-
-    public List<ComponentData> Components { get; set; } = new();
-    public List<ConnectionData> Connections { get; set; } = new();
-
-    /// <summary>
-    /// ComponentGroups with their hierarchical structure, frozen paths, and external pins.
-    /// </summary>
-    public List<DesignGroupData>? Groups { get; set; }
-
-    /// <summary>
-    /// Per-component S-matrix data, keyed by component Identifier string.
-    /// Null or empty for designs without stored S-matrix overrides.
-    /// </summary>
-    public Dictionary<string, ComponentSMatrixData>? SMatrices { get; set; }
-
-    /// <summary>
-    /// Most recent simulation results and any stored parameter sweep results.
-    /// Null if no simulation has been run and saved.
-    /// </summary>
-    public SimulationResultsData? SimulationResults { get; set; }
-
-    /// <summary>
-    /// Design metadata: PDK versions, design rules, authorship.
-    /// Automatically populated with dates on every save.
-    /// </summary>
-    public DesignMetadata? Metadata { get; set; }
-
-    /// <summary>
-    /// References to external simulation or measurement files linked to this design.
-    /// Null or empty for designs without external data.
-    /// </summary>
-    public List<ExternalReferenceData>? ExternalReferences { get; set; }
-
-    /// <summary>
-    /// Identifier of the coupler designated as THE analysis output for the Eye/BER
-    /// and Transient analyses (#754). Null when no coupler is designated (automatic
-    /// selection). Older files without this field load with no designation.
-    /// </summary>
-    public string? AnalysisOutputCoupler { get; set; }
-
-    /// <summary>
-    /// GDS-imported component sets scoped to this design (issue #830): the
-    /// component drafts AND the source .gds (base64) travel inside the .lun so
-    /// it stays self-contained and portable. Null for designs without GDS
-    /// imports; older files reference legacy global import PDKs instead and
-    /// are migrated on load.
-    /// </summary>
-    public List<Services.GdsImport.DesignScope.ImportedGdsComponentSetData>? ImportedGdsComponents { get; set; }
-
-    /// <summary>
-    /// Per-layer visibility overrides for imported GDS geometry (issue #858).
-    /// Only non-default entries are stored; null when every layer is fully
-    /// visible. Older files without this field load with all layers shown.
-    /// </summary>
-    public List<Services.GdsImport.LayerVisibility.GdsLayerVisibilityData>? LayerVisibility { get; set; }
-
-    /// <summary>
-    /// Chip width in micrometers as configured in the Chip Size settings.
-    /// Null for files saved before chip-size support was added (defaults to 5000 μm on load).
-    /// </summary>
-    public double? ChipWidthMicrometers { get; set; }
-
-    /// <summary>
-    /// Chip height in micrometers as configured in the Chip Size settings.
-    /// Null for files saved before chip-size support was added (defaults to 5000 μm on load).
-    /// </summary>
-    public double? ChipHeightMicrometers { get; set; }
-
-    /// <summary>
-    /// The fabrication process this design is locked to (issue #570 — one process per chip).
-    /// Null for legacy files saved before single-process support; migrated on load.
-    /// </summary>
-    public ActiveProcessData? ActiveProcess { get; set; }
-
-    /// <summary>
-    /// Pin-less frozen waveguide paths living directly on the canvas (issue #856):
-    /// GDS-imported route geometry released by ungrouping its import group. Null for
-    /// files saved before canvas-level frozen paths existed.
-    /// </summary>
-    public List<CAP_DataAccess.Persistence.DTOs.FrozenPathDto>? CanvasFrozenPaths { get; set; }
-
-    /// <summary>
-    /// Coherent interference mode of the Wavelength Spectrum tab (issue #1333): routed
-    /// waveguides carry their propagation phase, so arm-length differences show as
-    /// fringes. Null in files saved before the mode existed — loads as off.
-    /// </summary>
-    public bool? CoherentPropagationPhase { get; set; }
-
-    /// <summary>
-    /// The workspace (Layout / Optics / Logic / System) the design was last saved in.
-    /// Null in files saved before workspaces existed — the design then opens in a
-    /// content-based default (see <c>WorkspaceDefaults</c>).
-    /// </summary>
-    public string? Workspace { get; set; }
-}
-
-/// <summary>
-/// DTO for a ComponentGroup in the design file.
-/// Bridges the UI-layer (TemplateName-based) and core-layer (ComponentGroupDto) serialization.
-/// </summary>
-public class DesignGroupData
-{
-    /// <summary>
-    /// Group metadata serialized via ComponentGroupSerializer.
-    /// </summary>
-    public CAP_DataAccess.Persistence.DTOs.ComponentGroupDto GroupDto { get; set; } = new();
-
-    /// <summary>
-    /// Child component data with template names for recreation from the component library.
-    /// Maps child Identifier to TemplateName.
-    /// </summary>
-    public List<ChildComponentData> ChildComponents { get; set; } = new();
-
-    /// <summary>
-    /// Canvas X position of the group ViewModel.
-    /// </summary>
-    public double CanvasX { get; set; }
-
-    /// <summary>
-    /// Canvas Y position of the group ViewModel.
-    /// </summary>
-    public double CanvasY { get; set; }
-
-    /// <summary>
-    /// Per-chiplet process binding of a top-level group (issue #938): the fabrication
-    /// process the chiplet's contents belong to. Null for unbound groups, nested groups
-    /// (their scope is the top-level chiplet's), and files saved before per-chiplet
-    /// bindings existed — the design-level <see cref="DesignFileData.ActiveProcess"/>
-    /// remains the default for those and for ungrouped components.
-    /// </summary>
-    public ActiveProcessData? ProcessBinding { get; set; }
-
-    /// <summary>
-    /// Truth Table pin-role assignment of a top-level group (issue #981): the input,
-    /// output, and bias pins plus threshold the panel last successfully extracted with.
-    /// Null when the group was never extracted — including every file saved before the
-    /// persistence existed — so legacy .lun files stay clean of unused blocks.
-    /// </summary>
-    public CAP_Core.Components.Core.TruthTablePinAssignment? TruthTablePinAssignment { get; set; }
-
-    /// <summary>
-    /// Die definition of a top-level group that is a die of a multi-die assembly
-    /// (outline, edge zone, enabled PDKs). Null for ordinary groups and single-die designs.
-    /// </summary>
-    public Dies.DieData? Die { get; set; }
-}
-
-/// <summary>
-/// DTO for a child component within a group, preserving template name for library lookup.
-/// </summary>
-public class ChildComponentData
-{
-    public string Identifier { get; set; } = "";
-
-    /// <summary>
-    /// Guid string of the component instance (stable unique ID).
-    /// Used as the primary lookup key during load; falls back to Identifier for old files.
-    /// </summary>
-    public string? ComponentGuid { get; set; }
-
-    public string TemplateName { get; set; } = "";
-
-    /// <summary>
-    /// PDK source name used to disambiguate templates with the same name.
-    /// Null in old files — falls back to name-only lookup.
-    /// </summary>
-    public string? PdkSource { get; set; }
-
-    public double X { get; set; }
-    public double Y { get; set; }
-    public int Rotation { get; set; }
-
-    /// <summary>
-    /// Exact continuous rotation in degrees for non-cardinal placements (GDS
-    /// import). Null in old files and for cardinal rotations — <see cref="Rotation"/>
-    /// alone restores those.
-    /// </summary>
-    public double? RotationDegrees { get; set; }
-
-    /// <summary>
-    /// True when the pins were mirrored across the local horizontal centerline
-    /// (GDS STRANS-reflected instance). Null in old files — no mirror.
-    /// </summary>
-    public bool? Mirrored { get; set; }
-
-    /// <summary>True for imported background geometry inside a group (see <c>ComponentData.IsBackground</c>).</summary>
-    public bool? IsBackground { get; set; }
-
-    public double? SliderValue { get; set; }
-
-    /// <summary>
-    /// All slider values keyed by slider number. Supersedes
-    /// <see cref="SliderValue"/> for multi-parameter components; null in old files.
-    /// </summary>
-    public Dictionary<int, double>? SliderValues { get; set; }
-
-    public int? LaserWavelengthNm { get; set; }
-    public double? LaserPower { get; set; }
-    public bool? IsLocked { get; set; }
-    public string? HumanReadableName { get; set; }
-}
-
-public class ComponentData
-{
-    public string TemplateName { get; set; } = "";
-
-    /// <summary>
-    /// PDK source name (e.g. "Built-in", "Demo PDK").
-    /// Used to disambiguate templates with the same name from different PDKs.
-    /// Null in old files — falls back to name-only lookup.
-    /// </summary>
-    public string? PdkSource { get; set; }
-
-    public double X { get; set; }
-    public double Y { get; set; }
-    public string Identifier { get; set; } = "";
-    public int Rotation { get; set; }
-
-    /// <summary>
-    /// Exact continuous rotation in degrees for non-cardinal placements (GDS
-    /// import). Null in old files and for cardinal rotations — <see cref="Rotation"/>
-    /// alone restores those.
-    /// </summary>
-    public double? RotationDegrees { get; set; }
-
-    /// <summary>
-    /// True when the pins were mirrored across the local horizontal centerline
-    /// (GDS STRANS-reflected instance). Null in old files — no mirror.
-    /// </summary>
-    public bool? Mirrored { get; set; }
-
-    /// <summary>
-    /// True for imported background geometry (die frames, logos): no routing obstacle,
-    /// no placement collisions, lowest click priority. Null — a regular component.
-    /// </summary>
-    public bool? IsBackground { get; set; }
-
-    public double? SliderValue { get; set; }
-
-    /// <summary>
-    /// All slider values keyed by slider number. Supersedes
-    /// <see cref="SliderValue"/> for multi-parameter components; null in old files.
-    /// </summary>
-    public Dictionary<int, double>? SliderValues { get; set; }
-
-    public int? LaserWavelengthNm { get; set; }
-    public double? LaserPower { get; set; }
-
-    /// <summary>Per-coupler laser on/off (#690). Null in old files — treated as on.</summary>
-    public bool? LaserEnabled { get; set; }
-
-    /// <summary>Spectral line shape name (#819). Null in old files — ideal source.</summary>
-    public string? LaserLineShape { get; set; }
-
-    /// <summary>Linewidth (FWHM) in nm (#819). Null in old files — editor default.</summary>
-    public double? LaserLinewidthFwhmNm { get; set; }
-
-    /// <summary>Relative intensity noise in dB/Hz (#819). Null in old files — default RIN.</summary>
-    public double? LaserRinDbPerHz { get; set; }
-
-    public bool? IsLocked { get; set; }
-
-    /// <summary>
-    /// True only for crossing components the crossing-insertion pass placed
-    /// automatically (#705); null otherwise and in old files. Used after load
-    /// to rebuild the crossings' dissolution records.
-    /// </summary>
-    public bool? IsInsertedCrossing { get; set; }
-
-    public string? HumanReadableName { get; set; }
-}
-
-public class ConnectionData
-{
-    public int StartComponentIndex { get; set; }
-    public string StartPinName { get; set; } = "";
-    public int EndComponentIndex { get; set; }
-    public string EndPinName { get; set; } = "";
-
-    /// <summary>
-    /// Stable component identifier for the start endpoint (preferred over StartComponentIndex).
-    /// Populated in new saves; null in old files (fall back to StartComponentIndex).
-    /// </summary>
-    public string? StartComponentId { get; set; }
-
-    /// <summary>
-    /// Stable component identifier for the end endpoint (preferred over EndComponentIndex).
-    /// Populated in new saves; null in old files (fall back to EndComponentIndex).
-    /// </summary>
-    public string? EndComponentId { get; set; }
-
-    /// <summary>
-    /// Identifier of the top-level group containing the start endpoint's component, set only
-    /// when the endpoint is a non-exposed pin of a component nested inside a group (#1444):
-    /// child identifiers are unique within one group but not across groups (two instances of
-    /// the same template share them), so the ancestor scopes the load-side search. Null for
-    /// top-level endpoints and in files that predate the field.
-    /// </summary>
-    public string? StartAncestorGroupId { get; set; }
-
-    /// <summary>Ancestor group identifier for the end endpoint — see <see cref="StartAncestorGroupId"/>.</summary>
-    public string? EndAncestorGroupId { get; set; }
-
-    public List<PathSegmentData>? CachedSegments { get; set; }
-    public bool? IsBlockedFallback { get; set; }
-
-    /// <summary>
-    /// True when the cached route violates a physical constraint (e.g. bend radius). Null in
-    /// old files (predates this field) — treated as false, matching their pre-existing behavior.
-    /// </summary>
-    public bool? IsInvalidGeometry { get; set; }
-
-    /// <summary>
-    /// True when the cached route is an honest placeholder rather than real geometry (the
-    /// router replaced a self-crossing fallback with a straight line — see
-    /// <see cref="CAP_Core.Routing.RoutedPath.IsPlaceholderGeometry"/>). Written as an
-    /// explicit true/false whenever a route was cached (never omitted just because it is
-    /// false), so null unambiguously means the file predates this field — <see
-    /// cref="CAP.Avalonia.ViewModels.Converters.PathSegmentConverter.ToRoutedPath"/> then
-    /// infers it from the route's shape instead of trusting a bare false.
-    /// </summary>
-    public bool? IsPlaceholderGeometry { get; set; }
-
-    public bool? IsLocked { get; set; }
-
-    /// <summary>Routing style name (WaveguideType); null = Auto (issue #574).</summary>
-    public string? RoutingStyle { get; set; }
-
-    /// <summary>Waveguide width in µm; null = model default.</summary>
-    public double? WidthMicrometers { get; set; }
-
-    /// <summary>Bend radius in µm; null = model default.</summary>
-    public double? BendRadiusMicrometers { get; set; }
-
-    /// <summary>True when the routed path is frozen (manual bend edits); null = false.</summary>
-    public bool? IsRouteFrozen { get; set; }
-
-    /// <summary>Refractive index of a die-to-die link's facet gap; null = air.</summary>
-    public double? FacetGapMediumIndex { get; set; }
-
-    /// <summary>Manual per-bend radius overrides (bend index → radius µm); null = none.</summary>
-    public Dictionary<int, double>? BendRadiusOverrides { get; set; }
-
-    /// <summary>Manual straight-segment shifts (straight index → offset µm, issue #791); null = none.</summary>
-    public Dictionary<int, double>? StraightShiftOffsets { get; set; }
-
-    /// <summary>
-    /// GDS layer of the import source route polygons (route-derived GDS connections),
-    /// paired with <see cref="SourceGdsDataType"/>. Null for app-created connections
-    /// and in files that predate the field — the export then uses the process defaults.
-    /// </summary>
-    public int? SourceGdsLayer { get; set; }
-
-    /// <summary>GDS datatype of the import source route polygons — see <see cref="SourceGdsLayer"/>.</summary>
-    public int? SourceGdsDataType { get; set; }
-
-    /// <summary>
-    /// Target route length (µm) the connection was meandered to (issue #1008);
-    /// null = no length intent (also in files that predate the field).
-    /// </summary>
-    public double? TargetLengthMicrometers { get; set; }
-
-    /// <summary>Accepted deviation (µm) from <see cref="TargetLengthMicrometers"/>; null = no length intent.</summary>
-    public double? LengthToleranceMicrometers { get; set; }
-
-    /// <summary>
-    /// The exact polygons an imported, still untouched route was drawn with; null for
-    /// routed connections and in files that predate the field.
-    /// </summary>
-    public List<CAP_DataAccess.Persistence.DTOs.AsDrawnPolygonDto>? AsDrawnPolygons { get; set; }
-}
-
-/// <summary>
-/// DTO for serializing waveguide path segments.
-/// </summary>
-public class PathSegmentData
-{
-    public string Type { get; set; } = "";
-    public double StartX { get; set; }
-    public double StartY { get; set; }
-    public double EndX { get; set; }
-    public double EndY { get; set; }
-    public double StartAngleDegrees { get; set; }
-    public double EndAngleDegrees { get; set; }
-    public double? CenterX { get; set; }
-    public double? CenterY { get; set; }
-    public double? RadiusMicrometers { get; set; }
-    public double? SweepAngleDegrees { get; set; }
+    public bool IsRunningDesignChecks { get => _designChecks.IsRunning; set => _designChecks.IsRunning = value; }
 }

@@ -1,3 +1,4 @@
+using CAP_Core.Export;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -107,17 +108,17 @@ public class BundledPdkForkReferenceIntegrityTests : IDisposable
         var canvas = new DesignCanvasViewModel();
         var libraryManager = new GroupLibraryManager();
         var store = new UserPdkStore(_userPdkRoot, new PdkJsonSaver(), new PdkLoader());
-        var deps = new AddCustomComponentDependencies(
+        var deps = new AddCustomComponentDependencies(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             new ComponentGeometryExtractor(
-                new Mock<IComponentPreviewRenderer>().Object, new Mock<IComponentPreviewRenderer>().Object),
+                new Mock<IPdkGeometryRenderer>().Object, new Mock<IPdkGeometryRenderer>().Object),
             Fdtd: null, UserPdkStore: store);
 
-        var leftPanel = new LeftPanelViewModel(
-            canvas, libraryManager, new PdkLoader(), _preferencesService,
+        var leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
+            canvas, libraryManager, new PdkLoader(), _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
             errorConsole: _errorConsole, addCustomComponentDeps: deps);
-        leftPanel.LoadBundledPdksFrom(_bundledDir);
+        leftPanel.LoadBundledPdkFiles(Directory.GetFiles(_bundledDir, "*.json"));
         return (leftPanel, store);
     }
 

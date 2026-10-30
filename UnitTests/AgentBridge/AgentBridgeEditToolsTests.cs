@@ -34,7 +34,7 @@ public class AgentBridgeEditToolsTests
         _b = AddWaveguide("wgB", 1000, 100);
         _canvas.ConnectPins(_a.Component.PhysicalPins.Single(p => p.Name == "out"),
             _b.Component.PhysicalPins.Single(p => p.Name == "in"));
-        _session = new AgentDesignSession(_canvas, _commands, () => null, new ExampleDesignsService());
+        _session = new AgentDesignSession(_canvas, _commands, () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
     }
 
     private ComponentViewModel AddWaveguide(string id, double x, double y)

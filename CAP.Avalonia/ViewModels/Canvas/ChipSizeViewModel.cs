@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,13 +13,13 @@ namespace CAP.Avalonia.ViewModels.Canvas;
 /// ViewModel for the Chip Size settings panel.
 /// Exposes chip dimensions in millimeters (user-facing) and derives tile counts.
 /// Applies the new footprint to the canvas immediately on <see cref="ApplyCommand"/>.
-/// The previous user default is persisted in <see cref="UserPreferencesService"/>.
+/// The previous user default is persisted in <see cref="IChipSizePreferences"/>.
 /// </summary>
 public partial class ChipSizeViewModel : ObservableObject
 {
     private const double UmPerMm = 1000.0;
 
-    private readonly UserPreferencesService _preferences;
+    private readonly IChipSizePreferences _preferences;
     private readonly DesignCanvasViewModel _canvas;
     private readonly ErrorConsoleService? _errorConsole;
 
@@ -52,7 +53,7 @@ public partial class ChipSizeViewModel : ObservableObject
     /// is no two-phase init.
     /// </summary>
     public ChipSizeViewModel(
-        UserPreferencesService preferences,
+        IChipSizePreferences preferences,
         DesignCanvasViewModel canvas,
         ErrorConsoleService? errorConsole = null)
     {

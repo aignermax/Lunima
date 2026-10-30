@@ -32,6 +32,11 @@ public partial class BottomPanelViewModel : ObservableObject
     public LengthMatchingViewModel LengthMatching { get; }
 
     /// <summary>
+    /// ViewModel for giving several selected waveguide connections one common length.
+    /// </summary>
+    public LengthEqualizationViewModel LengthEqualization { get; }
+
+    /// <summary>
     /// ViewModel for the insertion-loss breakdown (propagation / bends / junctions) of the
     /// selected waveguide connection.
     /// </summary>
@@ -67,11 +72,13 @@ public partial class BottomPanelViewModel : ObservableObject
         ElementLockViewModel elementLock,
         ErrorConsoleViewModel errorConsole,
         AnalysisDockViewModel analysis,
-        Canvas.ConnectionLoss.ConnectionLossViewModel? connectionLoss = null)
+        Canvas.ConnectionLoss.ConnectionLossViewModel? connectionLoss = null,
+        LengthEqualizationViewModel? lengthEqualization = null)
     {
         ConnectionRouting = connectionRouting;
         RerouteImported = rerouteImported;
         LengthMatching = lengthMatching;
+        LengthEqualization = lengthEqualization ?? new LengthEqualizationViewModel(canvas);
         ConnectionLoss = connectionLoss ?? new Canvas.ConnectionLoss.ConnectionLossViewModel();
         ElementLock = elementLock;
         ErrorConsole = errorConsole;

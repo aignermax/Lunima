@@ -54,6 +54,20 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
 
     public class PdkComponentDraft
     {
+        /// <summary>Captures an independent component definition for background work.</summary>
+        public PdkComponentDraft Copy()
+        {
+            var copy = (PdkComponentDraft)MemberwiseClone();
+            copy.OutlinePolygons = OutlinePolygons?.Select(polygon => polygon.Copy()).ToList();
+            copy.Pins = Pins.Select(pin => pin.Copy()).ToList();
+            copy.SMatrix = SMatrix?.Copy();
+            copy.MaterialDispersion = MaterialDispersion?.Copy();
+            copy.Sliders = Sliders?.Select(slider => slider.Copy()).ToList();
+            copy.CompactModelParameters = CompactModelParameters is null ? null
+                : new(CompactModelParameters, CompactModelParameters.Comparer);
+            return copy;
+        }
+
         /// <summary>Original embedded GDS cell for expanded template variants.</summary>
         [JsonPropertyName("importedSourceCellName")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -145,6 +159,16 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
 
     public class PdkSMatrixDraft
     {
+        /// <summary>Copies all wavelength, connection and parameter values.</summary>
+        public PdkSMatrixDraft Copy()
+        {
+            var copy = (PdkSMatrixDraft)MemberwiseClone();
+            copy.Connections = Connections.Select(connection => connection.Copy()).ToList();
+            copy.WavelengthData = WavelengthData?.Select(entry => entry.Copy()).ToList();
+            copy.Parameters = Parameters?.Select(parameter => parameter.Copy()).ToList();
+            return copy;
+        }
+
         [JsonPropertyName("wavelengthNm")]
         public int WavelengthNm { get; set; } = 1550;
 
@@ -168,6 +192,13 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
 
     public class WavelengthSMatrixEntry
     {
+        /// <summary>Copies the connections at this wavelength.</summary>
+        public WavelengthSMatrixEntry Copy() => new()
+        {
+            WavelengthNm = WavelengthNm,
+            Connections = Connections.Select(connection => connection.Copy()).ToList()
+        };
+
         [JsonPropertyName("wavelengthNm")]
         public int WavelengthNm { get; set; }
 
@@ -177,6 +208,9 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
 
     public class SMatrixConnection
     {
+        /// <summary>Copies the scalar definition for an independent snapshot.</summary>
+        public SMatrixConnection Copy() => (SMatrixConnection)MemberwiseClone();
+
         [JsonPropertyName("fromPin")]
         public string FromPin { get; set; }
 

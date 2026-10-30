@@ -25,6 +25,8 @@ public sealed class CanvasPens
     private const double SelectedWaveguideMinPx = 2.5;
     private const double HoverBoostPx = 1.5;
     private const double BlockedMinPx = 2.0;
+    private const double LengthPeerWidthFactor = 4.0;
+    private const double LengthPeerMinPx = 6.0;
 
     private static CanvasPens? _current;
 
@@ -44,6 +46,7 @@ public sealed class CanvasPens
         Blocked = Dashed(CanvasPalette.Danger, Math.Max(2.0, BlockedMinPx / Zoom));
         BlockedHover = Dashed(CanvasPalette.Lighten(CanvasPalette.Danger, 0.35), Math.Max(2.0, (BlockedMinPx + HoverBoostPx) / Zoom));
         NoFlow = new ImmutablePen(new ImmutableSolidColorBrush(CanvasPalette.WithAlpha(CanvasPalette.Gray500, 0x50)), HairlinePx / Zoom);
+        LengthPeer = Geometry(CanvasPalette.WithAlpha(CanvasPalette.Accent, 0x70), WaveguideWorldWidth * LengthPeerWidthFactor, LengthPeerMinPx);
         FrozenPath = Geometry(CanvasPalette.WithAlpha(CanvasPalette.Waveguide, 0xD0), WaveguideWorldWidth, WaveguideMinPx);
 
         GroupBorder = DashedPx(CanvasPalette.Gray500, HairlinePx);
@@ -69,6 +72,8 @@ public sealed class CanvasPens
     public IPen WaveguideHover { get; }
     /// <summary>Selected connection.</summary>
     public IPen WaveguideSelected { get; }
+    /// <summary>Glow under a route locked to the same length as the selected or hovered one.</summary>
+    public IPen LengthPeer { get; }
     /// <summary>Metal trace.</summary>
     public IPen Electrical { get; }
     /// <summary>Metal trace under the pointer.</summary>

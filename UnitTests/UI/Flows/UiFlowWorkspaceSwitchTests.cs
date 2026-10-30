@@ -41,13 +41,13 @@ public class UiFlowWorkspaceSwitchTests
         using var host = new UiFlowTestHost();
         var vm = host.Vm;
         var win = host.Window;
-        var bar = win.FindControl<Border>("WorkspaceSwitchBar").ShouldNotBeNull();
+        var bar = UiInput.Named<Border>(win, "WorkspaceSwitchBar").ShouldNotBeNull();
         var logicSegment = UiInput.Descendants<Button>(bar).First(b => Equals(b.Content, "Logic"));
 
         UiInput.Click(win, logicSegment);
 
         vm.WorkspaceSwitch.Current.ShouldBe(Workspace.Logic);
-        var run = win.FindControl<Button>("RunSimulationButton").ShouldNotBeNull();
+        var run = UiInput.Named<Button>(win, "RunSimulationButton").ShouldNotBeNull();
         UiInput.Descendants<TextBlock>(run).Any(t => t.Text == "Build logic").ShouldBeTrue();
         vm.BottomPanel.Analysis.Tabs.IsShown(AnalysisDockTab.Logic).ShouldBeTrue();
         vm.BottomPanel.Analysis.Tabs.IsShown(AnalysisDockTab.Spectrum).ShouldBeFalse();

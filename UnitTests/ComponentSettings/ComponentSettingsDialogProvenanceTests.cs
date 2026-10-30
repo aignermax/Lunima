@@ -51,7 +51,7 @@ public class ComponentSettingsDialogProvenanceTests
         Func<Task<ComponentTemplate?>>? resetToPdkOriginal = null)
     {
         var instance = ComponentTemplates.CreateFromTemplate(template, 0, 0);
-        var vm = new ComponentSettingsDialogViewModel(
+        var vm = new ComponentSettingsDialogViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             Mock.Of<IFileDialogService>(),
             resetToPdkOriginal: resetToPdkOriginal);
         vm.Configure("key", "key", "My Comp", store,

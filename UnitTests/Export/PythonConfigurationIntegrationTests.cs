@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP_Core.Export;
 using CAP.Avalonia.ViewModels.Export;
 using Shouldly;
@@ -17,7 +18,7 @@ public class PythonConfigurationIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
 
         // Act
         await viewModel.SearchForPythonAsync();
@@ -37,7 +38,7 @@ public class PythonConfigurationIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
         var customPath = "/custom/python";
 
         // Act
@@ -54,8 +55,8 @@ public class PythonConfigurationIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
-        var installation = new PythonDiscoveryService.PythonInstallation
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
+        var installation = new PythonInstallation
         {
             Path = "/usr/bin/python3",
             Source = "System",
@@ -77,7 +78,7 @@ public class PythonConfigurationIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
         var savedPath = "/saved/python";
 
         // Act
@@ -94,7 +95,7 @@ public class PythonConfigurationIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
 
         // Act
         viewModel.Initialize(null);
@@ -114,7 +115,7 @@ public class PythonConfigurationIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
 
         // Act
         await viewModel.SearchForPythonAsync();
@@ -133,10 +134,10 @@ public class PythonConfigurationIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
         string? capturedPath = null;
         viewModel.OnPythonPathChanged = path => capturedPath = path;
-        var installation = new PythonDiscoveryService.PythonInstallation
+        var installation = new PythonInstallation
         {
             Path = "/test/python",
             Source = "Test"
@@ -154,7 +155,7 @@ public class PythonConfigurationIntegrationTests
     {
         // Arrange
         var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(service, new global::CAP_Core.Export.PythonDiscoveryService());
 
         // Act - Full workflow
         await viewModel.SearchForPythonAsync();

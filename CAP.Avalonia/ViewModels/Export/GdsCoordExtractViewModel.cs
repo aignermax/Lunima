@@ -1,5 +1,6 @@
 using CAP.Avalonia.Services.Localization;
-using CAP_Core.Export;
+using CAP.Avalonia.Services.Lifetime;
+using CAP_Core.Export.Contracts;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -11,9 +12,22 @@ namespace CAP.Avalonia.ViewModels.Export;
 /// and view the resulting coordinate summary for diagnosing pin/waveguide
 /// alignment issues (issue #329).
 /// </summary>
-public partial class GdsCoordExtractViewModel : ObservableObject
+public partial class GdsCoordExtractViewModel : ObservableObject, IAsyncDisposable
 {
-    private readonly GdsCoordinateExtractor _extractor;
+    private readonly ShellWorkScope _work = new();
+    private int _revision;
+    private AsyncCancellationScope? _request;
+
+    private void InvalidateRequest()
+    {
+        _revision++;
+        _request?.Cancel();
+    }
+    private bool IsCurrent(int revision) => !_work.IsStopping && revision == _revision;
+    partial void OnGdsFilePathChanging(string value) => InvalidateRequest();
+    public Task StopAsync() => _work.StopAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private readonly IGdsCoordinateExtractor _extractor;
 
     [ObservableProperty]
     private string _gdsFilePath = string.Empty;
@@ -35,9 +49,10 @@ public partial class GdsCoordExtractViewModel : ObservableObject
 
     /// <summary>Initializes a new instance of <see cref="GdsCoordExtractViewModel"/>.</summary>
     /// <param name="extractor">Core coordinate extraction service.</param>
-    public GdsCoordExtractViewModel(GdsCoordinateExtractor extractor)
+    public GdsCoordExtractViewModel(IGdsCoordinateExtractor extractor, ApplicationWorkCoordinator? applicationWork = null)
     {
         _extractor = extractor;
+        _work.RegisterWith(applicationWork, StopAsync);
     }
 
     /// <summary>
@@ -45,30 +60,46 @@ public partial class GdsCoordExtractViewModel : ObservableObject
     /// Outputs a JSON file with all polygon and path coordinates for debugging.
     /// </summary>
     [RelayCommand]
-    public async Task ExtractCoordinatesAsync()
+    public Task ExtractCoordinatesAsync() => _work.RunAsync(ExtractCoordinatesCoreAsync);
+
+    private async Task ExtractCoordinatesCoreAsync(CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(GdsFilePath))
+        InvalidateRequest();
+        var revision = _revision;
+        var path = GdsFilePath;
+        if (string.IsNullOrWhiteSpace(path))
         {
             StatusText = LocalizationService.Instance.Translate("Export.CoordExtract.SpecifyPath");
             return;
         }
 
-        IsExtracting = true;
-        HasResult = false;
-        StatusText = LocalizationService.Instance.Translate("Export.CoordExtract.Extracting");
-        ResultSummary = string.Empty;
-        OutputJsonPath = string.Empty;
-
+        await using var request = new AsyncCancellationScope(cancellationToken);
+        _request = request;
         try
         {
-            var result = await _extractor.ExtractAsync(GdsFilePath);
+            IsExtracting = true;
+            if (!IsCurrent(revision)) return;
+            HasResult = false;
+            if (!IsCurrent(revision)) return;
+            StatusText = LocalizationService.Instance.Translate("Export.CoordExtract.Extracting");
+            if (!IsCurrent(revision)) return;
+            ResultSummary = string.Empty;
+            if (!IsCurrent(revision)) return;
+            OutputJsonPath = string.Empty;
+            if (!IsCurrent(revision)) return;
+
+            var result = await _extractor.ExtractAsync(path, cancellationToken: request.Token);
+            if (!IsCurrent(revision)) return;
 
             if (result.Success)
             {
-                HasResult = true;
                 OutputJsonPath = result.JsonOutputPath ?? string.Empty;
+                if (!IsCurrent(revision)) return;
                 StatusText = result.Status;
+                if (!IsCurrent(revision)) return;
                 ResultSummary = BuildSummary(result.JsonContent);
+                if (!IsCurrent(revision)) return;
+                HasResult = true;
             }
             else
             {
@@ -76,9 +107,14 @@ public partial class GdsCoordExtractViewModel : ObservableObject
                     LocalizationService.Instance.Translate("Export.CoordExtract.Failed"), result.ErrorMessage);
             }
         }
+        catch (OperationCanceledException) when (!IsCurrent(revision)) { }
         finally
         {
-            IsExtracting = false;
+            if (ReferenceEquals(_request, request))
+            {
+                _request = null;
+                IsExtracting = false;
+            }
         }
     }
 
@@ -89,10 +125,17 @@ public partial class GdsCoordExtractViewModel : ObservableObject
     /// <param name="path">Absolute path to the GDS file.</param>
     public void SetGdsFilePath(string path)
     {
-        GdsFilePath = path;
+        if (_work.IsStopping) return;
+        var revision = _revision + 1;
+        if (GdsFilePath == path) InvalidateRequest();
+        else GdsFilePath = path; // OnChanging revokes the old request before observers run.
+        if (!IsCurrent(revision)) return;
         HasResult = false;
+        if (!IsCurrent(revision)) return;
         StatusText = string.Empty;
+        if (!IsCurrent(revision)) return;
         ResultSummary = string.Empty;
+        if (!IsCurrent(revision)) return;
         OutputJsonPath = string.Empty;
     }
 
@@ -102,6 +145,8 @@ public partial class GdsCoordExtractViewModel : ObservableObject
     /// <param name="pythonPath">Path to Python executable, or null for system default.</param>
     public void SetCustomPythonPath(string? pythonPath)
     {
+        if (_work.IsStopping) return;
+        InvalidateRequest();
         _extractor.SetCustomPythonPath(pythonPath);
     }
 
@@ -112,7 +157,7 @@ public partial class GdsCoordExtractViewModel : ObservableObject
 
         try
         {
-            var doc = System.Text.Json.JsonDocument.Parse(jsonContent);
+            using var doc = System.Text.Json.JsonDocument.Parse(jsonContent);
             var root = doc.RootElement;
 
             var dbUnit = root.TryGetProperty("database_unit", out var u) ? u.GetDouble() : 0;

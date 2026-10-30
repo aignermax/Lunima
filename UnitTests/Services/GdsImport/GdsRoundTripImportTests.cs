@@ -57,7 +57,7 @@ public class GdsRoundTripImportTests : IDisposable
             ("wgA", WaveguideCell),
             ("wgB", WaveguideCell));
 
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
 
         analysis.TopCellCandidates.ShouldBe(new[] { "ConnectAPIC_Design" });
         analysis.TopCells.ShouldBe(new[] { new GdsTopCellSummary("ConnectAPIC_Design", 2) });
@@ -75,7 +75,7 @@ public class GdsRoundTripImportTests : IDisposable
                 .SRef("SUB", 0, 0)),
             ("SUB", WaveguideCell));
 
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
 
         analysis.TopCellCandidates.ShouldBe(new[] { "TOP" });
     }
@@ -89,7 +89,7 @@ public class GdsRoundTripImportTests : IDisposable
             ("TOP", w => w.SRef("SUB", 0, 0, angleDegrees: 90.0)),
             ("SUB", WaveguideCell));
 
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
 
         analysis.TopCellCandidates.ShouldBe(new[] { "TOP" });
     }
@@ -106,7 +106,7 @@ public class GdsRoundTripImportTests : IDisposable
             ("wgA", WaveguideCell),
             ("wgB", WaveguideCell));
 
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         var service = _host.CreateService(() => Array.Empty<ComponentTemplate>());
         var outcome = await service.ImportAsync(gdsPath, analysis.TopCellCandidates[0], null, null);
 
@@ -218,7 +218,7 @@ public class GdsRoundTripImportTests : IDisposable
             $"cells: {string.Join(", ", library.Cells.Keys)}");
 
         // 4. Analyze (the dialog's candidate list) offers the design cell.
-        var analysis = await GdsImportService.AnalyzeAsync(gdsPath);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(gdsPath);
         analysis.TopCellCandidates.ShouldBe(new[] { "ConnectAPIC_Design" });
 
         // 5. Explode import: both demofab components come back as drafts — the

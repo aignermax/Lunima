@@ -31,16 +31,16 @@ public class DialogScreenshotTests
         if (!DialogShot.Enabled) return;
         var canvas = new DesignCanvasViewModel();
 
-        var gdsFactory = new GdsFactoryExportViewModel(canvas, new GdsExportService());
+        var gdsFactory = new GdsFactoryExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), canvas, new GdsExportService());
         DialogShot.Capture(new GdsFactoryExportDialog { DataContext = gdsFactory }, "export-gdsfactory");
 
-        var photonTorch = new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas)
+        var photonTorch = new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new PhotonTorchExporter(), canvas)
         {
             UseTimeDomain = true,
         };
         DialogShot.Capture(new PhotonTorchExportDialog { DataContext = photonTorch }, "export-photontorch");
 
-        var verilogA = new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas);
+        var verilogA = new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas, Mock.Of<IUrlLauncher>());
         DialogShot.Capture(new VerilogAExportDialog { DataContext = verilogA }, "export-verilog-a");
     }
 
@@ -87,9 +87,8 @@ public class DialogScreenshotTests
     public void PdkResolutionCheckDialog_WithFailures()
     {
         if (!DialogShot.Enabled) return;
-        var vm = new PdkResolutionCheckViewModel(
-            new PdkLoader(), new Mock<PdkFunctionResolutionService>("python3", "script.py", null, null).Object,
-            () => null)
+        var vm = new PdkResolutionCheckViewModel(UnitTests.Helpers.TestBundledPdkCatalog.ForDirectory(null),
+            new PdkLoader(), new Mock<PdkFunctionResolutionService>("python3", "script.py", null, null).Object)
         {
             StatusText = "1 error, 1 warning across 1 PDK.",
             HasFailures = true,

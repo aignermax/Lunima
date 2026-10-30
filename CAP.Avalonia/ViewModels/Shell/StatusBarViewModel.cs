@@ -11,11 +11,12 @@ namespace CAP.Avalonia.ViewModels.Shell;
 /// Fixed status-bar fields that summarize the editor state: the active canvas mode and
 /// what is selected. Both re-read live on selection, mode and UI-language changes.
 /// </summary>
-public partial class StatusBarViewModel : ObservableObject
+public partial class StatusBarViewModel : ObservableObject, IDisposable
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly CanvasInteractionViewModel _interaction;
     private readonly LocalizationService _localization;
+    private readonly IDisposable _localizationSubscription;
 
     /// <summary>Localized name of the active canvas mode.</summary>
     [ObservableProperty]
@@ -41,12 +42,22 @@ public partial class StatusBarViewModel : ObservableObject
         _canvas = canvas;
         _interaction = interaction;
         _localization = localization;
-        _canvas.Selection.SelectedComponents.CollectionChanged += (_, _) => UpdateSelection();
-        _canvas.Selection.SelectedConnections.CollectionChanged += (_, _) => UpdateSelection();
+        _canvas.Selection.SelectedComponents.CollectionChanged += SelectionChanged;
+        _canvas.Selection.SelectedConnections.CollectionChanged += SelectionChanged;
         _interaction.PropertyChanged += OnInteractionPropertyChanged;
-        LocalizationWeakSubscription.Subscribe(this, static (self, _) => self.Refresh(), _localization);
+        _localizationSubscription = LocalizationWeakSubscription.Subscribe(this, static (self, _) => self.Refresh(), _localization);
         Refresh();
     }
+
+    public void Dispose()
+    {
+        _canvas.Selection.SelectedComponents.CollectionChanged -= SelectionChanged;
+        _canvas.Selection.SelectedConnections.CollectionChanged -= SelectionChanged;
+        _interaction.PropertyChanged -= OnInteractionPropertyChanged;
+        _localizationSubscription.Dispose();
+    }
+
+    private void SelectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs args) => UpdateSelection();
 
     /// <summary>Localization key of the label for <paramref name="mode"/>.</summary>
     public static string ModeKey(InteractionMode mode) => mode switch

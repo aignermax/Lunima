@@ -28,7 +28,7 @@ public class AgentBridgeExampleDesignTests
         var (canvas, fileOps, _) = await MziFringeAnalysis.LoadExample(ExampleFileName);
         await fileOps.PostLoadRouting;
         var commands = new CommandManager();
-        return (new AgentDesignSession(canvas, commands, () => fileOps, new ExampleDesignsService()), commands);
+        return (new AgentDesignSession(canvas, commands, () => fileOps, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog())), commands);
     }
 
     private static JsonElement Body(AgentToolResult result)

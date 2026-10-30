@@ -125,7 +125,7 @@ public class MakeGateScreenshotTests
             var preferences = new UserPreferencesService(
                 Path.Combine(Path.GetTempPath(), $"firstgate-shot-prefs-{Guid.NewGuid():N}.json"));
             var home = new CAP.Avalonia.ViewModels.Home.HomeViewModel(
-                new RecentProjectsService(preferences), preferences, new ExampleDesignsService());
+                new RecentProjectsService(preferences), preferences, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
             var homeWindow = new Window { Width = 900, Height = 720, Content = new HomeView { DataContext = home } };
             homeWindow.Show();
             try

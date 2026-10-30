@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Avalonia.Controls;
 using CAP.Avalonia.ViewModels.AI;
@@ -21,7 +22,7 @@ namespace CAP.Avalonia.ViewModels.Panels;
 /// </summary>
 public partial class RightPanelViewModel : ObservableObject
 {
-    private readonly UserPreferencesService _preferencesService;
+    private readonly IPanelLayoutPreferences _preferencesService;
 
     private GridLength _rightPanelWidth = new GridLength(250);
     /// <summary>
@@ -152,7 +153,7 @@ public partial class RightPanelViewModel : ObservableObject
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(
         DesignCanvasViewModel canvas,
-        UserPreferencesService preferencesService,
+        IPanelLayoutPreferences preferencesService,
         ParameterSweepViewModel sweep,
         RoutingDiagnosticsViewModel routingDiagnostics,
         DesignValidationViewModel designValidation,

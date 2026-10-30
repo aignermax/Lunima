@@ -21,6 +21,8 @@ internal static class PdkOffsetFeatureExtensions
     public static IServiceCollection AddPdkOffsetFeature(this IServiceCollection services)
     {
         services.AddSingleton<PdkJsonSaver>();
+        services.AddSingleton<IPdkWriter>(sp => sp.GetRequiredService<PdkJsonSaver>());
+        services.AddSingleton<PreviewGeometryCache>();
         services.AddSingleton(sp =>
         {
             var prefs = sp.GetRequiredService<UserPreferencesService>();
@@ -39,13 +41,16 @@ internal static class PdkOffsetFeatureExtensions
             var script = PythonResolution.FindScript("render_component_preview.py");
             // Share the DI-registered launch factory so the preview subprocess gets the
             // same platform-aware executable resolution / augmented PATH as everything else.
-            return new NazcaComponentPreviewService(
+            var backend = new NazcaComponentPreviewService(
                 python, script, launchFactory: sp.GetRequiredService<ProcessLaunchFactory>())
             {
+                GeometryCache = sp.GetRequiredService<PreviewGeometryCache>(),
                 PythonExecutableResolver = LiveInterpreter(prefs, python, path =>
                     PythonResolution.ValidatedNazcaPython(path) ?? PythonResolution.DiscoverNazcaPython()
                     ?? PythonResolution.ResolvePythonExecutable()),
             };
+            PreviewBackendConfiguration.Configure(backend, prefs, sp.GetService<PdkManagerViewModel>());
+            return backend;
         });
         // gdsfactory override preview (#637): same plumbing, gf renderer + the active
         // (gdsfactory-capable) interpreter. Resolved lazily each time it is used.
@@ -54,21 +59,25 @@ internal static class PdkOffsetFeatureExtensions
             var prefs = sp.GetRequiredService<UserPreferencesService>();
             var python = prefs.GetCustomPythonPath() ?? PythonResolution.ResolvePythonExecutable();
             var script = PythonResolution.FindScript("render_gdsfactory_preview.py");
-            return new GdsFactoryComponentPreviewService(
+            var backend = new GdsFactoryComponentPreviewService(
                 python, script, launchFactory: sp.GetRequiredService<ProcessLaunchFactory>())
             {
+                GeometryCache = sp.GetRequiredService<PreviewGeometryCache>(),
                 PythonExecutableResolver = LiveInterpreter(prefs, python,
                     path => path ?? PythonResolution.ResolvePythonExecutable()),
             };
+            PreviewBackendConfiguration.Configure(backend, prefs, sp.GetService<PdkManagerViewModel>());
+            return backend;
         });
         services.AddSingleton(sp => new PdkOffsetEditorViewModel(
-            sp.GetRequiredService<PdkLoader>(),
-            sp.GetRequiredService<PdkJsonSaver>(),
+            sp.GetRequiredService<IBundledPdkCatalog>(),
+            sp.GetRequiredService<IPdkReader>(),
+            sp.GetRequiredService<IPdkWriter>(),
             sp.GetRequiredService<PdkManagerViewModel>(),
             sp.GetRequiredService<NazcaComponentPreviewService>(),
             sp.GetRequiredService<GdsFactoryComponentPreviewService>(),
             // Fork-on-save for bundled PDKs — same store the component editor forks with.
-            sp.GetRequiredService<CAP_DataAccess.Components.AddCustomComponent.UserPdkStore>()));
+            sp.GetRequiredService<CAP_DataAccess.Components.AddCustomComponent.IUserPdkLibrary>()));
 
         return services;
     }

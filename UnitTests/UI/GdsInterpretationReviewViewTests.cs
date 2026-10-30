@@ -256,7 +256,7 @@ public class GdsInterpretationReviewViewTests
         while (directory != null && !Directory.Exists(Path.Combine(directory.FullName, "Tools", "gds-test-data")))
             directory = directory.Parent;
         var source = Path.Combine(directory.ShouldNotBeNull().FullName, "Tools", "gds-test-data", "gdsfactory_mzi_like.gds");
-        var analysis = await GdsImportService.AnalyzeAsync(source);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(source);
         var vm = await GdsInterpretationReviewViewModel.CreateAsync(analysis.Library, analysis.TopCellCandidates[0],
             analysis.SourceSha256, [new(1, 0, GdsLayerRole.OpticalCore), new(1, 10, GdsLayerRole.PortLabel)], [],
             new GdsLayerProfileStore(Path.Combine(ScreenshotDirectory, $"mzi-{Guid.NewGuid():N}.json")));

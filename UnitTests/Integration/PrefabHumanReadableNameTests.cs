@@ -250,12 +250,23 @@ public class PrefabHumanReadableNameTests : IDisposable
         var canvas = new DesignCanvasViewModel();
         var commandManager = new CommandManager();
         var nazcaExporter = new SimpleNazcaExporter();
-        var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService());
+        var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService());
 
         var photonTorchExport = new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(
-            new CAP_Core.Export.PhotonTorchExporter(), canvas);
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            new CAP_Core.Export.PhotonTorchExporter(),
+            canvas);
         var vm = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, new CAP_Core.Export.SaxExporter(), _library, gdsExport, photonTorchExport, null!);
+            Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),
+            new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
+            canvas,
+            commandManager,
+            nazcaExporter,
+            new CAP_Core.Export.SaxExporter(),
+            _library,
+            gdsExport,
+            photonTorchExport,
+            null!);
 
         return (vm, canvas);
     }

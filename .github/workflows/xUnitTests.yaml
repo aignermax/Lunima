@@ -51,6 +51,9 @@ jobs:
           # On pull_request HEAD is the merge commit; HEAD^1 is the base tip.
           fetch-depth: 2
 
+      - name: Enforce authored source size
+        run: python3 scripts/check_source_size.py
+
       - name: 🧭 Select shards
         id: select
         run: python3 scripts/ci/select_test_shards.py --event "${{ github.event_name }}"

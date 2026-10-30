@@ -30,24 +30,32 @@ public sealed record RoutingMetrics(int BlockedCount, int CrossingCount, IReadOn
 public static class RepairEdit
 {
     /// <summary>Executes <paramref name="command"/> and waits for routing. Returns whether routing finished in time.</summary>
-    public static async Task<bool> ExecuteAndRouteAsync(AgentDesignSession session, IUndoableCommand command)
+    public static async Task<bool> ExecuteAndRouteAsync(AgentDesignSession session, IUndoableCommand command,
+        AgentDocumentOperation? operation = null)
     {
-        session.Commands.ExecuteCommand(command);
-        var routed = await RoutingAwaiter.RerouteAndWaitAsync(session.Canvas);
-        session.Canvas.InvalidateSimulation();
+        await using var owned = operation == null ? new AgentDocumentOperation(session.Canvas) : null;
+        var edit = operation ?? owned!;
+        edit.Commit(() => session.Commands.ExecuteCommand(command));
+        var routed = await edit.RouteAsync();
+        await edit.CompleteDerivedWorkAsync();
+        edit.Commit(session.Canvas.InvalidateSimulation);
         return routed;
     }
 
     /// <summary>Undoes the most recent step and waits for routing.</summary>
-    public static async Task<bool> UndoAndRouteAsync(AgentDesignSession session)
+    public static async Task<bool> UndoAndRouteAsync(AgentDesignSession session, AgentDocumentOperation? operation = null)
     {
+        await using var owned = operation == null ? new AgentDocumentOperation(session.Canvas) : null;
+        var edit = operation ?? owned!;
         var routing = session.Canvas.Routing;
         var restoredBefore = routing.RestoredGeometryVersion;
-        if (!await routing.ExecuteHistoryChangeAsync(session.Commands.Undo, () => session.Commands.CanUndo))
+        if (!await routing.ExecuteHistoryChangeAsync(() => edit.Commit(session.Commands.Undo),
+                () => { edit.EnsureCurrent(); return session.Commands.CanUndo; }))
             return true;
         var routed = routing.RestoredGeometryVersion != restoredBefore
-            || await RoutingAwaiter.RerouteAndWaitAsync(session.Canvas);
-        session.Canvas.InvalidateSimulation();
+            || await edit.RouteAsync();
+        await edit.CompleteDerivedWorkAsync();
+        edit.Commit(session.Canvas.InvalidateSimulation);
         return routed;
     }
 }

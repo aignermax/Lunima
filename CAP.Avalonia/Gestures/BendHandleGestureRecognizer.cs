@@ -16,7 +16,9 @@ namespace CAP.Avalonia.Gestures;
 /// radius directly onto the connection (there is no number panel); the whole drag is committed
 /// as one <see cref="BendRadiusCommand"/> on release so Ctrl+Z reverts it exactly. The active
 /// fabrication process' minimum bend radius is resolved once at drag start and clamps the whole
-/// edit — a drag below it keeps the last valid geometry and paints the handle red.
+/// edit — a drag below it keeps the last valid geometry and paints the handle red. On a
+/// length-matched connection the handle sets the meander's bend radius instead, regenerating the
+/// meander at the same target length (<see cref="MeanderRadiusDrag"/>).
 /// </summary>
 public sealed class BendHandleGestureRecognizer : IGestureRecognizer
 {
@@ -35,6 +37,7 @@ public sealed class BendHandleGestureRecognizer : IGestureRecognizer
     private double _radiusAtPress;
     private double _lastValidRadius;
     private double _minRadiusMicrometers = BendRadiusEditor.MinRadiusMicrometers;
+    private MeanderRadiusDrag? _meanderDrag;
 
     /// <summary>Initializes a new instance of <see cref="BendHandleGestureRecognizer"/>.</summary>
     /// <param name="state">Shared interaction state carrying the active-bend highlight fields.</param>
@@ -62,7 +65,10 @@ public sealed class BendHandleGestureRecognizer : IGestureRecognizer
             var (hx, hy) = BendHandleGeometry.HandlePoint(corner);
             if (Distance(canvasPoint.X, canvasPoint.Y, hx, hy) <= grab)
             {
-                Capture(selected, corner, ResolveMinRadius(mainVm, selected));
+                double minRadius = ResolveMinRadius(mainVm, selected);
+                Capture(selected, corner, minRadius);
+                if (MeanderRadiusDrag.Applies(selected))
+                    _meanderDrag = new MeanderRadiusDrag(selected, canvas, minRadius);
                 return true;
             }
         }
@@ -98,6 +104,13 @@ public sealed class BendHandleGestureRecognizer : IGestureRecognizer
         double distance = BendHandleGeometry.ProjectDistance(_corner, _bisector, (canvasPoint.X, canvasPoint.Y));
         double newRadius = BendHandleGeometry.RadiusFromDistance(distance, _handleFactor);
 
+        if (_meanderDrag != null)
+        {
+            _state.ActiveBendClamped = !_meanderDrag.TryApply(newRadius);
+            _invalidate();
+            return;
+        }
+
         if (BendRadiusEditor.TryApplyOverride(_connection.Connection, _bendIndex, newRadius, out _, _minRadiusMicrometers))
         {
             _lastValidRadius = newRadius;
@@ -118,6 +131,14 @@ public sealed class BendHandleGestureRecognizer : IGestureRecognizer
     {
         if (_connection == null) return;
 
+        if (_meanderDrag != null)
+        {
+            if (mainVm != null && _meanderDrag.Complete(_invalidate) is { } meanderCommand)
+                mainVm.CommandManager.ExecuteCommand(meanderCommand);
+            ResetDrag();
+            return;
+        }
+
         if (mainVm != null && Math.Abs(_lastValidRadius - _radiusAtPress) > MeaningfulChangeMicrometers)
         {
             mainVm.CommandManager.ExecuteCommand(
@@ -130,7 +151,9 @@ public sealed class BendHandleGestureRecognizer : IGestureRecognizer
     /// <inheritdoc/>
     public void Cancel()
     {
-        if (_connection != null)
+        if (_meanderDrag != null)
+            _meanderDrag.Revert();
+        else if (_connection != null)
         {
             BendRadiusEditor.TryApplyOverride(_connection.Connection, _bendIndex, _radiusAtPress, out _, _minRadiusMicrometers);
             _connection.NotifyPathChanged();
@@ -143,6 +166,7 @@ public sealed class BendHandleGestureRecognizer : IGestureRecognizer
         _state.ActiveBendIndex = -1;
         _state.ActiveBendClamped = false;
         _connection = null;
+        _meanderDrag = null;
         _invalidate();
     }
 

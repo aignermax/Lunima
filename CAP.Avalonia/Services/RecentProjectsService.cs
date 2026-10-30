@@ -1,40 +1,24 @@
+using CAP_Core.Preferences;
+
 namespace CAP.Avalonia.Services;
-
-/// <summary>
-/// A single entry in the recent-projects list shown on the Home screen.
-/// </summary>
-public class RecentProjectEntry
-{
-    /// <summary>Absolute path to the .lun design file.</summary>
-    public string FilePath { get; set; } = "";
-
-    /// <summary>UTC timestamp of when the project was last opened or saved.</summary>
-    public DateTime LastOpenedUtc { get; set; }
-
-    /// <summary>
-    /// True when the user pinned this project. Pinned entries survive cap
-    /// eviction and are shown first on the Home screen.
-    /// </summary>
-    public bool Pinned { get; set; }
-}
 
 /// <summary>
 /// Maintains the most-recently-used project list (MRU) backing the Home screen.
 /// Handles ordering, deduplication, the entry cap, and path normalization;
-/// persistence is delegated to <see cref="UserPreferencesService"/>.
+/// persistence is delegated to <see cref="IRecentProjectPreferences"/>.
 /// </summary>
 public class RecentProjectsService
 {
     /// <summary>Maximum number of entries kept in the recent-projects list.</summary>
     public const int MaxRecentProjects = 10;
 
-    private readonly UserPreferencesService _preferences;
+    private readonly IRecentProjectPreferences _preferences;
     private readonly Func<DateTime> _utcNow;
 
     /// <summary>Initializes a new instance of <see cref="RecentProjectsService"/>.</summary>
     /// <param name="preferences">Preference store the list is persisted through.</param>
     /// <param name="utcNow">Clock override for deterministic tests; defaults to <see cref="DateTime.UtcNow"/>.</param>
-    public RecentProjectsService(UserPreferencesService preferences, Func<DateTime>? utcNow = null)
+    public RecentProjectsService(IRecentProjectPreferences preferences, Func<DateTime>? utcNow = null)
     {
         _preferences = preferences;
         _utcNow = utcNow ?? (() => DateTime.UtcNow);

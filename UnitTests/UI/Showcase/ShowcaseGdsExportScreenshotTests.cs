@@ -95,7 +95,7 @@ public class ShowcaseGdsExportScreenshotTests
         var manager = new PdkManagerViewModel();
         manager.RegisterPdk("SiEPIC EBeam PDK", pdkPath, isBundled: true, componentCount: drafts.Count);
 
-        var vm = new PdkOffsetEditorViewModel(
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             new PdkLoader(), new PdkJsonSaver(), manager,
             ShowcaseSiepicGeometry.StubPreviewService(drafts));
         var window = new PdkOffsetEditorWindow { Width = 1010, Height = 1400, DataContext = vm };

@@ -35,7 +35,7 @@ public class StoreNumberTourJourneyTests
         var home = new HomeViewModel(
             new RecentProjectsService(preferences),
             preferences,
-            new ExampleDesignsService());
+            new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
 
         var entry = home.TourEntries.FirstOrDefault(
             e => ReferenceEquals(e.Command, home.StoreNumberTourCommand));
@@ -114,7 +114,7 @@ public class StoreNumberTourJourneyTests
 
     private static AnalysisDockViewModel MakeDock() =>
         new(new TimeDomainViewModel(), new EyeDiagramViewModel(),
-            new WavelengthSpectrumViewModel(), new AnalysisOutputPanelViewModel(),
+            new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()), new AnalysisOutputPanelViewModel(),
             new MonteCarloViewModel(), new CircuitOptimizationViewModel(new CommandManager()));
 
     /// <summary>Manually fired clock — the panel requires an instance, the tour never fires ticks.</summary>

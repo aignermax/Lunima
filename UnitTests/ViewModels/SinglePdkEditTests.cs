@@ -13,7 +13,7 @@ public class SinglePdkEditTests
     [Fact]
     public void LoadForSinglePdkEdit_WithProcess_PopulatesEditorFromDraft()
     {
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver());
         var draft = new PdkDraft
         {
             Name = "MyCustomPdk",
@@ -38,7 +38,7 @@ public class SinglePdkEditTests
     [Fact]
     public void LoadForSinglePdkEdit_WithoutProcess_ShowsEmptyEditorSeededWithDraftName()
     {
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver());
         var draft = new PdkDraft { Name = "BlankPdk", Process = null };
 
         Should.NotThrow(() => vm.LoadForSinglePdkEdit(draft));
@@ -65,7 +65,7 @@ public class SinglePdkEditTests
             };
             new PdkJsonSaver().SaveToFile(draft, path);
 
-            var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>())
+            var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver())
             {
                 PdkFilePathResolver = name => name == "MyCustomPdk" ? path : null,
                 ConfirmSaveToPdk = _ => Task.FromResult(true),
@@ -106,7 +106,7 @@ public class SinglePdkEditTests
             };
             new PdkJsonSaver().SaveToFile(draft, path);
 
-            var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>())
+            var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver())
             {
                 PdkFilePathResolver = name => name == "MyCustomPdk" ? path : null,
                 ConfirmSaveToPdk = _ => Task.FromResult(false),
@@ -137,7 +137,7 @@ public class SinglePdkEditTests
         {
             var draft = new PdkDraft { Name = "BlankPdk", Process = null };
 
-            var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>())
+            var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver())
             {
                 PdkFilePathResolver = name => name == "BlankPdk" ? path : null,
                 ConfirmSaveToPdk = _ => Task.FromResult(true),
@@ -175,7 +175,7 @@ public class SinglePdkEditTests
                 Xsections = new List<ProcessXsection> { new() { Name = "strip", WidthUm = 0.5 } },
             },
         };
-        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+        var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver());
 
         vm.LoadForSinglePdkEdit(draft);
         vm.Xsections.Single(x => x.Name == "strip").WidthUm = 0.9;
@@ -200,7 +200,7 @@ public class SinglePdkEditTests
             };
             new PdkJsonSaver().SaveToFile(draft, path);
 
-            var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>())
+            var vm = new ProcessManagementViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver())
             {
                 PdkFilePathResolver = name => name == "MyCustomPdk" ? path : null,
                 ConfirmSaveToPdk = _ => Task.FromResult(true),

@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using CAP.Avalonia.Services.Localization;
 using CAP_Core.Solvers.Fdtd;
 
@@ -9,11 +10,11 @@ namespace CAP.Avalonia.Services.Solvers;
 public class FdtdBackendRegistry
 {
     private readonly IReadOnlyDictionary<FdtdBackendType, IFdtdSMatrixService> _services;
-    private readonly UserPreferencesService _preferences;
+    private readonly IFdtdPreferences _preferences;
 
     public FdtdBackendRegistry(
         IReadOnlyDictionary<FdtdBackendType, IFdtdSMatrixService> services,
-        UserPreferencesService preferences)
+        IFdtdPreferences preferences)
     {
         _services = services ?? throw new ArgumentNullException(nameof(services));
         _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));

@@ -16,17 +16,10 @@ namespace CAP.Avalonia.ViewModels.Analysis.EyeDiagram;
 /// coupler with its laser off, #690; strongest trace as legacy fallback) into
 /// an eye histogram, and reports Q-factor / BER with a receiver noise model.
 /// </summary>
-public partial class EyeDiagramViewModel : ObservableObject
+public partial class EyeDiagramViewModel : ObservableObject, IAsyncDisposable
 {
     private const double GigabitsToBits = 1e9;
     private const double SecondsToPicoseconds = 1e12;
-
-    /// <summary>Receiver electrical bandwidth as a fraction of the bit rate (typical NRZ receiver).</summary>
-    private const double ReceiverBandwidthFactor = 0.75;
-
-    private const double CenterWavelengthNm = TimeDomainSimulator.DefaultCenterWavelengthNm;
-    private const double SpanNm = TimeDomainSimulator.DefaultSpanNm;
-    private const int FreqPoints = TimeDomainSimulator.DefaultNPoints;
 
     /// <summary>Selectable PRBS pattern orders.</summary>
     public IReadOnlyList<PrbsOrder> PrbsOrders { get; } =
@@ -74,133 +67,176 @@ public partial class EyeDiagramViewModel : ObservableObject
     public Action? RequestOutputPicker { get; set; }
 
     private readonly CAP_Core.ErrorConsoleService? _errorConsole;
-    private DesignCanvasViewModel? _canvas;
+    private readonly TransientPanelLifetime _lifetime = new();
+    private readonly IEyeAnalysisRunner _runner;
+    private DesignCanvasViewModel? _canvas => _lifetime.Canvas;
+    private Task? _retirement;
+    public Task StopAsync() => _retirement ??= RetireAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private async Task RetireAsync()
+    {
+        try { await _lifetime.StopAsync(); }
+        finally
+        {
+            _lastHistogram = null;
+            FileDialogService = null;
+            RequestOutputPicker = null;
+        }
+    }
     private EyeHistogram? _lastHistogram;
 
     /// <summary>Initializes a new instance of <see cref="EyeDiagramViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
-    public EyeDiagramViewModel(CAP_Core.ErrorConsoleService? errorConsole = null)
+    public EyeDiagramViewModel(CAP_Core.ErrorConsoleService? errorConsole = null,
+        IEyeAnalysisRunner? runner = null, Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
     {
         _errorConsole = errorConsole;
+        _runner = runner ?? new EyeAnalysisRunner();
+        _lifetime.RegisterWith(applicationWork, StopAsync);
     }
 
     /// <summary>Configures the panel with the current canvas context.</summary>
     /// <param name="canvas">Canvas providing components and connections.</param>
     public void Configure(DesignCanvasViewModel? canvas)
     {
-        _canvas = canvas;
-        StatusText = "";
-        MetricsText = "";
+        if (_lifetime.IsStopping) return;
+        var version = _lifetime.Configure(canvas);
         _lastHistogram = null;
+        StatusText = "";
+        if (!_lifetime.IsConfiguration(version)) return;
+        MetricsText = "";
+        if (!_lifetime.IsConfiguration(version)) return;
         PlotModel = EyeDiagramPlotBuilder.CreateEmptyPlotModel();
-        OnPropertyChanged(nameof(HasResult));
+        if (_lifetime.IsConfiguration(version)) OnPropertyChanged(nameof(HasResult));
     }
 
     /// <summary>Runs the PRBS transient simulation and updates the eye plot and metrics.</summary>
     [RelayCommand]
-    private async Task RunEyeAnalysis()
+    private Task RunEyeAnalysis() => _lifetime.RunAsync(RunEyeAnalysisCoreAsync);
+
+    private async Task RunEyeAnalysisCoreAsync(CancellationToken stop)
     {
-        if (_canvas == null || _canvas.Components.Count == 0)
+        var canvas = _canvas;
+        var version = _lifetime.Version;
+        if (canvas == null || canvas.Components.Count == 0)
         {
             StatusText = LocalizationService.Instance.Translate("Analysis.Common.NoCircuit");
             return;
         }
         if (IsRunning) return;
-
-        // Resolve the analysis output BEFORE simulating (#754): an invalid designation
-        // aborts with a clear warning instead of silently guessing. Without a
-        // designation every off-laser coupler counts as an output (field wish, round 4
-        // final) — the eyedropper only restricts, so no picker mode is forced here.
-        var resolution = AnalysisOutputResolver.Resolve(_canvas!);
-        if (ReportInvalidDesignation(resolution)) return;
-
-        IsRunning = true;
-        StatusText = LocalizationService.Instance.Translate("Analysis.Eye.RunningPrbs");
-        MetricsText = "";
-        _lastHistogram = null;
-
+        AnalysisSweepOperation? operation = null;
         try
         {
-            var outcome = await Task.Run(() => RunAnalysisCore(resolution));
+            var resolution = AnalysisOutputResolver.Resolve(canvas);
+            if (!_lifetime.IsConfiguration(version)) return;
+            operation = _lifetime.Begin(stop);
+            operation.ThrowIfObsolete();
+            if (ReportInvalidDesignation(resolution, operation)) return;
+            var output = CapturedAnalysisOutput.Capture(resolution);
+            var (circuit, excitation) = TransientCircuitFactory.Capture(canvas);
+            var request = new EyeAnalysisRequest(circuit, excitation, BitRateGbps * GigabitsToBits,
+                SelectedPrbsOrder, ThresholdRelative, output.PinIds,
+                output.State == AnalysisOutputState.MultipleCandidates,
+                new(EyeTraceSelector.NoSignalAtDesignatedOutputError, EyeTraceSelector.BelowNoiseFloorError,
+                    EyeTraceSelector.MultipleOutputsWarning));
+            operation.ThrowIfObsolete();
+            IsRunning = true;
+            operation.ThrowIfObsolete();
+            StatusText = LocalizationService.Instance.Translate("Analysis.Eye.RunningPrbs");
+            operation.ThrowIfObsolete();
+            _lastHistogram = null;
+            MetricsText = "";
+            operation.ThrowIfObsolete();
+            var outcome = await _runner.RunAsync(request, operation.Token);
+            operation.ThrowIfObsolete();
+            foreach (var warning in outcome.PassivityWarnings)
+            {
+                _errorConsole?.LogWarning(warning.ToMessage());
+                operation.ThrowIfObsolete();
+            }
             if (outcome.Error != null || outcome.Histogram == null)
             {
-                // Expected "can't run" conditions (no light source / no output traces) are surfaced
-                // as a status, not thrown — so they don't break under the debugger (#535/#570).
                 StatusText = outcome.Error ?? "Eye analysis produced no result.";
                 return;
             }
             _lastHistogram = outcome.Histogram;
             PlotModel = EyeDiagramPlotBuilder.BuildPlotModel(outcome.Histogram);
-            MetricsText = FormatMetrics(outcome.Metrics!);   // non-null when Histogram != null
+            operation.ThrowIfObsolete();
+            MetricsText = FormatMetrics(outcome.Metrics!);
+            operation.ThrowIfObsolete();
             OnPropertyChanged(nameof(HasResult));
+            operation.ThrowIfObsolete();
             StatusText = outcome.Warning ?? "Done";
         }
-        catch (CAP_Core.LightCalculation.NonConvergentCircuitException ex)
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
         {
-            // Physics-integrity abort (non-passive data, resonant loop, fabricated
-            // energy): render the structured diagnostics fully localized.
-            _errorConsole?.LogError($"Eye-diagram analysis blocked: {ex.Message}", ex);
-            StatusText = NonConvergentCircuitMessageFormatter.Format(ex);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _errorConsole?.LogError($"Eye-diagram analysis failed: {ex.Message}", ex);
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("Analysis.Common.Failed"), ex.Message);
+            if (operation?.CanPublish != true) return;
+            _errorConsole?.LogError(ex is CAP_Core.LightCalculation.NonConvergentCircuitException
+                ? $"Eye-diagram analysis blocked: {ex.Message}" : $"Eye-diagram analysis failed: {ex.Message}", ex);
+            if (!operation.CanPublish) return;
+            StatusText = ex is CAP_Core.LightCalculation.NonConvergentCircuitException physics
+                ? NonConvergentCircuitMessageFormatter.Format(physics)
+                : string.Format(LocalizationService.Instance.Translate("Analysis.Common.Failed"), ex.Message);
         }
         finally
         {
-            IsRunning = false;
+            try { IsRunning = false; }
+            finally { await _lifetime.EndAsync(operation); }
         }
     }
 
     /// <summary>Exports the eye histogram to a CSV file.</summary>
     [RelayCommand]
-    private async Task ExportCsv()
-    {
-        if (_lastHistogram == null) return;
+    private Task ExportCsv() => _lifetime.RunAsync(ExportCsvCoreAsync);
 
+    private async Task ExportCsvCoreAsync(CancellationToken stop)
+    {
+        var histogram = _lastHistogram;
+        if (histogram == null || _canvas == null) return;
+        AnalysisSweepOperation? operation = null;
         try
         {
-            string? path = null;
-            if (FileDialogService != null)
-            {
-                path = await FileDialogService.ShowSaveFileDialogAsync(
-                    "Export Eye Histogram", "csv", "CSV Files|*.csv|All Files|*.*");
-            }
+            operation = _lifetime.Begin(stop);
+            operation.ThrowIfObsolete();
+            var dialog = FileDialogService;
+            var path = dialog == null ? null : await dialog.ShowSaveFileDialogAsync(
+                "Export Eye Histogram", "csv", "CSV Files|*.csv|All Files|*.*");
+            operation.ThrowIfObsolete();
+            if (!ReferenceEquals(histogram, _lastHistogram)) return;
             if (path == null)
             {
                 StatusText = LocalizationService.Instance.Translate("Analysis.Common.ExportCancelled");
                 return;
             }
-
-            await File.WriteAllTextAsync(path, _lastHistogram.ToCsv());
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("Analysis.Common.ExportedTo"), Path.GetFileName(path));
+            var csv = histogram.ToCsv();
+            operation.ThrowIfObsolete();
+            await File.WriteAllTextAsync(path, csv, operation.Token);
+            operation.ThrowIfObsolete();
+            if (!ReferenceEquals(histogram, _lastHistogram)) return;
+            StatusText = string.Format(LocalizationService.Instance.Translate("Analysis.Common.ExportedTo"), Path.GetFileName(path));
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+            if (operation?.CanPublish != true) return;
             _errorConsole?.LogError($"Eye histogram export failed: {ex.Message}", ex);
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("Analysis.Common.ExportFailed"), ex.Message);
+            if (operation.CanPublish)
+                StatusText = string.Format(LocalizationService.Instance.Translate("Analysis.Common.ExportFailed"), ex.Message);
         }
+        finally { await _lifetime.EndAsync(operation); }
     }
-
-    /// <summary>Outcome of an eye run: either a result (optionally with a non-fatal
-    /// <see cref="Warning"/>), or a user-facing <see cref="Error"/> for an expected
-    /// "can't run" condition (no light source / no output traces).</summary>
-    private sealed record EyeRunOutcome(
-        EyeHistogram? Histogram, EyeMetrics? Metrics, string? Error, string? Warning = null);
 
     /// <summary>
     /// Surfaces an invalid designation (#754) as a status warning and activates the
     /// picker. Returns true when the run must not proceed.
     /// </summary>
-    private bool ReportInvalidDesignation(AnalysisOutputResolution resolution)
+    private bool ReportInvalidDesignation(AnalysisOutputResolution resolution, AnalysisSweepOperation operation)
     {
         if (resolution.State == AnalysisOutputState.DesignatedMissing)
         {
             StatusText = LocalizationService.Instance.Translate("Analysis.Output.DesignatedMissing");
+            operation.ThrowIfObsolete();
             RequestOutputPicker?.Invoke();
             return true;
         }
@@ -212,83 +248,6 @@ public partial class EyeDiagramViewModel : ObservableObject
             return true;
         }
         return false;
-    }
-
-    private EyeRunOutcome RunAnalysisCore(AnalysisOutputResolution resolution)
-    {
-        // Tolerated measurement noise (≤ 0.5 % passivity excess in shipped measured
-        // data) surfaces as a console warning; the run continues (review finding [1]).
-        var (simulator, ports) = TransientCircuitFactory.Create(
-            _canvas!, warning => _errorConsole?.LogWarning(warning.ToMessage()));
-        var outputPinIds = TransientCircuitFactory.CollectOutputCouplerPinIds(_canvas!);
-        var designatedPinIds = resolution.State == AnalysisOutputState.DesignatedValid
-            ? AnalysisOutputResolver.CollectLightPinIds(resolution.Output!)
-            : null;
-
-        double bitRateHz = BitRateGbps * GigabitsToBits;
-        var sweepDef = TimeSignalDefinition.FromWavelengthSweep(CenterWavelengthNm, SpanNm, FreqPoints);
-        var plan = EyeSimulationPlan.Create(
-            bitRateHz, sweepDef.SampleRateHz, PrbsGenerator.PatternLength(SelectedPrbsOrder));
-
-        var bits = PrbsGenerator.GenerateBits(SelectedPrbsOrder, plan.BitCount);
-        var timeDef = new TimeSignalDefinition(sweepDef.SampleRateHz, plan.TotalSamples);
-
-        var signals = new Dictionary<Guid, double[]>();
-        double injectedPeakPower = 0;
-        foreach (var used in ports.GetUsedExternalInputs())
-        {
-            double amplitude = Math.Sqrt(used.Input.InFlowPower.Magnitude);
-            // Peak intensity of the strongest input — the reference for the −60 dB
-            // no-signal gate in EyeTraceSelector (#762 review).
-            injectedPeakPower = Math.Max(injectedPeakPower, amplitude * amplitude);
-            signals[used.AttachedComponentPinId] = PrbsGenerator.ToNrzSamples(bits, plan.SamplesPerBit, amplitude);
-        }
-        if (signals.Count == 0)
-            return new EyeRunOutcome(null, null, outputPinIds.Count > 0
-                ? "No laser is switched on — turn the laser on at your input coupler."
-                : "No light source found — place an input coupler (e.g. a grating/edge coupler).");
-
-        // Laser phase noise (#834): interferometric noise from finite linewidth
-        // flows into the eye/BER metrics automatically.
-        var phaseNoise = TransientCircuitFactory.BuildPhaseNoiseSettings(_canvas!);
-        var result = simulator.Run(signals, timeDef, CenterWavelengthNm, SpanNm, FreqPoints, phaseNoise);
-        if (result.PinTraces.Count == 0)
-            return new EyeRunOutcome(null, null,
-                "The circuit produced no output traces — connect an output path from the light source to a detector/output.");
-
-        // Analyse the trace at the designated output coupler (#754) or, without a
-        // designation, at a coupler whose laser is off (a true output, #690); fall
-        // back to the strongest trace (with a warning) for all-lasers-on designs.
-        var selection = EyeTraceSelector.Select(result, outputPinIds, designatedPinIds,
-            hasMultipleCandidates: resolution.State == AnalysisOutputState.MultipleCandidates,
-            injectedPeakPower: injectedPeakPower);
-        if (selection.Trace == null)
-            return new EyeRunOutcome(null, null, selection.Error);
-        var trace = selection.Trace;
-
-        // Per-source RIN (#819): the source's LaserConfig drives the amplitude
-        // noise the BER estimator assumes at the receiver.
-        var noise = new NoiseModel
-        {
-            BandwidthHz = ReceiverBandwidthFactor * bitRateHz,
-            RinDbPerHz = TransientCircuitFactory.ResolveRinDbPerHz(_canvas!),
-        };
-
-        // The plotted eye shows the same receiver noise (#834 field report:
-        // RIN edits looked dead because only the metrics consumed them). The
-        // metrics keep the clean trace + analytical noise (no double count).
-        var plotTrace = ReceiverNoiseTrace.Apply(trace, noise);
-
-        // No time bin can be finer than one sample, otherwise bins stay empty.
-        int timeBins = Math.Min(EyeDiagramBuilder.DefaultTimeBins, plan.SamplesPerBit);
-        var histogram = EyeDiagramBuilder.Build(
-            plotTrace, timeDef.SampleRateHz, plan.BitPeriodSeconds, timeBins);
-        double threshold = histogram.MinAmplitude
-            + ThresholdRelative * (histogram.MaxAmplitude - histogram.MinAmplitude);
-        var metrics = BerEstimator.Estimate(
-            trace, timeDef.SampleRateHz, plan.BitPeriodSeconds, threshold, noise, timeBins);
-
-        return new EyeRunOutcome(histogram, metrics, null, selection.Warning);
     }
 
     private static string FormatMetrics(EyeMetrics metrics)

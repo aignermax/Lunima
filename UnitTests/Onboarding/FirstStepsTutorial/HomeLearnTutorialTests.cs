@@ -23,7 +23,7 @@ public class HomeLearnTutorialTests : IDisposable
         _home = new HomeViewModel(
             new RecentProjectsService(new UserPreferencesService(_testPreferencesPath)),
             new UserPreferencesService(_testPreferencesPath),
-            new ExampleDesignsService(_emptyExamplesBase));
+            new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog(_emptyExamplesBase)));
     }
 
     public void Dispose()

@@ -22,16 +22,19 @@ internal static class AddCustomComponentFeature
     public static IServiceCollection AddAddCustomComponentFeature(this IServiceCollection services)
     {
         services.AddSingleton(_ => UserPdkStore.CreateDefault());
+        services.AddSingleton<IUserPdkLibrary>(sp => sp.GetRequiredService<UserPdkStore>());
         services.AddSingleton(sp => new ComponentGeometryExtractor(
-            new ComponentPreviewRendererAdapter(sp.GetRequiredService<NazcaComponentPreviewService>()),
-            new ComponentPreviewRendererAdapter(sp.GetRequiredService<GdsFactoryComponentPreviewService>())));
+            sp.GetRequiredService<NazcaComponentPreviewService>(),
+            sp.GetRequiredService<GdsFactoryComponentPreviewService>()));
         services.AddSingleton(sp => new AddCustomComponentDependencies(
+            sp.GetRequiredService<CAP_DataAccess.Import.ISParameterImportCatalog>(),
             sp.GetRequiredService<ComponentGeometryExtractor>(),
             sp.GetRequiredService<IFdtdSMatrixService>(),
-            sp.GetRequiredService<UserPdkStore>(),
+            sp.GetRequiredService<IUserPdkLibrary>(),
             sp.GetService<CAP_Core.ErrorConsoleService>(),
             sp.GetService<FdtdBackendRegistry>(),
-            sp.GetService<IUrlLauncher>()));
+            sp.GetService<IUrlLauncher>(),
+            sp.GetRequiredService<Services.Lifetime.ApplicationWorkCoordinator>()));
         return services;
     }
 }

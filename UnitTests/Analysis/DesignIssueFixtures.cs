@@ -48,6 +48,7 @@ internal static class DesignIssueFixtures
         DesignIssueType.DieOverlap or DesignIssueType.ComponentOffDie or DesignIssueType.EdgeCouplerOffDieEdge
             or DesignIssueType.CrossDieWaveguide
             => ProduceDieIssue(type),
+        DesignIssueType.LengthTargetNotMet => ProduceLengthTargetIssue(),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "unhandled issue type"),
     };
 
@@ -93,6 +94,16 @@ internal static class DesignIssueFixtures
         mark(connection.RoutedPath!);
 
         return new DesignValidator().Validate(new[] { connection }).Single(i => i.Type == type);
+    }
+
+    private static DesignIssue ProduceLengthTargetIssue()
+    {
+        var connection = CreateConnection(0, 0, 100, 0);
+        connection.TargetLengthMicrometers = 250;
+        connection.LengthToleranceMicrometers = 0.1;
+
+        return new DesignValidator().Validate(new[] { connection })
+            .Single(i => i.Type == DesignIssueType.LengthTargetNotMet);
     }
 
     private static DesignIssue ProduceOutOfBoundsIssue()

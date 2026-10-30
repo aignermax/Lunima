@@ -1,0 +1,470 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels"
+        xmlns:vmLib="using:CAP.Avalonia.ViewModels.Library"
+        xmlns:diagnostics="using:CAP.Avalonia.ViewModels.Diagnostics"
+        xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:converters="using:CAP.Avalonia.Converters"
+        xmlns:tour="using:CAP.Avalonia.Controls.TourAnchor"
+        xmlns:views="using:CAP.Avalonia.Views"
+        xmlns:behaviors="using:CAP.Avalonia.Behaviors"
+        xmlns:panels="using:CAP.Avalonia.Views.Panels"
+        xmlns:loc="using:CAP.Avalonia.Services.Localization"
+        xmlns:ws="using:CAP.Avalonia.ViewModels.Workspaces"
+        xmlns:wsPanels="using:CAP.Avalonia.Views.Panels.WorkspaceRail"
+        x:Class="CAP.Avalonia.Views.Shell.WorkspaceLibraryPane"
+        x:DataType="vm:MainViewModel" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+
+    <DockPanel>
+        <!-- Contextual rail: each workspace shows the sections of its tool set, in its
+             order (Grid.Row), opening on the first (WorkspaceRailLayout). Layout shows all. -->
+        <Border DockPanel.Dock="Left" Classes="rail">
+            <Grid x:Name="LeftRailIcons" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                <Button Classes="rail" Command="{Binding LeftRail.ShowGatesCommand}"
+                        Grid.Row="{Binding LeftRail.GatesOrder}" Margin="0,0,0,4"
+                        IsVisible="{Binding LeftRail.IsGatesAvailable}"
+                        Classes.active="{Binding LeftRail.IsGatesActive}"
+                        ToolTip.Tip="{loc:Localize LeftRail.Gates}"
+                        ToolTip.Placement="Right">
+                    <controls:Icon Data="{StaticResource Icon.Binary}" Size="18"/>
+                </Button>
+                <Button x:Name="ChipletsRailButton" Classes="rail" Command="{Binding LeftRail.ShowChipletsCommand}"
+                        Grid.Row="{Binding LeftRail.ChipletsOrder}" Margin="0,0,0,4"
+                        IsVisible="{Binding LeftRail.IsChipletsAvailable}"
+                        Classes.active="{Binding LeftRail.IsChipletsActive}"
+                        ToolTip.Tip="{loc:Localize Workspace.System.Chiplets}"
+                        ToolTip.Placement="Right">
+                    <controls:Icon Data="{StaticResource Icon.Microchip}" Size="18"/>
+                </Button>
+                <Button Classes="rail" Command="{Binding LeftRail.ShowLibraryCommand}"
+                        Grid.Row="{Binding LeftRail.LibraryOrder}" Margin="0,0,0,4"
+                        IsVisible="{Binding LeftRail.IsLibraryAvailable}"
+                        Classes.active="{Binding LeftRail.IsLibraryActive}"
+                        ToolTip.Tip="{loc:Localize LeftPanel.ComponentLibrary}"
+                        ToolTip.Placement="Right">
+                    <controls:Icon Data="{StaticResource Icon.Shapes}" Size="18"/>
+                </Button>
+                <Button Classes="rail" Command="{Binding LeftRail.ShowHierarchyCommand}"
+                        Grid.Row="{Binding LeftRail.HierarchyOrder}" Margin="0,0,0,4"
+                        IsVisible="{Binding LeftRail.IsHierarchyAvailable}"
+                        Classes.active="{Binding LeftRail.IsHierarchyActive}"
+                        ToolTip.Tip="{loc:Localize Hierarchy.Title}"
+                        ToolTip.Placement="Right">
+                    <controls:Icon Data="{StaticResource Icon.ListTree}" Size="18"/>
+                </Button>
+                <Button Classes="rail" Command="{Binding LeftRail.ShowPdksCommand}"
+                        Grid.Row="{Binding LeftRail.PdksOrder}" Margin="0,0,0,4"
+                        IsVisible="{Binding LeftRail.IsPdksAvailable}"
+                        Classes.active="{Binding LeftRail.IsPdksActive}"
+                        ToolTip.Tip="{loc:Localize LeftRail.Pdks}"
+                        ToolTip.Placement="Right">
+                    <controls:Icon Data="{StaticResource Icon.Package}" Size="18"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Panel>
+            <!-- ── Library (default): saved groups + components, one scroll ── -->
+            <DockPanel Classes="railPane" IsVisible="{Binding LeftRail.IsLibraryActive}"
+                       behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                <DockPanel DockPanel.Dock="Top" Classes="paneHeader">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2"
+                                IsVisible="{Binding IsFullLibrary}">
+                        <!-- Online, community-shared counterpart to this local library -->
+                        <Button Classes="headerIcon" Click="OpenRegistryBrowser_Click"
+                                ToolTip.Tip="{loc:Localize Registry.OpenTip}">
+                            <controls:Icon Data="{StaticResource Icon.Globe}"/>
+                        </Button>
+                        <Button Classes="headerIcon" Command="{Binding GdsImport.OpenGdsImportDialogCommand}"
+                                ToolTip.Tip="{loc:Localize GdsImport.OpenTip}">
+                            <controls:Icon Data="{StaticResource Icon.FileInput}"/>
+                        </Button>
+                        <Button Classes="headerIcon" Command="{Binding LeftPanel.OpenNewComponentCommand}"
+                                ToolTip.Tip="{loc:Localize LeftPanel.NewComponentTip}">
+                            <controls:Icon Data="{StaticResource Icon.Plus}"/>
+                        </Button>
+                    </StackPanel>
+                    <TextBlock Classes="paneTitle" Text="{loc:Localize LeftPanel.ComponentLibrary}"
+                               IsVisible="{Binding IsFullLibrary}"/>
+                    <TextBlock Classes="paneTitle" Text="{loc:Localize Workspace.ToolSet.InstrumentsTitle}"
+                               IsVisible="{Binding IsInstrumentLibrary}"/>
+                    <TextBlock Classes="paneTitle" Text="{loc:Localize Workspace.ToolSet.DieFacetsTitle}"
+                               IsVisible="{Binding IsDieFacetLibrary}"/>
+                </DockPanel>
+                <!-- Optics places instruments only; circuit parts are one click away in Layout. -->
+                <StackPanel DockPanel.Dock="Top" IsVisible="{Binding IsInstrumentLibrary}">
+                    <TextBlock Classes="caption" Margin="16,0,16,0" TextWrapping="Wrap"
+                               Text="{loc:Localize Workspace.ToolSet.InstrumentsHint}"/>
+                    <wsPanels:PlaceInLayoutHint/>
+                </StackPanel>
+                <!-- System places the edge couplers that link dies; everything else is placed in Layout. -->
+                <StackPanel DockPanel.Dock="Top" IsVisible="{Binding IsDieFacetLibrary}">
+                    <TextBlock Classes="caption" Margin="16,0,16,0" TextWrapping="Wrap"
+                               Text="{loc:Localize Workspace.ToolSet.DieFacetsHint}"/>
+                    <wsPanels:PlaceInLayoutHint/>
+                </StackPanel>
+                <TextBox DockPanel.Dock="Top" Classes="search" Margin="12,0,12,8"
+                         Watermark="{loc:Localize LeftPanel.SearchWatermark}"
+                         Text="{Binding LeftPanel.SearchText}">
+                    <TextBox.InnerLeftContent>
+                        <controls:Icon Data="{StaticResource Icon.Search}" Size="14"
+                                       Foreground="{DynamicResource Brush.Text.Tertiary}"
+                                       Margin="8,0,0,0"/>
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+
+                <StackPanel x:Name="PythonStartupProgress" DockPanel.Dock="Top" Margin="12,0,12,8" Spacing="4"
+                            IsVisible="{Binding PythonStartup.IsRunning, FallbackValue=False}">
+                    <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:Localize PythonStartup.Preparing}"/>
+                    <ProgressBar IsIndeterminate="True" Height="3"/>
+                    <TextBlock Classes="caption" TextTrimming="CharacterEllipsis" MaxLines="2"
+                               Text="{Binding PythonStartup.ProgressText}" ToolTip.Tip="{Binding PythonStartup.ProgressText}"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="12,0,12,8" Spacing="4"
+                            IsVisible="{Binding PythonStartup.HasError, FallbackValue=False}">
+                    <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:Localize PythonStartup.Failed}"/>
+                    <Button x:Name="PythonStartupRetryButton" Classes="link" HorizontalAlignment="Left"
+                            Content="{loc:Localize PythonStartup.Retry}" Command="{Binding PythonStartup.RetryCommand}"/>
+                    <Button Classes="link" HorizontalAlignment="Left" Content="{loc:Localize Settings.Section.PythonEnvironments}"
+                            Command="{Binding OpenPreviewPythonSettingsCommand}"/>
+                    <Expander Header="{loc:Localize Preview.ErrorDetails}">
+                        <TextBlock Classes="caption" TextWrapping="Wrap" MaxHeight="100" Text="{Binding PythonStartup.ErrorText}"/>
+                    </Expander>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="12,0,12,8"
+                            IsVisible="{Binding GdsPreviewRenderService.HasUnavailablePreviews}">
+                  <StackPanel IsVisible="{Binding !PythonStartup.IsRunning, FallbackValue=True}">
+                   <StackPanel Spacing="4" IsVisible="{Binding !PythonStartup.HasError, FallbackValue=True}">
+                    <TextBlock Classes="caption" TextWrapping="Wrap"
+                               Text="{loc:Localize Preview.Unavailable}"
+                               ToolTip.Tip="{Binding GdsPreviewRenderService.PreviewFailureDetail}"/>
+                    <Button x:Name="PreviewPythonSettingsButton" Classes="link"
+                            HorizontalAlignment="Left"
+                            Content="{loc:Localize Settings.Section.PythonEnvironments}"
+                            Command="{Binding OpenPreviewPythonSettingsCommand}"/>
+                    <Expander Header="{loc:Localize Preview.ErrorDetails}">
+                        <TextBlock Classes="caption" TextWrapping="Wrap" MaxHeight="100"
+                                   Text="{Binding GdsPreviewRenderService.PreviewFailureDetail}"/>
+                    </Expander>
+                   </StackPanel>
+                  </StackPanel>
+                </StackPanel>
+
+                <!-- Online-registry hit line under the local hits: visible only while
+                     it has something to say, styled as a link so it is never mistaken
+                     for a placeable local template. -->
+                <Button DockPanel.Dock="Bottom" Classes="link" Margin="12,6,12,8"
+                        HorizontalAlignment="Left"
+                        Click="OpenRegistrySearchHint_Click"
+                        IsVisible="{Binding LeftPanel.RegistrySearchHintText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                        ToolTip.Tip="{loc:Localize Registry.SearchHintTip}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:Icon Data="{StaticResource Icon.Globe}" Size="12"/>
+                        <TextBlock Classes="caption" Foreground="{DynamicResource Brush.Text.Link}"
+                                   Text="{Binding LeftPanel.RegistrySearchHintText}"/>
+                    </StackPanel>
+                </Button>
+
+                <ScrollViewer x:Name="ComponentLibraryScroll"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
+                    <StackPanel Margin="0,0,0,8">
+                        <!-- Saved groups: a collapsible category of the library (Layout only) -->
+                        <ToggleButton x:Name="SavedGroupsToggle" Classes="sectionHeader" IsChecked="True"
+                                      IsVisible="{Binding IsFullLibrary}"
+                                      AutomationProperties.Name="{loc:Localize LeftPanel.SavedGroups}"
+                                      ToolTip.Tip="{loc:Localize LeftPanel.SavedGroupsTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronRight}"
+                                               Classes.open="{Binding #SavedGroupsToggle.IsChecked}"/>
+                                <TextBlock Classes="label" Text="{loc:Localize LeftPanel.SavedGroups}"/>
+                            </StackPanel>
+                        </ToggleButton>
+                        <StackPanel Margin="8,0,8,4">
+                            <StackPanel.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding ElementName="SavedGroupsToggle" Path="IsChecked"/>
+                                    <Binding Path="IsFullLibrary"/>
+                                </MultiBinding>
+                            </StackPanel.IsVisible>
+                            <TextBlock Classes="caption" Margin="8,0,8,4" TextWrapping="Wrap"
+                                       Text="{Binding LeftPanel.ComponentLibrary.StatusText}"
+                                       IsVisible="{Binding LeftPanel.ComponentLibrary.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            <ListBox x:Name="UserGroupsListBox"
+                                     Classes="library"
+                                     behaviors:LibraryDragBehavior.IsEnabled="True"
+                                     ItemsSource="{Binding LeftPanel.ComponentLibrary.UserGroups}"
+                                     SelectionChanged="OnUserGroupsSelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
+                                        <Border Classes="libraryRow"
+                                                ToolTip.Tip="{Binding Template.Description}"
+                                                PointerEntered="OnGroupItemPointerEntered"
+                                                PointerExited="OnGroupItemPointerExited">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="{loc:Localize Common.Rename}" Command="{Binding RenameCommand}"/>
+                                                    <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteCommand}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Right" Classes="rowAction danger"
+                                                        IsVisible="{Binding IsHovered}"
+                                                        Command="{Binding DeleteCommand}"
+                                                        ToolTip.Tip="{loc:Localize LeftPanel.DeleteSavedGroupTip}">
+                                                    <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                                </Button>
+                                                <Border DockPanel.Dock="Left" Classes="thumb">
+                                                    <controls:Icon Data="{StaticResource Icon.Group}"/>
+                                                </Border>
+                                                <StackPanel VerticalAlignment="Center" Spacing="1">
+                                                    <TextBlock Classes="rowTitle" Text="{Binding Template.Name}"/>
+                                                    <TextBlock Classes="caption">
+                                                        <Run Text="{Binding Template.ComponentCount}"/>
+                                                        <Run Text="{loc:Localize LeftPanel.ComponentsSuffix}"/>
+                                                        <Run Text=" · "/>
+                                                        <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                                        <Run Text="×"/>
+                                                        <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                                        <Run Text="µm"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Classes="label" Margin="8,8,8,4" Text="{loc:Localize LeftPanel.PdkMacros}"
+                                       IsVisible="{Binding LeftPanel.ComponentLibrary.PdkGroups.Count}"/>
+                            <ListBox x:Name="PdkGroupsListBox"
+                                     Classes="library"
+                                     behaviors:LibraryDragBehavior.IsEnabled="True"
+                                     ItemsSource="{Binding LeftPanel.ComponentLibrary.PdkGroups}"
+                                     SelectionChanged="OnPdkGroupsSelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
+                                        <Border Classes="libraryRow"
+                                                ToolTip.Tip="{Binding Template.Description}"
+                                                PointerEntered="OnGroupItemPointerEntered"
+                                                PointerExited="OnGroupItemPointerExited">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="{loc:Localize Common.Rename}" Command="{Binding RenameCommand}"/>
+                                                    <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteCommand}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Right" Classes="rowAction danger"
+                                                        IsVisible="{Binding IsHovered}"
+                                                        Command="{Binding DeleteCommand}"
+                                                        ToolTip.Tip="{loc:Localize LeftPanel.DeleteSavedGroupTip}">
+                                                    <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                                </Button>
+                                                <Border DockPanel.Dock="Left" Classes="thumb">
+                                                    <controls:Icon Data="{StaticResource Icon.Boxes}"/>
+                                                </Border>
+                                                <StackPanel VerticalAlignment="Center" Spacing="1">
+                                                    <TextBlock Classes="rowTitle" Text="{Binding Template.Name}"/>
+                                                    <TextBlock Classes="caption">
+                                                        <Run Text="{Binding Template.ComponentCount}"/>
+                                                        <Run Text="{loc:Localize LeftPanel.ComponentsSuffix}"/>
+                                                        <Run Text=" · "/>
+                                                        <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                                        <Run Text="×"/>
+                                                        <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                                        <Run Text="µm"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+
+                        <Border Classes="divider" Height="1" Margin="12,4,12,4" IsVisible="{Binding IsFullLibrary}"/>
+                        <TextBlock Classes="label" Margin="16,8,16,2" Text="{loc:Localize LeftPanel.Components}"
+                                   IsVisible="{Binding IsFullLibrary}"/>
+                        <TextBlock Classes="caption" Margin="16,0,16,6" TextWrapping="Wrap"
+                                   Text="{loc:Localize LeftPanel.PlaceHint}"/>
+                        <ListBox x:Name="ComponentLibraryList"
+                                 Classes="library" Margin="8,0"
+                                 ItemsSource="{Binding LeftPanel.FilteredTemplates}"
+                                 behaviors:LibraryDragBehavior.IsEnabled="True"
+                                 SelectedItem="{Binding CanvasInteraction.SelectedTemplate}"
+                                 controls:ComponentPreview.RenderService="{Binding GdsPreviewRenderService}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vmLib:ComponentTemplate">
+                                    <DockPanel>
+                                        <Border DockPanel.Dock="Left" Classes="previewFrame">
+                                            <controls:ComponentPreview
+                                                Width="52" Height="32"
+                                                WidthMicrometers="{Binding WidthMicrometers}"
+                                                HeightMicrometers="{Binding HeightMicrometers}"
+                                                PinDefinitions="{Binding PinDefinitions}"
+                                                NazcaModuleName="{Binding NazcaModuleName}"
+                                                NazcaFunctionName="{Binding NazcaFunctionName}"
+                                                NazcaParameters="{Binding NazcaParameters}"
+                                                GdsFactoryFunction="{Binding GdsFactoryFunction}"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center" Spacing="1">
+                                            <!-- DockPanel, not a horizontal StackPanel: the title needs a finite
+                                                 width to wrap and trim. Long PDK names (several "Directional
+                                                 Coupler …" variants) wrap to two lines; the tooltip has the rest. -->
+                                            <DockPanel>
+                                                <!-- User-global S-matrix override: applies to every project. -->
+                                                <controls:Icon DockPanel.Dock="Right" Margin="4,0,0,0"
+                                                               Data="{StaticResource Icon.ChartLine}" Size="12"
+                                                               Foreground="{DynamicResource Brush.Info}"
+                                                               VerticalAlignment="Center"
+                                                               IsVisible="{Binding HasUserGlobalSMatrixOverride}"
+                                                               ToolTip.Tip="{loc:Localize LeftPanel.SMatrixOverrideTip}"/>
+                                                <TextBlock Classes="rowTitle" Text="{Binding Name}"
+                                                           TextWrapping="Wrap" MaxLines="2"
+                                                           ToolTip.Tip="{Binding Name}"/>
+                                            </DockPanel>
+                                            <!-- Actions share the category row, leaving the title its full width.
+                                                 Their reserved space does not change on hover/selection. -->
+                                            <DockPanel>
+                                                <!-- Edit/delete appear on hover or selection only: the palette
+                                                     stays calm but the actions remain discoverable. -->
+                                                <StackPanel Classes="itemActions" DockPanel.Dock="Right"
+                                                            Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                                    <Button Classes="rowAction" Click="TemplateEditComponent_Click"
+                                                            ToolTip.Tip="{loc:Localize LeftPanel.EditComponentTip}">
+                                                        <controls:Icon Data="{StaticResource Icon.Pencil}"/>
+                                                    </Button>
+                                                    <!-- Only where there is something to delete or restore. -->
+                                                    <Button Classes="rowAction danger" Click="TemplateDeleteComponent_Click"
+                                                            IsVisible="{Binding IsDeletable}"
+                                                            ToolTip.Tip="{loc:Localize LeftPanel.DeleteComponentTip}">
+                                                        <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                                    </Button>
+                                                </StackPanel>
+                                                <TextBlock Classes="caption" Text="{Binding Category}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- ── Gates (Logic default) ── -->
+            <Border Classes="railPane" IsVisible="{Binding LeftRail.IsGatesActive}"
+                    behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                <wsPanels:GatesPane/>
+            </Border>
+
+            <!-- ── Chiplets (System default) ── -->
+            <Border Classes="railPane" IsVisible="{Binding LeftRail.IsChipletsActive}"
+                    behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                <DockPanel>
+                    <!-- System places no parts; circuit parts are one click away in Layout. -->
+                    <wsPanels:PlaceInLayoutHint DockPanel.Dock="Bottom" Margin="0,0,0,8"
+                                                IsVisible="{Binding !IsFullLibrary}"/>
+                    <wsPanels:ChipletsPane/>
+                </DockPanel>
+            </Border>
+
+            <!-- ── Hierarchy ── -->
+            <Border Classes="railPane" IsVisible="{Binding LeftRail.IsHierarchyActive}"
+                    behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                <views:HierarchyPanel DataContext="{Binding LeftPanel.HierarchyPanel}"/>
+            </Border>
+
+            <!-- ── PDKs ── -->
+            <DockPanel Classes="railPane" IsVisible="{Binding LeftRail.IsPdksActive}"
+                       behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                <DockPanel DockPanel.Dock="Top" Classes="paneHeader">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                        <Button Classes="headerIcon" Command="{Binding LeftPanel.PdkManager.EnableAllCommand}"
+                                ToolTip.Tip="{loc:Localize LeftPanel.EnableAllPdksTip}">
+                            <controls:Icon Data="{StaticResource Icon.SquareCheckBig}"/>
+                        </Button>
+                        <Button Classes="headerIcon" Command="{Binding LeftPanel.PdkManager.DisableAllCommand}"
+                                ToolTip.Tip="{loc:Localize LeftPanel.DisableAllPdksTip}">
+                            <controls:Icon Data="{StaticResource Icon.Square}"/>
+                        </Button>
+                        <!-- Recover deleted PDKs / removed components from user-pdks/.trash -->
+                        <Button Classes="headerIcon" Command="{Binding LeftPanel.PdkTrash.OpenCommand}"
+                                ToolTip.Tip="{loc:Localize LeftPanel.TrashTip}">
+                            <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <panels:PdkTrashPanel DataContext="{Binding LeftPanel.PdkTrash}"/>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Classes="headerIcon" Click="PdkCreate_Click"
+                                ToolTip.Tip="{loc:Localize LeftPanel.CreatePdkTip}">
+                            <controls:Icon Data="{StaticResource Icon.Plus}"/>
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="paneTitle" Text="{loc:Localize LeftRail.Pdks}"/>
+                        <!-- What a PDK is, what its process defines, and why a component
+                             only seats on a chiplet of its own process. -->
+                        <controls:HelpFlyoutButton Title="{loc:Localize PdkHelp.Title}" VerticalAlignment="Center">
+                            <controls:HelpFlyoutButton.HelpContent>
+                                <panels:PdkHelpFlyout/>
+                            </controls:HelpFlyoutButton.HelpContent>
+                        </controls:HelpFlyoutButton>
+                    </StackPanel>
+                </DockPanel>
+                <TextBlock DockPanel.Dock="Top" Classes="caption" Margin="16,0,16,8" TextWrapping="Wrap"
+                           Text="{Binding LeftPanel.PdkManager.StatusText}"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl Margin="8,0,8,8" ItemsSource="{Binding LeftPanel.PdkManager.LoadedPdks}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vmLib:PdkInfoViewModel">
+                                <Border Classes="pdkRow">
+                                    <DockPanel>
+                                        <StackPanel Classes="itemActions" DockPanel.Dock="Right"
+                                                    Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                            <!-- Bundled PDKs save as a custom fork; design-scoped sets have no file. -->
+                                            <Button Classes="rowAction" IsVisible="{Binding !IsDesignScoped}"
+                                                    Click="PdkEditProcess_Click"
+                                                    ToolTip.Tip="{loc:Localize LeftPanel.EditPdkTip}">
+                                                <controls:Icon Data="{StaticResource Icon.Pencil}"/>
+                                            </Button>
+                                            <Button Classes="rowAction danger" IsVisible="{Binding CanDelete}"
+                                                    Click="PdkDelete_Click"
+                                                    ToolTip.Tip="{loc:Localize LeftPanel.DeletePdkTip}">
+                                                <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                            </Button>
+                                        </StackPanel>
+                                        <StackPanel Spacing="1">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <CheckBox IsChecked="{Binding IsEnabled}"
+                                                          Content="{Binding Name}"
+                                                          IsEnabled="{Binding !IsLockedByProcess}"/>
+                                                <controls:Icon Data="{StaticResource Icon.Lock}" Size="12"
+                                                               Foreground="{DynamicResource Brush.Text.Tertiary}"
+                                                               VerticalAlignment="Center"
+                                                               IsVisible="{Binding IsLockedByProcess}"
+                                                               ToolTip.Tip="{loc:Localize LeftPanel.PdkLockedTip}"/>
+                                            </StackPanel>
+                                            <TextBlock Classes="caption" Margin="28,0,0,0">
+                                                <Run Text="{Binding SourceBadge}"/>
+                                                <Run Text=" · "/>
+                                                <Run Text="{Binding ComponentCount}"/>
+                                                <Run Text="{loc:Localize LeftPanel.ComponentsSuffix}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Panel>
+    </DockPanel>
+
+</UserControl>

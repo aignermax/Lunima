@@ -37,7 +37,7 @@ public class AgentBridgeRepairToolsTests
         var vm = _canvas.ConnectPins(a.Component.PhysicalPins.Single(p => p.Name == "out"),
             b.Component.PhysicalPins.Single(p => p.Name == "in"));
         _wireId = vm!.Connection.Id.ToString();
-        _session = new AgentDesignSession(_canvas, new CommandManager(), () => null, new ExampleDesignsService());
+        _session = new AgentDesignSession(_canvas, new CommandManager(), () => null, new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
     }
 
     private ComponentViewModel AddWaveguide(string id, double x, double y)
@@ -136,7 +136,7 @@ public class AgentBridgeRepairToolsTests
     public void Ranking_PrefersFewerBlocked_ThenFewerCrossings_ThenSmallerChange_AndDropsInapplicable()
     {
         RepairCandidate Candidate(string name, double change) =>
-            new("nudge_component", name, change, new { }, () => (null, "unused"));
+            new("nudge_component", name, change, new { }, new NudgeRepair(Guid.Empty, change, 0));
         var outcomes = new[]
         {
             new TrialOutcome(Candidate("worse", 1), true, null, 3, 0, false, 1),

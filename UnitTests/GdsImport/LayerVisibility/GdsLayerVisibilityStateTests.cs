@@ -1,3 +1,4 @@
+using CAP_DataAccess.Persistence.NativeDesign;
 using CAP.Avalonia.Services.GdsImport.LayerVisibility;
 using Shouldly;
 using Xunit;

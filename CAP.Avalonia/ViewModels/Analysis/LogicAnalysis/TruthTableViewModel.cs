@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using CAP.Avalonia.Services.Localization;
+using CAP.Avalonia.Services.Lifetime;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
 using CAP_Core.Components.ComponentHelpers;
@@ -18,14 +19,25 @@ namespace CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 /// together with the raw simulated power behind it. A pin is exactly one of input, output,
 /// or bias: checking it in one list revokes it in the other two.
 /// </summary>
-public partial class TruthTableViewModel : ObservableObject
+public partial class TruthTableViewModel : ObservableObject, IAsyncDisposable
 {
     private const double DefaultThreshold = 0.5;
 
-    private readonly TruthTableExtractor _extractor = new();
+    private readonly TruthTableExtractor _extractor;
+
+    private readonly TruthTableWorkSession _work = new();
+    private readonly ObservablePublicationQueue _publication = new();
+    private Task? _retirement;
+
+    public TruthTableViewModel(TruthTableExtractor? extractor = null,
+        ApplicationWorkCoordinator? applicationWork = null)
+    {
+        _extractor = extractor ?? new();
+        _work.RegisterWith(applicationWork, StopAsync);
+    }
     private ComponentGroup? _group;
+    private ComponentGroup? _pinGroup;
     private DesignCanvasViewModel? _canvas;
-    private CancellationTokenSource? _extractCts;
     private bool _revertingPinCheck;
 
     /// <summary>True while exactly one group is selected and the panel is active.</summary>
@@ -89,36 +101,88 @@ public partial class TruthTableViewModel : ObservableObject
     /// </summary>
     public void ConfigureForSelection(ComponentViewModel? component, DesignCanvasViewModel? canvas)
     {
-        // A late-finishing extraction must not display results for the newly
-        // selected/deselected group.
-        _extractCts?.Cancel();
+        if (_work.IsStopping) return;
+        _work.Configure(canvas?.Document, () => component?.Component is ComponentGroup
+            && (canvas == null || canvas.Components.Contains(component)));
         _canvas = canvas;
         _group = component?.Component as ComponentGroup;
+        var version = _work.Version;
         var singleSelection = canvas == null || canvas.Selection.SelectedComponents.Count <= 1;
-        IsGroupSelected = _group != null && singleSelection;
+        _publication.Publish(() => ConfigureDisplay(version, singleSelection));
+    }
 
-        HasResult = false;
-        Rows.Clear();
-        StatusText = "";
-        BiasSummaryText = "";
-        ClearThresholdSuggestion();
+    private void ConfigureDisplay(long version, bool singleSelection)
+    {
+        if (!_work.IsVersionCurrent(version)) return;
         _revertingPinCheck = true;
         try
         {
+            IsGroupSelected = _group != null && singleSelection;
+            if (!_work.IsVersionCurrent(version)) return;
+            HasResult = false;
+            if (!_work.IsVersionCurrent(version)) return;
+            Rows.Clear();
+            if (!_work.IsVersionCurrent(version)) return;
+            InputHeaders.Clear();
+            if (!_work.IsVersionCurrent(version)) return;
+            OutputHeaders.Clear();
+            if (!_work.IsVersionCurrent(version)) return;
+            StatusText = "";
+            if (!_work.IsVersionCurrent(version)) return;
+            BiasSummaryText = "";
+            if (!_work.IsVersionCurrent(version)) return;
+            ClearThresholdSuggestion(() => _work.IsVersionCurrent(version));
+            if (!_work.IsVersionCurrent(version)) return;
             IsRegister = _group?.TruthTablePinAssignment?.IsRegister ?? false;
+            if (!_work.IsVersionCurrent(version)) return;
+            RebuildPinLists(version);
+            if (!_work.IsVersionCurrent(version)) return;
+            PrefillFromPersistedAssignment(version);
+            if (!_work.IsVersionCurrent(version)) return;
+            SignalNamesVisible = IsGroupSelected && _group?.TruthTablePinAssignment != null;
+            if (!_work.IsVersionCurrent(version)) return;
+            RefreshCollisionHints();
+            if (!_work.IsVersionCurrent(version)) return;
+            WavelengthText = IsGroupSelected
+                ? string.Format(Translate("TruthTable.Wavelength"), ResolveWavelengthNm()) : "";
         }
-        finally
-        {
-            _revertingPinCheck = false;
-        }
-        RebuildPinLists();
-        PrefillFromPersistedAssignment();
-        SignalNamesVisible = IsGroupSelected && _group?.TruthTablePinAssignment != null;
-        RefreshCollisionHints();
-        WavelengthText = IsGroupSelected
-            ? string.Format(Translate("TruthTable.Wavelength"), ResolveWavelengthNm())
-            : "";
+        finally { _revertingPinCheck = false; }
     }
+
+    public Task StopAsync()
+    {
+        if (_retirement != null) return _retirement;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _retirement = completion.Task;
+        _ = RetireAsync(completion);
+        return completion.Task;
+    }
+
+    private async Task RetireAsync(TaskCompletionSource completion)
+    {
+        try
+        {
+            try { await _work.StopAsync(); }
+            finally
+            {
+                DetachPinHandlers();
+                _group = null;
+                _pinGroup = null;
+                _canvas = null;
+                OpenLogicRequested = null;
+                await _publication.PublishAsync(() =>
+                {
+                    HasResult = false;
+                    Rows.Clear();
+                    IsProcessing = false;
+                });
+            }
+            completion.TrySetResult();
+        }
+        catch (Exception error) { completion.TrySetException(error); }
+    }
+
+    public ValueTask DisposeAsync() => new(StopAsync());
 
     /// <summary>
     /// Re-applies the pin-role assignment the group was last successfully extracted
@@ -128,58 +192,54 @@ public partial class TruthTableViewModel : ObservableObject
     /// and for groups never extracted; pin names that no longer exist on the group
     /// are skipped instead of failing.
     /// </summary>
-    private void PrefillFromPersistedAssignment()
+    private void PrefillFromPersistedAssignment(long version)
     {
         var saved = _group?.TruthTablePinAssignment;
-        if (saved == null)
-            return;
-
-        _revertingPinCheck = true;
-        try
-        {
-            CheckPins(InputPins, saved.InputPinNames);
-            CheckPins(OutputPins, saved.OutputPinNames);
-            CheckPins(BiasPins, saved.BiasPinNames);
-            Threshold = saved.Threshold;
-        }
-        finally
-        {
-            _revertingPinCheck = false;
-        }
+        if (saved == null) return;
+        CheckPins(InputPins, saved.InputPinNames, version);
+        if (!_work.IsVersionCurrent(version)) return;
+        CheckPins(OutputPins, saved.OutputPinNames, version);
+        if (!_work.IsVersionCurrent(version)) return;
+        CheckPins(BiasPins, saved.BiasPinNames, version);
+        if (!_work.IsVersionCurrent(version)) return;
+        Threshold = saved.Threshold;
+        if (!_work.IsVersionCurrent(version)) return;
         PrefillSignalNames(saved);
     }
 
-    /// <summary>Ticks the checkbox of every listed pin that still exists on the group.</summary>
-    private static void CheckPins(IEnumerable<PinSelectionViewModel> pins, IEnumerable<string> names)
+    private void CheckPins(IEnumerable<PinSelectionViewModel> pins, IEnumerable<string> names, long version)
     {
         foreach (var name in names)
         {
+            if (!_work.IsVersionCurrent(version)) return;
             var pin = pins.FirstOrDefault(p => p.PinName == name);
-            if (pin != null)
-                pin.IsChecked = true;
+            if (pin != null) pin.IsChecked = true;
         }
     }
 
-    private void RebuildPinLists()
+    private void RebuildPinLists(long version)
     {
         DetachPinHandlers();
+        _pinGroup = null;
         InputPins.Clear();
+        if (!_work.IsVersionCurrent(version)) return;
         OutputPins.Clear();
+        if (!_work.IsVersionCurrent(version)) return;
         BiasPins.Clear();
-        if (!IsGroupSelected || _group == null)
-            return;
-
-        foreach (var pin in _group.ExternalPins)
+        if (!_work.IsVersionCurrent(version) || !IsGroupSelected || _group == null) return;
+        _pinGroup = _group;
+        foreach (var pin in _group.ExternalPins.ToArray())
         {
             var input = CreatePin(pin.Name);
-            var output = CreatePin(pin.Name);
-            // OnSignalNamesVisibleChanged only fires on change — freshly rebuilt rows
-            // take the flag explicitly so an unchanged value still reaches them.
             input.SignalEditingVisible = SignalNamesVisible;
-            output.SignalEditingVisible = SignalNamesVisible;
             InputPins.Add(input);
+            if (!_work.IsVersionCurrent(version)) return;
+            var output = CreatePin(pin.Name);
+            output.SignalEditingVisible = SignalNamesVisible;
             OutputPins.Add(output);
+            if (!_work.IsVersionCurrent(version)) return;
             BiasPins.Add(CreatePin(pin.Name));
+            if (!_work.IsVersionCurrent(version)) return;
         }
     }
 
@@ -206,8 +266,12 @@ public partial class TruthTableViewModel : ObservableObject
     /// </summary>
     private void OnPinPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (sender is not PinSelectionViewModel pin)
+        if (_work.IsStopping || !ReferenceEquals(_pinGroup, _group)
+            || sender is not PinSelectionViewModel pin
+            || !(InputPins.Contains(pin) || OutputPins.Contains(pin) || BiasPins.Contains(pin)))
             return;
+        if (!_revertingPinCheck && (e.PropertyName is nameof(PinSelectionViewModel.SignalName)
+            or nameof(PinSelectionViewModel.IsChecked))) _work.Invalidate();
         if (e.PropertyName == nameof(PinSelectionViewModel.SignalName))
         {
             if (!_revertingPinCheck && (InputPins.Contains(pin) || OutputPins.Contains(pin)))

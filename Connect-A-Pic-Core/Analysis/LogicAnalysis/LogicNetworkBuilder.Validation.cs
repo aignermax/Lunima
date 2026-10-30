@@ -54,25 +54,27 @@ public sealed partial class LogicNetworkBuilder
     /// <summary>One gate group with its prevalidated logic interface.</summary>
     private sealed class GateContext
     {
-        private GateContext(LogicGateInstance instance)
+        private GateContext(ComponentGroup group, GateRoleAssignment roles, string gateId)
         {
-            Instance = instance;
+            Group = group;
+            Roles = roles;
+            GateId = gateId;
+            InputPinNames = roles.InputPinNames;
+            OutputPinNames = roles.OutputPinNames;
         }
 
-        /// <summary>The gate instance this context wraps.</summary>
-        public LogicGateInstance Instance { get; }
+        public GateRoleAssignment Roles { get; }
+        public IReadOnlyList<string> InputPinNames { get; private set; }
+        public IReadOnlyList<string> OutputPinNames { get; private set; }
 
         /// <summary>
         /// The network-local gate id: the explicit hierarchical path for a gate nested
         /// inside wrapper groups, else the plain group name.
         /// </summary>
-        public string GateId => Instance.GateId ?? Instance.Group.GroupName;
+        public string GateId { get; }
 
         /// <summary>The placed gate group.</summary>
-        public ComponentGroup Group => Instance.Group;
-
-        /// <summary>The gate's evaluable logic model.</summary>
-        public LogicGateModel Model => Instance.Model;
+        public ComponentGroup Group { get; }
 
         /// <summary>Validates one gate instance and wraps it as a context.</summary>
         /// <exception cref="ArgumentException">The instance is incomplete or inconsistent.</exception>
@@ -87,10 +89,13 @@ public sealed partial class LogicNetworkBuilder
             if (instance.Roles == null)
                 throw new ArgumentException($"Gate '{instance.Group.GroupName}' has no role assignment.", nameof(instance));
 
-            var context = new GateContext(instance);
+            var context = new GateContext(instance.Group, instance.Roles, instance.GateId ?? instance.Group.GroupName);
+            // A caller-supplied model may order the same role set differently.
+            context.InputPinNames = instance.Model.InputPinNames;
+            context.OutputPinNames = instance.Model.OutputPinNames;
             context.ThrowOnDuplicateRolePins();
             context.ThrowOnOverlappingRoles();
-            context.ThrowOnRoleModelMismatch();
+            context.ThrowOnRoleModelMismatch(instance.Model);
             context.ThrowOnUnknownRolePins();
             context.ThrowOnInvalidSignalNames(
                 instance.Roles.InputSignalNames, instance.Roles.InputPinNames, "input");
@@ -99,12 +104,23 @@ public sealed partial class LogicNetworkBuilder
             return context;
         }
 
+        internal static GateContext Create(LogicGateTopologyInput gate)
+        {
+            var context = new GateContext(gate.Group, gate.Roles, gate.GateId);
+            context.ThrowOnDuplicateRolePins();
+            context.ThrowOnOverlappingRoles();
+            context.ThrowOnUnknownRolePins();
+            context.ThrowOnInvalidSignalNames(gate.Roles.InputSignalNames, gate.Roles.InputPinNames, "input");
+            context.ThrowOnInvalidSignalNames(gate.Roles.OutputSignalNames, gate.Roles.OutputPinNames, "output");
+            return context;
+        }
+
         /// <summary>The wiring role of one external pin name, or null when the pin has no role.</summary>
         public PinRole? RoleOf(string pinName)
         {
-            if (Instance.Roles.InputPinNames.Contains(pinName)) return PinRole.Input;
-            if (Instance.Roles.OutputPinNames.Contains(pinName)) return PinRole.Output;
-            if (Instance.Roles.BiasPinNames.Contains(pinName)) return PinRole.Bias;
+            if (Roles.InputPinNames.Contains(pinName)) return PinRole.Input;
+            if (Roles.OutputPinNames.Contains(pinName)) return PinRole.Output;
+            if (Roles.BiasPinNames.Contains(pinName)) return PinRole.Bias;
             return null;
         }
 
@@ -114,14 +130,14 @@ public sealed partial class LogicNetworkBuilder
         /// name as its network input.
         /// </summary>
         public string? SignalNameOf(string pinName) =>
-            SignalNameOf(Instance.Roles.InputSignalNames, pinName);
+            SignalNameOf(Roles.InputSignalNames, pinName);
 
         /// <summary>
         /// The signal name assigned to one output pin, or null when the pin carries
         /// none and its network tap keeps the raw <c>&lt;gate&gt;.&lt;pin&gt;</c> name.
         /// </summary>
         public string? OutputSignalNameOf(string pinName) =>
-            SignalNameOf(Instance.Roles.OutputSignalNames, pinName);
+            SignalNameOf(Roles.OutputSignalNames, pinName);
 
         /// <summary>Looks up one pin's signal name in an optional name map.</summary>
         private static string? SignalNameOf(IReadOnlyDictionary<string, string>? names, string pinName) =>
@@ -132,20 +148,20 @@ public sealed partial class LogicNetworkBuilder
         /// <summary>Rejects pins listed twice within one role list.</summary>
         private void ThrowOnDuplicateRolePins()
         {
-            var duplicate = Instance.Roles.InputPinNames
-                .Concat(Instance.Roles.OutputPinNames)
-                .Concat(Instance.Roles.BiasPinNames)
+            var duplicate = Roles.InputPinNames
+                .Concat(Roles.OutputPinNames)
+                .Concat(Roles.BiasPinNames)
                 .GroupBy(name => name).FirstOrDefault(g => g.Count() > 1)?.Key;
             if (duplicate != null)
                 throw new ArgumentException(
                     $"Gate '{GateId}' lists pin '{duplicate}' more than once in its role assignment.",
-                    nameof(Instance));
+                    "Instance");
         }
 
         /// <summary>Rejects pins claimed for two roles — a pin is exactly one of input, output, or bias.</summary>
         private void ThrowOnOverlappingRoles()
         {
-            var roles = Instance.Roles;
+            var roles = Roles;
             var overlap = roles.InputPinNames.Intersect(roles.OutputPinNames)
                 .Concat(roles.InputPinNames.Intersect(roles.BiasPinNames))
                 .Concat(roles.BiasPinNames.Intersect(roles.OutputPinNames))
@@ -153,14 +169,14 @@ public sealed partial class LogicNetworkBuilder
             if (overlap != null)
                 throw new ArgumentException(
                     $"Gate '{GateId}' assigns pin '{overlap}' two roles — a pin is exactly one of input, output, or bias.",
-                    nameof(Instance));
+                    "Instance");
         }
 
         /// <summary>Rejects a role assignment that does not match the gate model's interface.</summary>
-        private void ThrowOnRoleModelMismatch()
+        private void ThrowOnRoleModelMismatch(LogicGateModel model)
         {
-            ThrowOnSetMismatch("input", Instance.Roles.InputPinNames, Model.InputPinNames);
-            ThrowOnSetMismatch("output", Instance.Roles.OutputPinNames, Model.OutputPinNames);
+            ThrowOnSetMismatch("input", Roles.InputPinNames, model.InputPinNames);
+            ThrowOnSetMismatch("output", Roles.OutputPinNames, model.OutputPinNames);
         }
 
         /// <summary>Compares one role list against the model's pin list, ignoring order.</summary>
@@ -171,7 +187,7 @@ public sealed partial class LogicNetworkBuilder
             throw new ArgumentException(
                 $"Gate '{GateId}' assigns {role} pins [{string.Join(", ", rolePins)}] but its logic model " +
                 $"declares [{string.Join(", ", modelPins)}] — the roles must match the extraction the model came from.",
-                nameof(Instance));
+                "Instance");
         }
 
         /// <summary>
@@ -182,15 +198,15 @@ public sealed partial class LogicNetworkBuilder
         private void ThrowOnUnknownRolePins()
         {
             var externalNames = Group.ExternalPins.Select(p => p.Name).ToList();
-            var unknown = Instance.Roles.InputPinNames
-                .Concat(Instance.Roles.OutputPinNames)
-                .Concat(Instance.Roles.BiasPinNames)
+            var unknown = Roles.InputPinNames
+                .Concat(Roles.OutputPinNames)
+                .Concat(Roles.BiasPinNames)
                 .FirstOrDefault(name => !externalNames.Contains(name));
             if (unknown != null)
                 throw new ArgumentException(
                     $"Gate '{GateId}' assigns a role to pin '{unknown}', which the group does not expose. " +
                     $"Available pins: {string.Join(", ", externalNames)}.",
-                    nameof(Instance));
+                    "Instance");
         }
 
         /// <summary>
@@ -211,13 +227,13 @@ public sealed partial class LogicNetworkBuilder
                     throw new ArgumentException(
                         $"Gate '{GateId}' assigns pin '{pinName}' an empty signal name — " +
                         "a signal name must be a non-empty string.",
-                        nameof(Instance));
+                        "Instance");
                 if (!rolePins.Contains(pinName))
                     throw new ArgumentException(
                         $"Gate '{GateId}' assigns pin '{pinName}' the signal name '{signalName}', " +
                         $"but '{pinName}' is not one of its {role} pins ({string.Join(", ", rolePins)}). " +
                         $"Only an {role} pin can carry a signal name.",
-                        nameof(Instance));
+                        "Instance");
             }
         }
     }

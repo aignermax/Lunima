@@ -3,6 +3,21 @@ namespace CAP_DataAccess.Import.Gds.Interpretation;
 /// <summary>Portable, explicit interpretation of an immutable GDS source.</summary>
 public sealed record GdsImportInterpretation
 {
+    /// <summary>Detaches editable interpretation collections from a pending save.</summary>
+    public GdsImportInterpretation Copy() => this with
+    {
+        Layers = [.. Layers],
+        Cells = Cells.Select(cell => cell with
+        {
+            Pins = cell.Pins is null ? null : [.. cell.Pins],
+            ModelPinMap = new(cell.ModelPinMap, cell.ModelPinMap.Comparer)
+        }).ToList(),
+        Groups = Groups.Select(group => group with
+        {
+            CellNames = [.. group.CellNames], InstanceNames = [.. group.InstanceNames]
+        }).ToList()
+    };
+
     /// <summary>Persistence schema version.</summary>
     public int Version { get; init; } = 1;
     /// <summary>SHA-256 of the reviewed source bytes.</summary>
@@ -32,6 +47,12 @@ public sealed record GdsCellInterpretation
     public string? ModelPdkName { get; init; }
     /// <summary>Explicit model name.</summary>
     public string? ModelComponentName { get; init; }
+    /// <summary>
+    /// Explicit opt-out of every assumed model: without a mapped model the cell
+    /// imports geometry-only regardless of pin count. Absent (default) keeps the
+    /// lossless 2-optical-pin pass-through default.
+    /// </summary>
+    public bool GeometryOnly { get; init; }
     /// <summary>Imported port name to model port name; absent entries use identical names.</summary>
     public Dictionary<string, string> ModelPinMap { get; init; } = new(StringComparer.Ordinal);
 }

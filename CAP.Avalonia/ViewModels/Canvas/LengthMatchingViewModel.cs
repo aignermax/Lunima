@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Globalization;
+using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services.Localization;
 using CAP_Core.Routing.MeanderGeneration;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,19 +11,23 @@ namespace CAP.Avalonia.ViewModels.Canvas;
 /// <summary>
 /// ViewModel for the "Length matching" section of the Properties panel: when exactly one
 /// waveguide connection is selected, the user can stretch its route to an exact target
-/// length (± tolerance) via a meander (<see cref="ConnectionLengthMatcher"/>) or clear the
-/// target again. A matched route stays frozen so later routing passes keep its length;
-/// clearing unfreezes it and hands it back to the normal router. Typed matcher failures are
-/// mapped to readable localized messages — the raw enum names never reach the UI.
+/// length (± tolerance) via a meander (<see cref="ConnectionLengthMatcher"/>) with a chosen bend
+/// radius, or clear the target again. The meander keeps clear of every other route and component.
+/// A matched route stays frozen so later routing passes keep its length; clearing unfreezes it
+/// and hands it back to the normal router. Apply and Clear are undoable. Typed matcher failures
+/// are mapped to readable localized messages — the raw enum names never reach the UI.
 /// </summary>
 public partial class LengthMatchingViewModel : ObservableObject
 {
     private const double DefaultToleranceMicrometers = 0.1;
+    private const double RadiusComparisonSlackMicrometers = 1e-9;
 
     private readonly DesignCanvasViewModel _canvas;
     private readonly ConnectionLengthMatcher _matcher;
 
     private WaveguideConnectionViewModel? _selectedConnection;
+    private WaveguideConnectionViewModel? _observedConnection;
+    private bool _reroutingItself;
 
     /// <summary>The currently selected connection (single-click selection), fed by MainViewModel.</summary>
     public WaveguideConnectionViewModel? SelectedConnection
@@ -46,6 +52,10 @@ public partial class LengthMatchingViewModel : ObservableObject
     /// <summary>Tolerance input (µm) as typed; defaults to 0.1 µm.</summary>
     [ObservableProperty]
     private string _toleranceText = "0.1";
+
+    /// <summary>Meander bend radius input (µm); defaults to the connection's effective bend radius.</summary>
+    [ObservableProperty]
+    private string _bendRadiusText = "";
 
     /// <summary>Localized status line shown after Apply/Clear, empty while nothing ran.</summary>
     [ObservableProperty]
@@ -74,6 +84,9 @@ public partial class LengthMatchingViewModel : ObservableObject
     /// connection (batch selection empty) or a batch selection holding exactly one.
     /// </summary>
     public bool HasExactlyOneConnection => TargetConnection() != null;
+
+    /// <summary>"Reset" visibility: the targeted route still carries a length constraint to remove.</summary>
+    public bool HasLengthTarget => TargetConnection()?.Connection.TargetLengthMicrometers != null;
 
     /// <summary>Formatted current length for the read-only row.</summary>
     public string CurrentLengthText => string.Format(CultureInfo.CurrentCulture,
@@ -111,18 +124,46 @@ public partial class LengthMatchingViewModel : ObservableObject
     private void UpdateFromSelection()
     {
         OnPropertyChanged(nameof(HasExactlyOneConnection));
+        OnPropertyChanged(nameof(HasLengthTarget));
         StatusMessage = "";
         var target = TargetConnection();
+        ObserveLength(target);
         if (target == null)
             return;
 
         CurrentLengthMicrometers = target.Connection.PathLengthMicrometers;
+        BendRadiusText = Math.Max(target.Connection.BendRadiusMicrometers, _matcher.ResolveProcessFloor(target.Connection))
+            .ToString("0.###", CultureInfo.InvariantCulture);
         // Pre-fill with the recorded intent when the route was matched before, so the
         // inputs round-trip a saved design; otherwise mirror the current geometry.
         TargetLengthText = (target.Connection.TargetLengthMicrometers ?? CurrentLengthMicrometers)
             .ToString("0.###", CultureInfo.InvariantCulture);
         ToleranceText = (target.Connection.LengthToleranceMicrometers ?? DefaultToleranceMicrometers)
             .ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Keeps <see cref="CurrentLengthMicrometers"/> live: any later path change (bend handle,
+    /// routing pass, undo) updates the read-only length row immediately.
+    /// </summary>
+    private void ObserveLength(WaveguideConnectionViewModel? target)
+    {
+        if (ReferenceEquals(_observedConnection, target))
+            return;
+        if (_observedConnection != null)
+            _observedConnection.PropertyChanged -= OnObservedConnectionChanged;
+        _observedConnection = target;
+        if (target != null)
+            target.PropertyChanged += OnObservedConnectionChanged;
+    }
+
+    private void OnObservedConnectionChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName != nameof(WaveguideConnectionViewModel.PathLength) || _observedConnection == null)
+            return;
+        CurrentLengthMicrometers = _observedConnection.Connection.PathLengthMicrometers;
+        // Apply, Clear, a padlock release and their undo all end in a path change.
+        OnPropertyChanged(nameof(HasLengthTarget));
     }
 
     /// <summary>Stretches the target connection's route to the entered target length.</summary>
@@ -132,24 +173,35 @@ public partial class LengthMatchingViewModel : ObservableObject
         if (TargetConnection() is not { } target)
             return;
 
-        if (!TryParseMicrometers(TargetLengthText, out double targetLength) || targetLength <= 0
-            || !TryParseMicrometers(ToleranceText, out double tolerance) || tolerance < 0)
+        if (!LengthInput.TryParse(TargetLengthText, out double targetLength) || targetLength <= 0
+            || !LengthInput.TryParse(ToleranceText, out double tolerance) || tolerance < 0
+            || !LengthInput.TryParse(BendRadiusText, out double radius) || radius <= 0)
         {
             SetError("Routing.LengthMatch.Error.InvalidInput");
             return;
         }
 
-        var obstacles = _canvas.Components.Select(vm => vm.Component).ToList();
-        var result = _matcher.ApplyTargetLength(target.Connection, obstacles, targetLength, tolerance);
+        double floor = _matcher.ResolveProcessFloor(target.Connection);
+        if (radius < floor - RadiusComparisonSlackMicrometers)
+        {
+            IsStatusError = true;
+            StatusMessage = string.Format(CultureInfo.CurrentCulture,
+                LocalizationService.Instance.Translate("Routing.LengthMatch.Error.RadiusBelowProcessMinimum"), floor);
+            return;
+        }
+
+        var before = LengthMatchState.Capture(target.Connection);
+        var components = _canvas.Components.Select(vm => vm.Component).ToList();
+        var result = _matcher.ApplyTargetLength(target.Connection, components, targetLength, tolerance,
+            _canvas.ConnectionManager.Connections, radius);
         if (!result.IsSuccess)
         {
             SetError(MapFailureKey(result.FailureReason));
             return;
         }
 
-        // The matcher replaced the geometry on the model; the canvas-bound values only
-        // refresh when the view-model re-reads them.
-        target.NotifyPathChanged();
+        Record(new LengthMatchCommand(target, before, LengthMatchState.Capture(target.Connection),
+            "Match route length", AfterApply));
         CurrentLengthMicrometers = target.Connection.PathLengthMicrometers;
         IsStatusError = false;
         StatusMessage = string.Format(CultureInfo.CurrentCulture,
@@ -162,9 +214,10 @@ public partial class LengthMatchingViewModel : ObservableObject
     /// normal router rebuild it (the stale meander geometry must be discarded first, or the
     /// incremental router would keep it). A connection without a length target is left
     /// untouched: routes frozen for other reasons (e.g. GDS-imported geometry) must not be
-    /// unfrozen and re-routed — that would silently discard their path.
+    /// unfrozen and re-routed — that would silently discard their path. The button stays usable
+    /// while that reroute is still running, so the next route can be cleared right away.
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task Clear()
     {
         if (TargetConnection() is not { } target)
@@ -174,16 +227,34 @@ public partial class LengthMatchingViewModel : ObservableObject
         if (connection.TargetLengthMicrometers is null)
             return;
 
-        connection.TargetLengthMicrometers = null;
-        connection.LengthToleranceMicrometers = null;
-        connection.IsRouteFrozen = false;
-        connection.InvalidateRoute();
+        var before = LengthMatchState.Capture(connection);
+        _reroutingItself = true;
+        try { Record(new LengthMatchCommand(target, before, before.Cleared(), "Clear route length target", AfterApply)); }
+        finally { _reroutingItself = false; }
         await _canvas.RecalculateRoutesAsync();
         target.NotifyPathChanged();
 
         CurrentLengthMicrometers = connection.PathLengthMicrometers;
         IsStatusError = false;
         StatusMessage = LocalizationService.Instance.Translate("Routing.LengthMatch.Cleared");
+    }
+
+    /// <summary>Executes through the undo history when one is wired, otherwise directly.</summary>
+    private void Record(LengthMatchCommand command)
+    {
+        if (_canvas.CommandManager is { } commands)
+            commands.ExecuteCommand(command);
+        else
+            command.Execute();
+    }
+
+    /// <summary>Undo/redo of a Clear (or of an Apply over a cleared route) needs a fresh route.</summary>
+    private void AfterApply(bool routeCleared)
+    {
+        if (routeCleared && !_reroutingItself)
+            _ = _canvas.RecalculateRoutesAsync();
+        if (TargetConnection() is { } target)
+            CurrentLengthMicrometers = target.Connection.PathLengthMicrometers;
     }
 
     private void SetError(string localizationKey)
@@ -201,19 +272,7 @@ public partial class LengthMatchingViewModel : ObservableObject
         MeanderFailureReason.TargetShorterThanDirectPath => "Routing.LengthMatch.Error.TargetShorterThanDirectPath",
         MeanderFailureReason.BoundsTooSmallForMeander => "Routing.LengthMatch.Error.BoundsTooSmallForMeander",
         MeanderFailureReason.EndpointsNotRoutableAtMinRadius => "Routing.LengthMatch.Error.EndpointsNotRoutableAtMinRadius",
+        MeanderFailureReason.CollidesWithRoutes => "Routing.LengthMatch.Error.CollidesWithRoutes",
         _ => "Routing.LengthMatch.Error.Unknown",
     };
-
-    /// <summary>
-    /// Parses a micrometer input: invariant first (the on-disk format), then the UI culture
-    /// so e.g. a German decimal comma is accepted when typing.
-    /// </summary>
-    private static bool TryParseMicrometers(string? text, out double value)
-    {
-        value = 0;
-        if (string.IsNullOrWhiteSpace(text))
-            return false;
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value)
-            || double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
-    }
 }

@@ -5,13 +5,13 @@ namespace CAP.Avalonia.Services.AgentBridge.Tools.Repair.Suggest;
 
 /// <summary>
 /// <c>suggest_fixes</c>: for one blocked connection, generates deterministic repair candidates
-/// (<see cref="RepairCandidateGenerator"/>), tries each on the live design and takes it back
+/// (<see cref="RepairCandidateGenerator"/>), tries each on an independent routing graph
 /// (<see cref="RepairSandbox"/>) within a time budget, and returns them ranked by the result.
 /// <c>apply_suggestion</c> then applies one by id.
 /// </summary>
 public sealed class SuggestFixesTool : IAgentBridgeTool
 {
-    /// <summary>Default time budget in seconds (a trial costs two routing passes).</summary>
+    /// <summary>Default time budget in seconds.</summary>
     public const double DefaultBudgetSeconds = 240;
 
     /// <summary>Largest time budget accepted, in seconds.</summary>
@@ -20,21 +20,31 @@ public sealed class SuggestFixesTool : IAgentBridgeTool
     private const int Decimals = 1;
 
     private readonly AgentDesignSession _session;
+    private readonly CAP.Avalonia.ViewModels.Canvas.CanvasRoutingFactory? _trialRoutingFactory;
+    private readonly RepairGraphBuilder? _graphBuilder;
 
     /// <summary>Creates the tool.</summary>
-    public SuggestFixesTool(AgentDesignSession session) => _session = session;
+    public SuggestFixesTool(AgentDesignSession session) : this(session, null) { }
+
+    internal SuggestFixesTool(AgentDesignSession session,
+        CAP.Avalonia.ViewModels.Canvas.CanvasRoutingFactory? trialRoutingFactory, RepairGraphBuilder? graphBuilder = null)
+    {
+        _session = session;
+        _trialRoutingFactory = trialRoutingFactory;
+        _graphBuilder = graphBuilder;
+    }
 
     /// <inheritdoc/>
     public string Name => "suggest_fixes";
 
     /// <inheritdoc/>
     public string Description =>
-        "For one blocked connection: try repair candidates on the live design — cut a wire in the way and route the " +
+        "For one blocked connection: try repair candidates on a private copy — cut a wire in the way and route the " +
         "blocked wire through the crossing (cut_through), slide a nearby crossing ±10/20 µm (move_crossing), shift a " +
         "straight of a pin-neighbour wire or of a wire running past the pins in 4 µm steps up to ±30 µm, widening the corridor first (shift_segment), move the component or gate group at either end in 4 µm steps up to ±30 µm, back from its pin first (nudge_component). " +
-        "Each is executed, the design re-routed and measured, then undone. Returns suggestions " +
+        "Each is executed, the private design re-routed and measured. Returns suggestions " +
         "ranked by blocked count, crossings added, geometry change; apply one with apply_suggestion. Takes long: " +
-        "each trial is two full routing passes; time_budget_s (default 240) bounds it. Clears the redo history.";
+        "each trial includes full joint routing; time_budget_s (default 240) bounds it. User history is preserved.";
 
     /// <inheritdoc/>
     public object InputSchema => new
@@ -50,8 +60,18 @@ public sealed class SuggestFixesTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) => ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        await using var permission = new RepairTrialPermission(_session, context);
+        if (!await CAP.Avalonia.Services.AgentBridge.Tools.Edit.RoutingAwaiter.WaitForIdleAsync(
+                _session.Canvas, cancellationToken: permission.CancellationToken))
+            throw new OperationCanceledException("The design has not finished its preceding routing pass.");
+        permission.EnsureCurrent();
         var id = ToolArguments.GetString(arguments, "connection_id") ?? "";
         var target = _session.FindConnection(id)?.Connection;
         if (target == null)
@@ -65,11 +85,11 @@ public sealed class SuggestFixesTool : IAgentBridgeTool
 
         var candidates = new RepairCandidateGenerator(_session, target).Generate();
         var baseline = RoutingMetrics.Measure(_session);
-        var sandbox = new RepairSandbox(_session, target);
+        var sandbox = new RepairSandbox(_session, target, permission, _trialRoutingFactory, _graphBuilder);
         var outcomes = await RunTrialsAsync(sandbox, candidates, baseline, budget, maxTrials);
 
         var ranked = RepairSuggestionSet.Rank(outcomes);
-        _session.Suggestions = new RepairSuggestionSet(id, RepairSuggestionSet.ComputeStamp(_session), ranked);
+        permission.Commit(() => _session.Suggestions = new RepairSuggestionSet(id, permission.Stamp, ranked));
 
         return AgentToolResult.Json(new
         {

@@ -69,13 +69,7 @@ public sealed partial class RepairCandidateGenerator
             $"Cut {Name(cut)} at ({x:F1}, {y:F1}) with a crossing and route the blocked wire straight through it");
         return new RepairCandidate("cut_through", description, 0,
             new { Tool = "insert_crossing", ConnectionId = cut.Id.ToString(), X = x, Y = y, ThroughConnectionId = _blocked.Id.ToString() },
-            () =>
-            {
-                var plan = CrossingCut.Create(_session, cut, x, y, _blocked, out var error);
-                return plan == null
-                    ? (null, error)
-                    : (new RepairEditPlan(plan.Command, () => plan.Insert.Succeeded && plan.ThroughStep?.Applied == true), null);
-            });
+            new CutRepair(cut.Id, _blocked.Id, x, y));
     }
 
     private IEnumerable<RepairCandidate> CrossingSlides()
@@ -103,14 +97,7 @@ public sealed partial class RepairCandidateGenerator
             $"Slide crossing {crossing.Identifier} {step:+0;-0} µm along its {axisName} wire");
         return new RepairCandidate("move_crossing", description, Math.Abs(step),
             new { Tool = "move_crossing_along_axis", CrossingId = crossing.Identifier, Axis = axisName, DeltaUm = step },
-            () =>
-            {
-                var error = MoveCrossingAlongAxisCommand.Validate(_session.Canvas, crossing, axis, step);
-                if (error != null)
-                    return (null, error);
-                var command = new MoveCrossingAlongAxisCommand(_session.Canvas, crossing, axis, step);
-                return (new RepairEditPlan(command, () => command.Succeeded), null);
-            });
+            new SlideRepair(crossing.Id, axis, step));
     }
 
     private double DistanceToPins((double X, double Y) point)

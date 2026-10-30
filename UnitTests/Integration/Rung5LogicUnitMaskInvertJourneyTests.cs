@@ -31,10 +31,10 @@ public class Rung5LogicUnitMaskInvertJourneyTests
     [Fact]
     public async Task LogicUnit_MaskAndInvert_RunsAndAndNotPhotonically_MatchingTheGoldenModel()
     {
-        using var container = BuildContainer();
+        await using var container = BuildContainer();
         var networkProvider = container.GetRequiredService<BuiltLogicNetworkProvider>();
         var playground = container.GetRequiredService<IsaPlaygroundViewModel>();
-        var examples = new ExampleDesignsService().GetExamples();
+        var examples = new ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()).GetExamples();
 
         // Step 1: open the shipped Logic Unit 4-bit the way the Home Examples tile does.
         var canvas = new DesignCanvasViewModel();

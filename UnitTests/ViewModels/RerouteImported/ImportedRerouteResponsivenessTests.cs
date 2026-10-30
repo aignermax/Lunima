@@ -1,3 +1,4 @@
+using UnitTests.ViewModels.Canvas;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using CAP.Avalonia.Commands;
@@ -22,7 +23,7 @@ public partial class RerouteImportedRoutesViewModelTests
     [Fact]
     public async Task CancelGroupConversion_KeepsUncomputedImportedRoutesAndTheirMasks()
     {
-        var canvas = new DesignCanvasViewModel();
+        var canvas = ReportedRoutingWorker.CreateCanvas();
         var mask = new AsDrawnGeometry(new[] { new OutlinePolygon { Points = new[]
         {
             new OutlinePoint(0, 0), new OutlinePoint(100, 0), new OutlinePoint(100, 2)
@@ -36,21 +37,22 @@ public partial class RerouteImportedRoutesViewModelTests
         commands.ExecuteCommand(new CreateGroupCommand(canvas, canvas.Components.ToList(), "Imported"));
         await canvas.RecalculateRoutesAsync();
         var group = (ComponentGroup)canvas.Components.Single().Component;
-        using var parked = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        canvas.Routing.BuildConnectionProcessFloorProvider = () => (_, _) =>
-        {
-            parked.Set(); release.Wait(); return null;
-        };
+        group.InternalPaths.ShouldAllBe(path => path.IsRouteFrozen && ReferenceEquals(path.AsDrawnGeometry, mask),
+            "the grouped baseline must retain both original imported masks before conversion starts");
+        var routing = (ReportedRoutingWorker)canvas.Routing;
+        routing.BlockWorker = true;
         var vm = new RerouteImportedRoutesViewModel(canvas, commands);
         var conversion = vm.RerouteAllCommand.ExecuteAsync(null);
         try
         {
-            (await Task.Run(() => parked.Wait(TimeSpan.FromSeconds(10)))).ShouldBeTrue();
+            await routing.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             canvas.Routing.CancelRouting();
         }
-        finally { release.Set(); await conversion; }
+        finally { routing.Release.TrySetResult(); await conversion.WaitAsync(TimeSpan.FromSeconds(30)); }
         group.InternalPaths.Count.ShouldBe(2, "cancellation must not discard uncomputed imported wires on group exit");
+        foreach (var path in group.InternalPaths)
+            _output.WriteLine($"After cancellation: frozen={path.IsRouteFrozen}, maskPresent={path.AsDrawnGeometry != null}, "
+                + $"sameMask={ReferenceEquals(path.AsDrawnGeometry, mask)}, segments={path.Path.Segments.Count}");
         group.InternalPaths.ShouldContain(path => path.IsRouteFrozen && ReferenceEquals(path.AsDrawnGeometry, mask));
     }
 

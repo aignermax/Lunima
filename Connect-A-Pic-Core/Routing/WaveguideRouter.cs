@@ -117,26 +117,42 @@ public partial class WaveguideRouter
     /// Library default is true; the application layer decides the product
     /// default (currently opt-in via the Routing settings page).
     /// </summary>
-    public bool UseDiagonalRouting { get; set; } = true;
+    public bool UseDiagonalRouting
+    {
+        get => _fineSearch.UseDiagonals;
+        set => _fineSearch.UseDiagonals = value;
+    }
 
     /// <summary>
     /// Maximum nodes for Phase 1 (quick) pathfinding.
     /// Phase 1 provides fast results for simple and medium-complexity routes.
     /// </summary>
-    public int Phase1MaxNodes { get; set; } = 200_000;
+    public int Phase1MaxNodes
+    {
+        get => _fineSearch.Phase1MaxNodes;
+        set => _fineSearch.Phase1MaxNodes = value;
+    }
 
     /// <summary>
     /// Maximum nodes for Phase 2 (extended) pathfinding.
     /// Phase 2 is triggered when Phase 1 fails, allowing longer search for complex routes.
     /// </summary>
-    public int Phase2MaxNodes { get; set; } = 2_000_000;
+    public int Phase2MaxNodes
+    {
+        get => _fineSearch.Phase2MaxNodes;
+        set => _fineSearch.Phase2MaxNodes = value;
+    }
 
     /// <summary>
     /// Invoked when routing escalates to Phase 2 (complex path search).
     /// Use this to show a "Computing complex path..." indicator in the UI.
     /// Called on the routing thread (not the UI thread).
     /// </summary>
-    public Action? OnComplexRouteStarted { get; set; }
+    public Action? OnComplexRouteStarted
+    {
+        get => _fineSearch.OnComplexRouteStarted;
+        set => _fineSearch.OnComplexRouteStarted = value;
+    }
 
     private IReadOnlyList<(double X, double Y, double Width, double Height)>? _allowedRoutingRegions;
 
@@ -160,13 +176,19 @@ public partial class WaveguideRouter
     /// </summary>
     public void InitializePathfindingGrid(double minX, double minY, double maxX, double maxY,
                                            IEnumerable<Component> components,
-                                           double? cellSize = null)
+                                           double? cellSize = null) =>
+        InitializePathfindingGrid(minX, minY, maxX, maxY, components, cellSize, default);
+
+    internal void InitializePathfindingGrid(double minX, double minY, double maxX, double maxY,
+        IEnumerable<Component> components, double? cellSize,
+        System.Collections.Immutable.ImmutableArray<OutlineRasterEntry> rasters)
     {
         double size = cellSize ?? AStarCellSize;
         PathfindingGrid = new PathfindingGrid(minX, minY, maxX, maxY, size, ObstaclePaddingMicrometers)
         {
             AllowedRegions = _allowedRoutingRegions,
         };
+        PathfindingGrid.SeedOutlineRasters(rasters);
         PathfindingGrid.RebuildFromComponents(components);
 
         CostCalculator.CellSizeMicrometers = size;
@@ -255,13 +277,18 @@ public partial class WaveguideRouter
     public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin,
                              CancellationToken cancellationToken = default)
     {
-        LastRouteCoarseNodesExpanded = 0;
+        _coarseRetry.Reset();
         // Crossings belong to the route that planned them: a route found another way (direct,
         // coarse retry) must not inherit those of an earlier call.
         ResetPlannedCrossings();
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budget.CancelAfter(MaxRouteDuration);
         try
         {
-            return RouteCore(startPin, endPin, cancellationToken);
+            var path = RouteCore(startPin, endPin, budget.Token);
+            path.SearchTimedOut = path.IsBlockedFallback && budget.IsCancellationRequested
+                && !cancellationToken.IsCancellationRequested;
+            return path;
         }
         finally
         {

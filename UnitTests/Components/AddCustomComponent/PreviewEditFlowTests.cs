@@ -40,11 +40,11 @@ public class PreviewEditFlowTests : IDisposable
 
     private NewComponentViewModel Build(UserPdkStore store, IReadOnlyList<ProcessDefinition> processes)
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(OkWithPolygon());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
-        return new NewComponentViewModel(extractor, fdtd: null, store, processes);
+        return new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd: null, store, processes);
     }
 
     [Fact]

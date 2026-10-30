@@ -1,0 +1,1881 @@
+{
+  "FormatVersion": "2.0",
+  "Components": [
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 300,
+      "Identifier": "Grating Coupler_1",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1150,
+      "Identifier": "Straight Waveguide 100\u00B5m_2",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 427,
+      "Identifier": "Grating Coupler_3",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1200,
+      "Identifier": "Straight Waveguide 100\u00B5m_4",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 554,
+      "Identifier": "Grating Coupler_5",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1250,
+      "Identifier": "Straight Waveguide 100\u00B5m_6",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 681,
+      "Identifier": "Grating Coupler_7",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1300,
+      "Identifier": "Straight Waveguide 100\u00B5m_8",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 808,
+      "Identifier": "Grating Coupler_9",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1350,
+      "Identifier": "Straight Waveguide 100\u00B5m_10",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 935,
+      "Identifier": "Grating Coupler_11",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1400,
+      "Identifier": "Straight Waveguide 100\u00B5m_12",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 1062,
+      "Identifier": "Grating Coupler_13",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1450,
+      "Identifier": "Straight Waveguide 100\u00B5m_14",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 1189,
+      "Identifier": "Grating Coupler_15",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1500,
+      "Identifier": "Straight Waveguide 100\u00B5m_16",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 1316,
+      "Identifier": "Grating Coupler_17",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1550,
+      "Identifier": "Straight Waveguide 100\u00B5m_18",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 1443,
+      "Identifier": "Grating Coupler_19",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1600,
+      "Identifier": "Straight Waveguide 100\u00B5m_20",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 1570,
+      "Identifier": "Grating Coupler_21",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1650,
+      "Identifier": "Straight Waveguide 100\u00B5m_22",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 1697,
+      "Identifier": "Grating Coupler_23",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1700,
+      "Identifier": "Straight Waveguide 100\u00B5m_24",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 1824,
+      "Identifier": "Grating Coupler_25",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1750,
+      "Identifier": "Straight Waveguide 100\u00B5m_26",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 1951,
+      "Identifier": "Grating Coupler_27",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1800,
+      "Identifier": "Straight Waveguide 100\u00B5m_28",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 2078,
+      "Identifier": "Grating Coupler_29",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1850,
+      "Identifier": "Straight Waveguide 100\u00B5m_30",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 150,
+      "Y": 2205,
+      "Identifier": "Grating Coupler_31",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 1700,
+      "Y": 1900,
+      "Identifier": "Straight Waveguide 100\u00B5m_32",
+      "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    }
+  ],
+  "Connections": [
+    {
+      "StartComponentIndex": 0,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 1,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_1",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_2",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 309.5,
+          "EndX": 540,
+          "EndY": 309.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 309.5,
+          "EndX": 575.7238727220644,
+          "EndY": 324.5170767696902,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 45.60039101280786,
+          "CenterX": 540,
+          "CenterY": 359.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 45.60039101280786
+        },
+        {
+          "Type": "Straight",
+          "StartX": 575.7238727220644,
+          "StartY": 324.5170767696902,
+          "EndX": 1374.2761272779358,
+          "EndY": 1139.98292323031,
+          "StartAngleDegrees": 45.60039101280786,
+          "EndAngleDegrees": 45.60039101280786
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1374.2761272779358,
+          "StartY": 1139.98292323031,
+          "EndX": 1410,
+          "EndY": 1155.0000000000002,
+          "StartAngleDegrees": 45.60039101280786,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1105.0000000000002,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -45.60039101280786
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1155.0000000000002,
+          "EndX": 1700,
+          "EndY": 1155.0000000000002,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 2,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 3,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_3",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_4",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 436.5,
+          "EndX": 540,
+          "EndY": 436.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 436.5,
+          "EndX": 573.9513919677645,
+          "EndY": 449.7943739536946,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 42.767721611377205,
+          "CenterX": 540,
+          "CenterY": 486.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 42.767721611377205
+        },
+        {
+          "Type": "Straight",
+          "StartX": 573.9513919677645,
+          "StartY": 449.7943739536946,
+          "EndX": 1376.0486080322353,
+          "EndY": 1191.7056260463055,
+          "StartAngleDegrees": 42.767721611377205,
+          "EndAngleDegrees": 42.767721611377205
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1376.0486080322353,
+          "StartY": 1191.7056260463055,
+          "EndX": 1409.9999999999998,
+          "EndY": 1205,
+          "StartAngleDegrees": 42.767721611377205,
+          "EndAngleDegrees": 0,
+          "CenterX": 1409.9999999999998,
+          "CenterY": 1155,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -42.767721611377205
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1409.9999999999998,
+          "StartY": 1205,
+          "EndX": 1699.9999999999998,
+          "EndY": 1205,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 4,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 5,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_5",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_6",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 563.5,
+          "EndX": 540,
+          "EndY": 563.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 563.5,
+          "EndX": 571.9153097170048,
+          "EndY": 575.0108715912187,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 39.66563232058167,
+          "CenterX": 540,
+          "CenterY": 613.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 39.66563232058167
+        },
+        {
+          "Type": "Straight",
+          "StartX": 571.9153097170048,
+          "StartY": 575.0108715912187,
+          "EndX": 1378.0846902829953,
+          "EndY": 1243.4891284087812,
+          "StartAngleDegrees": 39.66563232058167,
+          "EndAngleDegrees": 39.66563232058167
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1378.0846902829956,
+          "StartY": 1243.4891284087812,
+          "EndX": 1410.0000000000002,
+          "EndY": 1254.9999999999998,
+          "StartAngleDegrees": 39.66563232058167,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410.0000000000002,
+          "CenterY": 1204.9999999999998,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -39.66563232058167
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410.0000000000002,
+          "StartY": 1254.9999999999998,
+          "EndX": 1700.0000000000002,
+          "EndY": 1254.9999999999998,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 6,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 7,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_7",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_8",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 690.5,
+          "EndX": 540,
+          "EndY": 690.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 690.5,
+          "EndX": 569.5845758001019,
+          "EndY": 700.1917765868052,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 36.27713540929407,
+          "CenterX": 540,
+          "CenterY": 740.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 36.27713540929407
+        },
+        {
+          "Type": "Straight",
+          "StartX": 569.5845758001019,
+          "StartY": 700.1917765868052,
+          "EndX": 1380.415424199898,
+          "EndY": 1295.3082234131948,
+          "StartAngleDegrees": 36.27713540929407,
+          "EndAngleDegrees": 36.27713540929407
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1380.415424199898,
+          "StartY": 1295.3082234131948,
+          "EndX": 1410,
+          "EndY": 1305,
+          "StartAngleDegrees": 36.27713540929407,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1255,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -36.27713540929407
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1305,
+          "EndX": 1700,
+          "EndY": 1305,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 8,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 9,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_9",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_10",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 817.5,
+          "EndX": 540,
+          "EndY": 817.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 817.5,
+          "EndX": 566.9316829660117,
+          "EndY": 825.3729961590166,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 32.59067447100057,
+          "CenterX": 540,
+          "CenterY": 867.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 32.59067447100057
+        },
+        {
+          "Type": "Straight",
+          "StartX": 566.9316829660117,
+          "StartY": 825.3729961590166,
+          "EndX": 1383.0683170339883,
+          "EndY": 1347.1270038409834,
+          "StartAngleDegrees": 32.59067447100057,
+          "EndAngleDegrees": 32.59067447100057
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1383.0683170339883,
+          "StartY": 1347.1270038409834,
+          "EndX": 1410,
+          "EndY": 1355,
+          "StartAngleDegrees": 32.59067447100057,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1305,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -32.59067447100057
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1355,
+          "EndX": 1700,
+          "EndY": 1355,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 10,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 11,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_11",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_12",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 944.5,
+          "EndX": 540,
+          "EndY": 944.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 944.5,
+          "EndX": 563.9369812322669,
+          "EndY": 950.602153475528,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 28.603117225791635,
+          "CenterX": 540,
+          "CenterY": 994.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 28.603117225791635
+        },
+        {
+          "Type": "Straight",
+          "StartX": 563.9369812322669,
+          "StartY": 950.602153475528,
+          "EndX": 1386.0630187677332,
+          "EndY": 1398.8978465244722,
+          "StartAngleDegrees": 28.603117225791635,
+          "EndAngleDegrees": 28.603117225791635
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1386.0630187677332,
+          "StartY": 1398.8978465244722,
+          "EndX": 1410,
+          "EndY": 1405.0000000000002,
+          "StartAngleDegrees": 28.603117225791635,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1355.0000000000002,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -28.603117225791635
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1405.0000000000002,
+          "EndX": 1700,
+          "EndY": 1405.0000000000002,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 12,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 13,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_13",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_14",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 1071.5,
+          "EndX": 540,
+          "EndY": 1071.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 1071.5,
+          "EndX": 560.5940200324474,
+          "EndY": 1075.938104309597,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 24.323013486213654,
+          "CenterX": 540,
+          "CenterY": 1121.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 24.323013486213654
+        },
+        {
+          "Type": "Straight",
+          "StartX": 560.5940200324474,
+          "StartY": 1075.938104309597,
+          "EndX": 1389.4059799675526,
+          "EndY": 1450.561895690403,
+          "StartAngleDegrees": 24.323013486213654,
+          "EndAngleDegrees": 24.323013486213654
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1389.4059799675526,
+          "StartY": 1450.561895690403,
+          "EndX": 1410,
+          "EndY": 1455,
+          "StartAngleDegrees": 24.323013486213654,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1405,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -24.323013486213654
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1455,
+          "EndX": 1700,
+          "EndY": 1455,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 14,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 15,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_15",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_16",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 1198.5,
+          "EndX": 540,
+          "EndY": 1198.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 1198.5,
+          "EndX": 556.9151806758622,
+          "EndY": 1201.4481492106534,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 19.773554697988093,
+          "CenterX": 540,
+          "CenterY": 1248.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 19.773554697988093
+        },
+        {
+          "Type": "Straight",
+          "StartX": 556.9151806758622,
+          "StartY": 1201.4481492106534,
+          "EndX": 1393.0848193241377,
+          "EndY": 1502.0518507893466,
+          "StartAngleDegrees": 19.773554697988093,
+          "EndAngleDegrees": 19.773554697988093
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1393.0848193241377,
+          "StartY": 1502.0518507893466,
+          "EndX": 1409.9999999999998,
+          "EndY": 1505,
+          "StartAngleDegrees": 19.773554697988093,
+          "EndAngleDegrees": 0,
+          "CenterX": 1409.9999999999998,
+          "CenterY": 1455,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -19.773554697988093
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1409.9999999999998,
+          "StartY": 1505,
+          "EndX": 1699.9999999999998,
+          "EndY": 1505,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 16,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 17,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_17",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_18",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 1325.5,
+          "EndX": 540,
+          "EndY": 1325.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 1325.5,
+          "EndX": 552.936244870018,
+          "EndY": 1327.2024475913847,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 14.994415517829637,
+          "CenterX": 540,
+          "CenterY": 1375.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 14.994415517829637
+        },
+        {
+          "Type": "Straight",
+          "StartX": 552.936244870018,
+          "StartY": 1327.2024475913847,
+          "EndX": 1397.063755129982,
+          "EndY": 1553.297552408615,
+          "StartAngleDegrees": 14.994415517829637,
+          "EndAngleDegrees": 14.994415517829637
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1397.063755129982,
+          "StartY": 1553.297552408615,
+          "EndX": 1410,
+          "EndY": 1554.9999999999998,
+          "StartAngleDegrees": 14.994415517829637,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1504.9999999999998,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -14.994415517829637
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1554.9999999999998,
+          "EndX": 1700,
+          "EndY": 1554.9999999999998,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 18,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 19,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_19",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_20",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 1452.5,
+          "EndX": 540,
+          "EndY": 1452.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 1452.5,
+          "EndX": 548.718148052911,
+          "EndY": 1453.2659275041408,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 10.041588519224142,
+          "CenterX": 540,
+          "CenterY": 1502.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 10.041588519224142
+        },
+        {
+          "Type": "Straight",
+          "StartX": 548.718148052911,
+          "StartY": 1453.2659275041408,
+          "EndX": 1401.2818519470889,
+          "EndY": 1604.2340724958592,
+          "StartAngleDegrees": 10.041588519224142,
+          "EndAngleDegrees": 10.041588519224142
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1401.2818519470889,
+          "StartY": 1604.2340724958592,
+          "EndX": 1410,
+          "EndY": 1605,
+          "StartAngleDegrees": 10.041588519224142,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1555,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -10.041588519224142
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1605,
+          "EndX": 1700,
+          "EndY": 1605,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 20,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 21,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_21",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_22",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 1579.5,
+          "EndX": 540,
+          "EndY": 1579.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 1579.5,
+          "EndX": 544.3444055818613,
+          "EndY": 1579.6890961722206,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 4.984607473715325,
+          "CenterX": 540,
+          "CenterY": 1629.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 4.984607473715325
+        },
+        {
+          "Type": "Straight",
+          "StartX": 544.3444055818613,
+          "StartY": 1579.6890961722206,
+          "EndX": 1405.6555944181387,
+          "EndY": 1654.8109038277794,
+          "StartAngleDegrees": 4.984607473715325,
+          "EndAngleDegrees": 4.984607473715325
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1405.6555944181387,
+          "StartY": 1654.8109038277794,
+          "EndX": 1410,
+          "EndY": 1655,
+          "StartAngleDegrees": 4.984607473715325,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1605,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -4.984607473715325
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1655,
+          "EndX": 1700,
+          "EndY": 1655,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 22,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 23,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_23",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_24",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 1706.5,
+          "EndX": 280.2083333333333,
+          "EndY": 1706.4999108330421,
+          "StartAngleDegrees": -0.00016912188772638074,
+          "EndAngleDegrees": -0.00016912188772638074
+        },
+        {
+          "Type": "Straight",
+          "StartX": 280.2083333333333,
+          "StartY": 1706.4999108330421,
+          "EndX": 310.4166666666667,
+          "EndY": 1706.4992884955916,
+          "StartAngleDegrees": -0.0011803798954867332,
+          "EndAngleDegrees": -0.0011803798954867332
+        },
+        {
+          "Type": "Straight",
+          "StartX": 310.4166666666667,
+          "StartY": 1706.4992884955916,
+          "EndX": 340.625,
+          "EndY": 1706.4976089398504,
+          "StartAngleDegrees": -0.003185593004071027,
+          "EndAngleDegrees": -0.003185593004071027
+        },
+        {
+          "Type": "Straight",
+          "StartX": 340.625,
+          "StartY": 1706.4976089398504,
+          "EndX": 370.8333333333333,
+          "EndY": 1706.494366207319,
+          "StartAngleDegrees": -0.0061504514457325936,
+          "EndAngleDegrees": -0.0061504514457325936
+        },
+        {
+          "Type": "Straight",
+          "StartX": 370.8333333333333,
+          "StartY": 1706.494366207319,
+          "EndX": 401.0416666666667,
+          "EndY": 1706.4890810858856,
+          "StartAngleDegrees": -0.010024225630650807,
+          "EndAngleDegrees": -0.010024225630650807
+        },
+        {
+          "Type": "Straight",
+          "StartX": 401.0416666666667,
+          "StartY": 1706.4890810858856,
+          "EndX": 431.25,
+          "EndY": 1706.4813093092794,
+          "StartAngleDegrees": -0.014740634119600454,
+          "EndAngleDegrees": -0.014740634119600454
+        },
+        {
+          "Type": "Straight",
+          "StartX": 431.25,
+          "StartY": 1706.4813093092794,
+          "EndX": 461.45833333333337,
+          "EndY": 1706.4706491585887,
+          "StartAngleDegrees": -0.020218977705801684,
+          "EndAngleDegrees": -0.020218977705801684
+        },
+        {
+          "Type": "Straight",
+          "StartX": 461.45833333333337,
+          "StartY": 1706.4706491585887,
+          "EndX": 491.66666666666663,
+          "EndY": 1706.4567483357832,
+          "StartAngleDegrees": -0.026365520186300125,
+          "EndAngleDegrees": -0.026365520186300125
+        },
+        {
+          "Type": "Straight",
+          "StartX": 491.66666666666663,
+          "StartY": 1706.4567483357832,
+          "EndX": 521.875,
+          "EndY": 1706.4393099916308,
+          "StartAngleDegrees": -0.033075092214479844,
+          "EndAngleDegrees": -0.033075092214479844
+        },
+        {
+          "Type": "Straight",
+          "StartX": 521.875,
+          "StartY": 1706.4393099916308,
+          "EndX": 552.0833333333334,
+          "EndY": 1706.418097804871,
+          "StartAngleDegrees": -0.04023289078590347,
+          "EndAngleDegrees": -0.04023289078590347
+        },
+        {
+          "Type": "Straight",
+          "StartX": 552.0833333333334,
+          "StartY": 1706.418097804871,
+          "EndX": 582.2916666666666,
+          "EndY": 1706.3929400257362,
+          "StartAngleDegrees": -0.04771644357853246,
+          "EndAngleDegrees": -0.04771644357853246
+        },
+        {
+          "Type": "Straight",
+          "StartX": 582.2916666666666,
+          "StartY": 1706.3929400257362,
+          "EndX": 612.5,
+          "EndY": 1706.3637324146378,
+          "StartAngleDegrees": -0.05539770452259651,
+          "EndAngleDegrees": -0.05539770452259651
+        },
+        {
+          "Type": "Straight",
+          "StartX": 612.5,
+          "StartY": 1706.3637324146378,
+          "EndX": 642.7083333333333,
+          "EndY": 1706.3304400257362,
+          "StartAngleDegrees": -0.06314524474514724,
+          "EndAngleDegrees": -0.06314524474514724
+        },
+        {
+          "Type": "Straight",
+          "StartX": 642.7083333333333,
+          "StartY": 1706.3304400257362,
+          "EndX": 672.9166666666667,
+          "EndY": 1706.293097804871,
+          "StartAngleDegrees": -0.07082650140969025,
+          "EndAngleDegrees": -0.07082650140969025
+        },
+        {
+          "Type": "Straight",
+          "StartX": 672.9166666666667,
+          "StartY": 1706.293097804871,
+          "EndX": 703.125,
+          "EndY": 1706.2518099916308,
+          "StartAngleDegrees": -0.07831004593492132,
+          "EndAngleDegrees": -0.07831004593492132
+        },
+        {
+          "Type": "Straight",
+          "StartX": 703.125,
+          "StartY": 1706.2518099916308,
+          "EndX": 733.3333333333333,
+          "EndY": 1706.2067483357832,
+          "StartAngleDegrees": -0.08546783281448012,
+          "EndAngleDegrees": -0.08546783281448012
+        },
+        {
+          "Type": "Straight",
+          "StartX": 733.3333333333333,
+          "StartY": 1706.2067483357832,
+          "EndX": 763.5416666666667,
+          "EndY": 1706.1581491585887,
+          "StartAngleDegrees": -0.09217739052311093,
+          "EndAngleDegrees": -0.09217739052311093
+        },
+        {
+          "Type": "Straight",
+          "StartX": 763.5416666666667,
+          "StartY": 1706.1581491585887,
+          "EndX": 793.75,
+          "EndY": 1706.1063093092794,
+          "StartAngleDegrees": -0.09832391703223319,
+          "EndAngleDegrees": -0.09832391703223319
+        },
+        {
+          "Type": "Straight",
+          "StartX": 793.75,
+          "StartY": 1706.1063093092794,
+          "EndX": 823.9583333333333,
+          "EndY": 1706.0515810858856,
+          "StartAngleDegrees": -0.10380224408365304,
+          "EndAngleDegrees": -0.10380224408365304
+        },
+        {
+          "Type": "Straight",
+          "StartX": 823.9583333333333,
+          "StartY": 1706.0515810858856,
+          "EndX": 854.1666666666667,
+          "EndY": 1705.994366207319,
+          "StartAngleDegrees": -0.10851863660123383,
+          "EndAngleDegrees": -0.10851863660123383
+        },
+        {
+          "Type": "Straight",
+          "StartX": 854.1666666666667,
+          "StartY": 1705.994366207319,
+          "EndX": 884.375,
+          "EndY": 1705.9351089398504,
+          "StartAngleDegrees": -0.11239239646661969,
+          "EndAngleDegrees": -0.11239239646661969
+        },
+        {
+          "Type": "Straight",
+          "StartX": 884.375,
+          "StartY": 1705.9351089398504,
+          "EndX": 914.5833333333333,
+          "EndY": 1705.8742884955916,
+          "StartAngleDegrees": -0.11535724321643394,
+          "EndAngleDegrees": -0.11535724321643394
+        },
+        {
+          "Type": "Straight",
+          "StartX": 914.5833333333333,
+          "StartY": 1705.8742884955916,
+          "EndX": 944.7916666666667,
+          "EndY": 1705.8124108330421,
+          "StartAngleDegrees": -0.11736244805763422,
+          "EndAngleDegrees": -0.11736244805763422
+        },
+        {
+          "Type": "Straight",
+          "StartX": 944.7916666666667,
+          "StartY": 1705.8124108330421,
+          "EndX": 975,
+          "EndY": 1705.75,
+          "StartAngleDegrees": -0.11837370178588351,
+          "EndAngleDegrees": -0.11837370178588351
+        },
+        {
+          "Type": "Straight",
+          "StartX": 975,
+          "StartY": 1705.75,
+          "EndX": 1005.2083333333334,
+          "EndY": 1705.6875891669579,
+          "StartAngleDegrees": -0.11837370178588305,
+          "EndAngleDegrees": -0.11837370178588305
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1005.2083333333334,
+          "StartY": 1705.6875891669579,
+          "EndX": 1035.4166666666665,
+          "EndY": 1705.6257115044084,
+          "StartAngleDegrees": -0.11736244805763557,
+          "EndAngleDegrees": -0.11736244805763557
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1035.4166666666665,
+          "StartY": 1705.6257115044084,
+          "EndX": 1065.625,
+          "EndY": 1705.5648910601496,
+          "StartAngleDegrees": -0.11535724321643308,
+          "EndAngleDegrees": -0.11535724321643308
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1065.625,
+          "StartY": 1705.5648910601496,
+          "EndX": 1095.8333333333335,
+          "EndY": 1705.505633792681,
+          "StartAngleDegrees": -0.11239239646661885,
+          "EndAngleDegrees": -0.11239239646661885
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1095.8333333333335,
+          "StartY": 1705.505633792681,
+          "EndX": 1126.0416666666665,
+          "EndY": 1705.4484189141144,
+          "StartAngleDegrees": -0.10851863660123547,
+          "EndAngleDegrees": -0.10851863660123547
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1126.0416666666665,
+          "StartY": 1705.4484189141144,
+          "EndX": 1156.25,
+          "EndY": 1705.3936906907206,
+          "StartAngleDegrees": -0.10380224408365224,
+          "EndAngleDegrees": -0.10380224408365224
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1156.25,
+          "StartY": 1705.3936906907206,
+          "EndX": 1186.4583333333335,
+          "EndY": 1705.3418508414113,
+          "StartAngleDegrees": -0.09832391703223244,
+          "EndAngleDegrees": -0.09832391703223244
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1186.4583333333335,
+          "StartY": 1705.3418508414113,
+          "EndX": 1216.6666666666665,
+          "EndY": 1705.2932516642168,
+          "StartAngleDegrees": -0.09217739052311233,
+          "EndAngleDegrees": -0.09217739052311233
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1216.6666666666665,
+          "StartY": 1705.2932516642168,
+          "EndX": 1246.875,
+          "EndY": 1705.2481900083692,
+          "StartAngleDegrees": -0.0854678328144795,
+          "EndAngleDegrees": -0.0854678328144795
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1246.875,
+          "StartY": 1705.2481900083692,
+          "EndX": 1277.0833333333335,
+          "EndY": 1705.206902195129,
+          "StartAngleDegrees": -0.07831004593492073,
+          "EndAngleDegrees": -0.07831004593492073
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1277.0833333333335,
+          "StartY": 1705.206902195129,
+          "EndX": 1307.2916666666665,
+          "EndY": 1705.1695599742638,
+          "StartAngleDegrees": -0.07082650140969132,
+          "EndAngleDegrees": -0.07082650140969132
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1307.2916666666665,
+          "StartY": 1705.1695599742638,
+          "EndX": 1337.5,
+          "EndY": 1705.1362675853622,
+          "StartAngleDegrees": -0.06314524474514677,
+          "EndAngleDegrees": -0.06314524474514677
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1337.5,
+          "StartY": 1705.1362675853622,
+          "EndX": 1367.7083333333335,
+          "EndY": 1705.1070599742638,
+          "StartAngleDegrees": -0.055397704522596306,
+          "EndAngleDegrees": -0.055397704522596306
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1367.7083333333335,
+          "StartY": 1705.1070599742638,
+          "EndX": 1397.9166666666665,
+          "EndY": 1705.081902195129,
+          "StartAngleDegrees": -0.047716443578532816,
+          "EndAngleDegrees": -0.047716443578532816
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1397.9166666666665,
+          "StartY": 1705.081902195129,
+          "EndX": 1428.125,
+          "EndY": 1705.0606900083692,
+          "StartAngleDegrees": -0.04023289078590332,
+          "EndAngleDegrees": -0.04023289078590332
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1428.125,
+          "StartY": 1705.0606900083692,
+          "EndX": 1458.3333333333335,
+          "EndY": 1705.0432516642168,
+          "StartAngleDegrees": -0.03307509221447972,
+          "EndAngleDegrees": -0.03307509221447972
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1458.3333333333335,
+          "StartY": 1705.0432516642168,
+          "EndX": 1488.5416666666665,
+          "EndY": 1705.0293508414113,
+          "StartAngleDegrees": -0.026365520186300322,
+          "EndAngleDegrees": -0.026365520186300322
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1488.5416666666665,
+          "StartY": 1705.0293508414113,
+          "EndX": 1518.75,
+          "EndY": 1705.0186906907206,
+          "StartAngleDegrees": -0.020218977705801604,
+          "EndAngleDegrees": -0.020218977705801604
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1518.75,
+          "StartY": 1705.0186906907206,
+          "EndX": 1548.9583333333335,
+          "EndY": 1705.0109189141144,
+          "StartAngleDegrees": -0.014740634119600372,
+          "EndAngleDegrees": -0.014740634119600372
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1548.9583333333335,
+          "StartY": 1705.0109189141144,
+          "EndX": 1579.1666666666665,
+          "EndY": 1705.005633792681,
+          "StartAngleDegrees": -0.010024225630650916,
+          "EndAngleDegrees": -0.010024225630650916
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1579.1666666666665,
+          "StartY": 1705.005633792681,
+          "EndX": 1609.375,
+          "EndY": 1705.0023910601496,
+          "StartAngleDegrees": -0.006150451445732559,
+          "EndAngleDegrees": -0.006150451445732559
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1609.375,
+          "StartY": 1705.0023910601496,
+          "EndX": 1639.5833333333335,
+          "EndY": 1705.0007115044084,
+          "StartAngleDegrees": -0.003185593004071009,
+          "EndAngleDegrees": -0.003185593004071009
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1639.5833333333335,
+          "StartY": 1705.0007115044084,
+          "EndX": 1669.7916666666665,
+          "EndY": 1705.0000891669579,
+          "StartAngleDegrees": -0.0011803798954867467,
+          "EndAngleDegrees": -0.0011803798954867467
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1669.7916666666665,
+          "StartY": 1705.0000891669579,
+          "EndX": 1700,
+          "EndY": 1705,
+          "StartAngleDegrees": -0.00016912188772637976,
+          "EndAngleDegrees": -0.00016912188772637976
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 24,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 25,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_25",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_26",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 1833.5,
+          "EndX": 540,
+          "EndY": 1833.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 1833.5,
+          "EndX": 544.5165457566804,
+          "EndY": 1833.2955903110687,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -5.1826446753645,
+          "CenterX": 540,
+          "CenterY": 1783.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -5.1826446753645
+        },
+        {
+          "Type": "Straight",
+          "StartX": 544.5165457566804,
+          "StartY": 1833.2955903110687,
+          "EndX": 1405.4834542433196,
+          "EndY": 1755.204409688931,
+          "StartAngleDegrees": -5.1826446753645,
+          "EndAngleDegrees": -5.1826446753645
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1405.4834542433196,
+          "StartY": 1755.204409688931,
+          "EndX": 1410,
+          "EndY": 1754.9999999999998,
+          "StartAngleDegrees": -5.1826446753645,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1804.9999999999998,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 5.1826446753645
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1754.9999999999998,
+          "EndX": 1700,
+          "EndY": 1754.9999999999998,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 26,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 27,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_27",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_28",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 1960.5,
+          "EndX": 540,
+          "EndY": 1960.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 1960.5,
+          "EndX": 548.8860057256624,
+          "EndY": 1959.70405371759,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -10.236990997018818,
+          "CenterX": 540,
+          "CenterY": 1910.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -10.236990997018818
+        },
+        {
+          "Type": "Straight",
+          "StartX": 548.8860057256624,
+          "StartY": 1959.70405371759,
+          "EndX": 1401.1139942743375,
+          "EndY": 1805.79594628241,
+          "StartAngleDegrees": -10.236990997018818,
+          "EndAngleDegrees": -10.236990997018818
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1401.1139942743378,
+          "StartY": 1805.79594628241,
+          "EndX": 1410,
+          "EndY": 1805,
+          "StartAngleDegrees": -10.236990997018818,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1855,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 10.236990997018818
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1805,
+          "EndX": 1700,
+          "EndY": 1805,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 28,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 29,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_29",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_30",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 2087.5,
+          "EndX": 540,
+          "EndY": 2087.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 2087.5,
+          "EndX": 553.0962191299824,
+          "EndY": 2085.754419947809,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -15.184278890178458,
+          "CenterX": 540,
+          "CenterY": 2037.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -15.184278890178458
+        },
+        {
+          "Type": "Straight",
+          "StartX": 553.0962191299824,
+          "StartY": 2085.754419947809,
+          "EndX": 1396.9037808700177,
+          "EndY": 1856.7455800521914,
+          "StartAngleDegrees": -15.184278890178458,
+          "EndAngleDegrees": -15.184278890178458
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1396.9037808700177,
+          "StartY": 1856.7455800521914,
+          "EndX": 1410,
+          "EndY": 1855.0000000000002,
+          "StartAngleDegrees": -15.184278890178458,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410,
+          "CenterY": 1905.0000000000002,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 15.184278890178458
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410,
+          "StartY": 1855.0000000000002,
+          "EndX": 1700,
+          "EndY": 1855.0000000000002,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 30,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 31,
+      "EndPinName": "a0",
+      "StartComponentId": "Grating Coupler_31",
+      "EndComponentId": "Straight Waveguide 100\u00B5m_32",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 250,
+          "StartY": 2214.5,
+          "EndX": 540,
+          "EndY": 2214.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 540,
+          "StartY": 2214.5,
+          "EndX": 557.0644424718877,
+          "EndY": 2211.49792339161,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -19.95541720322364,
+          "CenterX": 540,
+          "CenterY": 2164.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -19.95541720322364
+        },
+        {
+          "Type": "Straight",
+          "StartX": 557.0644424718877,
+          "StartY": 2211.49792339161,
+          "EndX": 1392.9355575281124,
+          "EndY": 1908.0020766083903,
+          "StartAngleDegrees": -19.95541720322364,
+          "EndAngleDegrees": -19.95541720322364
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1392.9355575281124,
+          "StartY": 1908.0020766083903,
+          "EndX": 1410.0000000000002,
+          "EndY": 1905.0000000000002,
+          "StartAngleDegrees": -19.95541720322364,
+          "EndAngleDegrees": 0,
+          "CenterX": 1410.0000000000002,
+          "CenterY": 1955.0000000000002,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 19.95541720322364
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1410.0000000000002,
+          "StartY": 1905.0000000000002,
+          "EndX": 1700.0000000000002,
+          "EndY": 1905.0000000000002,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    }
+  ],
+  "Metadata": {
+    "PdkVersions": {},
+    "Authorship": {
+      "Created": "2026-10-28",
+      "Modified": "2026-10-28T13:42:25.3269684Z"
+    }
+  },
+  "ChipWidthMicrometers": 2600,
+  "ChipHeightMicrometers": 2600,
+  "ActiveProcess": {
+    "DisplayName": "Demo SOI 220nm",
+    "IsPlayground": false,
+    "CoreMaterial": "Si",
+    "CoreThicknessNm": 220,
+    "Cladding": "SiO2",
+    "DesignWavelengthNm": 1550,
+    "ProcessName": "Demo SOI 220nm",
+    "MemberPdkNames": [
+      "Demo PDK",
+      "SiEPIC EBeam PDK"
+    ]
+  },
+  "Workspace": "Layout"
+}

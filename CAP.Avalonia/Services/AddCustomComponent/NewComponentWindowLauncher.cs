@@ -11,13 +11,13 @@ namespace CAP.Avalonia.Services.AddCustomComponent;
 public static class NewComponentWindowLauncher
 {
     public static NewComponentViewModel BuildViewModel(
-        AddCustomComponentDependencies deps, PdkLoader pdkLoader, IReadOnlyList<PdkDraft> loadedPdks,
+        AddCustomComponentDependencies deps, IPdkReader pdkLoader, IReadOnlyList<PdkDraft> loadedPdks,
         Action<PdkComponentDraft, string, string, bool> register,
         Action<string, string>? removeMigratedTemplate = null)
     {
         var processes = loadedPdks.Where(d => d.Process != null).Select(d => d.Process!).ToList();
-        var vm = new NewComponentViewModel(deps.Extractor, deps.Fdtd, deps.UserPdkStore, processes,
-            deps.ErrorConsole, deps.BackendRegistry, deps.UrlLauncher);
+        var vm = new NewComponentViewModel(deps.SParameterImports, deps.Extractor, deps.Fdtd, deps.UserPdkStore, processes,
+            deps.ErrorConsole, deps.BackendRegistry, deps.UrlLauncher, deps.ApplicationWork);
         vm.Saved += (_, _) => OnSaved(vm, pdkLoader, register, removeMigratedTemplate);
         // Probe the selected backend upfront so a known-bad state (Docker down, no
         // API key) disables the compute button and shows the hint before the first click.
@@ -26,7 +26,7 @@ public static class NewComponentWindowLauncher
     }
 
     private static void OnSaved(
-        NewComponentViewModel vm, PdkLoader pdkLoader,
+        NewComponentViewModel vm, IPdkReader pdkLoader,
         Action<PdkComponentDraft, string, string, bool> register,
         Action<string, string>? removeMigratedTemplate)
     {

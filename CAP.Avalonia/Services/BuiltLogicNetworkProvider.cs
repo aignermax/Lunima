@@ -7,8 +7,8 @@ namespace CAP.Avalonia.Services;
 /// issue #1215): the Logic panel publishes its freshly built network here, so
 /// sibling features — the ISA playground's "compute ADD on the photonic chip"
 /// toggle — can run on the student's own design without importing the Logic
-/// analysis feature. The provider holds no state of its own beyond the
-/// reference; a rebuild failure, a cancel or a design edit clears it again, so
+/// analysis feature. The provider versions each publication so an older build
+/// cannot clear a newer hand-off; a rebuild failure, a cancel or a design edit clears it again, so
 /// consumers never see a network that no longer matches the design on the
 /// canvas. Registered as a DI singleton: the Logic panel (transient) and the
 /// playground window (singleton) must share one instance.
@@ -31,11 +31,15 @@ public sealed class BuiltLogicNetworkProvider
     /// <summary>The last successfully assembled network, or null when none is current.</summary>
     public LogicNetworkEvaluator? Network => _network;
 
+    /// <summary>Distinguishes publications even when they reuse the same evaluator instance.</summary>
+    internal long PublicationRevision { get; private set; }
+
     /// <summary>Publishes a freshly assembled network.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="network"/> is null.</exception>
     public void Publish(LogicNetworkEvaluator network)
     {
         _network = network ?? throw new ArgumentNullException(nameof(network));
+        PublicationRevision++;
         Changed?.Invoke();
     }
 
@@ -59,6 +63,7 @@ public sealed class BuiltLogicNetworkProvider
         }
 
         _network = null;
+        PublicationRevision++;
         Changed?.Invoke();
     }
 }

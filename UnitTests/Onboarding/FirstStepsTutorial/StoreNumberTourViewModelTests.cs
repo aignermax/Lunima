@@ -61,7 +61,7 @@ public class StoreNumberTourViewModelTests
 
     private static AnalysisDockViewModel MakeDock() =>
         new(new TimeDomainViewModel(), new EyeDiagramViewModel(),
-            new WavelengthSpectrumViewModel(), new AnalysisOutputPanelViewModel(),
+            new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()), new AnalysisOutputPanelViewModel(),
             new MonteCarloViewModel(), new CircuitOptimizationViewModel(new CommandManager()));
 
     /// <summary>Toggles one network input exactly like the panel's toggle row.</summary>

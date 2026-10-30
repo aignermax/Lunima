@@ -37,16 +37,16 @@ public class SaveWithoutPreviewTests : IDisposable
         Pins = new() { new PhysicalPinDraft { Name = "o1" }, new PhysicalPinDraft { Name = "o2" } }
     };
 
-    private (NewComponentViewModel vm, Mock<IComponentPreviewRenderer> gds) Build()
+    private (NewComponentViewModel vm, Mock<IPdkGeometryRenderer> gds) Build()
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Ok());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
         var process = new ProcessDefinition { Name = "P" };
         store.SaveToNamedPdk("My PDK", process, SeedComponent("seed"), "gdsfactory", null);
-        var vm = new NewComponentViewModel(extractor, fdtd: null, store, new List<ProcessDefinition> { process });
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd: null, store, new List<ProcessDefinition> { process });
         vm.ComponentName = "My Comp";
         vm.SelectedBackend = GeometryBackend.GdsFactory;
         vm.Code = "import gdsfactory as gf\ncomponent = gf.components.coupler()";
@@ -71,15 +71,15 @@ public class SaveWithoutPreviewTests : IDisposable
     [Fact]
     public async Task Save_whenTheCodeFailsToRender_reportsTheErrorAndDoesNotSave()
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(NazcaPreviewResult.Fail("SyntaxError: invalid syntax"));
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
         var store = new UserPdkStore(_root, new PdkJsonSaver(), new PdkLoader());
         var process = new ProcessDefinition { Name = "P" };
         store.SaveToNamedPdk("My PDK", process, SeedComponent("seed"), "gdsfactory", null);
-        var vm = new NewComponentViewModel(extractor, fdtd: null, store, new List<ProcessDefinition> { process });
+        var vm = new NewComponentViewModel(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(), extractor, fdtd: null, store, new List<ProcessDefinition> { process });
         vm.ComponentName = "My Comp";
         vm.SelectedBackend = GeometryBackend.GdsFactory;
         vm.Code = "def broken(:\n    pass";

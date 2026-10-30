@@ -20,10 +20,10 @@ public class GdsReviewedImportTests
         Directory.CreateDirectory(host.GdsCacheDirectory);
         var bytes = Fixture();
         await File.WriteAllBytesAsync(path, bytes);
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path);
         await File.WriteAllBytesAsync(path, [0, 1, 2]);
         var template = ModelTemplate();
-        var service = new GdsImportService(host.Scope, () => [template]);
+        var service = new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope, () => [template]);
         var result = await service.ImportAsync(path, "TOP", preParsedLibrary: analysis.Library,
             sourceBytes: analysis.SourceBytes, interpretation: Review(analysis));
         result.RegisteredComponents.Count.ShouldBe(1);
@@ -31,7 +31,68 @@ public class GdsReviewedImportTests
         var draft = host.Scope.Sets.Single().Drafts.Single();
         draft.WidthMicrometers.ShouldBe(10);
         draft.RawCode.ShouldContain("nd.load_gds");
-        draft.ImportedModelStatus.ShouldBe("geometry-only");
+        draft.ImportedModelStatus.ShouldBeNull(
+            "a reviewed 2-optical-pin cell without a mapped model stays pass-through eligible");
+        draft.SMatrix.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ReviewedMultiPinCellWithoutModelStaysGeometryOnly()
+    {
+        using var host = new GdsDesignScopeTestHost();
+        Directory.CreateDirectory(host.GdsCacheDirectory);
+        var path = Path.Combine(host.GdsCacheDirectory, "source.gds");
+        await File.WriteAllBytesAsync(path, Fixture());
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path);
+        var review = Review(analysis) with
+        {
+            Cells = [new()
+            {
+                CellName = "device",
+                Pins =
+                [
+                    new() { Name = "in", XUm = 0, YUm = 2 },
+                    new() { Name = "out", XUm = 10, YUm = 2 },
+                    new() { Name = "monitor", XUm = 5, YUm = 2 },
+                ]
+            }]
+        };
+        await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope).ImportAsync(path, "TOP",
+            preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes, interpretation: review);
+        var draft = host.Scope.Sets.Single().Drafts.Single();
+        draft.Pins.Count.ShouldBe(3);
+        draft.ImportedModelStatus.ShouldBe("geometry-only",
+            "a multi-pin unmodeled cell cannot default its internal routing");
+        draft.SMatrix.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ReviewedTwoOpticalPlusElectricalCellWithoutModelStaysGeometryOnly()
+    {
+        using var host = new GdsDesignScopeTestHost();
+        Directory.CreateDirectory(host.GdsCacheDirectory);
+        var path = Path.Combine(host.GdsCacheDirectory, "source.gds");
+        await File.WriteAllBytesAsync(path, Fixture());
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path);
+        var review = Review(analysis) with
+        {
+            Cells = [new()
+            {
+                CellName = "device",
+                Pins =
+                [
+                    new() { Name = "in", XUm = 0, YUm = 2 },
+                    new() { Name = "out", XUm = 10, YUm = 2 },
+                    new() { Name = "heater", XUm = 5, YUm = 0, IsElectrical = true },
+                ]
+            }]
+        };
+        await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope).ImportAsync(path, "TOP",
+            preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes, interpretation: review);
+        var draft = host.Scope.Sets.Single().Drafts.Single();
+        draft.Pins.Count.ShouldBe(3);
+        draft.ImportedModelStatus.ShouldBe("geometry-only",
+            "an electrical pin means the cell is active and needs a real model");
         draft.SMatrix.ShouldBeNull();
     }
 
@@ -42,9 +103,9 @@ public class GdsReviewedImportTests
         Directory.CreateDirectory(host.GdsCacheDirectory);
         var path = Path.Combine(host.GdsCacheDirectory, "source.gds");
         await File.WriteAllBytesAsync(path, Fixture());
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path);
         var template = ModelTemplate();
-        var service = new GdsImportService(host.Scope, () => [template]);
+        var service = new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope, () => [template]);
         var review = Review(analysis) with
         {
             Cells = [new() { CellName = "device", ModelPdkName = "models", ModelComponentName = "device" }]
@@ -72,12 +133,12 @@ public class GdsReviewedImportTests
         Directory.CreateDirectory(host.GdsCacheDirectory);
         var path = Path.Combine(host.GdsCacheDirectory, "source.gds");
         await File.WriteAllBytesAsync(path, Fixture());
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path);
         var review = Review(analysis) with
         {
             Cells = [new() { CellName = "device", Pins = [new() { Name = "outside", XUm = 1000 }] }]
         };
-        await Should.ThrowAsync<InvalidDataException>(() => new GdsImportService(host.Scope).ImportAsync(path,
+        await Should.ThrowAsync<InvalidDataException>(() => new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope).ImportAsync(path,
             "TOP", preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes, interpretation: review));
         host.Scope.Sets.ShouldBeEmpty();
     }
@@ -94,12 +155,12 @@ public class GdsReviewedImportTests
             .BeginCell("device").Boundary(1, 0, (0, 0), (10000, 0), (10000, 4000), (0, 4000), (0, 0)).EndCell()
             .EndLibrary().ToArray();
         await File.WriteAllBytesAsync(path, bytes);
-        var analysis = await GdsImportService.AnalyzeAsync(path);
+        var analysis = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader()).AnalyzeAsync(path);
         var review = Review(analysis) with
         {
             Cells = [new() { CellName = "container", ExpandChildren = true }, new() { CellName = "device", Pins = [] }]
         };
-        var result = await new GdsImportService(host.Scope).ImportAsync(path, "TOP",
+        var result = await new GdsImportService(new CAP_DataAccess.Import.Gds.GdsSourceReader(), host.Scope).ImportAsync(path, "TOP",
             preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes, interpretation: review);
         result.Instances.Single().PositionYUm.ShouldBe(96, 1e-9);
     }

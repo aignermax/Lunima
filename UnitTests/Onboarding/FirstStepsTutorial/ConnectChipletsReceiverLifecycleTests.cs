@@ -60,7 +60,7 @@ public class ConnectChipletsReceiverLifecycleTests
     {
         var commands = new CommandManager();
         var dock = new AnalysisDockViewModel(new TimeDomainViewModel(), new EyeDiagramViewModel(),
-            new WavelengthSpectrumViewModel(), new AnalysisOutputPanelViewModel(),
+            new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()), new AnalysisOutputPanelViewModel(),
             new MonteCarloViewModel(), new CircuitOptimizationViewModel(commands));
         var tour = new ConnectChipletsTourViewModel(canvas, new DesignValidationViewModel(), dock, commands);
         tour.Start();

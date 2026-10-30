@@ -10,7 +10,7 @@ namespace CAP_Core.ComponentRegistry.RegistryClient;
 /// a local cache, so all reads work offline once cached. Fetches never throw
 /// on network failure — callers inspect <see cref="RegistryResult{T}"/>.
 /// </summary>
-public class RegistryClient
+public class RegistryClient : IRegistryCatalog
 {
     /// <summary>Raw-content base URL of the public registry repository.</summary>
     public const string DefaultBaseUrl =

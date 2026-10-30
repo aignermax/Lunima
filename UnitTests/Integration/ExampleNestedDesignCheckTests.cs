@@ -21,6 +21,7 @@ public class ExampleNestedDesignCheckTests
     private static readonly Dictionary<string, string> PinnedFindings = new()
     {
         ["EBeam Add-Drop Ring.lun"] = "UnconnectedPin=3",
+        ["Length Matching - Fiber Array Fan-In.lun"] = "UnconnectedPin=32",
         ["Two Dies - SOI and SiN Edge-Coupler Link.lun"] = "",
         ["EBeam Mach-Zehnder Interferometer.lun"] = "UnconnectedPin=2",
         ["Logic Gate - Build your first gate.lun"] = "UnconnectedPin=6",

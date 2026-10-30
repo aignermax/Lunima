@@ -10,6 +10,7 @@ using CAP_Core;
 using CAP_Core.Components.Core;
 using CAP_Core.Export;
 using CAP_DataAccess.Import.Gds;
+using CAP_DataAccess.Import.Gds.Interpretation;
 using Moq;
 using Shouldly;
 using UnitTests.Import.Gds;
@@ -213,6 +214,46 @@ public class GdsImportDesignRoundTripTests : IDisposable
         frozen.EndPin.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task ImportPlaceSaveLoad_ShapeOnlyDecision_RoundTripsInTheInterpretation()
+    {
+        // Issue #1572: the explicit "Shape only · no simulation" decision on a
+        // 2-optical-pin cell must ride the .lun save/load inside the persisted
+        // interpretation — and keep the imported draft geometry-only after reload.
+        var gdsPath = WriteGds();
+        var analysis = await new GdsImportService(new GdsSourceReader()).AnalyzeAsync(gdsPath);
+        using var saveHost = new GdsDesignScopeTestHost();
+        var service = saveHost.CreateService(() => Array.Empty<ComponentTemplate>());
+        var review = new GdsImportInterpretation
+        {
+            TopCellName = "TOP",
+            SourceSha256 = analysis.SourceSha256,
+            Layers = [new(1, 0, GdsLayerRole.OpticalCore), new(1, 10, GdsLayerRole.PortLabel)],
+            Cells = [new() { CellName = "wgA", GeometryOnly = true }]
+        };
+        var outcome = await service.ImportAsync(gdsPath, "TOP",
+            preParsedLibrary: analysis.Library, sourceBytes: analysis.SourceBytes, interpretation: review);
+        saveHost.Scope.Sets.Single().Drafts.Single(d => d.Name == "wgA")
+            .ImportedModelStatus.ShouldBe("geometry-only");
+        saveHost.Scope.Sets.Single().Drafts.Single(d => d.Name == "wgB")
+            .ImportedModelStatus.ShouldBeNull("the untouched sibling keeps the pass-through default");
+
+        var saveCanvas = new DesignCanvasViewModel();
+        await new GdsPlacementExecutor(saveCanvas, null, () => saveHost.Templates.ToList())
+            .ExecuteAsync(GdsPlacementPlan.FromOutcome(outcome));
+        var savePath = Path.Combine(_root, "circuit-shapeonly.lun");
+        await SaveToFile(CreateFileOperations(saveCanvas, saveHost, out _), savePath);
+
+        using var loadHost = new GdsDesignScopeTestHost();
+        var loadCanvas = new DesignCanvasViewModel();
+        await LoadFromFile(CreateFileOperations(loadCanvas, loadHost, out _), savePath);
+
+        var set = loadHost.Scope.Sets.ShouldHaveSingleItem();
+        set.Interpretation.ShouldNotBeNull().Cells.Single(c => c.CellName == "wgA")
+            .GeometryOnly.ShouldBeTrue("the shape-only decision survives the .lun round trip");
+        set.Drafts.Single(d => d.Name == "wgA").ImportedModelStatus.ShouldBe("geometry-only");
+    }
+
     /// <summary>
     /// TOP with one pinned waveguide (wgA), one pin-less geometry cell ("logo":
     /// only an extent rectangle on (111,0)), and a top-cell route stub on (1,0)
@@ -369,14 +410,14 @@ public class GdsImportDesignRoundTripTests : IDisposable
         out ErrorConsoleService errorConsole)
     {
         errorConsole = new ErrorConsoleService();
-        return new FileOperationsViewModel(
+        return new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             host.Templates,
-            new GdsExportViewModel(new GdsExportService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas),
             null!,
             errorConsole: errorConsole)
         {

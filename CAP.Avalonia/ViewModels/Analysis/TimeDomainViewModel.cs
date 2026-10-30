@@ -18,7 +18,7 @@ namespace CAP.Avalonia.ViewModels.Analysis;
 /// Sweeps S-parameters over a wavelength grid, performs IFFT to obtain impulse
 /// responses, convolves with a user-selected input pulse, and reports output traces.
 /// </summary>
-public partial class TimeDomainViewModel : ObservableObject
+public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
 {
     [ObservableProperty]
     private double _centerWavelengthNm = 1550;
@@ -65,19 +65,49 @@ public partial class TimeDomainViewModel : ObservableObject
     /// </summary>
     public ObservableCollection<TimeTraceSeriesViewModel> Series { get; } = new();
 
+    /// <summary>
+    /// One-line description of which components' curves are plotted, driven by the canvas
+    /// selection (all components when nothing is selected).
+    /// </summary>
+    [ObservableProperty]
+    private string _selectionHint = "";
+
     /// <summary>True once a completed transient result is available to plot/export.</summary>
     public bool HasResult => _lastResult != null;
 
     private readonly CAP_Core.ErrorConsoleService? _errorConsole;
-    private DesignCanvasViewModel? _canvas;
+    private readonly TransientPanelLifetime _lifetime = new();
+    private readonly ObservablePublicationQueue _publication = new();
+    private readonly ITransientSimulationRunner _runner;
+    private DesignCanvasViewModel? _canvas => _lifetime.Canvas;
+    private Task? _retirement;
+    public Task StopAsync() => _retirement ??= RetireAsync();
+    public ValueTask DisposeAsync() => new(StopAsync());
+    private async Task RetireAsync()
+    {
+        try { await _lifetime.StopAsync(); }
+        finally
+        {
+            DetachSeries();
+            ObserveSelection(null);
+            _lastResult = null;
+            FileDialogService = null;
+            RequestOutputPicker = null;
+        }
+    }
     private TimeDomainResult? _lastResult;
     private Dictionary<Guid, string> _pinNameMap = new();
+    private Dictionary<Guid, CAP_Core.Components.Core.Component> _pinOwnerMap = new();
+    private CAP.Avalonia.Selection.SelectionManager? _observedSelection;
 
     /// <summary>Initializes a new instance of <see cref="TimeDomainViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
-    public TimeDomainViewModel(CAP_Core.ErrorConsoleService? errorConsole = null)
+    public TimeDomainViewModel(CAP_Core.ErrorConsoleService? errorConsole = null,
+        ITransientSimulationRunner? runner = null, Services.Lifetime.ApplicationWorkCoordinator? applicationWork = null)
     {
         _errorConsole = errorConsole;
+        _runner = runner ?? new TransientSimulationRunner();
+        _lifetime.RegisterWith(applicationWork, StopAsync);
     }
 
     /// <summary>File dialog service for CSV export. Set by MainViewModel.</summary>
@@ -94,135 +124,171 @@ public partial class TimeDomainViewModel : ObservableObject
     /// <summary>Configures the panel with the current canvas context.</summary>
     public void Configure(DesignCanvasViewModel? canvas)
     {
-        _canvas = canvas;
-        ResultText = "";
-        StatusText = "";
+        if (_lifetime.IsStopping) return;
+        var version = _lifetime.Configure(canvas);
+        ObserveSelection(canvas);
         _lastResult = null;
-        ClearPlot();
+        _publication.Publish(() =>
+        {
+            if (!_lifetime.IsConfiguration(version)) return;
+            ResultText = "";
+            if (!_lifetime.IsConfiguration(version)) return;
+            StatusText = "";
+            if (!_lifetime.IsConfiguration(version)) return;
+            ClearPlot(() => _lifetime.IsConfiguration(version));
+        });
     }
 
     /// <summary>Runs the time-domain simulation pipeline.</summary>
     [RelayCommand]
-    private async Task RunTransient()
+    private Task RunTransient() => _lifetime.RunAsync(RunTransientCoreAsync);
+
+    private async Task RunTransientCoreAsync(CancellationToken stop)
     {
-        if (_canvas == null || _canvas.Components.Count == 0)
+        var canvas = _canvas;
+        var version = _lifetime.Version;
+        if (canvas == null || canvas.Components.Count == 0)
         {
             StatusText = LocalizationService.Instance.Translate("Analysis.Common.NoCircuit");
             return;
         }
-
-        // All lasers off means there is no input signal at all — say so instead of
-        // rendering an empty plot with status "Done" (#690, mirrors the eye analysis).
-        if (_canvas.Components.Where(c => c.IsLightSource).All(c => c.IsLaserOff)
-            && _canvas.Components.Any(c => c.IsLightSource))
+        if (canvas.Components.Where(c => c.IsLightSource).All(c => c.IsLaserOff)
+            && canvas.Components.Any(c => c.IsLightSource))
         {
             StatusText = LocalizationService.Instance.Translate("Analysis.Common.NoLaserOn");
             return;
         }
-
         if (IsRunning) return;
-
-        // Resolve the analysis output BEFORE simulating (#754): an invalid designation
-        // aborts with a clear warning instead of silently guessing. Without a
-        // designation every off-laser coupler counts as an output (field wish, round 4
-        // final) — the eyedropper only restricts, so no picker mode is forced here.
-        var resolution = AnalysisOutputResolver.Resolve(_canvas!);
-        if (ReportInvalidDesignation(resolution)) return;
-
-        IsRunning = true;
-        StatusText = LocalizationService.Instance.Translate("Analysis.TimeDomain.BuildingImpulseResponses");
-        ResultText = "";
-        _lastResult = null;
-        ClearPlot();
-
+        AnalysisSweepOperation? operation = null;
         try
         {
-            _pinNameMap = BuildPinNameMap();
-            var result = await Task.Run(() => RunSimulationCore());
-            var (displayed, statusOverride) = ApplyOutputSelection(result, resolution);
-            if (displayed == null)
+            var resolution = AnalysisOutputResolver.Resolve(canvas);
+            if (!_lifetime.IsConfiguration(version)) return;
+            operation = _lifetime.Begin(stop);
+            operation.ThrowIfObsolete();
+            if (ReportInvalidDesignation(resolution, operation)) return;
+            var output = CapturedAnalysisOutput.Capture(resolution);
+            var names = BuildPinNameMap(out var owners);
+            var (circuit, excitation) = TransientCircuitFactory.Capture(canvas);
+            var waveform = new TransientWaveformSettings(Source.SourceType switch
             {
-                StatusText = statusOverride!;
-                return;
+                TransientSourceType.ContinuousWave => TransientWaveform.ContinuousWave,
+                TransientSourceType.PrbsNrz => TransientWaveform.PrbsNrz,
+                _ => TransientWaveform.GaussianPulse
+            }, Source.BitrateGbps * 1e9, Source.PrbsOrder, Source.SamplesPerSymbol, Source.SymbolCount,
+                Source.ExtinctionRatioDb, Source.Seed, PulseCenterPs * 1e-12, PulseSigmaPs * 1e-12);
+            var request = new TransientSimulationRequest(circuit, excitation, waveform,
+                CenterWavelengthNm, SpanNm, FreqPoints);
+            operation.ThrowIfObsolete();
+            IsRunning = true;
+            operation.ThrowIfObsolete();
+            StatusText = LocalizationService.Instance.Translate("Analysis.TimeDomain.BuildingImpulseResponses");
+            operation.ThrowIfObsolete();
+            _lastResult = null;
+            ResultText = "";
+            operation.ThrowIfObsolete();
+            await _publication.PublishAsync(() =>
+            {
+                if (operation.CanPublish) ClearPlot(() => operation.CanPublish);
+            });
+            operation.ThrowIfObsolete();
+            var outcome = await _runner.RunAsync(request, operation.Token);
+            operation.ThrowIfObsolete();
+            foreach (var warning in outcome.Warnings)
+            {
+                _errorConsole?.LogWarning(warning.ToMessage());
+                operation.ThrowIfObsolete();
             }
+            var (displayed, statusOverride) = ApplyOutputSelection(outcome.Result, output);
+            if (displayed == null) { StatusText = statusOverride!; return; }
+            _pinNameMap = names;
+            _pinOwnerMap = owners;
             _lastResult = displayed;
             var peaks = TimeTracePeak.Build(displayed);
             ResultText = TimeDomainResultFormatter.FormatResult(displayed, peaks);
-            BuildPlot(displayed, peaks);
+            operation.ThrowIfObsolete();
+            await _publication.PublishAsync(() =>
+            {
+                if (operation.CanPublish) BuildPlot(displayed, peaks, operation);
+            });
+            operation.ThrowIfObsolete();
             OnPropertyChanged(nameof(HasResult));
+            operation.ThrowIfObsolete();
             StatusText = statusOverride ?? string.Format(
                 LocalizationService.Instance.Translate("Analysis.TimeDomain.DonePins"), displayed.PinTraces.Count);
         }
-        catch (CAP_Core.LightCalculation.NonConvergentCircuitException ex)
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
         {
-            // Physics-integrity abort (non-passive data, resonant loop, fabricated
-            // energy): render the structured diagnostics fully localized.
-            _errorConsole?.LogError($"Time-domain simulation blocked: {ex.Message}", ex);
-            StatusText = NonConvergentCircuitMessageFormatter.Format(ex);
-        }
-        catch (InvalidOperationException ex)
-        {
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("Analysis.TimeDomain.CannotRun"), ex.Message);
-            _errorConsole?.LogError($"Time-domain simulation blocked: {ex.Message}", ex);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _errorConsole?.LogError($"Time-domain simulation failed: {ex.Message}", ex);
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("Analysis.Common.Failed"), ex.Message);
+            if (operation?.CanPublish != true) return;
+            _errorConsole?.LogError(ex is InvalidOperationException
+                ? $"Time-domain simulation blocked: {ex.Message}" : $"Time-domain simulation failed: {ex.Message}", ex);
+            if (!operation.CanPublish) return;
+            StatusText = ex switch
+            {
+                CAP_Core.LightCalculation.NonConvergentCircuitException physics => NonConvergentCircuitMessageFormatter.Format(physics),
+                InvalidOperationException => string.Format(LocalizationService.Instance.Translate("Analysis.TimeDomain.CannotRun"), ex.Message),
+                _ => string.Format(LocalizationService.Instance.Translate("Analysis.Common.Failed"), ex.Message)
+            };
         }
         finally
         {
-            IsRunning = false;
+            try { IsRunning = false; }
+            finally { await _lifetime.EndAsync(operation); }
         }
     }
 
     /// <summary>Exports the last simulation result to a CSV file.</summary>
     [RelayCommand]
-    private async Task ExportCsv()
-    {
-        if (_lastResult == null) return;
+    private Task ExportCsv() => _lifetime.RunAsync(ExportCsvCoreAsync);
 
+    private async Task ExportCsvCoreAsync(CancellationToken stop)
+    {
+        var result = _lastResult;
+        if (result == null || _canvas == null) return;
+        AnalysisSweepOperation? operation = null;
         try
         {
-            string? path = null;
-            if (FileDialogService != null)
-            {
-                path = await FileDialogService.ShowSaveFileDialogAsync(
-                    "Export Time-Domain Traces",
-                    "csv",
-                    "CSV Files|*.csv|All Files|*.*");
-            }
-
+            operation = _lifetime.Begin(stop);
+            operation.ThrowIfObsolete();
+            var dialog = FileDialogService;
+            var path = dialog == null ? null : await dialog.ShowSaveFileDialogAsync(
+                "Export Time-Domain Traces", "csv", "CSV Files|*.csv|All Files|*.*");
+            operation.ThrowIfObsolete();
+            if (!ReferenceEquals(result, _lastResult)) return;
             if (path == null)
             {
                 StatusText = LocalizationService.Instance.Translate("Analysis.Common.ExportCancelled");
                 return;
             }
-
-            var csv = TimeDomainResultFormatter.BuildCsvContent(_lastResult);
-            await File.WriteAllTextAsync(path, csv);
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("Analysis.Common.ExportedTo"), Path.GetFileName(path));
+            var csv = TimeDomainResultFormatter.BuildCsvContent(result);
+            operation.ThrowIfObsolete();
+            await File.WriteAllTextAsync(path, csv, operation.Token);
+            operation.ThrowIfObsolete();
+            if (!ReferenceEquals(result, _lastResult)) return;
+            StatusText = string.Format(LocalizationService.Instance.Translate("Analysis.Common.ExportedTo"), Path.GetFileName(path));
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+            if (operation?.CanPublish != true) return;
             _errorConsole?.LogError($"CSV export failed: {ex.Message}", ex);
-            StatusText = string.Format(
-                LocalizationService.Instance.Translate("Analysis.Common.ExportFailed"), ex.Message);
+            if (operation.CanPublish)
+                StatusText = string.Format(LocalizationService.Instance.Translate("Analysis.Common.ExportFailed"), ex.Message);
         }
+        finally { await _lifetime.EndAsync(operation); }
     }
 
     /// <summary>
     /// Surfaces an invalid designation (#754) as a status warning and activates the
     /// picker. Returns true when the run must not proceed.
     /// </summary>
-    private bool ReportInvalidDesignation(AnalysisOutputResolution resolution)
+    private bool ReportInvalidDesignation(AnalysisOutputResolution resolution, AnalysisSweepOperation operation)
     {
         if (resolution.State == AnalysisOutputState.DesignatedMissing)
         {
             StatusText = LocalizationService.Instance.Translate("Analysis.Output.DesignatedMissing");
+            operation.ThrowIfObsolete();
             RequestOutputPicker?.Invoke();
             return true;
         }
@@ -243,53 +309,21 @@ public partial class TimeDomainViewModel : ObservableObject
     /// but carries an explicit warning instead of a silent "Done".
     /// </summary>
     private static (TimeDomainResult? Displayed, string? StatusOverride) ApplyOutputSelection(
-        TimeDomainResult result, AnalysisOutputResolution resolution)
+        TimeDomainResult result, CapturedAnalysisOutput resolution)
     {
         if (resolution.State == AnalysisOutputState.MultipleCandidates)
             return (result, LocalizationService.Instance.Translate("Analysis.Output.MultipleCandidatesWarning"));
         if (resolution.State != AnalysisOutputState.DesignatedValid)
             return (result, null);
 
-        var pinIds = AnalysisOutputResolver.CollectLightPinIds(resolution.Output!);
+        var pinIds = resolution.PinIds!;
         var traces = result.PinTraces
             .Where(kv => pinIds.Contains(kv.Key))
             .ToDictionary(kv => kv.Key, kv => kv.Value);
         if (traces.Count == 0)
             return (null, string.Format(
-                LocalizationService.Instance.Translate("Analysis.Output.NoSignal"), resolution.Output!.Name));
+                LocalizationService.Instance.Translate("Analysis.Output.NoSignal"), resolution.Name));
         return (new TimeDomainResult(result.TimeAxis, traces), null);
-    }
-
-    private TimeDomainResult RunSimulationCore()
-    {
-        // Tolerated measurement noise (≤ 0.5 % passivity excess in shipped measured
-        // data) surfaces as a console warning; the run continues (review finding [1]).
-        var (simulator, portManager) = TransientCircuitFactory.Create(
-            _canvas!, warning => _errorConsole?.LogWarning(warning.ToMessage()));
-
-        var timeDef = Source.CreateGrid(CenterWavelengthNm, SpanNm, FreqPoints);
-
-        var inputSignals = BuildInputSignals(portManager, timeDef);
-        // Laser phase noise (#834): finite-linewidth sources random-walk their phase.
-        var phaseNoise = TransientCircuitFactory.BuildPhaseNoiseSettings(_canvas!);
-        return simulator.Run(inputSignals, timeDef, CenterWavelengthNm, SpanNm, FreqPoints, phaseNoise);
-    }
-
-    private Dictionary<Guid, double[]> BuildInputSignals(
-        PhysicalExternalPortManager portManager, TimeSignalDefinition timeDef)
-    {
-        double sigmaSeconds = PulseSigmaPs * 1e-12;
-        double centerInput = PulseCenterPs * 1e-12;
-        double pulseCenter = Math.Max(centerInput, 3 * sigmaSeconds);
-
-        var signals = new Dictionary<Guid, double[]>();
-        foreach (var usedInput in portManager.GetUsedExternalInputs())
-        {
-            double amplitude = Math.Sqrt(usedInput.Input.InFlowPower.Magnitude);
-            var source = Source.CreateSource(amplitude, pulseCenter, sigmaSeconds);
-            signals[usedInput.AttachedComponentPinId] = source.Generate(timeDef);
-        }
-        return signals;
     }
 
     /// <summary>
@@ -297,9 +331,10 @@ public partial class TimeDomainViewModel : ObservableObject
     /// plot legend shows readable names instead of Guids. Built on the UI thread from the
     /// current canvas before the simulation runs.
     /// </summary>
-    private Dictionary<Guid, string> BuildPinNameMap()
+    private Dictionary<Guid, string> BuildPinNameMap(out Dictionary<Guid, CAP_Core.Components.Core.Component> owners)
     {
         var map = new Dictionary<Guid, string>();
+        owners = new Dictionary<Guid, CAP_Core.Components.Core.Component>();
         if (_canvas == null) return map;
 
         foreach (var compVm in _canvas.Components)
@@ -314,6 +349,8 @@ public partial class TimeDomainViewModel : ObservableObject
                 // label resolves regardless of which flow direction the trace carries.
                 map[pin.LogicalPin.IDInFlow] = label;
                 map[pin.LogicalPin.IDOutFlow] = label;
+                owners[pin.LogicalPin.IDInFlow] = component;
+                owners[pin.LogicalPin.IDOutFlow] = component;
             }
         }
         return map;
@@ -323,29 +360,88 @@ public partial class TimeDomainViewModel : ObservableObject
     /// Builds the legend items and plot model from a completed result, and subscribes to
     /// each series so toggling its visibility updates the existing plot.
     /// </summary>
-    private void BuildPlot(TimeDomainResult result, IReadOnlyList<TimeTracePeak> peaks)
+    private void BuildPlot(TimeDomainResult result, IReadOnlyList<TimeTracePeak> peaks, AnalysisSweepOperation operation)
     {
         DetachSeries();
         Series.Clear();
+        operation.ThrowIfObsolete();
 
         var items = TimeTracePlotBuilder.BuildSeriesItems(
             result, pinId => _pinNameMap.TryGetValue(pinId, out var name) ? name : null, peaks);
+        var selected = SelectedComponentSet();
         foreach (var item in items)
         {
+            item.IsVisible = IsPinShown(item.PinId, selected);
             item.PropertyChanged += OnSeriesVisibilityChanged;
             Series.Add(item);
+            operation.ThrowIfObsolete();
         }
 
         PlotModel = TimeTracePlotBuilder.BuildPlotModel(result, items);
+        UpdateSelectionHint();
+    }
+
+    private void ObserveSelection(DesignCanvasViewModel? canvas)
+    {
+        if (_observedSelection != null)
+            _observedSelection.SelectedComponents.CollectionChanged -= OnCanvasSelectionChanged;
+        _observedSelection = canvas?.Selection;
+        if (_observedSelection != null)
+            _observedSelection.SelectedComponents.CollectionChanged += OnCanvasSelectionChanged;
+    }
+
+    /// <summary>Re-filters the plotted curves to the selection; never re-runs the simulation.</summary>
+    private void OnCanvasSelectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (_lastResult == null || Series.Count == 0) return;
+        var selected = SelectedComponentSet();
+        // Select-all raises one change per component: redraw the plot once, not once per curve.
+        _batchingVisibility = true;
+        try
+        {
+            foreach (var item in Series.ToList())
+                item.IsVisible = IsPinShown(item.PinId, selected);
+        }
+        finally
+        {
+            _batchingVisibility = false;
+        }
+        PlotModel.InvalidatePlot(false);
+        UpdateSelectionHint();
+    }
+
+    private bool _batchingVisibility;
+
+    private HashSet<CAP_Core.Components.Core.Component> SelectedComponentSet() =>
+        _observedSelection?.SelectedComponents.Select(c => c.Component).ToHashSet() ?? new();
+
+    private bool IsPinShown(Guid pinId, HashSet<CAP_Core.Components.Core.Component> selected) =>
+        selected.Count == 0
+        || (_pinOwnerMap.TryGetValue(pinId, out var owner) && selected.Contains(owner));
+
+    private void UpdateSelectionHint()
+    {
+        var selectedCount = SelectedComponentSet().Count;
+        var shown = Series.Count(s => s.IsVisible);
+        var t = LocalizationService.Instance;
+        SelectionHint = selectedCount == 0
+            ? t.Translate("Analysis.TimeDomain.SelectionAll")
+            : shown == 0
+                ? t.Translate("Analysis.TimeDomain.SelectionNoCurves")
+                : string.Format(t.Translate("Analysis.TimeDomain.SelectionFiltered"), selectedCount);
+        TimeTracePlotBuilder.ApplyLegendPolicy(PlotModel, shown);
+        PlotModel.InvalidatePlot(false);
     }
 
     /// <summary>Resets the plot and legend to the empty state (e.g. on reconfigure or re-run).</summary>
-    private void ClearPlot()
+    private void ClearPlot(Func<bool> canContinue)
     {
         DetachSeries();
         Series.Clear();
+        SelectionHint = "";
+        if (!canContinue()) return;
         PlotModel = TimeTracePlotBuilder.CreateEmptyPlotModel();
-        OnPropertyChanged(nameof(HasResult));
+        if (canContinue()) OnPropertyChanged(nameof(HasResult));
     }
 
     private void DetachSeries()
@@ -363,6 +459,7 @@ public partial class TimeDomainViewModel : ObservableObject
         var series = PlotModel.Series.FirstOrDefault(series => Equals(series.Tag, item.PinId));
         if (series == null) return;
         series.IsVisible = item.IsVisible;
-        PlotModel.InvalidatePlot(false);
+        if (!_batchingVisibility)
+            PlotModel.InvalidatePlot(false);
     }
 }

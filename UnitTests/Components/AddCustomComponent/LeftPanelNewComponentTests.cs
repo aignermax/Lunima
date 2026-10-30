@@ -34,8 +34,8 @@ public class LeftPanelNewComponentTests : IDisposable
         var preferencesPath = Path.Combine(Path.GetTempPath(), $"test-preferences-{Guid.NewGuid()}.json");
         var preferencesService = new UserPreferencesService(preferencesPath);
 
-        return new LeftPanelViewModel(
-            canvas, libraryManager, pdkLoader, preferencesService,
+        return new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
+            canvas, libraryManager, pdkLoader, preferencesService, preferencesService,
             new HierarchyPanelViewModel(canvas),
             new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager));

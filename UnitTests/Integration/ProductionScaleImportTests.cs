@@ -81,6 +81,8 @@ public sealed class ProductionScaleImportTests : IDisposable
 
         stopwatch.Elapsed.TotalSeconds.ShouldBeLessThan(RoutingPassBudgetSeconds);
         canvas.Connections.ShouldAllBe(c => c.Connection.IsRouteFrozen && c.Connection.AsDrawnGeometry != null);
+        canvas.Router.PathfindingGrid!.OutlineRasterizationCount.ShouldBe(0,
+            "an unchanged production import must reuse its detached outline rasters instead of scan-converting every body again");
     }
 
     [AvaloniaFact]

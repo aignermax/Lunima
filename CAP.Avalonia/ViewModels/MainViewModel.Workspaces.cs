@@ -29,22 +29,32 @@ public partial class MainViewModel
                 RefreshSystemOverview();
         };
         workspaces.IsSimulationOn = Canvas.ShowPowerFlow;
-        Canvas.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(Canvas.ShowPowerFlow))
-                workspaces.IsSimulationOn = Canvas.ShowPowerFlow;
-        };
-        workspaces.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName != nameof(WorkspaceViewModel.Current))
-                return;
-            ApplyDieSurfaceLock(workspaces.Profile.LocksDieContent);
-            if (workspaces.IsSystem)
-                RefreshSystemOverview();
-        };
+        Canvas.PropertyChanged += WorkspacePowerFlowChanged;
+        workspaces.PropertyChanged += WorkspaceSurfaceChanged;
         ApplyDieSurfaceLock(workspaces.Profile.LocksDieContent);
         BottomPanel.Analysis.Readiness.PlaceLightSourceRequested = ArmLightSourcePlacement;
         return workspaces;
+    }
+
+    private void WorkspacePowerFlowChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(Canvas.ShowPowerFlow)) WorkspaceSwitch.IsSimulationOn = Canvas.ShowPowerFlow;
+    }
+
+    private void WorkspaceSurfaceChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName != nameof(WorkspaceViewModel.Current)) return;
+        ApplyDieSurfaceLock(WorkspaceSwitch.Profile.LocksDieContent);
+        if (WorkspaceSwitch.IsSystem) RefreshSystemOverview();
+    }
+
+    private void UnwireWorkspaces()
+    {
+        Canvas.PropertyChanged -= WorkspacePowerFlowChanged;
+        WorkspaceSwitch.PropertyChanged -= WorkspaceSurfaceChanged;
+        FileOperations.CaptureWorkspaceForSave = null;
+        FileOperations.RestoreWorkspace = null;
+        BottomPanel.Analysis.Readiness.PlaceLightSourceRequested = null;
     }
 
     /// <summary>
@@ -55,12 +65,15 @@ public partial class MainViewModel
     /// simulation off. Optics in Transient mode starts a transient run each press.
     /// </summary>
     [RelayCommand]
-    private async Task RunWorkspace()
+    private Task RunWorkspace() => _work.RunAsync(RunWorkspaceCoreAsync);
+
+    private async Task RunWorkspaceCoreAsync(CancellationToken cancellationToken)
     {
         switch (WorkspaceSwitch.Current)
         {
             case Workspace.Layout:
                 await RunDesignChecks();
+                if (_work.IsStopping || cancellationToken.IsCancellationRequested) return;
                 BottomPanel.Analysis.OpenChecks();
                 break;
             case Workspace.Optics when SimulationMode == Analysis.SimulationMode.Transient:
@@ -101,9 +114,11 @@ public partial class MainViewModel
     private async Task RunSystem()
     {
         await RunDesignChecks();
+        if (_work.IsStopping) return;
         if (SimulationMode != Analysis.SimulationMode.Cw)
             SimulationMode = Analysis.SimulationMode.Cw;
         await ExecuteSimulation();
+        if (_work.IsStopping) return;
         RefreshSystemOverview();
         BottomPanel.Analysis.OpenChecks();
     }

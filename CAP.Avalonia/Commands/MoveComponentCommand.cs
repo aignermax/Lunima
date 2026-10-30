@@ -77,7 +77,12 @@ public class MoveComponentCommand : IMergeableCommand
     }
 
     public void Undo()
-        => _canvas.Routing.RestoreMove(UndoPosition, () => _routesBefore.Restore(_canvas));
+    {
+        // Restoring wires publishes further document changes after the position move.
+        // Capture the derived carrier grid only once that entire restore is finished.
+        using var bounds = _canvas.Dies.DeferScopeBoundsUpdates();
+        _canvas.Routing.RestoreMove(UndoPosition, () => _routesBefore.Restore(_canvas));
+    }
 
     private void UndoPosition()
     {

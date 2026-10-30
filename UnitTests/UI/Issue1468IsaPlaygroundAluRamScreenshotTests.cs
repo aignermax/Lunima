@@ -78,7 +78,7 @@ public class Issue1468IsaPlaygroundAluRamScreenshotTests
         {
             var provider = new BuiltLogicNetworkProvider();
             provider.Publish(_fixture.Network);
-            var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+            var vm = new IsaPlaygroundViewModel(new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()),provider) { UsePhotonicAdder = true };
             vm.SelectedSample = vm.Samples.Single(s => s.FileName == MultiplySampleFileName);
             RunToHalt(vm);
             vm.PhotonicAlu.ShouldNotBeNull("the adder must run on light on this chip");

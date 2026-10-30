@@ -10,7 +10,7 @@ public partial class IsaPlaygroundViewModel
     public Func<string, Task<bool>>? OpenExampleRequested { get; set; }
     /// <summary>Builds the current canvas through the Logic panel.</summary>
     public Func<Task<bool>>? BuildLogicNetworkRequested { get; set; }
-    internal Func<IReadOnlyList<ExampleDesign>> FindExamples { get; set; } = () => new ExampleDesignsService().GetExamples();
+    internal Func<IReadOnlyList<ExampleDesign>> FindExamples { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BuildExampleNetworkCommand))]

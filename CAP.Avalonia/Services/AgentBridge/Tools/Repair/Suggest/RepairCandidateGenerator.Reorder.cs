@@ -33,16 +33,6 @@ public sealed partial class RepairCandidateGenerator
                 ConnectionId = connection.Id.ToString(),
                 Reconnect = $"{connection.StartPin.ParentComponent.Identifier}.{connection.StartPin.Name} → {connection.EndPin.ParentComponent.Identifier}.{connection.EndPin.Name}",
             },
-            () =>
-            {
-                var vm = _session.Canvas.Connections.FirstOrDefault(c => c.Connection == connection);
-                if (vm == null)
-                    return (null, "The neighbour wire is gone.");
-                var delete = new DeleteConnectionCommand(_session.Canvas, vm);
-                var reconnect = new CreateConnectionCommand(_session.Canvas, connection.StartPin, connection.EndPin);
-                return (new RepairEditPlan(delete,
-                    () => _session.Canvas.Connections.All(c => c.Connection != connection),
-                    new IUndoableCommand[] { reconnect }), null);
-            });
+            new ReorderRepair(connection.Id));
     }
 }

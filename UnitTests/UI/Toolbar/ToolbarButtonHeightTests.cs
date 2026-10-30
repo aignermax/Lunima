@@ -27,7 +27,7 @@ public sealed class ToolbarButtonHeightTests
     {
         using var host = new UiFlowTestHost();
         Dispatcher.UIThread.RunJobs();
-        var toolbar = host.Window.FindControl<StackPanel>("MainToolbar").ShouldNotBeNull();
+        var toolbar = UiInput.Named<StackPanel>(host.Window, "MainToolbar").ShouldNotBeNull();
 
         var buttons = toolbar.GetLogicalDescendants().OfType<Button>()
             .Where(b => b.IsEffectivelyVisible)

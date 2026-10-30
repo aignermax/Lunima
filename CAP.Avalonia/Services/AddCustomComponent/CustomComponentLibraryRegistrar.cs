@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,8 +17,8 @@ public static class CustomComponentLibraryRegistrar
         ObservableCollection<ComponentTemplate> allTemplates,
         ObservableCollection<string> categories,
         PdkManagerViewModel pdkManager,
-        UserPreferencesService preferencesService,
-        PdkLoader pdkLoader,
+        IPdkLibraryPreferences preferencesService,
+        IPdkReader pdkLoader,
         List<PdkDraft> loadedPdkDrafts,
         Action reapplyActiveProcess,
         Action filterComponents)
@@ -73,6 +74,7 @@ public static class CustomComponentLibraryRegistrar
             }
         }
 
+        pdkManager.NotifyDefinitionsChanged();
         reapplyActiveProcess();
         filterComponents();
     }

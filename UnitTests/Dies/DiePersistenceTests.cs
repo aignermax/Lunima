@@ -118,9 +118,9 @@ public class DiePersistenceTests
     private static string TempLun() => Path.Combine(Path.GetTempPath(), $"die-test-{Guid.NewGuid():N}.lun");
 
     private static FileOperationsViewModel NewFileOps(DesignCanvasViewModel canvas) =>
-        new(canvas, new CommandManager(), new SimpleNazcaExporter(), new SaxExporter(),
+        new(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),canvas, new CommandManager(), new SimpleNazcaExporter(), new SaxExporter(),
             new ObservableCollection<ComponentTemplate>(DemoTemplates),
-            new GdsExportViewModel(new GdsExportService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(), new PhotonTorchExporter(), canvas),
             null!, errorConsole: new ErrorConsoleService());
 }

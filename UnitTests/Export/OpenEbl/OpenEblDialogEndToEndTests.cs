@@ -1,3 +1,4 @@
+using CAP_Core.Export.OpenEbl;
 using System.Globalization;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
@@ -80,7 +81,7 @@ public class OpenEblDialogEndToEndTests
     public async Task EmptyCanvas_ExportAndCheck_ReportsNothingToExportAndNeverTouchesTheToolchain()
     {
         var preferencesPath = NewTempPreferencesPath();
-        using var provider = ProductionContainerTestHelper.BuildWithTempPreferences(preferencesPath);
+        await using var provider = ProductionContainerTestHelper.BuildWithTempPreferences(preferencesPath);
         try
         {
             var vm = provider.GetRequiredService<OpenEblCheckViewModel>();
@@ -105,7 +106,7 @@ public class OpenEblDialogEndToEndTests
     private static async Task RunDialogJourneyAsync(string exampleFileName)
     {
         var preferencesPath = NewTempPreferencesPath();
-        using var provider = ProductionContainerTestHelper.BuildWithTempPreferences(preferencesPath);
+        await using var provider = ProductionContainerTestHelper.BuildWithTempPreferences(preferencesPath);
         try
         {
             var canvas = provider.GetRequiredService<DesignCanvasViewModel>();
@@ -161,7 +162,7 @@ public class OpenEblDialogEndToEndTests
     /// </summary>
     private static FileOperationsViewModel ComposeFileOperations(
         ServiceProvider provider, DesignCanvasViewModel canvas, LeftPanelViewModel leftPanel) =>
-        new(
+        new(provider.GetRequiredService<CAP.Avalonia.Services.IUrlLauncher>(), provider.GetRequiredService<CAP_DataAccess.Persistence.NativeDesign.INativeDesignFileStore>(),
             canvas,
             provider.GetRequiredService<CommandManager>(),
             provider.GetRequiredService<SimpleNazcaExporter>(),

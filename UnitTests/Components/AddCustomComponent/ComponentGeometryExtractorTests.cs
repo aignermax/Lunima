@@ -30,8 +30,8 @@ public class ComponentGeometryExtractorTests
     [Fact]
     public async Task GdsFactory_reference_renders_via_raw_code_wrapper()
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.Is<string>(s => s.Contains("cspdk.sin300.coupler")), It.IsAny<CancellationToken>()))
            .ReturnsAsync(Ok());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
@@ -48,8 +48,8 @@ public class ComponentGeometryExtractorTests
     [Fact]
     public async Task Nazca_reference_renders_via_module_function()
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         nazca.Setup(n => n.RenderAsync("mymod", "mycell", null, It.IsAny<CancellationToken>()))
              .ReturnsAsync(Ok());
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);
@@ -64,8 +64,8 @@ public class ComponentGeometryExtractorTests
     [Fact]
     public async Task Failed_render_surfaces_error_and_no_pins()
     {
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
            .ReturnsAsync(new NazcaPreviewResult { Success = false, Error = "boom" });
         var extractor = new ComponentGeometryExtractor(nazca.Object, gds.Object);

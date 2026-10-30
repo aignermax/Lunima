@@ -84,7 +84,7 @@
          steps and the example tiles on the right.
          Disabled while the startup project (CLI arg / reopen preference) loads
          so a click can't interleave with the in-flight load. -->
-    <Border x:Name="HomeCard" Classes="overlay" Width="860"
+    <Border x:Name="HomeCard" Classes="overlay" Width="860" BoxShadow="none"
             behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromY="10"
             HorizontalAlignment="Center" VerticalAlignment="Center"
             IsEnabled="{Binding !IsStartupLoadInProgress}"

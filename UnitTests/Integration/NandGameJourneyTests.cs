@@ -256,14 +256,14 @@ public class NandGameJourneyFixture : IAsyncLifetime
     private (FileOperationsViewModel, DesignCanvasViewModel) CreateFileOperations()
     {
         var canvas = new DesignCanvasViewModel();
-        var vm = new FileOperationsViewModel(
+        var vm = new FileOperationsViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new CAP_DataAccess.Persistence.NativeDesign.NativeDesignFileStore(),
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
             new SaxExporter(),
             _library,
-            new GdsExportViewModel(new GdsExportService()),
-            new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas),
+            new GdsExportViewModel(new GdsExportService(), new global::CAP_Core.Export.PythonDiscoveryService()),
+            new PhotonTorchExportViewModel(Moq.Mock.Of<CAP.Avalonia.Services.IUrlLauncher>(),new PhotonTorchExporter(), canvas),
             null!);
         return (vm, canvas);
     }
@@ -285,7 +285,7 @@ public class NandGameJourneyFixture : IAsyncLifetime
     private static async Task<TruthTableViewModel> ExtractViaPanelVm(
         ComponentGroup group, DesignCanvasViewModel canvas)
     {
-        var component = new ComponentViewModel(group);
+        var component = canvas.Components.Single(item => ReferenceEquals(item.Component, group));
         canvas.Selection.SelectSingle(component);
         var vm = new TruthTableViewModel();
         vm.ConfigureForSelection(component, canvas);

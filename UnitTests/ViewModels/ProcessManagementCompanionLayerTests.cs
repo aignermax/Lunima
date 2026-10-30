@@ -105,7 +105,7 @@ public class ProcessManagementCompanionLayerTests : IDisposable
     }
 
     private ProcessManagementViewModel CreateVm() =>
-        new(Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(),
+        new(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory), Mock.Of<IFileDialogService>(), Array.Empty<IProcessImporter>(), new PdkJsonSaver(),
             userPdkStore: new UserPdkStore(Path.Combine(_tempDir, "user-pdks"), new PdkJsonSaver(), new PdkLoader()));
 
     private static ProcessDefinition ProcessWithTrench() => new()

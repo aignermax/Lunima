@@ -1,3 +1,4 @@
+using CAP_Core.Export.Contracts;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.OpenEblCheck;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -85,7 +86,7 @@ internal sealed class TestableOpenEblCheckViewModel : OpenEblCheckViewModel
     public TestableOpenEblCheckViewModel(
         DesignCanvasViewModel canvas,
         GdsExportService gdsExport,
-        OpenEblSubmissionChecker checker)
+        IOpenEblSubmissionChecker checker)
         : base(canvas, new SimpleNazcaExporter(), gdsExport, checker)
     {
     }
@@ -94,7 +95,7 @@ internal sealed class TestableOpenEblCheckViewModel : OpenEblCheckViewModel
 }
 
 /// <summary>Checker fake returning scripted reports; records invocations.</summary>
-internal sealed class FakeOpenEblSubmissionChecker : OpenEblSubmissionChecker
+internal sealed class FakeOpenEblSubmissionChecker : IOpenEblSubmissionChecker
 {
     private readonly Func<CancellationToken, Task<OpenEblCheckReport>> _run;
 
@@ -107,7 +108,7 @@ internal sealed class FakeOpenEblSubmissionChecker : OpenEblSubmissionChecker
 
     public string? LastGdsPath { get; private set; }
 
-    public override Task<OpenEblCheckReport> CheckAsync(
+    public Task<OpenEblCheckReport> CheckAsync(
         string gdsPath, CancellationToken cancellationToken = default)
     {
         CallCount++;
@@ -132,12 +133,17 @@ internal sealed class FakeGdsExportService : GdsExportService
 
     public int CallCount { get; private set; }
 
-    public override Task<ExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
+    public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds, CancellationToken cancellationToken)
+
+    { cancellationToken.ThrowIfCancellationRequested(); return ExportToGdsAsync(scriptPath, generateGds); }
+
+
+    public override Task<GdsExportResult> ExportToGdsAsync(string scriptPath, bool generateGds)
     {
         CallCount++;
         if (!_success)
         {
-            return Task.FromResult(new ExportResult
+            return Task.FromResult(new GdsExportResult
             {
                 ScriptPath = scriptPath,
                 Success = false,
@@ -148,7 +154,7 @@ internal sealed class FakeGdsExportService : GdsExportService
 
         var gdsPath = Path.ChangeExtension(scriptPath, ".gds");
         File.WriteAllText(gdsPath, "fake gds content");
-        return Task.FromResult(new ExportResult
+        return Task.FromResult(new GdsExportResult
         {
             ScriptPath = scriptPath,
             GdsPath = gdsPath,

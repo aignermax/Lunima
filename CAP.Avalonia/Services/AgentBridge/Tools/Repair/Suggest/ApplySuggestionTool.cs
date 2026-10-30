@@ -37,8 +37,14 @@ public sealed class ApplySuggestionTool : IAgentBridgeTool
     };
 
     /// <inheritdoc/>
-    public async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments) => ExecuteCoreAsync(arguments, null);
+
+    /// <inheritdoc/>
+    public Task<AgentToolResult> ExecuteAsync(JsonElement arguments, AgentToolContext context) => ExecuteCoreAsync(arguments, context);
+
+    private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
+        await using var edit = new AgentDocumentOperation(_session.Canvas, context);
         var set = _session.Suggestions;
         if (set == null)
             return AgentToolResult.Error("No suggestions yet. Call suggest_fixes first.");
@@ -46,7 +52,7 @@ public sealed class ApplySuggestionTool : IAgentBridgeTool
         var suggestion = set.Suggestions.FirstOrDefault(s => string.Equals(s.Id, id, StringComparison.OrdinalIgnoreCase));
         if (suggestion == null)
             return AgentToolResult.Error($"No suggestion '{id}'. Available: {string.Join(", ", set.Suggestions.Select(s => s.Id))}.");
-        if (RepairSuggestionSet.ComputeStamp(_session) != set.Stamp)
+        if (!_session.Canvas.Document.IsCurrentRevision(set.Stamp))
             return AgentToolResult.Error("The design changed since suggest_fixes ran; call suggest_fixes again.");
 
         var current = RoutingMetrics.Measure(_session).BlockedCount;
@@ -55,18 +61,18 @@ public sealed class ApplySuggestionTool : IAgentBridgeTool
                 $"Not applied: in its trial {suggestion.Id} ended with {suggestion.Outcome.BlockedAfter} blocked wires " +
                 $"(now {current}). Pass allow_worse=true to apply it anyway, e.g. as a first step of a combination.");
 
-        var (plan, error) = suggestion.Outcome.Candidate.Build();
+        var (plan, error) = suggestion.Outcome.Candidate.Build(_session);
         if (plan == null)
             return AgentToolResult.Error("The suggestion cannot be applied any more: " + error);
 
         var before = RoutingMetrics.Measure(_session);
-        if (!await plan.ExecuteAndRouteAsync(_session))
+        if (!await plan.ExecuteAndRouteAsync(_session, edit))
         {
-            await RepairEdit.UndoAndRouteAsync(_session);
+            await RepairEdit.UndoAndRouteAsync(_session, edit);
             return AgentToolResult.Error("The edit did not take effect; nothing was changed.");
         }
 
-        _session.Suggestions = null;
+        edit.Commit(() => _session.Suggestions = null);
         var after = RoutingMetrics.Measure(_session);
         return AgentToolResult.Json(new
         {

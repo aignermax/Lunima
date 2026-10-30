@@ -5,11 +5,12 @@ namespace CAP.Avalonia.ViewModels.Panels;
 
 public partial class LeftPanelViewModel
 {
+    private readonly IUserPdkLibrary? _userPdkLibrary;
+
     internal Task ReloadUserPdksAtStartupAsync(string? userPdkRootOverride = null)
     {
-        var root = userPdkRootOverride ?? UserPdkStore.DefaultRootDirectory;
-
-        foreach (var path in CollectUserPdkCandidatePaths(root))
+        var managedPaths = _userPdkLibrary?.GetPdkFilePaths(userPdkRootOverride) ?? Array.Empty<string>();
+        foreach (var path in CollectUserPdkCandidatePaths(managedPaths))
         {
             if (PdkManager.IsPdkLoaded(path))
                 continue;
@@ -28,7 +29,7 @@ public partial class LeftPanelViewModel
         return Task.CompletedTask;
     }
 
-    private IReadOnlyList<string> CollectUserPdkCandidatePaths(string root)
+    private IReadOnlyList<string> CollectUserPdkCandidatePaths(IEnumerable<string> managedPaths)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var result = new List<string>();
@@ -57,11 +58,8 @@ public partial class LeftPanelViewModel
                 result.Add(fullPath);
         }
 
-        if (Directory.Exists(root))
-        {
-            foreach (var path in Directory.GetFiles(root, "*.json"))
-                AddCandidate(path);
-        }
+        foreach (var path in managedPaths)
+            AddCandidate(path);
 
         foreach (var path in _preferencesService.GetUserPdkPaths())
             AddCandidate(path);

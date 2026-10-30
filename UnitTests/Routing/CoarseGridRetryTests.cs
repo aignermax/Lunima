@@ -20,6 +20,63 @@ public class CoarseGridRetryTests
 {
     private const double BendRadius = 10.0;
 
+    [Fact]
+    public void RetryStarted_UsesBudgetChangedByCallback()
+    {
+        var (router, start, end) = OpenCoarseScene();
+        int callbacks = 0;
+        router.OnCoarseRetryStarted = () =>
+        {
+            callbacks++;
+            router.CoarseRetryBudgetMultiplier = 0;
+        };
+
+        CoarseRoute(router, start, end).ShouldBeNull();
+        callbacks.ShouldBe(1);
+        router.LastRouteCoarseNodesExpanded.ShouldBe(0);
+
+        router.OnCoarseRetryStarted = null;
+        router.CoarseRetryBudgetMultiplier = 16;
+        CoarseRoute(router, start, end).ShouldNotBeNull(
+            "the same geometry is routable when the callback has not removed its budget");
+        router.LastRouteCoarseNodesExpanded.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void RetryCounter_AccumulatesWithinRoute_AndResetsBeforeNextRouteDiagnostic()
+    {
+        var (router, start, end) = OpenCoarseScene();
+        CoarseRoute(router, start, end).ShouldNotBeNull();
+        long firstAttempt = router.LastRouteCoarseNodesExpanded;
+        firstAttempt.ShouldBeGreaterThan(0);
+        CoarseRoute(router, start, end).ShouldNotBeNull();
+        router.LastRouteCoarseNodesExpanded.ShouldBe(firstAttempt * 2,
+            "retries for the same wire share their expansion counter instead of resetting per attempt");
+
+        var recorded = new List<long>();
+        router.OnRouteCoarseExpansionsRecorded = recorded.Add;
+        router.Route(start, start).ShouldNotBeNull();
+        router.LastRouteCoarseNodesExpanded.ShouldBe(0);
+        recorded.ToArray().ShouldBe(new long[] { 0 }, "a new direct/abutment route reports its own zero expansions");
+    }
+
+    private static (WaveguideRouter Router, PhysicalPin Start, PhysicalPin End) OpenCoarseScene()
+    {
+        var start = Gate(0, 74, (320, 26, 0));
+        var end = Gate(240, 245, (160, 0, 270));
+        var router = new WaveguideRouter { MinBendRadiusMicrometers = BendRadius };
+        router.InitializePathfindingGrid(0, 0, 800, 400, new[] { start, end });
+        return (router, start.PhysicalPins[0], end.PhysicalPins[0]);
+    }
+
+    private static RoutedPath? CoarseRoute(WaveguideRouter router, PhysicalPin start, PhysicalPin end)
+    {
+        var (startX, startY) = start.GetAbsolutePosition();
+        var (endX, endY) = end.GetAbsolutePosition();
+        return router.TryRouteCoarseAStar(BendRadius, startX, startY, start.GetAbsoluteAngle(),
+            endX, endY, AngleUtilities.NormalizeAngle(end.GetAbsoluteAngle() + 180), start, end);
+    }
+
     /// <summary>
     /// A registered sibling wall spans the full grid width between the start pin (y=100)
     /// and the south-facing end pin (y=245). The only opening the coarse A* gets is the

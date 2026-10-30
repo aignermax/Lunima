@@ -41,7 +41,7 @@ public class PdkOffsetEditorRenderErrorVisibilityTests
     {
         var renderer = new Mock<NazcaComponentPreviewService>(
             "py", "nazca.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
-        var vm = new PdkOffsetEditorViewModel(
+        var vm = new PdkOffsetEditorViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
             new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel(), renderer.Object)
         {
             // Synchronous marshaller — no Avalonia dispatcher in unit tests.

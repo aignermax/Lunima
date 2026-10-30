@@ -39,7 +39,7 @@ public class EBeamMziSpectrumToggleTests
         canvas.ConnectionManager.EnableCoherentPropagationPhase.ShouldBeTrue(
             "the EBeam MZI example saves the coherent mode on");
 
-        var vm = new WavelengthSpectrumViewModel { AutoRefreshDelay = TimeSpan.Zero };
+        var vm = new WavelengthSpectrumViewModel(new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrumFileSource()) { AutoRefreshDelay = TimeSpan.Zero };
         vm.Configure(canvas);
         vm.IsCoherentInterference.ShouldBeTrue("Configure syncs the toggle from the loaded design");
         vm.StartNm = 1500;

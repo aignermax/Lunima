@@ -33,7 +33,7 @@ public class UiFlowGateViewTests
         var win = host.Window;
         await OpenHalfAdderInGateView(host);
 
-        var gatesButton = win.FindControl<Button>("GateViewGatesButton").ShouldNotBeNull();
+        var gatesButton = UiInput.Named<Button>(win, "GateViewGatesButton").ShouldNotBeNull();
         gatesButton.IsEffectivelyVisible.ShouldBeTrue("the toggle is on the toolbar in Logic");
         gatesButton.Classes.ShouldContain("active");
 
@@ -101,7 +101,7 @@ public class UiFlowGateViewTests
         UiInput.PressKey(win, Key.V);
         vm.GateView.IsPhysicalShown.ShouldBeTrue();
 
-        UiInput.Click(win, win.FindControl<Button>("GateViewGatesButton").ShouldNotBeNull());
+        UiInput.Click(win, UiInput.Named<Button>(win, "GateViewGatesButton").ShouldNotBeNull());
         vm.GateView.IsShown.ShouldBeTrue();
     }
 

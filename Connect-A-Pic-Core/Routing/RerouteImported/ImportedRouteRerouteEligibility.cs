@@ -16,8 +16,9 @@ public static class ImportedRouteRerouteEligibility
     /// True when <paramref name="connection"/> is a frozen, unedited optical route
     /// that a re-route pass may replace with a fresh A* route: frozen with actual
     /// geometry, Auto style (an explicit style is the user's choice and is frozen
-    /// by design), not electrical (metal traces are out of scope), not locked, and
-    /// without manual bend/segment edits (hand-edited geometry is sacred).
+    /// by design), not electrical (metal traces are out of scope), not locked,
+    /// without manual bend/segment edits (hand-edited geometry is sacred), and without a
+    /// length target (that route is frozen to keep its meander, not because it was imported).
     /// </summary>
     public static bool IsEligible(WaveguideConnection connection) =>
         connection.IsRouteFrozen
@@ -25,6 +26,7 @@ public static class ImportedRouteRerouteEligibility
         && !connection.IsLocked
         && connection.Type == WaveguideType.Auto
         && !connection.HasManualPathEdits
+        && connection.TargetLengthMicrometers == null
         && connection.RoutedPath is { Segments.Count: > 0 };
 
     /// <summary>

@@ -27,6 +27,15 @@ public partial class WaveguideConnectionManager
     /// <summary>Set when a wire was added or removed since the last pass (see <see cref="NoteWireSetChanged"/>).</summary>
     private volatile bool _wireSetChanged;
 
+    internal bool HasPendingWireSetChange => _wireSetChanged;
+
+    /// <summary>Restores pass-start failure knowledge after private graph construction, without inventing an edit.</summary>
+    internal void RestoreFailureState(IEnumerable<UnroutableWireMemory.SnapshotEntry> entries, bool pendingWireSetChange)
+    {
+        UnroutableWires.RestoreState(entries);
+        _wireSetChanged = pendingWireSetChange;
+    }
+
     /// <summary>True during a pass that follows an added or removed wire.</summary>
     private bool _wireSetChangedThisPass;
 
@@ -85,7 +94,7 @@ public partial class WaveguideConnectionManager
     /// settled pieces of routing-placed crossings (they keep their route until it goes stale).
     /// </summary>
     private bool IsKeptOutOfRerouting(WaveguideConnection connection) =>
-        IsKnownUnroutable(connection) || IsSettledPiece(connection);
+        IsKnownUnroutable(connection) || CrossingRoutePolicy.IsSettledPiece(connection);
 
     /// <summary>The wires the ordering cascade re-routes: all but the kept ones.</summary>
     private List<WaveguideConnection> CascadeParticipants()
@@ -111,6 +120,10 @@ public partial class WaveguideConnectionManager
     /// </summary>
     private bool IsKnownUnroutable(WaveguideConnection connection) =>
         IsBlockedAtUnchangedPins(connection) && UnroutableWires.IsRemembered(connection);
+
+    /// <summary>True when the wire's fallback comes from the router's time budget, not from a proven dead end.</summary>
+    private static bool HitRouteTimeBudget(WaveguideConnection connection) =>
+        connection.RoutedPath?.SearchTimedOut == true;
 
     /// <summary>True when the wire is blocked and its placeholder still ends at both pins.</summary>
     private static bool IsBlockedAtUnchangedPins(WaveguideConnection connection)
@@ -150,7 +163,7 @@ public partial class WaveguideConnectionManager
             return;
         foreach (var connection in SnapshotConnections())
         {
-            if (failures.Contains(connection.Id) && IsBlockedAtUnchangedPins(connection))
+            if (failures.Contains(connection.Id) && IsBlockedAtUnchangedPins(connection) && !HitRouteTimeBudget(connection))
                 UnroutableWires.Remember(connection);
         }
     }

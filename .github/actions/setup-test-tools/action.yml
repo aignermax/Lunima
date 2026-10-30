@@ -50,10 +50,38 @@ runs:
         set -euo pipefail
         # The klayout pip wheel ships only the Python module (klayout.db); the
         # foundry-deck DRC tests probe a `klayout` executable ($KLAYOUT or PATH).
-        packages="klayout"
-        if [ "${{ inputs.simulation-tools }}" = "true" ]; then packages="$packages ngspice"; fi
-        sudo apt-get update -qq
-        sudo apt-get install -y -qq $packages > /dev/null
+        packages=(klayout)
+        if [ "${{ inputs.simulation-tools }}" = "true" ]; then packages+=(ngspice); fi
+        # Inactivity timeouts do not bound a mirror that keeps trickling bytes.
+        # Download separately so the wall-clock bound never interrupts dpkg.
+        apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+        download_packages() {
+          sudo timeout --kill-after=15s 120s apt-get "${apt_options[@]}" update &&
+          sudo timeout --kill-after=15s 180s apt-get "${apt_options[@]}" install \
+            --download-only -y --no-install-recommends "${packages[@]}"
+        }
+        if ! download_packages; then
+          echo 'Retrying Ubuntu packages through the canonical archive mirror.'
+          sudo python3 - <<'PY'
+        from pathlib import Path
+        import re
+        # New runner images use mirror+file:/etc/apt/apt-mirrors.txt; rewriting
+        # only sources.list leaves the actual Azure mirror in that file active.
+        sources = [Path('/etc/apt/sources.list'), Path('/etc/apt/apt-mirrors.txt')]
+        sources += list(Path('/etc/apt/sources.list.d').glob('*.list'))
+        sources += list(Path('/etc/apt/sources.list.d').glob('*.sources'))
+        for path in sources:
+            if path.is_file():
+                original = path.read_text()
+                updated = re.sub(r'https?://azure\.archive\.ubuntu\.com/ubuntu(?=/|\s|$)',
+                                 'https://archive.ubuntu.com/ubuntu', original)
+                if updated != original:
+                    path.write_text(updated)
+        PY
+          download_packages
+        fi
+        sudo env DEBIAN_FRONTEND=noninteractive apt-get "${apt_options[@]}" install --no-download \
+          -y --no-install-recommends "${packages[@]}"
         klayout -v
         if command -v ngspice > /dev/null; then ngspice --version | head -1; fi
 

@@ -42,21 +42,27 @@ public static class UiThreadWatchdog
     }
 
     /// <summary>
-    /// Awaits <paramref name="body"/>'s task and reports a stall for the synchronous
-    /// prefix — the stretch from invocation to the first await that yields. A command
-    /// that yields within <see cref="BudgetMs"/> is budget-compliant regardless of how
-    /// long its background remainder takes; the returned value is the full wall-clock
-    /// duration so the caller can still await completion and assert on the outcome.
+    /// Measures the synchronous prefix and dispatcher responsiveness until completion,
+    /// including continuations after an await. Background waiting is not a UI stall.
+    /// Returns full wall-clock duration and preserves the command's exception.
     /// </summary>
     public static async Task<long> MeasureAsync(string commandName, Func<Task> body)
     {
         var start = Stopwatch.GetTimestamp();
-        var task = body();
-        // Everything body() did before returning ran on the caller's thread — that is
-        // the UI-blocking portion. If the task is already complete the entire body was
-        // synchronous and the same measurement covers it.
-        Report(commandName, Stopwatch.GetElapsedTime(start));
-        await task;
+        var heartbeat = DispatcherHeartbeat.StartIfOnUiThread();
+        var prefix = TimeSpan.Zero;
+        try
+        {
+            Task task;
+            try { task = body(); }
+            finally { prefix = Stopwatch.GetElapsedTime(start); }
+            await task;
+        }
+        finally
+        {
+            var maximum = heartbeat == null ? TimeSpan.Zero : await heartbeat.CompleteAsync();
+            Report(commandName, prefix > maximum ? prefix : maximum);
+        }
         return ElapsedMs(start);
     }
 

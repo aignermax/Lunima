@@ -1,3 +1,4 @@
+using CAP_Core.Preferences;
 namespace CAP.Avalonia.Services;
 
 /// <summary>

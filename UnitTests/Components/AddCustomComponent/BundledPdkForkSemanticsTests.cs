@@ -118,15 +118,15 @@ public class BundledPdkForkSemanticsTests : IDisposable
         var libraryManager = new GroupLibraryManager();
         var store = new UserPdkStore(_userPdkRoot, new PdkJsonSaver(), new PdkLoader());
 
-        var nazca = new Mock<IComponentPreviewRenderer>();
-        var gds = new Mock<IComponentPreviewRenderer>();
+        var nazca = new Mock<IPdkGeometryRenderer>();
+        var gds = new Mock<IPdkGeometryRenderer>();
         gds.Setup(g => g.RenderRawCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(PreviewOk());
-        var deps = new AddCustomComponentDependencies(
+        var deps = new AddCustomComponentDependencies(global::UnitTests.Helpers.SParameterImportTestCatalog.Create(),
             new ComponentGeometryExtractor(nazca.Object, gds.Object), Fdtd: null, UserPdkStore: store);
 
-        var leftPanel = new LeftPanelViewModel(
-            canvas, libraryManager, new PdkLoader(), _preferencesService,
+        var leftPanel = new LeftPanelViewModel(new CAP_DataAccess.Components.ComponentDraftMapper.BundledPdkCatalog(AppContext.BaseDirectory),
+            canvas, libraryManager, new PdkLoader(), _preferencesService, _preferencesService,
             new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
             new ComponentLibraryViewModel(libraryManager),
             errorConsole: _errorConsole, addCustomComponentDeps: deps);
@@ -137,7 +137,7 @@ public class BundledPdkForkSemanticsTests : IDisposable
     {
         var bundledPath = WriteBundledPdk();
         var (leftPanel, store) = CreateLeftPanel();
-        leftPanel.LoadBundledPdksFrom(_bundledDir);
+        leftPanel.LoadBundledPdkFiles(Directory.GetFiles(_bundledDir, "*.json"));
         return (leftPanel, store, bundledPath);
     }
 
@@ -265,7 +265,14 @@ public class BundledPdkForkSemanticsTests : IDisposable
         var edited = leftPanel.AllTemplates.Single(t => t.PdkSource == BundledPdkName && t.Name == "Bundled Coupler");
         leftPanel.IsComponentRevertToBundled(edited).ShouldBeTrue(
             "the confirm prompt must announce a restore, not a plain delete");
+        var revisions = 0;
+        leftPanel.PdkManager.DefinitionsChanged += () =>
+        {
+            leftPanel.AllTemplates.Single(t => t.Name == "Bundled Coupler").RawCode.ShouldBe(BundledCouplerCode);
+            revisions++;
+        };
         leftPanel.RemoveCustomComponentCommand.Execute(edited);
+        revisions.ShouldBe(1);
 
         var fork = new PdkLoader().LoadFromFileForEditing(store.ResolveNamedPath(BundledPdkName));
         var reverted = fork.Components.Single(c => c.Name == "Bundled Coupler");
@@ -377,7 +384,7 @@ public class BundledPdkForkSemanticsTests : IDisposable
     {
         WriteBundledPdk();
         var (leftPanel, store) = CreateLeftPanel();
-        leftPanel.LoadBundledPdksFrom(_bundledDir);
+        leftPanel.LoadBundledPdkFiles(Directory.GetFiles(_bundledDir, "*.json"));
         store.SaveToNamedPdk(BundledPdkName, new ProcessDefinition { Name = "Foundry Process" },
             RawCodeComponent("Bundled Coupler", BundledCouplerCode + "\n# forked"), "gdsfactory", null);
 
@@ -416,7 +423,7 @@ public class BundledPdkForkSemanticsTests : IDisposable
 
         WriteBundledPdk(FullProcess("Foundry Process", 1));
         var (leftPanel, store) = CreateLeftPanel();
-        leftPanel.LoadBundledPdksFrom(_bundledDir);
+        leftPanel.LoadBundledPdkFiles(Directory.GetFiles(_bundledDir, "*.json"));
 
         // A layer-renumbered custom PDK that is registered BEFORE the fork shadows the bundled entry.
         var renumberedComponent = RawCodeComponent("Renumbered Straight", BundledCouplerCode);
@@ -453,7 +460,7 @@ public class BundledPdkForkSemanticsTests : IDisposable
         // reload the fork's templates — instead of logging "no loaded bundled PDK".
         WriteBundledPdk();
         var (leftPanel, store) = CreateLeftPanel();
-        leftPanel.LoadBundledPdksFrom(_bundledDir);
+        leftPanel.LoadBundledPdkFiles(Directory.GetFiles(_bundledDir, "*.json"));
         var forkPath = store.SaveToNamedPdk(BundledPdkName, new ProcessDefinition { Name = "Foundry Process" },
             RawCodeComponent("Bundled Coupler", BundledCouplerCode + "\n# forked"), "gdsfactory", null);
         await leftPanel.ReloadUserPdksAtStartupAsync(_userPdkRoot);

@@ -50,7 +50,7 @@ public class MoveRouteRestorationTests
         if (throughBridge)
         {
             var session = new CAP.Avalonia.Services.AgentBridge.Tools.AgentDesignSession(
-                scenario.Canvas, scenario.Commands, () => null, new CAP.Avalonia.Services.ExampleDesignsService());
+                scenario.Canvas, scenario.Commands, () => null, new CAP.Avalonia.Services.ExampleDesignsService(new CAP.Avalonia.Services.FileExampleCatalog()));
             var result = await new CAP.Avalonia.Services.AgentBridge.Tools.Edit.UndoTool(session)
                 .ExecuteAsync(System.Text.Json.JsonDocument.Parse("{}").RootElement);
             result.IsError.ShouldBeFalse();

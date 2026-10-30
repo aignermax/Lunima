@@ -1,5 +1,5 @@
+using CAP_DataAccess.Persistence.NativeDesign;
 using System.Security.Cryptography;
-using System.Text.Json;
 using CAP_DataAccess.Components.AddCustomComponent;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
@@ -27,8 +27,8 @@ public sealed partial class DesignScopedGdsComponentService
     private readonly Action<string, IReadOnlyList<PdkComponentDraft>>? _registerPdk;
     private readonly Action<string>? _removePdk;
     private readonly string _gdsCacheDirectory;
-    private readonly UserPdkStore _userPdkStore;
-    private readonly PdkLoader _pdkLoader;
+    private readonly IUserPdkLibrary? _userPdkStore;
+    private readonly IPdkReader? _pdkLoader;
 
     /// <summary>Hex characters of the content hash used as the cache file stem (collision-safe at this scale).</summary>
     private const int CacheFileHashLength = 16;
@@ -41,20 +41,20 @@ public sealed partial class DesignScopedGdsComponentService
     /// </param>
     /// <param name="removePdk">Removes a design-scoped PDK from the runtime library by name. Null skips removal.</param>
     /// <param name="gdsCacheDirectory">Cache directory for materialized .gds files; defaults to <see cref="DefaultGdsCacheDirectory"/>.</param>
-    /// <param name="userPdkStore">Legacy-migration source store; defaults to the managed user-PDK root.</param>
+    /// <param name="userPdkStore">Legacy-migration source library; omitted for headless scopes without legacy migration.</param>
     /// <param name="pdkLoader">Loader for legacy import-PDK files; defaults to a fresh loader.</param>
     public DesignScopedGdsComponentService(
         Action<string, IReadOnlyList<PdkComponentDraft>>? registerPdk = null,
         Action<string>? removePdk = null,
         string? gdsCacheDirectory = null,
-        UserPdkStore? userPdkStore = null,
-        PdkLoader? pdkLoader = null)
+        IUserPdkLibrary? userPdkStore = null,
+        IPdkReader? pdkLoader = null)
     {
         _registerPdk = registerPdk;
         _removePdk = removePdk;
         _gdsCacheDirectory = gdsCacheDirectory ?? DefaultGdsCacheDirectory;
-        _userPdkStore = userPdkStore ?? UserPdkStore.CreateDefault();
-        _pdkLoader = pdkLoader ?? new PdkLoader();
+        _userPdkStore = userPdkStore;
+        _pdkLoader = pdkLoader;
     }
 
     /// <summary>Per-user cache for materialized .gds copies (content-addressed, safe to delete anytime).</summary>
@@ -129,8 +129,8 @@ public sealed partial class DesignScopedGdsComponentService
             PdkName = s.PdkName,
             GdsFileName = s.GdsFileName,
             GdsBase64 = Convert.ToBase64String(s.GdsBytes),
-            Components = s.Drafts,
-            Interpretation = s.Interpretation,
+            Components = s.Drafts.Select(draft => draft.Copy()).ToList(),
+            Interpretation = s.Interpretation?.Copy(),
         }).ToList();
     }
 
@@ -183,7 +183,7 @@ public sealed partial class DesignScopedGdsComponentService
     }
 
     /// <summary>
-    /// Deep-clones the drafts (JSON round-trip — registration copies must never
+    /// Copies the drafts (registration copies must never
     /// alias the stored token-form drafts) and substitutes the cache path into
     /// their raw code.
     /// </summary>
@@ -193,7 +193,7 @@ public sealed partial class DesignScopedGdsComponentService
         var clones = new List<PdkComponentDraft>(drafts.Count);
         foreach (var draft in drafts)
         {
-            var clone = JsonSerializer.Deserialize<PdkComponentDraft>(JsonSerializer.Serialize(draft))!;
+            var clone = draft.Copy();
             if (clone.RawCode is not null)
                 clone.RawCode = GdsCellDraftMapper.SubstituteGdsFileName(clone.RawCode, gdsCachePath);
             clones.Add(clone);
