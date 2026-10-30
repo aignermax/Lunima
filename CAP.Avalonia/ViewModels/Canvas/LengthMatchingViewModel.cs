@@ -85,6 +85,9 @@ public partial class LengthMatchingViewModel : ObservableObject
     /// </summary>
     public bool HasExactlyOneConnection => TargetConnection() != null;
 
+    /// <summary>"Reset" visibility: the targeted route still carries a length constraint to remove.</summary>
+    public bool HasLengthTarget => TargetConnection()?.Connection.TargetLengthMicrometers != null;
+
     /// <summary>Formatted current length for the read-only row.</summary>
     public string CurrentLengthText => string.Format(CultureInfo.CurrentCulture,
         LocalizationService.Instance.Translate("Routing.LengthMatch.CurrentLengthFormat"),
@@ -121,6 +124,7 @@ public partial class LengthMatchingViewModel : ObservableObject
     private void UpdateFromSelection()
     {
         OnPropertyChanged(nameof(HasExactlyOneConnection));
+        OnPropertyChanged(nameof(HasLengthTarget));
         StatusMessage = "";
         var target = TargetConnection();
         ObserveLength(target);
@@ -155,8 +159,11 @@ public partial class LengthMatchingViewModel : ObservableObject
 
     private void OnObservedConnectionChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (args.PropertyName == nameof(WaveguideConnectionViewModel.PathLength) && _observedConnection != null)
-            CurrentLengthMicrometers = _observedConnection.Connection.PathLengthMicrometers;
+        if (args.PropertyName != nameof(WaveguideConnectionViewModel.PathLength) || _observedConnection == null)
+            return;
+        CurrentLengthMicrometers = _observedConnection.Connection.PathLengthMicrometers;
+        // Apply, Clear, a padlock release and their undo all end in a path change.
+        OnPropertyChanged(nameof(HasLengthTarget));
     }
 
     /// <summary>Stretches the target connection's route to the entered target length.</summary>

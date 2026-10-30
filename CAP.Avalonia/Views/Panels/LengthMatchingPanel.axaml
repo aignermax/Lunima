@@ -63,7 +63,8 @@
             <Button Content="{loc:Localize Routing.LengthMatch.Apply}"
                     Command="{Binding BottomPanel.LengthMatching.ApplyCommand}"/>
             <Button Content="{loc:Localize Routing.LengthMatch.Clear}"
-                    Command="{Binding BottomPanel.LengthMatching.ClearCommand}"/>
+                    Command="{Binding BottomPanel.LengthMatching.ClearCommand}"
+                    IsVisible="{Binding BottomPanel.LengthMatching.HasLengthTarget}"/>
         </StackPanel>
 
         <!-- Error and success are separate blocks: colored without a converter. -->

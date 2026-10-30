@@ -8,7 +8,7 @@ namespace CAP.Avalonia.ViewModels.Canvas;
 /// <summary>
 /// What can be done with a length lock (a recorded length target): find the routes locked to
 /// the same length (the group equalized together), tell whether a route still holds its length,
-/// re-equalize the whole group, or release the lock — as one undoable step.
+/// re-equalize the whole group, or release the lock (removing all its constraints) — as one undoable step.
 /// </summary>
 public sealed class LengthLockActions
 {
@@ -52,6 +52,8 @@ public sealed class LengthLockActions
     /// </summary>
     public async Task ReEqualizeAsync(WaveguideConnectionViewModel connection)
     {
+        if (_equalize.IsBusy)
+            return;
         var group = GroupOf(connection);
         _canvas.Selection.ClearConnectionSelection();
         foreach (var member in group)
@@ -63,14 +65,17 @@ public sealed class LengthLockActions
         await _equalize.EqualizeCommand.ExecuteAsync(null);
     }
 
-    /// <summary>Drops the length lock of each route, keeping its shape; one undo step. Returns how many were released.</summary>
+    /// <summary>
+    /// Removes every length constraint of each route — target, tolerance, frozen meander and its
+    /// bend radius — and lets the router rebuild it; one undo step. Returns how many were released.
+    /// </summary>
     public int Release(IEnumerable<WaveguideConnectionViewModel> connections)
     {
         var steps = connections.Where(c => c.Connection.TargetLengthMicrometers != null).Distinct().Select(c =>
         {
             var before = LengthMatchState.Capture(c.Connection);
-            return (IUndoableCommand)new LengthMatchCommand(c, before,
-                before with { TargetLengthMicrometers = null, ToleranceMicrometers = null }, "Release length lock");
+            return (IUndoableCommand)new LengthMatchCommand(c, before, before.Cleared(), "Release length lock",
+                RerouteWhenCleared);
         }).ToList();
         if (steps.Count == 0)
             return 0;
@@ -80,6 +85,13 @@ public sealed class LengthLockActions
         else
             command.Execute();
         return steps.Count;
+    }
+
+    /// <summary>A cleared route (release or its redo) needs the router; a newer pass supersedes an older one.</summary>
+    private void RerouteWhenCleared(bool routeCleared)
+    {
+        if (routeCleared)
+            _ = _canvas.RecalculateRoutesAsync();
     }
 
     private static double? Key(WaveguideConnectionViewModel connection) =>

@@ -1,5 +1,6 @@
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.Connections;
 using CAP_Core.Routing.MeanderGeneration;
 using Shouldly;
 using UnitTests.Routing.LengthEqualization;
@@ -18,7 +19,7 @@ public class LengthLockActionsTests
     private const double FarMoveMicrometers = 900;
 
     private static async Task<(DesignCanvasViewModel Canvas, List<WaveguideConnectionViewModel> Connections,
-        CommandManager Commands, LengthEqualizationViewModel Panel)> EqualizedFanInAsync(int count)
+        CommandManager Commands, LengthEqualizationViewModel Panel)> EqualizedFanInAsync(int count, string? minRadius = null)
     {
         var (canvas, connections) = await FanInDesign.CreateAsync(count);
         var commands = new CommandManager();
@@ -26,6 +27,9 @@ public class LengthLockActionsTests
         var panel = new LengthEqualizationViewModel(canvas) { MaxRadiusText = "50" };
         foreach (var connection in connections)
             canvas.Selection.SelectedConnections.Add(connection);
+        // After selecting: a selection change refills the radius fields with suggestions.
+        if (minRadius != null)
+            panel.MinRadiusText = minRadius;
         await panel.EqualizeCommand.ExecuteAsync(null);
         panel.HasErrorStatus.ShouldBeFalse(panel.StatusMessage);
         canvas.Selection.ClearConnectionSelection();
@@ -79,5 +83,56 @@ public class LengthLockActionsTests
 
         commands.Undo();
         panel.Locks.GroupOf(connections[1]).Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Release_RemovesEveryConstraint_SoTheRouterRoutesNormallyAgain()
+    {
+        var (canvas, connections, _, panel) = await EqualizedFanInAsync(4, minRadius: "30");
+        connections.ShouldAllBe(c => c.Connection.BendRadiusMicrometers > WaveguideConnection.DefaultBendRadiusMicrometers);
+
+        panel.Locks.Release(connections);
+        await canvas.RecalculateRoutesAsync();
+
+        foreach (var connection in connections.Select(c => c.Connection))
+        {
+            connection.BendRadiusMicrometers.ShouldBe(WaveguideConnection.DefaultBendRadiusMicrometers);
+            connection.IsRouteFrozen.ShouldBeFalse();
+            connection.RoutedPath.ShouldNotBeNull();
+            connection.IsBlockedFallback.ShouldBeFalse();
+        }
+    }
+
+    [Fact]
+    public async Task UndoRelease_RestoresLock_Radius_AndMeander()
+    {
+        var (canvas, connections, commands, panel) = await EqualizedFanInAsync(3, minRadius: "30");
+        var locked = connections.Select(c => LengthMatchState.Capture(c.Connection)).ToList();
+
+        panel.Locks.Release(connections);
+        await canvas.RecalculateRoutesAsync();
+        commands.Undo();
+
+        for (int i = 0; i < connections.Count; i++)
+        {
+            var connection = connections[i].Connection;
+            connection.TargetLengthMicrometers.ShouldBe(locked[i].TargetLengthMicrometers);
+            connection.BendRadiusMicrometers.ShouldBe(locked[i].BendRadiusMicrometers);
+            connection.IsRouteFrozen.ShouldBeTrue();
+            connection.PathLengthMicrometers.ShouldBe(locked[i].Path!.TotalLengthMicrometers, 1e-6);
+        }
+    }
+
+    [Fact]
+    public async Task ReleaseButton_IsShownOnlyWhileASelectedRouteIsLocked()
+    {
+        var (canvas, connections, _, panel) = await EqualizedFanInAsync(3);
+        foreach (var connection in connections)
+            canvas.Selection.SelectedConnections.Add(connection);
+        panel.HasLockedSelection.ShouldBeTrue();
+
+        panel.ReleaseLengthLockCommand.Execute(null);
+
+        panel.HasLockedSelection.ShouldBeFalse();
     }
 }

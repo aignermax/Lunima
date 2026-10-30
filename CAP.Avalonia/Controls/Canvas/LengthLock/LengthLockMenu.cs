@@ -19,11 +19,12 @@ internal static class LengthLockMenu
         var menu = new ContextMenu { Placement = PlacementMode.Pointer };
         menu.Items.Add(new MenuItem { Header = locks.Describe(connection), IsEnabled = false });
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item(Format("Routing.LengthLock.ReEqualize", group.Count), () =>
+        if (group.Count > 1)
         {
-            _ = locks.ReEqualizeAsync(connection);
-            main.StatusText = locks.Describe(connection);
-        }));
+            // Equalizing needs at least two routes; a lone lock can only be released.
+            menu.Items.Add(Item(Format("Routing.LengthLock.ReEqualize", group.Count),
+                () => ReEqualize(main, locks, connection)));
+        }
         menu.Items.Add(Item(LocalizationService.Instance.Translate("Routing.LengthLock.ReleaseOne"),
             () => Released(main, locks.Release(new[] { connection }))));
         if (group.Count > 1)
@@ -32,6 +33,19 @@ internal static class LengthLockMenu
                 () => Released(main, locks.Release(group))));
         }
         menu.Open(anchor);
+    }
+
+    private static async void ReEqualize(MainViewModel main, LengthLockActions locks, WaveguideConnectionViewModel connection)
+    {
+        main.StatusText = locks.Describe(connection);
+        try
+        {
+            await locks.ReEqualizeAsync(connection);
+        }
+        catch (Exception exception)
+        {
+            main.StatusText = exception.Message;
+        }
     }
 
     private static MenuItem Item(string header, Action action)

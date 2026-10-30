@@ -82,7 +82,7 @@ public class BundleAutoRestyleTests
     }
 
     [Fact]
-    public async Task ReleaseLengthLock_KeepsTheRoutes_DropsTheTarget_AndUndoRestoresIt()
+    public async Task ReleaseLengthLock_RemovesTheConstraints_ReroutesNormally_AndUndoRestoresIt()
     {
         var (canvas, connections, commands) = await CreateSelectedFanInAsync(6);
         var equalize = Panel(canvas);
@@ -91,14 +91,16 @@ public class BundleAutoRestyleTests
         double target = connections[0].Connection.TargetLengthMicrometers!.Value;
 
         equalize.ReleaseLengthLockCommand.Execute(null);
+        await canvas.RecalculateRoutesAsync();
 
-        connections.ShouldAllBe(c => c.Connection.TargetLengthMicrometers == null && c.Connection.IsRouteFrozen);
-        for (int i = 0; i < connections.Count; i++)
-            connections[i].Connection.PathLengthMicrometers.ShouldBe(routes[i], 1e-6);
+        connections.ShouldAllBe(c => c.Connection.TargetLengthMicrometers == null && !c.Connection.IsRouteFrozen);
+        connections.ShouldAllBe(c => c.Connection.RoutedPath != null && !c.Connection.IsBlockedFallback);
         equalize.HasSuccessStatus.ShouldBeTrue(equalize.StatusMessage);
 
         commands.Undo().ShouldBeTrue();
-        connections.ShouldAllBe(c => c.Connection.TargetLengthMicrometers == target);
+        connections.ShouldAllBe(c => c.Connection.TargetLengthMicrometers == target && c.Connection.IsRouteFrozen);
+        for (int i = 0; i < connections.Count; i++)
+            connections[i].Connection.PathLengthMicrometers.ShouldBe(routes[i], 1e-6);
     }
 
     [Fact]

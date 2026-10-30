@@ -34,7 +34,8 @@
             <Button Content="{loc:Localize Routing.LengthEqualize.Apply}"
                     Command="{Binding BottomPanel.LengthEqualization.EqualizeCommand}"/>
             <Button Content="{loc:Localize Routing.LengthEqualize.ReleaseLock}"
-                    Command="{Binding BottomPanel.LengthEqualization.ReleaseLengthLockCommand}"/>
+                    Command="{Binding BottomPanel.LengthEqualization.ReleaseLengthLockCommand}"
+                    IsVisible="{Binding BottomPanel.LengthEqualization.HasLockedSelection}"/>
         </StackPanel>
         <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,0"
                      IsVisible="{Binding BottomPanel.LengthEqualization.IsBusy}"/>

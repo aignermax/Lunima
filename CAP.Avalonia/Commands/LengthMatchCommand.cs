@@ -71,10 +71,15 @@ public sealed record LengthMatchState(RoutedPath? Path, bool IsRouteFrozen, doub
         connection.RoutedPath?.DeepCopy(), connection.IsRouteFrozen, connection.TargetLengthMicrometers,
         connection.LengthToleranceMicrometers, connection.BendRadiusMicrometers, connection.WidthMicrometers);
 
-    /// <summary>The state after clearing the target: no route, unfrozen, no target.</summary>
+    /// <summary>
+    /// The state after clearing the target: no route, unfrozen, no target, default bend radius.
+    /// The radius goes back too — a meander's radius (e.g. an equalizer minimum of 250 µm) would
+    /// otherwise make the router fail every later route of the connection.
+    /// </summary>
     public LengthMatchState Cleared() => this with
     {
         Path = null, IsRouteFrozen = false, TargetLengthMicrometers = null, ToleranceMicrometers = null,
+        BendRadiusMicrometers = WaveguideConnection.DefaultBendRadiusMicrometers,
     };
 
     /// <summary>Writes this state onto the connection.</summary>
