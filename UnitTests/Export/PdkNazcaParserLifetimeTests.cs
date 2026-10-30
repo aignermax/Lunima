@@ -12,7 +12,7 @@ public sealed class PdkNazcaParserLifetimeTests
     public async Task RootExitsFirst_RetiresDescendantsBeforeReturningParsedData(bool inheritPipes)
     {
         await using var child = await ControlledSolverProcess.CreateAsync(OwnedToolProcessScenarios.RootExits(inheritPipes));
-        var running = Parser(child).ParseAsync("fixture");
+        var running = Parser(child, TimeSpan.FromSeconds(5)).ParseAsync("fixture");
         try
         {
             var result = await running.WaitAsync(ControlledSolverProcess.GuardTimeout);
