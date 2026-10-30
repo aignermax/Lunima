@@ -148,6 +148,9 @@
         <!-- Waveform plot: power vs time, one series per output pin.
              Plain wheel scrolls the analysis dock; Ctrl(/Cmd)+wheel zooms (#693,
              see ScrollFriendlyPlotController assigned in code-behind). -->
+        <TextBlock Classes="caption" Margin="0,4,0,0" TextWrapping="Wrap"
+                   Text="{Binding BottomPanel.Analysis.Transient.SelectionHint}"
+                   IsVisible="{Binding BottomPanel.Analysis.Transient.HasResult}"/>
         <Border Classes="card fade-in" Classes.shown="{Binding BottomPanel.Analysis.Transient.HasResult}" Padding="0" ClipToBounds="True"
                 Height="200" Margin="0,4,0,0"
                 IsVisible="{Binding BottomPanel.Analysis.Transient.HasResult}"
@@ -155,28 +158,6 @@
             <oxy:PlotView x:Name="WaveformPlot"
                           Model="{Binding BottomPanel.Analysis.Transient.PlotModel}" Background="Transparent"/>
         </Border>
-
-        <!-- Per-pin visibility toggles (legend): flow horizontally, wrap down (responsive). -->
-        <ItemsControl ItemsSource="{Binding BottomPanel.Analysis.Transient.Series}"
-                      Margin="0,2,0,0"
-                      IsVisible="{Binding BottomPanel.Analysis.Transient.HasResult}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal"/>
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="trace:TimeTraceSeriesViewModel">
-                    <CheckBox IsChecked="{Binding IsVisible}" Margin="0,0,10,1">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <Border Width="10" Height="10" CornerRadius="2"
-                                    VerticalAlignment="Center" Background="{Binding ColorHex}"/>
-                            <TextBlock Classes="secondary" Text="{Binding Label}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </CheckBox>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
 
         <!-- Peak-power summary table. -->
         <ScrollViewer MaxHeight="110" Margin="0,2,0,0"

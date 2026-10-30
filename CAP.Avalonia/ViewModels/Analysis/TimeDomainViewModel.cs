@@ -65,6 +65,13 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
     /// </summary>
     public ObservableCollection<TimeTraceSeriesViewModel> Series { get; } = new();
 
+    /// <summary>
+    /// One-line description of which components' curves are plotted, driven by the canvas
+    /// selection (all components when nothing is selected).
+    /// </summary>
+    [ObservableProperty]
+    private string _selectionHint = "";
+
     /// <summary>True once a completed transient result is available to plot/export.</summary>
     public bool HasResult => _lastResult != null;
 
@@ -82,6 +89,7 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
         finally
         {
             DetachSeries();
+            ObserveSelection(null);
             _lastResult = null;
             FileDialogService = null;
             RequestOutputPicker = null;
@@ -89,6 +97,8 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
     }
     private TimeDomainResult? _lastResult;
     private Dictionary<Guid, string> _pinNameMap = new();
+    private Dictionary<Guid, CAP_Core.Components.Core.Component> _pinOwnerMap = new();
+    private CAP.Avalonia.Selection.SelectionManager? _observedSelection;
 
     /// <summary>Initializes a new instance of <see cref="TimeDomainViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
@@ -116,6 +126,7 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
     {
         if (_lifetime.IsStopping) return;
         var version = _lifetime.Configure(canvas);
+        ObserveSelection(canvas);
         _lastResult = null;
         _publication.Publish(() =>
         {
@@ -157,7 +168,7 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
             operation.ThrowIfObsolete();
             if (ReportInvalidDesignation(resolution, operation)) return;
             var output = CapturedAnalysisOutput.Capture(resolution);
-            var names = BuildPinNameMap();
+            var names = BuildPinNameMap(out var owners);
             var (circuit, excitation) = TransientCircuitFactory.Capture(canvas);
             var waveform = new TransientWaveformSettings(Source.SourceType switch
             {
@@ -191,6 +202,7 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
             var (displayed, statusOverride) = ApplyOutputSelection(outcome.Result, output);
             if (displayed == null) { StatusText = statusOverride!; return; }
             _pinNameMap = names;
+            _pinOwnerMap = owners;
             _lastResult = displayed;
             var peaks = TimeTracePeak.Build(displayed);
             ResultText = TimeDomainResultFormatter.FormatResult(displayed, peaks);
@@ -319,9 +331,10 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
     /// plot legend shows readable names instead of Guids. Built on the UI thread from the
     /// current canvas before the simulation runs.
     /// </summary>
-    private Dictionary<Guid, string> BuildPinNameMap()
+    private Dictionary<Guid, string> BuildPinNameMap(out Dictionary<Guid, CAP_Core.Components.Core.Component> owners)
     {
         var map = new Dictionary<Guid, string>();
+        owners = new Dictionary<Guid, CAP_Core.Components.Core.Component>();
         if (_canvas == null) return map;
 
         foreach (var compVm in _canvas.Components)
@@ -336,6 +349,8 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
                 // label resolves regardless of which flow direction the trace carries.
                 map[pin.LogicalPin.IDInFlow] = label;
                 map[pin.LogicalPin.IDOutFlow] = label;
+                owners[pin.LogicalPin.IDInFlow] = component;
+                owners[pin.LogicalPin.IDOutFlow] = component;
             }
         }
         return map;
@@ -353,14 +368,57 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
 
         var items = TimeTracePlotBuilder.BuildSeriesItems(
             result, pinId => _pinNameMap.TryGetValue(pinId, out var name) ? name : null, peaks);
+        var selected = SelectedComponentSet();
         foreach (var item in items)
         {
+            item.IsVisible = IsPinShown(item.PinId, selected);
             item.PropertyChanged += OnSeriesVisibilityChanged;
             Series.Add(item);
             operation.ThrowIfObsolete();
         }
 
         PlotModel = TimeTracePlotBuilder.BuildPlotModel(result, items);
+        UpdateSelectionHint();
+    }
+
+    private void ObserveSelection(DesignCanvasViewModel? canvas)
+    {
+        if (_observedSelection != null)
+            _observedSelection.SelectedComponents.CollectionChanged -= OnCanvasSelectionChanged;
+        _observedSelection = canvas?.Selection;
+        if (_observedSelection != null)
+            _observedSelection.SelectedComponents.CollectionChanged += OnCanvasSelectionChanged;
+    }
+
+    /// <summary>Re-filters the plotted curves to the selection; never re-runs the simulation.</summary>
+    private void OnCanvasSelectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (_lastResult == null || Series.Count == 0) return;
+        var selected = SelectedComponentSet();
+        foreach (var item in Series.ToList())
+            item.IsVisible = IsPinShown(item.PinId, selected);
+        UpdateSelectionHint();
+    }
+
+    private HashSet<CAP_Core.Components.Core.Component> SelectedComponentSet() =>
+        _observedSelection?.SelectedComponents.Select(c => c.Component).ToHashSet() ?? new();
+
+    private bool IsPinShown(Guid pinId, HashSet<CAP_Core.Components.Core.Component> selected) =>
+        selected.Count == 0
+        || (_pinOwnerMap.TryGetValue(pinId, out var owner) && selected.Contains(owner));
+
+    private void UpdateSelectionHint()
+    {
+        var selectedCount = SelectedComponentSet().Count;
+        var shown = Series.Count(s => s.IsVisible);
+        var t = LocalizationService.Instance;
+        SelectionHint = selectedCount == 0
+            ? t.Translate("Analysis.TimeDomain.SelectionAll")
+            : shown == 0
+                ? t.Translate("Analysis.TimeDomain.SelectionNoCurves")
+                : string.Format(t.Translate("Analysis.TimeDomain.SelectionFiltered"), selectedCount);
+        TimeTracePlotBuilder.ApplyLegendPolicy(PlotModel, shown);
+        PlotModel.InvalidatePlot(false);
     }
 
     /// <summary>Resets the plot and legend to the empty state (e.g. on reconfigure or re-run).</summary>
@@ -368,6 +426,7 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
     {
         DetachSeries();
         Series.Clear();
+        SelectionHint = "";
         if (!canContinue()) return;
         PlotModel = TimeTracePlotBuilder.CreateEmptyPlotModel();
         if (canContinue()) OnPropertyChanged(nameof(HasResult));
