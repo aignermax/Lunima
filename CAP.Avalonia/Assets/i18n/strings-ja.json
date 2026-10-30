@@ -2410,6 +2410,7 @@
   "Routing.LengthEqualize.MaxRadius": "ミアンダーの最大半径 (µm):",
   "Routing.LengthEqualize.MinRadius": "最小半径 (µm):",
   "Routing.LengthEqualize.Error.MinRadius": "最小半径は正の数で、最大半径以下にしてください。",
+  "Routing.LengthEqualize.Error.RerouteIncomplete": "以前の長さロックの再配線が完了しませんでした（配線が停止または上書きされました）。ロックを元に戻しました。もう一度揃えてください。",
   "Routing.LengthEqualize.Apply": "長さを揃える",
   "Routing.LengthEqualize.Busy": "{0} 本の接続の長さを揃えています…",
   "Routing.LengthEqualize.Success": "{0} 本の接続を {1:F1} µm に揃えました ({2:F1} 秒)。",

@@ -134,5 +134,10 @@ public class LengthLockActionsTests
         panel.ReleaseLengthLockCommand.Execute(null);
 
         panel.HasLockedSelection.ShouldBeFalse();
+        bool notified = false;
+        panel.PropertyChanged += (_, e) => notified |= e.PropertyName == nameof(panel.HasLockedSelection);
+        canvas.CommandManager!.Undo();
+        notified.ShouldBeTrue("undo brings the locks back, so the button must reappear");
+        panel.HasLockedSelection.ShouldBeTrue();
     }
 }

@@ -395,10 +395,22 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
     {
         if (_lastResult == null || Series.Count == 0) return;
         var selected = SelectedComponentSet();
-        foreach (var item in Series.ToList())
-            item.IsVisible = IsPinShown(item.PinId, selected);
+        // Select-all raises one change per component: redraw the plot once, not once per curve.
+        _batchingVisibility = true;
+        try
+        {
+            foreach (var item in Series.ToList())
+                item.IsVisible = IsPinShown(item.PinId, selected);
+        }
+        finally
+        {
+            _batchingVisibility = false;
+        }
+        PlotModel.InvalidatePlot(false);
         UpdateSelectionHint();
     }
+
+    private bool _batchingVisibility;
 
     private HashSet<CAP_Core.Components.Core.Component> SelectedComponentSet() =>
         _observedSelection?.SelectedComponents.Select(c => c.Component).ToHashSet() ?? new();
@@ -447,6 +459,7 @@ public partial class TimeDomainViewModel : ObservableObject, IAsyncDisposable
         var series = PlotModel.Series.FirstOrDefault(series => Equals(series.Tag, item.PinId));
         if (series == null) return;
         series.IsVisible = item.IsVisible;
-        PlotModel.InvalidatePlot(false);
+        if (!_batchingVisibility)
+            PlotModel.InvalidatePlot(false);
     }
 }

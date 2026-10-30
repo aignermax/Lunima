@@ -29,6 +29,9 @@ internal sealed class LengthLockReplacement
         return replacement;
     }
 
+    /// <summary>True when the router gave every released route a path again.</summary>
+    public bool AllRerouted => _locked.Keys.All(vm => vm.Connection.RoutedPath != null);
+
     /// <summary>The state an undo of the run must restore: the old lock when there was one.</summary>
     public LengthMatchState BeforeOf(WaveguideConnectionViewModel connection) =>
         _locked.TryGetValue(connection, out var locked) ? locked : LengthMatchState.Capture(connection.Connection);
@@ -37,9 +40,10 @@ internal sealed class LengthLockReplacement
     /// Undo steps for released routes the run did not record (failed or skipped), so undo still
     /// brings their old lock back.
     /// </summary>
-    public IEnumerable<IUndoableCommand> UnrecordedSteps(IReadOnlySet<WaveguideConnectionViewModel> recorded) =>
+    public IEnumerable<IUndoableCommand> UnrecordedSteps(IReadOnlySet<WaveguideConnectionViewModel> recorded,
+        Action<bool> afterApply) =>
         _locked.Where(entry => !recorded.Contains(entry.Key)).Select(entry => (IUndoableCommand)new LengthMatchCommand(
-            entry.Key, entry.Value, LengthMatchState.Capture(entry.Key.Connection), "Release length lock"));
+            entry.Key, entry.Value, LengthMatchState.Capture(entry.Key.Connection), "Release length lock", afterApply));
 
     /// <summary>Puts every old lock back unchanged (the run was rejected or failed before applying).</summary>
     public void Restore()

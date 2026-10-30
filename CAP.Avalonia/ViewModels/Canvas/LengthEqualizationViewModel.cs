@@ -110,6 +110,7 @@ public partial class LengthEqualizationViewModel : ObservableObject
 
     private void Refresh()
     {
+        ObserveHistory();
         OnPropertyChanged(nameof(HasSeveralConnections));
         OnPropertyChanged(nameof(SummaryText));
         OnPropertyChanged(nameof(HasLockedSelection));
@@ -127,6 +128,21 @@ public partial class LengthEqualizationViewModel : ObservableObject
     }
 
     private bool CanEqualize() => !IsBusy;
+
+    private CommandManager? _observedHistory;
+
+    /// <summary>Undo and redo can add or remove locks; the release button follows them.</summary>
+    private void ObserveHistory()
+    {
+        if (_canvas.CommandManager is not { } history || ReferenceEquals(history, _observedHistory))
+            return;
+        if (_observedHistory != null)
+            _observedHistory.StateChanged -= OnHistoryChanged;
+        _observedHistory = history;
+        history.StateChanged += OnHistoryChanged;
+    }
+
+    private void OnHistoryChanged(object? sender, EventArgs args) => OnPropertyChanged(nameof(HasLockedSelection));
 
     /// <summary>
     /// Removes the length lock of every selected route that has one — target, meander and bend
@@ -161,7 +177,15 @@ public partial class LengthEqualizationViewModel : ObservableObject
         try
         {
             if (replacement.HasReleased)
+            {
                 await _canvas.RecalculateRoutesAsync();
+                // A superseded, stopped or suspended pass returns without routing the released wires.
+                if (!replacement.AllRerouted)
+                {
+                    SetStatus(true, LocalizationService.Instance.Translate("Routing.LengthEqualize.Error.RerouteIncomplete"));
+                    return;
+                }
+            }
             targets = Targets();
             if (targets.Count < MinimumConnections || !TryReadTarget(targets, out double? targetLength))
                 return;
@@ -178,8 +202,12 @@ public partial class LengthEqualizationViewModel : ObservableObject
         }
         finally
         {
-            if (!applied)
+            if (!applied && replacement.HasReleased)
+            {
                 replacement.Restore();
+                // The old meanders were captured before the wait; a pass re-checks them against the pins now.
+                _ = _canvas.RecalculateRoutesAsync();
+            }
             IsBusy = false;
             OnPropertyChanged(nameof(SummaryText));
             OnPropertyChanged(nameof(HasLockedSelection));
@@ -262,7 +290,7 @@ public partial class LengthEqualizationViewModel : ObservableObject
             steps.Add(new LengthMatchCommand(vm, replacement.BeforeOf(vm), after, "Match route length"));
             recorded.Add(vm);
         }
-        steps.AddRange(replacement.UnrecordedSteps(recorded));
+        steps.AddRange(replacement.UnrecordedSteps(recorded, RerouteWhenCleared));
         if (steps.Count == 0)
             return false;
         var command = new CompositeCommand($"Equalize route lengths ({steps.Count})", steps);
@@ -278,7 +306,15 @@ public partial class LengthEqualizationViewModel : ObservableObject
     /// left out of a bundle is not a lock it should carry.
     /// </summary>
     private static bool MissedForLackOfRoom(LengthEqualizationOutcome outcome) =>
-        !outcome.IsSuccess && !outcome.NotInBundle && outcome.Failure != MeanderFailureReason.TargetShorterThanDirectPath;
+        !outcome.IsSuccess && !outcome.NotInBundle && outcome.Failure is MeanderFailureReason.BoundsTooSmallForMeander
+            or MeanderFailureReason.CollidesWithRoutes or MeanderFailureReason.EndpointsNotRoutableAtMinRadius;
+
+    /// <summary>A redo that clears a route again needs the router, like a release does.</summary>
+    private void RerouteWhenCleared(bool routeCleared)
+    {
+        if (routeCleared)
+            _ = _canvas.RecalculateRoutesAsync();
+    }
 
     private void Report(LengthEqualizationResult result, double? unifiedWidth) =>
         SetStatus(result.FailedCount > 0, LengthEqualizationStatus.Describe(result, unifiedWidth));
