@@ -2,17 +2,22 @@
    1. "Flashlight": a static background layout (waveguide routes from Lunima's own example
       designs, see circuit.json) is faint by default and revealed around the cursor.
    2. One connected photonic circuit at a time grows along the mouse path and fades out.
-   Everything is anchored in page coordinates and scrolls with the content. The canvas is fixed
-   to the viewport; the background is cached once per resize and only composited per frame.
+   Everything is anchored in page coordinates and scrolls with the content. Scrolling must not
+   repaint a viewport-sized canvas (2D canvas is often software-rendered), so the faint layout is
+   a CSS background on #wg-bg that the browser scrolls itself, the torch is a small canvas moved
+   with a transform, and the circuit canvas only clears the area it drew last frame.
    Off for reduced motion and touch-only devices. Needs circuit-parts.js. */
 (function () {
   "use strict";
   var mq = window.matchMedia;
   if (!mq || mq("(prefers-reduced-motion: reduce)").matches || mq("(hover: none)").matches) return;
   var canvas = document.getElementById("wg-fx");
+  var torch = document.getElementById("wg-torch");
+  var bg = document.getElementById("wg-bg");
   var ctx = canvas && canvas.getContext("2d");
+  var tctx = torch && torch.getContext("2d");
   var parts = window.LunimaParts;
-  if (!ctx || !parts) return;
+  if (!ctx || !tctx || !bg || !parts) return;
 
   var MAX_CHAIN_PARTS = 14;       // parts in one growing circuit
   var MAX_POINTS_PER_FRAME = 900; // drawing budget for the live circuit
@@ -28,6 +33,8 @@
   var BG_TILE_GAP = 56;
   var BG_STRIP_MIN_HEIGHT = 900;
   var MAX_DPR = 2;
+  var CIRCUIT_MAX_DPR = 1.5;      // the circuit canvas spans the viewport; keep its backing store small
+  var DIRTY_PAD = 4;
   var IDLE_TIMEOUT_MS = 2500;
   var FALLBACK_DELAY_MS = 1200;
   var GLOW_WIDTH = 4.5, GLOW_ALPHA = 0.12, LINE_WIDTH = 1.3, PEAK_ALPHA = 0.55;
@@ -35,10 +42,9 @@
   var CIRCUIT_URL = "site/circuit.json";
 
   var dpr = 1, width = 0, height = 0, rafId = 0, resizeTimer = 0;
-  var tiles = null, strip = null, stripH = 0;
-  var scratch = document.createElement("canvas");
-  var sctx = scratch.getContext("2d");
-  var mask = null;
+  var tiles = null, strip = null, stripH = 0, bgUrl = null;
+  var mask = null, torchShown = false;
+  var dirty = null;   // screen rect the circuit occupied in the last frame
   var scrollY = window.pageYOffset || 0;
   var mouse = { x: 0, y: 0, active: false, vx: 1, vy: 0 };
   var lastSpawn = null;
@@ -57,17 +63,18 @@
     var d = from.dir, c = COS[d], sn = SIN[d];
     function tx(x, y) { return from.x + c * x - sn * s * y; }
     function ty(x, y) { return from.y + sn * x + c * s * y; }
-    var minY = Infinity, maxY = -Infinity;
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     var lines = part.lines.map(function (l) {
       var o = [];
       for (var i = 0; i < l.length; i += 2) {
-        var y = ty(l[i], l[i + 1]);
+        var x = tx(l[i], l[i + 1]), y = ty(l[i], l[i + 1]);
+        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
         minY = Math.min(minY, y); maxY = Math.max(maxY, y);
-        o.push(tx(l[i], l[i + 1]), y);
+        o.push(x, y);
       }
       return o;
     });
-    chain.push({ lines: lines, minY: minY, maxY: maxY, born: now });
+    chain.push({ lines: lines, minX: minX, maxX: maxX, minY: minY, maxY: maxY, born: now });
     return part.outs.map(function (p) {
       return { x: tx(p.x, p.y), y: ty(p.x, p.y), dir: (d + s * p.a + 4) % 4 };
     });
@@ -159,12 +166,27 @@
       drawTile(g, t, x, y, k, rand() < 0.5);
       x += w + BG_TILE_GAP; rowH = Math.max(rowH, h);
     }
+    publishBackground(strip, width, stripH);
+  }
+
+  /* The faint, always-visible layout: the strip as a repeating CSS background, scrolled by the browser. */
+  function publishBackground(source, w, h) {
+    if (!source.toBlob) return;
+    source.toBlob(function (blob) {
+      if (!blob || source !== strip) return;
+      if (bgUrl) URL.revokeObjectURL(bgUrl);
+      bgUrl = URL.createObjectURL(blob);
+      bg.style.backgroundImage = "url(" + bgUrl + ")";
+      bg.style.backgroundSize = w + "px " + h + "px";
+      bg.style.opacity = String(BG_BASE_ALPHA / BG_LINE_ALPHA);
+    });
   }
 
   function buildMask() {
     var size = Math.round(TORCH_RADIUS * 2 * dpr);
-    scratch.width = size; scratch.height = size;
-    mask = sctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    torch.width = size; torch.height = size;
+    torch.style.width = torch.style.height = TORCH_RADIUS * 2 + "px";
+    mask = tctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
     mask.addColorStop(0, "rgba(0,0,0,1)");
     mask.addColorStop(0.45, "rgba(0,0,0,0.85)");
     mask.addColorStop(1, "rgba(0,0,0,0)");
@@ -176,25 +198,33 @@
     for (var n = Math.max(first, 0); n <= last; n++) draw(n * stripH);
   }
 
-  function drawBase() {
-    ctx.globalAlpha = BG_BASE_ALPHA / BG_LINE_ALPHA;
-    eachStrip(scrollY, height, function (top) { ctx.drawImage(strip, 0, top - scrollY, width, stripH); });
-    ctx.globalAlpha = 1;
+  function drawTorch() {
+    var z = LENS_ZOOM, pageY = mouse.y + scrollY, c = TORCH_RADIUS, size = torch.width;
+    tctx.setTransform(1, 0, 0, 1, 0, 0);
+    tctx.globalCompositeOperation = "source-over";
+    tctx.clearRect(0, 0, size, size);
+    if (strip) {
+      tctx.setTransform(dpr * z, 0, 0, dpr * z, c * dpr, c * dpr);
+      tctx.translate(-mouse.x, -pageY);
+      eachStrip(pageY - c / z, 2 * c / z, function (top) { tctx.drawImage(strip, 0, top, width, stripH); });
+      tctx.setTransform(1, 0, 0, 1, 0, 0);
+      tctx.globalCompositeOperation = "destination-in";
+      tctx.fillStyle = mask;
+      tctx.fillRect(0, 0, size, size);
+      tctx.globalCompositeOperation = "source-over";
+    }
+    var g = tctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    g.addColorStop(0, "rgba(" + COLOR + ", 0.09)");
+    g.addColorStop(1, "rgba(" + COLOR + ", 0)");
+    tctx.fillStyle = g;
+    tctx.fillRect(0, 0, size, size);
+    torch.style.transform = "translate3d(" + (mouse.x - c) + "px," + (mouse.y - c) + "px,0)";
   }
 
-  function drawTorch() {
-    var z = LENS_ZOOM, pageY = mouse.y + scrollY, c = TORCH_RADIUS;
-    sctx.setTransform(1, 0, 0, 1, 0, 0);
-    sctx.globalCompositeOperation = "source-over";
-    sctx.clearRect(0, 0, scratch.width, scratch.height);
-    sctx.setTransform(dpr * z, 0, 0, dpr * z, c * dpr, c * dpr);
-    sctx.translate(-mouse.x, -pageY);
-    eachStrip(pageY - c / z, 2 * c / z, function (top) { sctx.drawImage(strip, 0, top, width, stripH); });
-    sctx.setTransform(1, 0, 0, 1, 0, 0);
-    sctx.globalCompositeOperation = "destination-in";
-    sctx.fillStyle = mask;
-    sctx.fillRect(0, 0, scratch.width, scratch.height);
-    ctx.drawImage(scratch, mouse.x - c, mouse.y - c, c * 2, c * 2);
+  function showTorch(show) {
+    if (show === torchShown) return;
+    torchShown = show;
+    torch.style.visibility = show ? "visible" : "hidden";
   }
 
   /* ---------- render loop ---------- */
@@ -216,7 +246,22 @@
     ctx.stroke();
   }
 
+  function clearDirty() {
+    if (!dirty) return;
+    ctx.clearRect(dirty.x0 - DIRTY_PAD, dirty.y0 - DIRTY_PAD,
+      dirty.x1 - dirty.x0 + 2 * DIRTY_PAD, dirty.y1 - dirty.y0 + 2 * DIRTY_PAD);
+    dirty = null;
+  }
+
+  function markDirty(p) {
+    var y0 = p.minY - scrollY, y1 = p.maxY - scrollY;
+    if (!dirty) { dirty = { x0: p.minX, x1: p.maxX, y0: y0, y1: y1 }; return; }
+    dirty.x0 = Math.min(dirty.x0, p.minX); dirty.x1 = Math.max(dirty.x1, p.maxX);
+    dirty.y0 = Math.min(dirty.y0, y0); dirty.y1 = Math.max(dirty.y1, y1);
+  }
+
   function drawCircuit(now) {
+    clearDirty();
     chain = chain.filter(function (p) { return partAlpha(p, now) > 0; });
     if (!chain.length) { head = null; return; }
     ctx.save();
@@ -230,6 +275,7 @@
       var a = partAlpha(p, now);
       strokePart(p, a * GLOW_ALPHA, GLOW_WIDTH);
       strokePart(p, a * PEAK_ALPHA, LINE_WIDTH);
+      markDirty(p);
       p.lines.forEach(function (l) { budget -= l.length / 2; });
     }
     ctx.restore();
@@ -237,16 +283,8 @@
   }
 
   function render(now) {
-    ctx.clearRect(0, 0, width, height);
-    if (strip) drawBase();
-    if (mouse.active) {
-      if (strip) drawTorch();
-      var g = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, TORCH_RADIUS);
-      g.addColorStop(0, "rgba(" + COLOR + ", 0.09)");
-      g.addColorStop(1, "rgba(" + COLOR + ", 0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(mouse.x - TORCH_RADIUS, mouse.y - TORCH_RADIUS, TORCH_RADIUS * 2, TORCH_RADIUS * 2);
-    }
+    showTorch(mouse.active);
+    if (mouse.active) drawTorch();
     drawCircuit(now);
   }
 
@@ -278,9 +316,11 @@
 
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    var circuitDpr = Math.min(dpr, CIRCUIT_MAX_DPR);
     width = window.innerWidth; height = window.innerHeight;
-    canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.width = Math.round(width * circuitDpr); canvas.height = Math.round(height * circuitDpr);
+    ctx.setTransform(circuitDpr, 0, 0, circuitDpr, 0, 0);
+    dirty = null;
     buildMask();
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () { buildStrip(); render(performance.now()); }, 150);
