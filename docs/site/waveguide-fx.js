@@ -50,8 +50,7 @@
       for (var i = 2; i < p.length; i += 2) g.lineTo(X(p[i]), Y(p[i + 1]));
     });
     tile.parts.forEach(function (q) {
-      var w = 22 * k, h = 11 * k;
-      g.rect(X(q[0]) - w / 2, Y(q[1]) - h / 2, w, h);
+      g.rect(flip ? X(q[0] + q[2]) : X(q[0]), Y(q[1]), q[2] * k, q[3] * k);
     });
     g.stroke();
   }

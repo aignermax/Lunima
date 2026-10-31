@@ -1,8 +1,9 @@
 """Builds docs/site/circuit.json from Lunima's own example designs (examples/*.lun).
 
 Each design becomes a "tile": its waveguide routes (straight + bend segments from the cached
-connection geometry, bends sampled into short polylines) and component anchor points, scaled
-so the longest side is TILE_UNITS. Run from the repository root:
+connection geometry and from the frozen paths inside groups, bends sampled into short
+polylines) and component outlines (top-left corner plus the PDK template size), scaled so the
+longest side is TILE_UNITS. Run from the repository root:
     python3 docs/site/build_circuit.py
 """
 import json
@@ -20,6 +21,10 @@ EXAMPLES = [
     "Logic Gate RAM 2x2.lun",
     "Logic Gate Register 2-bit.lun",
 ]
+PDKS = [
+    os.path.join("CAP-DataAccess", "PDKs", "demo-pdk.json"),
+    os.path.join("CAP-DataAccess", "PDKs", "siepic-ebeam-pdk.json"),
+]
 TILE_UNITS = 1000
 ARC_STEP_DEG = 15
 
@@ -35,12 +40,12 @@ def arc_points(seg):
             for i in range(1, n + 1)]
 
 
-def connection_path(conn):
+def segments_path(segments):
     pts = []
-    for seg in conn.get("CachedSegments") or []:
+    for seg in segments or []:
         if not pts:
             pts.append((seg["StartX"], seg["StartY"]))
-        if seg["Type"] == "Bend" and "CenterX" in seg:
+        if seg["Type"].lower() == "bend" and "CenterX" in seg:
             pts.extend(arc_points(seg))
         else:
             pts.append((seg["EndX"], seg["EndY"]))
@@ -80,11 +85,43 @@ def dedupe(pts):
     return out
 
 
-def build_tile(design):
-    paths = [p for p in map(connection_path, design["Connections"]) if len(p) > 1]
-    anchors = [(c["X"], c["Y"]) for c in design["Components"]]
-    xs = [x for p in paths for x, _ in p] + [x for x, _ in anchors]
-    ys = [y for p in paths for _, y in p] + [y for _, y in anchors]
+def load_template_sizes():
+    sizes = {}
+    for path in PDKS:
+        with open(path, encoding="utf-8") as fh:
+            for comp in json.load(fh)["components"]:
+                sizes[comp["name"]] = (comp["widthMicrometers"], comp["heightMicrometers"])
+    return sizes
+
+
+def all_components(design):
+    comps = list(design["Components"])
+    for group in design.get("Groups") or []:
+        comps.extend(group["ChildComponents"])
+    return comps
+
+
+def all_segment_lists(design):
+    lists = [conn.get("CachedSegments") for conn in design["Connections"]]
+    for group in design.get("Groups") or []:
+        lists.extend(path.get("Segments") for path in group["GroupDto"]["InternalPaths"])
+    return lists
+
+
+def outline(comp, sizes):
+    """Axis-aligned body (x, y, w, h); Rotation counts quarter turns, odd turns swap w and h."""
+    w, h = sizes[comp["TemplateName"]]
+    if comp.get("Rotation", 0) % 2:
+        w, h = h, w
+    return comp["X"], comp["Y"], w, h
+
+
+def build_tile(design, sizes):
+    paths = [p for p in map(segments_path, all_segment_lists(design)) if len(p) > 1]
+    boxes = [outline(c, sizes) for c in all_components(design)]
+    corners = [(x, y) for x, y, _, _ in boxes] + [(x + w, y + h) for x, y, w, h in boxes]
+    xs = [x for p in paths for x, _ in p] + [x for x, _ in corners]
+    ys = [y for p in paths for _, y in p] + [y for _, y in corners]
     x0, y0 = min(xs), min(ys)
     span = max(max(xs) - x0, max(ys) - y0) or 1
     k = TILE_UNITS / span
@@ -101,15 +138,16 @@ def build_tile(design):
     return {
         "w": round((max(xs) - x0) * k), "h": round((max(ys) - y0) * k),
         "paths": flat_paths,
-        "parts": dedupe([[round(v) for v in norm(a)] for a in anchors]),
+        "parts": dedupe([[round(v) for v in norm((x, y)) + [w * k, h * k]] for x, y, w, h in boxes]),
     }
 
 
 def main():
+    sizes = load_template_sizes()
     tiles = []
     for name in EXAMPLES:
         with open(os.path.join("examples", name), encoding="utf-8") as fh:
-            tile = build_tile(json.load(fh))
+            tile = build_tile(json.load(fh), sizes)
         tiles.append(tile)
     out = os.path.join("docs", "site", "circuit.json")
     with open(out, "w", encoding="utf-8") as fh:
