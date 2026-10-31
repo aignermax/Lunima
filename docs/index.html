@@ -333,7 +333,6 @@
   /* ---------- cursor waveguide canvas ---------- */
   body { position: relative; }
   #wg-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; background-repeat: repeat-y; }
-  #wg-fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
   #wg-torch { position: fixed; left: 0; top: 0; z-index: 0; pointer-events: none; will-change: transform; visibility: hidden; }
   header, main, footer, .privacy { position: relative; z-index: 1; }
 </style>
@@ -344,10 +343,8 @@
   Download
 </a>
 <div id="wg-bg" aria-hidden="true"></div>
-<canvas id="wg-fx" aria-hidden="true"></canvas>
 <canvas id="wg-torch" aria-hidden="true"></canvas>
 <script src="site/floating-cta.js" defer></script>
-<script src="site/circuit-parts.js" defer></script>
 <script src="site/waveguide-fx.js" defer></script>
 
 <header>
