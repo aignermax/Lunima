@@ -7,6 +7,35 @@ their reasons, move a component, cut wires with crossings, slide crossings, shif
 segments, re-route, take a screenshot of a region, save — while you watch the canvas. Every
 edit goes through Lunima's undo history, so **Ctrl+Z** reverts whatever the agent did.
 
+## Headless: no window at all
+
+The same tools also run **without the desktop app**. The `CAP.Desktop` binary (`CAP.Desktop.exe`
+on Windows, `Lunima.app/Contents/MacOS/CAP.Desktop` on macOS) starts the production application
+on Avalonia's headless platform when its first argument is `mcp` or `agent`: the real
+view-models, routing, simulation and rendering (screenshots have real pixels), but no window, no
+HTTP socket and no update check.
+
+```bash
+# MCP server over stdin/stdout — Claude Code starts it on demand:
+claude mcp add --scope user lunima-headless -- /path/to/CAP.Desktop mcp
+
+# One-shot CLI: JSON on stdout, diagnostics on stderr
+CAP.Desktop agent tools                                   # every tool + argument schema
+CAP.Desktop agent call get_design_summary --design chip.lun
+CAP.Desktop agent call move_component '{"id":"mmi1","dx":20}' --design chip.lun --save
+CAP.Desktop agent run steps.json --design chip.lun --save out.lun --images shots/
+```
+
+A script for `agent run` is a JSON array of `{"tool": "...", "arguments": {...}}` steps (`-`
+reads it from stdin); it stops at the first failed step unless `--keep-going` is given. Text
+results that hold JSON are printed as JSON; images are written to PNG files and reported by
+path. Exit codes: `0` success, `1` a tool reported an error, `2` malformed command line.
+
+The headless session reads a private *copy* of your preferences (PDK libraries, Python
+interpreter, routing settings), so nothing it does — recent files, reopen-last-project —
+changes the interactive app. Every session starts with an empty design unless `--design` is
+given.
+
 ## Connect Claude Code (one click)
 
 **Settings → Agent bridge (MCP) → Connect Claude Code → Connect.** This turns the bridge on
@@ -173,6 +202,10 @@ Notes:
   `ProcessLaunchFactory`, 30 s timeout per call), `ClaudeCodeConnector` (enable + register) and
   the installer switches `--register-claude-code` / `--unregister-claude-code`.
 - `Hosting/` — `AgentBridgeHost` (start/stop per settings) and the UI dispatcher.
+- `Headless/` — the windowless host: `HeadlessAgentProgram` (headless Avalonia platform +
+  dispatcher loop), `HeadlessAgentSession` (production container over a preferences copy),
+  `AgentCliCommand` / `AgentCliRunner` (CLI verbs) and `AgentScript`. `Transport/McpStdioServer`
+  is the stdio transport over the same `McpJsonRpcDispatcher` the HTTP server uses.
 
 The server is hand-written instead of using ASP.NET Core / Kestrel: the Windows MSI is a
 framework-dependent build that only requires the .NET *Desktop* runtime, so adding the

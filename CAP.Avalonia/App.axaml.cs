@@ -24,6 +24,13 @@ public partial class App : Application
     /// </summary>
     internal static void OverrideServicesForTesting(IServiceProvider services) => Services = services;
 
+    /// <summary>
+    /// Set by the headless agent host before Avalonia setup: that host builds its own container
+    /// (<see cref="Services.AgentBridge.Headless.HeadlessAgentSession"/>), so the framework
+    /// callback must neither build a second one, start the HTTP bridge nor open a window.
+    /// </summary>
+    internal static bool HostsHeadlessAgent { get; set; }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -83,6 +90,12 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        if (HostsHeadlessAgent)
+        {
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
+
         // Issue #697: re-enforce requested dialog sizes after open (Linux/X11 collapse).
         DialogSizeGuard.Initialize();
 

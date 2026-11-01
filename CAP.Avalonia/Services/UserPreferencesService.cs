@@ -42,6 +42,9 @@ public partial class UserPreferencesService : IUpdatePreferences, IRecentProject
         _preferences = LoadPreferences();
     }
 
+    /// <summary>Where the interactive app keeps its preferences file.</summary>
+    internal static string DefaultFilePath => Path.Combine(GetAppDataDirectory(), "user-preferences.json");
+
     /// <summary>
     /// Gets the app data directory for Lunima.
     /// </summary>

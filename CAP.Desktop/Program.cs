@@ -1,6 +1,8 @@
 using System.Globalization;
 using Avalonia;
+using Avalonia.Headless;
 using CAP.Avalonia;
+using CAP.Avalonia.Services.AgentBridge.Headless;
 using CAP.Avalonia.Services.AgentBridge.Registration;
 
 namespace CAP.Desktop;
@@ -22,6 +24,10 @@ class Program
         if (AgentBridgeCommandLine.IsRegistrationCommand(args))
             return AgentBridgeCommandLine.RunAsync(args).GetAwaiter().GetResult();
 
+        // Agent interface without a window: `mcp` (stdio MCP server) and `agent …` (one-shot CLI).
+        if (AgentCliCommand.IsAgentCommand(args))
+            return HeadlessAgentProgram.Run(args, BuildHeadlessAvaloniaApp);
+
         return BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
     }
@@ -29,5 +35,12 @@ class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            .LogToTrace();
+
+    /// <summary>The app on Avalonia's headless platform, with Skia so screenshots have real pixels.</summary>
+    private static AppBuilder BuildHeadlessAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
             .LogToTrace();
 }
