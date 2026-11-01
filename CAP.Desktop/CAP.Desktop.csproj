@@ -93,6 +93,16 @@
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Foundry DRC decks for the agent tool check_foundry_drc: KLayoutDrcRunner.ShippedDecks()
+       looks for `scripts/drc/*.lydrc` beside the binary (all three OSes; the deck's licence
+       README ships with it). -->
+  <ItemGroup>
+    <Content Include="..\scripts\drc\*.lydrc;..\scripts\drc\README.md"
+             Link="scripts\drc\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- openEBL submission-check scripts (issue #1365). OpenEblSubmissionChecker
        resolves `<baseDir>/scripts/openebl/` walking up from AppContext.BaseDirectory,
        so both files must land next to the published binary in that exact layout —

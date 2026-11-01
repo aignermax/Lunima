@@ -106,6 +106,11 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, ExportNetlistTool>();
         services.AddTransient<IAgentBridgeTool, AnalyzeGdsTool>();
         services.AddTransient<IAgentBridgeTool, ImportGdsTool>();
+        services.AddSingleton<CAP_Core.Export.FoundryDrc.IFoundryDrcRunner>(sp =>
+            new CAP_Core.Export.FoundryDrc.KLayoutDrcRunner(sp.GetRequiredService<CAP_Core.Export.ProcessLaunchFactory>()));
+        services.AddTransient<IAgentBridgeTool>(sp => new CheckFoundryDrcTool(
+            sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>,
+            sp.GetRequiredService<CAP_Core.Export.FoundryDrc.IFoundryDrcRunner>()));
         services.AddTransient<IAgentBridgeTool, CreateGroupTool>();
         services.AddTransient<IAgentBridgeTool, UngroupTool>();
         services.AddTransient<IAgentBridgeTool, SavePrefabTool>();

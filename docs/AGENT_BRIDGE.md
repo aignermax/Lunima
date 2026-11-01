@@ -155,6 +155,7 @@ Exchange — GDS, layout scripts and netlists:
 | `export_netlist` | `gdsfactory_yaml` (inline or to `path`), `sax` and `photontorch` Python scripts, or `verilog_a` (modules + top-level netlist + SPICE test bench into a folder). Parametric components export their S-matrix at the current parameter values |
 | `analyze_gds` | Read a GDS without importing: library, top-cell candidates with their sub-cell instances, and the layer census (polygons / paths / texts per layer/datatype) |
 | `import_gds` | Import a cell like the GDS-import dialog: `explode` (sub-cells become components, abutments and drawn routes become connections) or `black_box`; layer roles as `"layer,datatype;..."`; optional `reroute`, `auto_connect`, `group` |
+| `check_foundry_drc` | Sign-off DRC: a foundry KLayout deck (`deck`: a shipped name from `scripts/drc`, e.g. `cornerstone_sin300_drc`, or a `.lydrc` path) on `gds_path` or on the open design (exported first). Every rule with its count, plus markers in the canvas frame with the component they lie on. Needs KLayout (`$KLAYOUT` or on `PATH`) |
 
 Hierarchy and logic — from optical gates to a processor:
 
