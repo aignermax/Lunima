@@ -52,6 +52,7 @@ internal static class RepositoryPresentationNamespaces
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Author", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Dies", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Edit", RepositoryModules.Presentation);
+        yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Exchange", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Inspect", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Repair", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Repair.Cut", RepositoryModules.Presentation);

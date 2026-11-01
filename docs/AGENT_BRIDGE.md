@@ -121,6 +121,15 @@ Analysis — structured results instead of a canvas overlay:
 | `sweep_spectrum` | Wavelength sweep `start_nm`..`end_nm`: per output the transmission (dB) per sample, maximum/minimum with wavelength, extinction ratio and free spectral range |
 | `validate_design` | The Checks tab: DRC-lite per PDK process (width, spacing, bend radius), overlaps, unconnected pins, chip bounds, PDK/process compatibility, chiplet interfaces, die assembly. Each finding with severity (`problem`/`hint`), kind, position and wire; `min_severity=problem` skips hints |
 
+Exchange — GDS, layout scripts and netlists:
+
+| Tool | What it does |
+|---|---|
+| `export_gds` | Write the Nazca script (`path` ending in `.py`) and, unless `generate_gds=false`, run it with the configured Python+Nazca to produce the GDS beside it. Reports skipped blocked routes, unresolved crossings and placeholder geometry |
+| `export_netlist` | `gdsfactory_yaml` (inline or to `path`), `sax` and `photontorch` Python scripts, or `verilog_a` (modules + top-level netlist + SPICE test bench into a folder). Parametric components export their S-matrix at the current parameter values |
+| `analyze_gds` | Read a GDS without importing: library, top-cell candidates with their sub-cell instances, and the layer census (polygons / paths / texts per layer/datatype) |
+| `import_gds` | Import a cell like the GDS-import dialog: `explode` (sub-cells become components, abutments and drawn routes become connections) or `black_box`; layer roles as `"layer,datatype;..."`; optional `reroute`, `auto_connect`, `group` |
+
 All other tools of the in-app **AI assistant** (`get_grid_state`, `run_simulation`, `get_light_values`, `inspect_group`, `copy_component`,
 `create_group`, `ungroup`, `save_as_prefab`, `clear_grid`, `fit_to_view`,
 `get_available_types`) are exposed as well — the tool list is generated from the same

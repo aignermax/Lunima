@@ -10,6 +10,7 @@ using CAP.Avalonia.Services.AgentBridge.Tools.Analysis;
 using CAP.Avalonia.Services.AgentBridge.Tools.Author;
 using CAP.Avalonia.Services.AgentBridge.Tools.Dies;
 using CAP.Avalonia.Services.AgentBridge.Tools.Edit;
+using CAP.Avalonia.Services.AgentBridge.Tools.Exchange;
 using CAP.Avalonia.Services.AgentBridge.Tools.Inspect;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Cut;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Geometry;
@@ -92,6 +93,10 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool>(sp => new SweepSpectrumTool(sp.GetRequiredService<AgentDesignSession>()));
         services.AddTransient<IAgentBridgeTool, SweepParameterTool>();
         services.AddTransient<IAgentBridgeTool, ValidateDesignTool>();
+        services.AddTransient<IAgentBridgeTool, ExportGdsTool>();
+        services.AddTransient<IAgentBridgeTool, ExportNetlistTool>();
+        services.AddTransient<IAgentBridgeTool, AnalyzeGdsTool>();
+        services.AddTransient<IAgentBridgeTool, ImportGdsTool>();
         services.AddSingleton<AgentToolCatalog>();
 
         services.AddSingleton(sp => new McpJsonRpcDispatcher(
