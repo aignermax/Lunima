@@ -24,7 +24,11 @@ public sealed class GetComponentTool : IAgentBridgeTool
     public object InputSchema => new
     {
         type = "object",
-        properties = new { id = new { type = "string", description = "Component id or unique display name." } },
+        properties = new
+        {
+            id = new { type = "string", description = "Component id or unique display name." },
+            pins = new { type = "string", @enum = new[] { "all", "signals", "connected", "free" }, description = "Which pins to list (large cells): default all." },
+        },
         required = new[] { "id" },
     };
 
@@ -35,7 +39,7 @@ public sealed class GetComponentTool : IAgentBridgeTool
         var vm = _session.FindComponent(id);
         return Task.FromResult(vm == null
             ? AgentToolResult.Error($"No top-level component with id '{id}'. Use list_components.")
-            : AgentToolResult.Json(ComponentDescriber.Describe(_session, vm)));
+            : AgentToolResult.Json(ComponentDescriber.Describe(_session, vm, ToolArguments.GetString(arguments, "pins"))));
     }
 }
 

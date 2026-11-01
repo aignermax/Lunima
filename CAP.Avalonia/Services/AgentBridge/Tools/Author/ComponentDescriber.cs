@@ -14,7 +14,10 @@ public static class ComponentDescriber
     private const int CoordinateDecimals = 3;
 
     /// <summary>Describes <paramref name="vm"/> on <paramref name="session"/>'s canvas.</summary>
-    public static object Describe(AgentDesignSession session, ComponentViewModel vm)
+    /// <param name="session">The design session.</param>
+    /// <param name="vm">The component.</param>
+    /// <param name="pinFilter">all (default), signals, connected or free.</param>
+    public static object Describe(AgentDesignSession session, ComponentViewModel vm, string? pinFilter = null)
     {
         var component = vm.Component;
         var group = component as ComponentGroup;
@@ -31,10 +34,28 @@ public static class ComponentDescriber
             RotationDeg = component.RotationDegrees,
             Locked = component.IsLocked,
             ChildCount = group?.ChildComponents.Count,
-            Pins = DescribePins(session.Canvas, component),
+            PinCount = ComponentPins.Of(component).Count,
+            Pins = Filter(DescribePins(session.Canvas, component), pinFilter),
             Parameters = DescribeParameters(component),
             LightSource = DescribeLightSource(vm),
         };
+    }
+
+    private static IReadOnlyList<object> Filter(IReadOnlyList<object> pins, string? filter)
+    {
+        if (filter is null or "all") return pins;
+        return pins.Where(p =>
+        {
+            var json = System.Text.Json.JsonSerializer.SerializeToElement(p);
+            var connected = json.GetProperty("ConnectedTo").ValueKind != System.Text.Json.JsonValueKind.Null;
+            return filter switch
+            {
+                "signals" => json.GetProperty("Signal").ValueKind != System.Text.Json.JsonValueKind.Null,
+                "connected" => connected,
+                "free" => !connected,
+                _ => true,
+            };
+        }).ToList();
     }
 
     /// <summary>Every connectable pin with position, facing, domain and its wire (null when free).</summary>

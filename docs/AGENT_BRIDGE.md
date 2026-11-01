@@ -125,7 +125,7 @@ Authoring — build a design from nothing (all undoable):
 | `list_component_types` | The loaded PDK libraries: type name, PDK, category, footprint, pins (local offset from the top-left corner, facing angle, domain), tunable parameters, and whether the active process allows it. Filters: `filter`, `pdk`, `category` |
 | `place_component` | Place a type with its top-left corner exactly at `x`,`y`, rotated `rotation_deg` counter-clockwise; refuses an occupied spot unless `nudge=true`; optional display `name` (usable as id). Returns the component with absolute pin positions. Supersedes the assistant's centred variant |
 | `create_connection` | Wire `from_component`[`.from_pin`] to `to_component`[`.to_pin`]; without pin names the closest free facing pair is used. Waits for routing; returns length, loss, blocked + reason. Supersedes the assistant's variant |
-| `get_component` | One component: type, PDK, pose, every pin's absolute position / facing / wired-to pin, parameters, light-source settings |
+| `get_component` | One component: type, PDK, pose, every pin's absolute position / facing / wired-to pin, parameters, light-source settings. For a cell, each pin also names the inner gate pin and the logic `signal` it carries; `pins=signals|connected|free` filters large cells |
 | `rotate_component` | Rotate by 90/180/270° counter-clockwise; refused when locked or the rotated footprint collides |
 | `set_parameter` | Set a tunable parameter by name (e.g. `splitting_ratio`) or slider number, clamped to its range |
 | `set_light_source` | Laser on (input) / off (output), `wavelength_nm`, `power`; `mark_as_source` turns any optical part into a source |
@@ -167,6 +167,7 @@ Hierarchy and logic — from optical gates to a processor:
 |---|---|
 | `create_group` / `ungroup` | Group components into a cell (internal wires move inside; open pins and leaving wires become external pins), or dissolve one level. Undoable |
 | `make_gate` | Make a group a logic gate: name external pins as `inputs` (≤ 4), `outputs`, `bias`; the optical truth table is simulated and returned with output powers. Without `threshold` it is put into the widest gap between the output powers (reported with its noise margin). `register=true` for clocked registers. Undoable |
+| `rename_signals` | Rename logic signals inside one placed cell (recursively), e.g. `{"S": "S1", "A": "A1"}` — so several instances of one library cell form one network (output names must be unique; same-named inputs merge). Undoable |
 | `save_as_prefab` / `delete_prefab` | Store a group or gate in the user's component library (refuses an existing name unless `replace=true`), or remove it. `list_component_types` lists library groups under `groups`; `place_component` places them by name |
 | `logic_build` | Build the logic network from the gates and the wires between them (Logic panel → Build): network inputs/outputs, gates, registers, critical-path delay, fan-out warnings |
 | `logic_evaluate` / `logic_truth_table` | One input combination, or all 2ⁿ (n ≤ 12 free inputs) as compact bit strings — by default over the named primary outputs; `fixed` holds inputs constant (e.g. `{"Cin": 0}`) |

@@ -121,6 +121,7 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, SavePrefabTool>();
         services.AddTransient<IAgentBridgeTool, DeletePrefabTool>();
         services.AddTransient<IAgentBridgeTool, MakeGateTool>();
+        services.AddTransient<IAgentBridgeTool, RenameSignalsTool>();
         services.AddTransient<IAgentBridgeTool, LogicBuildTool>();
         services.AddTransient<IAgentBridgeTool, LogicEvaluateTool>();
         services.AddTransient<IAgentBridgeTool, LogicTruthTableTool>();
