@@ -14,22 +14,35 @@ public static class LogicDescriber
             Powers = table.OutputPinNames.ToDictionary(o => o, o => Math.Round(row.Outputs[o].Power, 4)),
         }).ToList();
 
+    /// <summary>Lists longer than this are only counted unless the caller asks for details.</summary>
+    private const int ListLimit = 50;
+
     /// <summary>The structure of a built network: signals, gates, registers and timing.</summary>
-    public static object Network(LogicNetworkEvaluator network) => new
+    public static object Network(LogicNetworkEvaluator network, bool detailed = false) => new
     {
         Inputs = network.InputPinNames,
-        Outputs = network.OutputPinNames,
-        Gates = network.Gates.Select(g => new
-        {
-            Id = g.Key,
-            Inputs = g.Value.InputPinNames,
-            Outputs = g.Value.OutputPinNames,
-        }).ToList(),
+        PrimaryOutputs = PrimaryOutputs(network),
+        OutputCount = network.OutputPinNames.Count,
+        Outputs = detailed || network.OutputPinNames.Count <= ListLimit ? network.OutputPinNames : null,
+        GateCount = network.Gates.Count,
+        Gates = detailed || network.Gates.Count <= ListLimit
+            ? network.Gates.Select(g => new { Id = g.Key, Inputs = g.Value.InputPinNames, Outputs = g.Value.OutputPinNames }).ToList()
+            : null,
         Registers = Registers(network),
         CriticalPathPs = Math.Round(network.CriticalPathDelayPicoseconds, 2),
         CriticalPath = network.CriticalPathGateIds,
         FanOutWarnings = network.FanOutWarnings.Select(w => w.ToString()).ToList(),
     };
+
+    /// <summary>
+    /// The outputs named as signals (e.g. <c>S0</c>, <c>Cout</c>); unwired gate pins appear as
+    /// <c>gate.pin</c> and are internal nodes. All outputs when none is named.
+    /// </summary>
+    public static IReadOnlyList<string> PrimaryOutputs(LogicNetworkEvaluator network)
+    {
+        var named = network.OutputPinNames.Where(n => !n.Contains('.')).ToList();
+        return named.Count > 0 ? named : network.OutputPinNames;
+    }
 
     /// <summary>Committed register outputs as <c>gate.pin</c> → bit.</summary>
     public static IReadOnlyDictionary<string, int> Registers(LogicNetworkEvaluator network) =>

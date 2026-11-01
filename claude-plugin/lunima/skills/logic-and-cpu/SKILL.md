@@ -20,6 +20,11 @@ The shipped examples already contain working gates. Load one with `load_example`
 
 ## 2. Compose
 
+To reuse a whole circuit (for example a full adder made of many gates):
+1. Group all its top-level parts into one cell with `create_group`, then `save_as_prefab`.
+2. Run `get_component` on the cell. Every cell pin reports `inner`, the gate pin it exposes, and `signal`, the logic signal it carries (A, B, Cin, S, Cout, …).
+3. Wire cells pin by pin with the help of `signal`. One logic signal often feeds several gate pins. Each of those pins needs its own wire, so a single output driving them needs a splitter or copy cell.
+
 - **Place gates:** `list_component_types {filter}` lists library gates under `groups`. Place them with `place_component {type: "<gate>", x, y, name}`.
 - **Wire them:** use `create_connection` with pin names, gate output → gate input.
 - **Grow the hierarchy:** group a finished cell and save it as a prefab too, then compose cells into units.
@@ -29,6 +34,8 @@ The shipped examples already contain working gates. Load one with `load_example`
 
 - `logic_build` builds the network. It reports the network inputs/outputs (named after the unwired gate pins or signal names), the gates, registers and the critical-path delay in ps.
 - `logic_truth_table` enumerates every input combination. Compare each row with the intended function; for an adder, compute every sum.
+  - By default it reports the named `primary_outputs` (for example S0..S3, Cout).
+  - Hold inputs constant with `fixed: {"Cin": 0}` to keep the table small.
 - `logic_evaluate {inputs}` tests single cases.
 - `logic_step {inputs, reset}` is one clock edge. Check that registers load when enabled and hold otherwise.
 

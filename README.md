@@ -51,6 +51,17 @@ Lunima speaks MCP: an agent such as Claude can inspect and edit the open design 
 
 ![Claude repairs the design through Lunima's MCP agent bridge: list_connections finds the blocked metal trace, suggest_fixes tries nudges in a sandbox, move_component moves the probe pad clear and all 12 connections route](docs/media/v0.17/agent-bridge.gif)
 
+**Headless, for agents.** The same engine also runs without a window, as an MCP server (`CAP.Desktop mcp`) or as a JSON command line (`CAP.Desktop agent …`). It has about 70 tools, which an agent can use to:
+- build a circuit from nothing, or apply a whole design from JSON or gdsfactory YAML
+- route bundles, match lengths and add fibre arrays
+- simulate, sweep and optimise
+- run DRC-lite or a foundry KLayout deck, and compare against a reference netlist (LVS)
+- import, analyse and export GDS and netlists
+- design chiplets
+- turn optics into logic gates and run programs on the photonic 4-bit CPU
+
+The repository is also a Claude Code plugin marketplace with workflow skills (`/plugin marketplace add aignermax/Lunima`). See [docs/AGENT_BRIDGE.md](docs/AGENT_BRIDGE.md).
+
 ---
 
 ## More of what's inside

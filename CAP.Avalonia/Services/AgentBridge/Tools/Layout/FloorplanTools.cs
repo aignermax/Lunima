@@ -206,8 +206,8 @@ public sealed class SetChipSizeTool : IAgentBridgeTool
             return Task.FromResult(AgentToolResult.Error("The main window is not ready yet."));
         if (!chip.CanEditRootChipSize)
             return Task.FromResult(AgentToolResult.Error("The canvas is a multi-die assembly; size the dies instead."));
-        var width = ToolArguments.GetDouble(arguments, "width_um");
-        var height = ToolArguments.GetDouble(arguments, "height_um");
+        var width = ToolArguments.GetDouble(arguments, "width_um") ?? ToolArguments.GetDouble(arguments, "width");
+        var height = ToolArguments.GetDouble(arguments, "height_um") ?? ToolArguments.GetDouble(arguments, "height");
         if (width is not > 0 || height is not > 0)
             return Task.FromResult(AgentToolResult.Error("Pass positive width_um and height_um."));
 

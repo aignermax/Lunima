@@ -721,7 +721,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             else
             {
                 // Clone regular component
-                clonedChild = CloneComponent(child);
+                clonedChild = GroupCopySupport.CloneComponent(child);
             }
 
             // Add the direct child to the map
@@ -731,7 +731,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             // This is needed because InternalPaths may reference pins from nested group children
             if (child is ComponentGroup childGroupForMap && clonedChild is ComponentGroup clonedChildGroup)
             {
-                AddDescendantsToMap(childGroupForMap, clonedChildGroup, componentMap);
+                GroupCopySupport.AddDescendantsToMap(childGroupForMap, clonedChildGroup, componentMap);
             }
 
             newGroup.AddChild(clonedChild);
@@ -747,7 +747,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
                 clonedPath = new FrozenWaveguidePath
                 {
                     PathId = Guid.NewGuid(),
-                    Path = CloneRoutedPath(frozenPath.Path),
+                    Path = GroupCopySupport.CloneRoutedPath(frozenPath.Path),
                 };
             }
             else
@@ -761,7 +761,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
                 clonedPath = new FrozenWaveguidePath
                 {
                     PathId = Guid.NewGuid(),
-                    Path = CloneRoutedPath(frozenPath.Path),
+                    Path = GroupCopySupport.CloneRoutedPath(frozenPath.Path),
                     StartPin = newStartPin,
                     EndPin = newEndPin
                 };
@@ -792,87 +792,12 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             newGroup.AddExternalPin(clonedPin);
         }
 
+        // A group's pins are materialised from its external pins (normally by ComputeSMatrix).
+        // An enclosing group's copy resolves its own exposed pins into this copy by name, so
+        // the copy must carry them now — otherwise a cell exposing a nested gate's pin
+        // cannot be copied or instantiated from the library.
+        newGroup.SyncPhysicalPinsFromExternalPins();
         return newGroup;
-    }
-
-    /// <summary>
-    /// Recursively adds all descendants of a group to the component map.
-    /// This is needed because InternalPaths may reference pins from nested group children.
-    /// </summary>
-    /// <param name="originalGroup">The original group whose descendants to map.</param>
-    /// <param name="clonedGroup">The cloned group whose descendants to add to the map.</param>
-    /// <param name="componentMap">The map to populate with original ID -> cloned component.</param>
-    private void AddDescendantsToMap(ComponentGroup originalGroup, ComponentGroup clonedGroup, Dictionary<Guid, Component> componentMap)
-    {
-        // Map each child component by pairing original and cloned children by index
-        for (int i = 0; i < originalGroup.ChildComponents.Count; i++)
-        {
-            var originalChild = originalGroup.ChildComponents[i];
-            var clonedChild = clonedGroup.ChildComponents[i];
-
-            // Add this descendant to the map
-            componentMap[originalChild.Id] = clonedChild;
-
-            // If the child is a group, recursively add its descendants
-            if (originalChild is ComponentGroup originalChildGroup && clonedChild is ComponentGroup clonedChildGroup)
-            {
-                AddDescendantsToMap(originalChildGroup, clonedChildGroup, componentMap);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Creates a deep clone of a Component with a new unique identifier.
-    /// Delegates to <see cref="Component.Clone"/> so every clone gets its own logical-pin
-    /// flow IDs and its own S-matrices — sharing them (as a shallow copy would) makes
-    /// copies of one group share simulation state instead of behaving as independent
-    /// instances.
-    /// </summary>
-    private Component CloneComponent(Component source)
-    {
-        var cloned = (Component)source.Clone();
-        cloned.Identifier = $"{source.Identifier}_{Guid.NewGuid():N}";
-        return cloned;
-    }
-
-    /// <summary>
-    /// Creates a deep clone of a RoutedPath.
-    /// </summary>
-    private RoutedPath CloneRoutedPath(RoutedPath source)
-    {
-        var cloned = new RoutedPath
-        {
-            IsBlockedFallback = source.IsBlockedFallback,
-            IsInvalidGeometry = source.IsInvalidGeometry,
-            IsPlaceholderGeometry = source.IsPlaceholderGeometry,
-            FailureReason = source.FailureReason
-        };
-
-        foreach (var segment in source.Segments)
-        {
-            if (segment is BendSegment bend)
-            {
-                cloned.Segments.Add(new BendSegment(
-                    bend.Center.X,
-                    bend.Center.Y,
-                    bend.RadiusMicrometers,
-                    bend.StartAngleDegrees,
-                    bend.SweepAngleDegrees
-                ));
-            }
-            else if (segment is StraightSegment straight)
-            {
-                cloned.Segments.Add(new StraightSegment(
-                    straight.StartPoint.X,
-                    straight.StartPoint.Y,
-                    straight.EndPoint.X,
-                    straight.EndPoint.Y,
-                    straight.StartAngleDegrees
-                ));
-            }
-        }
-
-        return cloned;
     }
 
     /// <summary>
@@ -955,23 +880,25 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// </summary>
     public void SyncPhysicalPinsFromExternalPins()
     {
+        // Reuse the existing pin objects by name: frozen internal paths and wires of an
+        // enclosing group hold references to them, and a recomputed S-matrix must not orphan those.
+        var existing = PhysicalPins.GroupBy(p => p.Name).ToDictionary(g => g.Key, g => new Queue<PhysicalPin>(g));
         PhysicalPins.Clear();
 
         foreach (var externalPin in ExternalPins)
         {
-            var physicalPin = new PhysicalPin
-            {
-                Name = externalPin.Name,
-                ParentComponent = this,
-                OffsetXMicrometers = externalPin.RelativeX,
-                OffsetYMicrometers = externalPin.RelativeY,
-                AngleDegrees = externalPin.AngleDegrees,
-                LogicalPin = externalPin.InternalPin.LogicalPin,
-                WaveguideWidthMicrometers = externalPin.InternalPin.WaveguideWidthMicrometers,
-                PortType = externalPin.InternalPin.PortType,
-                Layer = externalPin.InternalPin.Layer
-            };
-
+            var physicalPin = existing.TryGetValue(externalPin.Name, out var reusable) && reusable.Count > 0
+                ? reusable.Dequeue()
+                : new PhysicalPin();
+            physicalPin.Name = externalPin.Name;
+            physicalPin.ParentComponent = this;
+            physicalPin.OffsetXMicrometers = externalPin.RelativeX;
+            physicalPin.OffsetYMicrometers = externalPin.RelativeY;
+            physicalPin.AngleDegrees = externalPin.AngleDegrees;
+            physicalPin.LogicalPin = externalPin.InternalPin.LogicalPin;
+            physicalPin.WaveguideWidthMicrometers = externalPin.InternalPin.WaveguideWidthMicrometers;
+            physicalPin.PortType = externalPin.InternalPin.PortType;
+            physicalPin.Layer = externalPin.InternalPin.Layer;
             PhysicalPins.Add(physicalPin);
         }
     }

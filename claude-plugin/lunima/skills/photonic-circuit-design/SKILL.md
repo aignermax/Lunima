@@ -31,6 +31,22 @@ are degrees counter-clockwise, powers are linear relative to a unit laser (dB = 
 9. **Look**: `screenshot` (whole design or a µm region) shows the routed layout with the power overlay.
 10. **Save**: `save_design {path}`. Export with `export_gds` (Nazca script plus GDS) and `export_netlist` (gdsfactory YAML, SAX, Verilog-A).
 
+## Faster: whole designs and port-relative placement
+
+- **Whole circuit in one call:** `apply_design {design: {instances, connections}, clear: true}`.
+  - Each instance has a pose (`x`, `y`, `rotation_deg`) or is placed against an earlier part (`attach_to: "split.out1"`, `pin: "in"`, `gap_um`).
+  - Instances also take `parameters` and a `light_source`.
+  - The call is atomic: if one part fails, nothing changes.
+  - A gdsfactory netlist YAML (`text` or `path`) is accepted too.
+- **No coordinate maths:** `place_component {type, attach_to: "<part>.<pin>", pin: "<own pin>", gap_um}` turns the part to face the pin and wires it.
+- **Many wires at once:** `connect_bundle {connections: [{from, to}]}` routes them together and reports the skew.
+  - `match_lengths {connection_ids: ["a.out1", "a.out2"]}` adds meanders until the lengths are equal. Use it for MZI arms and phased arrays.
+- **Understand a part:** `describe_component_type {type}` shows where its light goes. A 3 dB coupler, for example, gives −3 dB to both outputs with a 90° phase offset.
+- **Tune:** `optimize {parameters: [{id, parameter}], objective: {maximize_ratio: ["bar", "cross"]}}` searches the parameters and applies the best values.
+- **Chip I/O:** `add_fiber_array {ports: ["dev.in1", "dev.in2"], coupler: "Grating Coupler", side: "west"}` places a 127 µm-pitch row of couplers and wires it.
+- **Try something risky:** wrap the steps in `batch {steps, atomic: true}`. It is undone on failure.
+- **Connections across sessions:** address a connection by an endpoint such as `"a.out1"`. GUIDs change when a design is reopened.
+
 ## Fixing problems
 
 - **Blocked wire** (`blocked: true`, `failure_reason`): move a part with `move_component {id, dx, dy}`, or call `suggest_fixes {connection_id}` and then `apply_suggestion {id: "s1"}`. Crossing wires can be cut with `list_cut_candidates` and `insert_crossing`.

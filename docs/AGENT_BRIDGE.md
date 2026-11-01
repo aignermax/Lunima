@@ -125,10 +125,20 @@ Authoring — build a design from nothing (all undoable):
 | `list_component_types` | The loaded PDK libraries: type name, PDK, category, footprint, pins (local offset from the top-left corner, facing angle, domain), tunable parameters, and whether the active process allows it. Filters: `filter`, `pdk`, `category` |
 | `place_component` | Place a type with its top-left corner exactly at `x`,`y`, rotated `rotation_deg` counter-clockwise; refuses an occupied spot unless `nudge=true`; optional display `name` (usable as id). Returns the component with absolute pin positions. Supersedes the assistant's centred variant |
 | `create_connection` | Wire `from_component`[`.from_pin`] to `to_component`[`.to_pin`]; without pin names the closest free facing pair is used. Waits for routing; returns length, loss, blocked + reason. Supersedes the assistant's variant |
-| `get_component` | One component: type, PDK, pose, every pin's absolute position / facing / wired-to pin, parameters, light-source settings |
+| `get_component` | One component: type, PDK, pose, every pin's absolute position / facing / wired-to pin, parameters, light-source settings. For a cell, each pin also names the inner gate pin and the logic `signal` it carries; `pins=signals|connected|free` filters large cells |
 | `rotate_component` | Rotate by 90/180/270° counter-clockwise; refused when locked or the rotated footprint collides |
 | `set_parameter` | Set a tunable parameter by name (e.g. `splitting_ratio`) or slider number, clamped to its range |
 | `set_light_source` | Laser on (input) / off (output), `wavelength_nm`, `power`; `mark_as_source` turns any optical part into a source |
+| `place_component` + `attach_to` | Port-relative placement: `attach_to="<component>.<pin>"`, `pin=<own pin>`, `gap_um` — rotation and position are solved so the pins face each other, and the wire is created (`connect=false` to skip) |
+| `connect_bundle` | Many wires (`[{from, to}]`) as one undo step, routed in one joint pass; reports each wire plus min/max length and skew |
+| `match_lengths` | Equalise the lengths of two or more wires with meanders (the Length Equalisation panel); `target_length_um`, meander radius limits |
+| `apply_design` | Build a whole circuit declaratively — Lunima JSON (instances with pose or `attach_to`, parameters, light sources; connections) or a gdsfactory netlist YAML (`instances`/`placements`/`connections`/`routes`; types matched by Lunima name, Nazca or gdsfactory function). Atomic; `clear=true` starts empty. Round-trips `export_netlist format=gdsfactory_yaml` |
+| `batch` | Several tool calls in one request; `atomic` (default) undoes the batch's edits when a step fails |
+| `describe_component_type` | What a part does, from its own model: transmission (dB, phase) from every input to every output at a wavelength, modelled wavelengths, pins, parameters, Nazca/gdsfactory cell |
+| `add_fiber_array` | Bring ports out to a row of couplers at `pitch_um` (default 127) on a side of the device, turned to face it, ordered so wires do not cross, wired as one bundle. Atomic |
+
+Connections can be addressed by GUID or by an endpoint `component.pin` — GUIDs are regenerated
+when a design is loaded, endpoints stay stable across sessions.
 
 Analysis — structured results instead of a canvas overlay:
 
@@ -138,6 +148,7 @@ Analysis — structured results instead of a canvas overlay:
 | `sweep_parameter` | Step one parameter (`id`, `parameter` or `slider`, `from`, `to`, `steps`), simulate each value and return every output's power curve with the values of maximum and minimum power. The parameter is restored afterwards |
 | `sweep_spectrum` | Wavelength sweep `start_nm`..`end_nm`: per output the transmission (dB) per sample, maximum/minimum with wavelength, extinction ratio and free spectral range |
 | `validate_design` | The Checks tab: DRC-lite per PDK process (width, spacing, bend radius), overlaps, unconnected pins, chip bounds, PDK/process compatibility, chiplet interfaces, die assembly. Each finding with severity (`problem`/`hint`), kind, position and wire; `min_severity=problem` skips hints |
+| `optimize` | Tune parameters (`[{id, parameter, min, max}]`) server-side for `{maximize: out}`, `{minimize: out}` or `{maximize_ratio: [a, b]}` — coarse scan plus golden-section per parameter, repeated `rounds` times; the best values are applied as one undo step |
 
 Exchange — GDS, layout scripts and netlists:
 
@@ -147,6 +158,8 @@ Exchange — GDS, layout scripts and netlists:
 | `export_netlist` | `gdsfactory_yaml` (inline or to `path`), `sax` and `photontorch` Python scripts, or `verilog_a` (modules + top-level netlist + SPICE test bench into a folder). Parametric components export their S-matrix at the current parameter values |
 | `analyze_gds` | Read a GDS without importing: library, top-cell candidates with their sub-cell instances, and the layer census (polygons / paths / texts per layer/datatype) |
 | `import_gds` | Import a cell like the GDS-import dialog: `explode` (sub-cells become components, abutments and drawn routes become connections) or `black_box`; layer roles as `"layer,datatype;..."`; optional `reroute`, `auto_connect`, `group` |
+| `check_foundry_drc` | Sign-off DRC: a foundry KLayout deck (`deck`: a shipped name from `scripts/drc`, e.g. `cornerstone_sin300_drc`, or a `.lydrc` path) on `gds_path` or on the open design (exported first). Every rule with its count, plus markers in the canvas frame with the component they lie on. Needs KLayout (`$KLAYOUT` or on `PATH`) |
+| `compare_netlist` | LVS-style: the open design (e.g. after `import_gds`) against a reference netlist (gdsfactory YAML or Lunima design JSON) — component counts per type, wires missing or extra as `Type.pin — Type.pin`, and per-instance wire differences when names match |
 
 Hierarchy and logic — from optical gates to a processor:
 
@@ -154,9 +167,10 @@ Hierarchy and logic — from optical gates to a processor:
 |---|---|
 | `create_group` / `ungroup` | Group components into a cell (internal wires move inside; open pins and leaving wires become external pins), or dissolve one level. Undoable |
 | `make_gate` | Make a group a logic gate: name external pins as `inputs` (≤ 4), `outputs`, `bias`; the optical truth table is simulated and returned with output powers. Without `threshold` it is put into the widest gap between the output powers (reported with its noise margin). `register=true` for clocked registers. Undoable |
+| `rename_signals` | Rename logic signals inside one placed cell (recursively), e.g. `{"S": "S1", "A": "A1"}` — so several instances of one library cell form one network (output names must be unique; same-named inputs merge). Undoable |
 | `save_as_prefab` / `delete_prefab` | Store a group or gate in the user's component library (refuses an existing name unless `replace=true`), or remove it. `list_component_types` lists library groups under `groups`; `place_component` places them by name |
 | `logic_build` | Build the logic network from the gates and the wires between them (Logic panel → Build): network inputs/outputs, gates, registers, critical-path delay, fan-out warnings |
-| `logic_evaluate` / `logic_truth_table` | One input combination, or all 2ⁿ (n ≤ 12) as compact bit strings |
+| `logic_evaluate` / `logic_truth_table` | One input combination, or all 2ⁿ (n ≤ 12 free inputs) as compact bit strings — by default over the named primary outputs; `fixed` holds inputs constant (e.g. `{"Cin": 0}`) |
 | `logic_step` | One clock cycle: settle, commit every register, settle again; `reset=true` clears the registers first |
 | `isa_run` | Assemble and run a program for the 4-bit learning ISA (docs/ISA.md) in the ISA playground: final ACC/PC/RAM, halt state and a step trace. `photonic=true` executes the operations the built network implements (e.g. ADD on the 4-bit adder chip), with the light's propagation time |
 

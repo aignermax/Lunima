@@ -25,6 +25,7 @@ public class CreateGroupCommand : IUndoableCommand
     private readonly List<WaveguideConnection> _externalConnections = new();
     private readonly List<WaveguideConnectionViewModel> _internalConnectionViewModels = new();
     private readonly Dictionary<Component, (double x, double y)> _originalPositions = new();
+    private readonly List<CAP_Core.Routing.CrossingInsertion.CrossingRecord> _releasedCrossings = new();
 
     public CreateGroupCommand(
         DesignCanvasViewModel canvas,
@@ -100,6 +101,7 @@ public class CreateGroupCommand : IUndoableCommand
             try
             {
                 _canvas.BeginCommandExecution();
+                ReleaseCrossingRecords();
 
                 // Remove child components from canvas
                 // IMPORTANT: Find ViewModels by Core Component reference, not by stored ViewModel reference
@@ -163,8 +165,10 @@ public class CreateGroupCommand : IUndoableCommand
 
         foreach (var conn in _canvas.ConnectionManager.Connections)
         {
-            bool startInGroup = componentSet.Contains(conn.StartPin.ParentComponent);
-            bool endInGroup = componentSet.Contains(conn.EndPin.ParentComponent);
+            // A wire to a gate group attaches to a pin inside it, so membership is decided
+            // by the pin's whole ancestry, not only its direct owner.
+            bool startInGroup = IsWithin(conn.StartPin.ParentComponent, componentSet);
+            bool endInGroup = IsWithin(conn.EndPin.ParentComponent, componentSet);
 
             if (startInGroup && endInGroup)
             {
@@ -222,11 +226,12 @@ public class CreateGroupCommand : IUndoableCommand
         // 6. Create GroupPins for ALL unoccupied pins
         var occupiedPins = new HashSet<PhysicalPin>();
 
-        // Mark pins that are occupied by internal connections
+        // Mark pins that are occupied by internal connections — as the leaf pin a wire
+        // really ends at, because a child group offers its own copy of that pin.
         foreach (var conn in _internalConnections)
         {
-            occupiedPins.Add(conn.StartPin);
-            occupiedPins.Add(conn.EndPin);
+            occupiedPins.Add(LeafPin(conn.StartPin));
+            occupiedPins.Add(LeafPin(conn.EndPin));
         }
 
         // A child group offers its boundary pins as its own pins only once they are
@@ -240,7 +245,7 @@ public class CreateGroupCommand : IUndoableCommand
         // like one. Only new groups get these names; saved files keep theirs.
         var exposedPins = _components
             .SelectMany(comp => comp.PhysicalPins)
-            .Where(pin => !occupiedPins.Contains(pin))
+            .Where(pin => !occupiedPins.Contains(LeafPin(pin)))
             .Select(pin => CreateExternalPin(pin, _createdGroup))
             .ToList();
         var pinNames = new GroupPinNamer().AssignNames(exposedPins
@@ -257,6 +262,7 @@ public class CreateGroupCommand : IUndoableCommand
         try
         {
             _canvas.BeginCommandExecution();
+            ReleaseCrossingRecords();
 
             // 7. Store and remove individual components from canvas.
             // Set/dictionary lookups keep this O(N + P + C): the previous
@@ -328,6 +334,7 @@ public class CreateGroupCommand : IUndoableCommand
 
             // Remove the group
             _canvas.RemoveComponent(_groupViewModel);
+            RestoreCrossingRecords();
 
             // Restore individual components at their original positions
             // CRITICAL: Re-add the SAME ComponentViewModels we removed!
@@ -373,6 +380,46 @@ public class CreateGroupCommand : IUndoableCommand
     }
 
     /// <summary>Creates the (still unnamed) external group pin exposing <paramref name="pin"/>.</summary>
+    /// <summary>
+    /// A recorded crossing that moves into the group no longer splits live wires — its pieces
+    /// became frozen paths. Its record would make the next routing pass "restore" the original
+    /// net on the canvas, so the record is handed back to the crossing service only on undo.
+    /// </summary>
+    private void ReleaseCrossingRecords()
+    {
+        _releasedCrossings.Clear();
+        if (_canvas.ConnectionManager.CrossingService is not { } crossings) return;
+        foreach (var component in _components)
+            if (crossings.ReleaseRecord(component) is { } record)
+                _releasedCrossings.Add(record);
+    }
+
+    private void RestoreCrossingRecords()
+    {
+        if (_canvas.ConnectionManager.CrossingService is not { } crossings) return;
+        foreach (var record in _releasedCrossings)
+            crossings.RestoreRecord(record);
+    }
+
+    private static bool IsWithin(Component component, HashSet<Component> members)
+    {
+        for (Component? current = component; current != null; current = current.ParentGroup as Component)
+            if (members.Contains(current))
+                return true;
+        return false;
+    }
+
+    /// <summary>The pin a group pin finally stands for, following nested groups' external pins down to a part.</summary>
+    private static PhysicalPin LeafPin(PhysicalPin pin)
+    {
+        var current = pin;
+        while (current.ParentComponent is ComponentGroup group
+            && group.ExternalPins.FirstOrDefault(e => e.Name == current.Name)?.InternalPin is { } inner
+            && !ReferenceEquals(inner, current))
+            current = inner;
+        return current;
+    }
+
     private static GroupPin CreateExternalPin(PhysicalPin pin, ComponentGroup group)
     {
         var (pinX, pinY) = pin.GetAbsolutePosition();

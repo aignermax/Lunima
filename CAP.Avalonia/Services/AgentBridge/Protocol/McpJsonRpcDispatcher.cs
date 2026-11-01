@@ -28,20 +28,26 @@ public sealed class McpJsonRpcDispatcher
     /// <summary>Server name reported in <c>initialize</c>.</summary>
     public const string ServerName = "lunima";
 
+    private const string ToolOverview =
+        "Units: µm, degrees counter-clockwise, positions are a component's top-left corner, powers linear (1 = unit laser). " +
+        "Build: new_design/open_design, list_component_types + describe_component_type, then apply_design (whole circuit " +
+        "as JSON or gdsfactory YAML) or place_component (x/y, or attach_to another part's pin) and create_connection / " +
+        "connect_bundle. Light: set_light_source (laser on = input, off = output). Verify: simulate, sweep_parameter, " +
+        "sweep_spectrum, optimize, validate_design, check_foundry_drc, compare_netlist, screenshot. Repair: " +
+        "list_connections blocked_only=true, suggest_fixes, apply_suggestion. Exchange: export_gds, export_netlist, " +
+        "analyze_gds, import_gds. Logic/CPU: create_group, make_gate, save_as_prefab, logic_build, logic_truth_table, " +
+        "logic_step, isa_run. Every edit is undoable (undo/redo); batch runs steps atomically. Connections can be named " +
+        "by an endpoint 'component.pin'.";
+
     /// <summary>Server instructions when the bridge runs inside the interactive desktop app.</summary>
     public const string DesktopInstructions =
-        "Lunima agent bridge: inspect and minimally edit the photonic design open in the running " +
-        "Lunima app. Start with get_design_summary and list_connections (blocked_only=true) to find " +
-        "failed (red) routes; use list_components for ids and positions. Edits (move_component, " +
-        "delete_component, delete_connection) are undoable by the user with Ctrl+Z or via the undo tool. " +
-        "Coordinates are micrometres (µm).";
+        "Lunima agent bridge: inspect and edit the photonic design open in the running Lunima app while the user " +
+        "watches; the user can undo any edit with Ctrl+Z. Start with get_design_summary. " + ToolOverview;
 
     /// <summary>Server instructions when Lunima runs headless (stdio MCP server or CLI).</summary>
     public const string HeadlessInstructions =
-        "Lunima headless engine: the full photonic design application without a window. The session " +
-        "holds one design; open or create it, then inspect, edit, route, simulate, validate and save it " +
-        "with the tools. Start with get_design_summary. Coordinates are micrometres (µm); positions are " +
-        "a component's top-left corner. Every edit is undoable with the undo tool.";
+        "Lunima headless engine: the full photonic chip design application without a window; one design per session. " +
+        ToolOverview;
 
     private static readonly JsonElement EmptyArguments = JsonDocument.Parse("{}").RootElement.Clone();
 

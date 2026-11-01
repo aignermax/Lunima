@@ -169,6 +169,9 @@ public class AgentLogicToolsTests
         var run = await Ok(session, "isa_run", """{"program":"LOAD 6\nSTORE 0\nLOAD 7\nADD 0\nHALT","photonic":true}""");
 
         run.GetProperty("accumulator").GetInt32().ShouldBe(13);
+        var table = await Ok(session, "logic_truth_table", """{"fixed":{"Cin":0,"A2":0,"A3":0,"B2":0,"B3":0}}""");
+        table.GetProperty("output_order").EnumerateArray().Select(o => o.GetString()).ShouldBe(new[] { "S0", "S1", "S2", "S3", "Cout" });
+        table.GetProperty("rows").EnumerateArray().Select(r => r.GetString()).ShouldContain("1100 -> 01000", "1 + 1 = 2");
         run.GetProperty("photonic_units").GetProperty("add").GetBoolean().ShouldBeTrue();
         run.GetProperty("photonic_status").GetString().ShouldContain("Photonic ADD");
     }
