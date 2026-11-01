@@ -134,6 +134,8 @@ Authoring — build a design from nothing (all undoable):
 | `match_lengths` | Equalise the lengths of two or more wires with meanders (the Length Equalisation panel); `target_length_um`, meander radius limits |
 | `apply_design` | Build a whole circuit declaratively — Lunima JSON (instances with pose or `attach_to`, parameters, light sources; connections) or a gdsfactory netlist YAML (`instances`/`placements`/`connections`/`routes`; types matched by Lunima name, Nazca or gdsfactory function). Atomic; `clear=true` starts empty. Round-trips `export_netlist format=gdsfactory_yaml` |
 | `batch` | Several tool calls in one request; `atomic` (default) undoes the batch's edits when a step fails |
+| `describe_component_type` | What a part does, from its own model: transmission (dB, phase) from every input to every output at a wavelength, modelled wavelengths, pins, parameters, Nazca/gdsfactory cell |
+| `add_fiber_array` | Bring ports out to a row of couplers at `pitch_um` (default 127) on a side of the device, turned to face it, ordered so wires do not cross, wired as one bundle. Atomic |
 
 Connections can be addressed by GUID or by an endpoint `component.pin` — GUIDs are regenerated
 when a design is loaded, endpoints stay stable across sessions.
@@ -146,6 +148,7 @@ Analysis — structured results instead of a canvas overlay:
 | `sweep_parameter` | Step one parameter (`id`, `parameter` or `slider`, `from`, `to`, `steps`), simulate each value and return every output's power curve with the values of maximum and minimum power. The parameter is restored afterwards |
 | `sweep_spectrum` | Wavelength sweep `start_nm`..`end_nm`: per output the transmission (dB) per sample, maximum/minimum with wavelength, extinction ratio and free spectral range |
 | `validate_design` | The Checks tab: DRC-lite per PDK process (width, spacing, bend radius), overlaps, unconnected pins, chip bounds, PDK/process compatibility, chiplet interfaces, die assembly. Each finding with severity (`problem`/`hint`), kind, position and wire; `min_severity=problem` skips hints |
+| `optimize` | Tune parameters (`[{id, parameter, min, max}]`) server-side for `{maximize: out}`, `{minimize: out}` or `{maximize_ratio: [a, b]}` — coarse scan plus golden-section per parameter, repeated `rounds` times; the best values are applied as one undo step |
 
 Exchange — GDS, layout scripts and netlists:
 

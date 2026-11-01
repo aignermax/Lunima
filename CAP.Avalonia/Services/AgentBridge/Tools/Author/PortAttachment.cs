@@ -51,6 +51,25 @@ public static class PortAttachment
         return null;
     }
 
+    /// <summary>
+    /// The quarter turns that make <paramref name="pinName"/> of <paramref name="template"/> point along
+    /// <paramref name="angle"/>, and that pin's offset from the top-left corner after turning; null when none does.
+    /// </summary>
+    public static (int QuarterTurns, double PinX, double PinY)? Facing(
+        DesignCanvasViewModel canvas, ComponentTemplate template, string pinName, double angle)
+    {
+        for (var turns = 0; turns < 4; turns++)
+        {
+            var probe = PlaceComponentCommand.CreateExact(canvas, template, 0, 0, turns).PlacedComponent!;
+            var pin = probe.PhysicalPins.FirstOrDefault(p => string.Equals(p.Name, pinName, StringComparison.OrdinalIgnoreCase));
+            if (pin == null)
+                return null;
+            if (AngleDistance(pin.GetAbsoluteAngle(), angle) <= AngleTolerance)
+                return (turns, pin.GetAbsolutePosition().x, pin.GetAbsolutePosition().y);
+        }
+        return null;
+    }
+
     /// <summary>The rotation in degrees for <paramref name="quarterTurns"/>.</summary>
     public static int Degrees(int quarterTurns) => quarterTurns * QuarterTurn;
 

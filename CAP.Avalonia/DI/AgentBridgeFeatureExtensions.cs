@@ -72,6 +72,8 @@ internal static class AgentBridgeFeatureExtensions
             sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>));
         services.AddTransient<IAgentBridgeTool, ConnectBundleTool>();
         services.AddTransient<IAgentBridgeTool, MatchLengthsTool>();
+        services.AddTransient<IAgentBridgeTool>(sp => new AddFiberArrayTool(
+            sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>));
         services.AddTransient<IAgentBridgeTool>(sp => new ApplyDesignTool(
             sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>));
         services.AddTransient<IAgentBridgeTool, LoadExampleTool>();
@@ -92,6 +94,7 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, NewDesignTool>();
         services.AddTransient<IAgentBridgeTool, OpenDesignTool>();
         services.AddTransient<IAgentBridgeTool, ListComponentTypesTool>();
+        services.AddTransient<IAgentBridgeTool, DescribeComponentTypeTool>();
         services.AddTransient<IAgentBridgeTool, GetComponentTool>();
         services.AddTransient<IAgentBridgeTool, PlaceComponentTool>();
         services.AddTransient<IAgentBridgeTool, RotateComponentTool>();
@@ -101,6 +104,7 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, SimulateTool>();
         services.AddTransient<IAgentBridgeTool>(sp => new SweepSpectrumTool(sp.GetRequiredService<AgentDesignSession>()));
         services.AddTransient<IAgentBridgeTool, SweepParameterTool>();
+        services.AddTransient<IAgentBridgeTool, OptimizeTool>();
         services.AddTransient<IAgentBridgeTool, ValidateDesignTool>();
         services.AddTransient<IAgentBridgeTool, ExportGdsTool>();
         services.AddTransient<IAgentBridgeTool, ExportNetlistTool>();

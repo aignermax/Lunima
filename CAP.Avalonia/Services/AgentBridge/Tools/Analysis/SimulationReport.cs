@@ -47,7 +47,7 @@ public static class SimulationReport
         canvas.Components
             .Where(c => c.IsLaserOff)
             .Select(c => new OutputPower(c.Component.Identifier, LightPins(c.Component)
-                .Sum(p => Power(fields, p.LogicalPin.IDInFlow))))
+                .Sum(p => Power(fields, p.LogicalPin.IDInFlow)), c.Name))
             .ToList();
 
     private static IReadOnlyList<object> DescribeOutputs(
@@ -117,7 +117,8 @@ public static class SimulationReport
 /// <summary>Received power of one output coupler.</summary>
 /// <param name="Component">Output component id.</param>
 /// <param name="Power">Linear received power.</param>
-public sealed record OutputPower(string Component, double Power);
+/// <param name="Name">Display name of the output component.</param>
+public sealed record OutputPower(string Component, double Power, string? Name = null);
 
 /// <summary>Power entering and leaving one wire, and its level relative to the brightest wire.</summary>
 public sealed record ConnectionPowerFlowInfo(double PowerIn, double PowerOut, double RelativeDb);

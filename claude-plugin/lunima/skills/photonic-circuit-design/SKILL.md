@@ -41,6 +41,9 @@ are degrees counter-clockwise, powers are linear relative to a unit laser (dB = 
 - **No coordinate maths:** `place_component {type, attach_to: "<part>.<pin>", pin: "<own pin>", gap_um}` turns the part to face the pin and wires it.
 - **Many wires at once:** `connect_bundle {connections: [{from, to}]}` routes them together and reports the skew.
   - `match_lengths {connection_ids: ["a.out1", "a.out2"]}` adds meanders until the lengths are equal. Use it for MZI arms and phased arrays.
+- **Understand a part:** `describe_component_type {type}` shows where its light goes. A 3 dB coupler, for example, gives −3 dB to both outputs with a 90° phase offset.
+- **Tune:** `optimize {parameters: [{id, parameter}], objective: {maximize_ratio: ["bar", "cross"]}}` searches the parameters and applies the best values.
+- **Chip I/O:** `add_fiber_array {ports: ["dev.in1", "dev.in2"], coupler: "Grating Coupler", side: "west"}` places a 127 µm-pitch row of couplers and wires it.
 - **Try something risky:** wrap the steps in `batch {steps, atomic: true}`. It is undone on failure.
 - **Connections across sessions:** address a connection by an endpoint such as `"a.out1"`. GUIDs change when a design is reopened.
 
