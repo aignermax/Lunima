@@ -42,6 +42,8 @@ internal static class RepositoryPresentationNamespaces
         yield return new("CAP.Avalonia.Selection", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AddCustomComponent", RepositoryModules.Presentation);
+        // The windowless agent host builds the production container and drives it: a composition root.
+        yield return new("CAP.Avalonia.Services.AgentBridge.Headless", RepositoryModules.Composition);
         yield return new("CAP.Avalonia.Services.AgentBridge.Hosting", RepositoryModules.Infrastructure);
         yield return new("CAP.Avalonia.Services.AgentBridge.Protocol", RepositoryModules.Contracts);
         yield return new("CAP.Avalonia.Services.AgentBridge.Registration", RepositoryModules.Infrastructure);

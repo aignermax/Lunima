@@ -28,23 +28,33 @@ public sealed class McpJsonRpcDispatcher
     /// <summary>Server name reported in <c>initialize</c>.</summary>
     public const string ServerName = "lunima";
 
-    private const string Instructions =
+    /// <summary>Server instructions when the bridge runs inside the interactive desktop app.</summary>
+    public const string DesktopInstructions =
         "Lunima agent bridge: inspect and minimally edit the photonic design open in the running " +
         "Lunima app. Start with get_design_summary and list_connections (blocked_only=true) to find " +
         "failed (red) routes; use list_components for ids and positions. Edits (move_component, " +
         "delete_component, delete_connection) are undoable by the user with Ctrl+Z or via the undo tool. " +
         "Coordinates are micrometres (µm).";
 
+    /// <summary>Server instructions when Lunima runs headless (stdio MCP server or CLI).</summary>
+    public const string HeadlessInstructions =
+        "Lunima headless engine: the full photonic design application without a window. The session " +
+        "holds one design; open or create it, then inspect, edit, route, simulate, validate and save it " +
+        "with the tools. Start with get_design_summary. Coordinates are micrometres (µm); positions are " +
+        "a component's top-left corner. Every edit is undoable with the undo tool.";
+
     private static readonly JsonElement EmptyArguments = JsonDocument.Parse("{}").RootElement.Clone();
 
     private readonly AgentToolCatalog _catalog;
     private readonly string _serverVersion;
+    private readonly string _instructions;
 
     /// <summary>Creates the dispatcher over <paramref name="catalog"/>.</summary>
-    public McpJsonRpcDispatcher(AgentToolCatalog catalog, string serverVersion)
+    public McpJsonRpcDispatcher(AgentToolCatalog catalog, string serverVersion, string instructions = DesktopInstructions)
     {
         _catalog = catalog;
         _serverVersion = serverVersion;
+        _instructions = instructions;
     }
 
     /// <summary>
@@ -103,7 +113,7 @@ public sealed class McpJsonRpcDispatcher
                 ["title"] = "Lunima",
                 ["version"] = _serverVersion,
             },
-            ["instructions"] = Instructions,
+            ["instructions"] = _instructions,
         };
     }
 
