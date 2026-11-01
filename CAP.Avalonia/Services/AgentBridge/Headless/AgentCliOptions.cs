@@ -7,6 +7,7 @@ internal sealed class AgentCliOptions
     private string? _save;
     private string? _images;
     private bool _keepGoing;
+    private bool _register;
 
     /// <summary>Splits <paramref name="args"/> into options and positional arguments.</summary>
     public bool TryRead(IReadOnlyList<string> args, List<string> positional, out string? error)
@@ -33,6 +34,9 @@ internal sealed class AgentCliOptions
                 case "--keep-going":
                     _keepGoing = true;
                     break;
+                case "--register":
+                    _register = true;
+                    break;
                 case "--help" or "-h":
                     positional.Insert(0, "help");
                     break;
@@ -56,6 +60,7 @@ internal sealed class AgentCliOptions
         SavePath = _save,
         ImageDirectory = _images,
         KeepGoing = _keepGoing,
+        Register = _register,
     };
 
     private bool ValidateSave(out string? error)

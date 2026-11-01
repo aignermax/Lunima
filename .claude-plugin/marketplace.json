@@ -1,0 +1,16 @@
+{
+  "name": "lunima",
+  "owner": {
+    "name": "Lunima"
+  },
+  "metadata": {
+    "description": "Lunima \u2014 open-source photonic chip design: the headless design engine and workflow skills for Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "lunima",
+      "source": "./claude-plugin/lunima",
+      "description": "Photonic chip design with Lunima, headless: build, route, simulate, sweep, check and export circuits, analyse and import GDS, design chiplets and build a photonic CPU."
+    }
+  ]
+}

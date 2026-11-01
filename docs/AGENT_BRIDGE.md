@@ -36,6 +36,24 @@ interpreter, routing settings), so nothing it does — recent files, reopen-last
 changes the interactive app. Every session starts with an empty design unless `--design` is
 given.
 
+### Claude Code plugin
+
+The repository is a Claude Code plugin marketplace (`.claude-plugin/marketplace.json` →
+`claude-plugin/lunima/`). The plugin bundles the headless MCP server (started as `lunima mcp`)
+and four workflow skills: `photonic-circuit-design`, `gds-layout`, `logic-and-cpu` and
+`chiplet-assembly`.
+
+```bash
+CAP.Desktop agent install            # writes the `lunima` launcher (~/.local/bin, or %LOCALAPPDATA%\Lunima\bin)
+# in Claude Code:
+/plugin marketplace add aignermax/Lunima
+/plugin install lunima@lunima
+```
+
+`agent install --register` instead registers the server directly as `lunima-headless`
+(`claude mcp add --scope user lunima-headless -- <path>/CAP.Desktop mcp`). The plugin also honours
+`LUNIMA_EXE` (full path of `CAP.Desktop`) when no launcher is on `PATH`.
+
 ## Connect Claude Code (one click)
 
 **Settings → Agent bridge (MCP) → Connect Claude Code → Connect.** This turns the bridge on

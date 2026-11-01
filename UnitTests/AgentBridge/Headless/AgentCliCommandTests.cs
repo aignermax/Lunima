@@ -73,6 +73,15 @@ public class AgentCliCommandTests
     public void Help_Variants(params string[] args) => Parse(args).Verb.ShouldBe(AgentCliVerb.Help);
 
     [Fact]
+    public void Install_WithRegister()
+    {
+        var command = Parse("agent", "install", "--register");
+
+        command.Verb.ShouldBe(AgentCliVerb.Install);
+        command.Register.ShouldBeTrue();
+    }
+
+    [Fact]
     public void SaveBack_WithoutDesign_IsRejected() =>
         ParseError("agent", "call", "undo", "--save").ShouldContain("--design");
 

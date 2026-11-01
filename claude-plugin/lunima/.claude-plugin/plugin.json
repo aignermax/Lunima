@@ -1,0 +1,12 @@
+{
+  "name": "lunima",
+  "version": "0.1.0",
+  "description": "Lunima's photonic design engine for Claude Code: headless MCP server (circuits, routing, S-matrix simulation, sweeps, DRC, GDS import/export, netlists, chiplets, logic gates, 4-bit ISA) plus workflow skills.",
+  "author": {
+    "name": "Lunima"
+  },
+  "homepage": "https://lunima.org",
+  "repository": "https://github.com/aignermax/Lunima",
+  "license": "MIT",
+  "keywords": ["photonics", "pic", "gds", "eda", "simulation", "chiplet", "mcp"]
+}

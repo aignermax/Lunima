@@ -15,6 +15,9 @@ public enum AgentCliVerb
     /// <summary>Run a JSON script: an array of <c>{"tool": …, "arguments": {…}}</c> steps.</summary>
     Run,
 
+    /// <summary>Install the <c>lunima</c> launcher (and optionally register with Claude Code).</summary>
+    Install,
+
     /// <summary>Print usage.</summary>
     Help,
 }
@@ -26,6 +29,7 @@ public enum AgentCliVerb
 /// lunima agent tools
 /// lunima agent call TOOL [JSON] [--design FILE] [--save [FILE]] [--images DIR]
 /// lunima agent run SCRIPT|- [--design FILE] [--save [FILE]] [--images DIR] [--keep-going]
+/// lunima agent install [--register]
 /// </code>
 /// </summary>
 /// <param name="Verb">The action.</param>
@@ -36,6 +40,7 @@ public enum AgentCliVerb
 /// <param name="SavePath">Where to save afterwards: empty means back to <paramref name="DesignPath"/>, null means no save.</param>
 /// <param name="ImageDirectory">Where image results (screenshots) are written; a temp folder when null.</param>
 /// <param name="KeepGoing">Run the remaining script steps after a failed one.</param>
+/// <param name="Register">For <see cref="AgentCliVerb.Install"/>: also register the stdio MCP server with Claude Code.</param>
 public sealed record AgentCliCommand(
     AgentCliVerb Verb,
     string? ToolName = null,
@@ -44,7 +49,8 @@ public sealed record AgentCliCommand(
     string? DesignPath = null,
     string? SavePath = null,
     string? ImageDirectory = null,
-    bool KeepGoing = false)
+    bool KeepGoing = false,
+    bool Register = false)
 {
     /// <summary>First argument that starts the MCP stdio server.</summary>
     public const string McpVerb = "mcp";
@@ -62,7 +68,10 @@ public sealed record AgentCliCommand(
         "  lunima agent call TOOL [JSON-ARGS] [--design FILE] [--save [FILE]] [--images DIR]\n" +
         "      Run one tool, print its result as JSON.\n" +
         "  lunima agent run SCRIPT|- [--design FILE] [--save [FILE]] [--images DIR] [--keep-going]\n" +
-        "      Run [{\"tool\": \"...\", \"arguments\": {...}}, ...] from a file or stdin.\n\n" +
+        "      Run [{\"tool\": \"...\", \"arguments\": {...}}, ...] from a file or stdin.\n" +
+        "  lunima agent install [--register]\n" +
+        "      Put a 'lunima' launcher on PATH (~/.local/bin, or %LOCALAPPDATA%\\Lunima\\bin on Windows);\n" +
+        "      --register also adds the stdio MCP server 'lunima-headless' to Claude Code.\n\n" +
         "--design opens a .lun design first; --save writes it back afterwards (to FILE, or to the\n" +
         "--design file). Exit code: 0 success, 1 a tool reported an error, 2 bad command line.";
 
@@ -106,6 +115,8 @@ public sealed record AgentCliCommand(
                     positional.Count == 3 ? positional[2] : "{}"));
             case "run" when positional.Count == 2:
                 return options.Apply(new AgentCliCommand(AgentCliVerb.Run, ScriptPath: positional[1]));
+            case "install" when positional.Count == 1:
+                return options.Apply(new AgentCliCommand(AgentCliVerb.Install));
             case "help" or "--help" or "-h":
                 return new AgentCliCommand(AgentCliVerb.Help);
             default:
