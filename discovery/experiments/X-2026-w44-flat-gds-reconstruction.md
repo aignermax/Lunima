@@ -1,5 +1,5 @@
 # X-2026-w44-flat-gds-reconstruction: Does Lunima's GDS import recover ports and connectivity from flat, marker-free layouts?
-- status: proposed
+- status: rejected-by-critic
 - method: benchmark
 - autonomy: autonomous
 - assumption: Lunima's existing GDS import (`CAP-DataAccess/Import/Gds/GdsHierarchyImporter.cs`, `CAP.Avalonia/Services/GdsImport/GdsImportService.cs`) recovers usable optical ports and waveguide connectivity from a **flattened** layout **without** pin-marker layers or port labels.
