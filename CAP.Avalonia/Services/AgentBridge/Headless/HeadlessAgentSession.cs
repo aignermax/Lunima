@@ -35,6 +35,9 @@ public sealed class HeadlessAgentSession : IAsyncDisposable
         Dispatcher = new McpJsonRpcDispatcher(Catalog, AppVersion(), McpJsonRpcDispatcher.HeadlessInstructions);
     }
 
+    /// <summary>The production container behind this session.</summary>
+    public IServiceProvider Services => _provider;
+
     /// <summary>The application's main view-model (the open design and every panel).</summary>
     public MainViewModel Main { get; }
 
