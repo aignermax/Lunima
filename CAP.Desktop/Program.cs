@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Headless;
 using CAP.Avalonia;
@@ -26,7 +27,10 @@ class Program
 
         // Agent interface without a window: `mcp` (stdio MCP server) and `agent …` (one-shot CLI).
         if (AgentCliCommand.IsAgentCommand(args))
+        {
+            AttachToCallingConsole();
             return HeadlessAgentProgram.Run(args, BuildHeadlessAvaloniaApp);
+        }
 
         return BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
@@ -36,6 +40,22 @@ class Program
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace();
+
+    private const int AttachParentProcess = -1;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool AttachConsole(int processId);
+
+    /// <summary>
+    /// On Windows this executable is a GUI-subsystem app: started from cmd/PowerShell without
+    /// redirection its output would vanish. Attach to the caller's console then; piped use
+    /// (Claude Code, scripts, MCP) is already redirected and stays untouched.
+    /// </summary>
+    private static void AttachToCallingConsole()
+    {
+        if (OperatingSystem.IsWindows() && !Console.IsOutputRedirected)
+            AttachConsole(AttachParentProcess);
+    }
 
     /// <summary>The app on Avalonia's headless platform, with Skia so screenshots have real pixels.</summary>
     private static AppBuilder BuildHeadlessAvaloniaApp()
