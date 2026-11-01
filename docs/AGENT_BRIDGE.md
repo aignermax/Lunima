@@ -129,6 +129,14 @@ Authoring — build a design from nothing (all undoable):
 | `rotate_component` | Rotate by 90/180/270° counter-clockwise; refused when locked or the rotated footprint collides |
 | `set_parameter` | Set a tunable parameter by name (e.g. `splitting_ratio`) or slider number, clamped to its range |
 | `set_light_source` | Laser on (input) / off (output), `wavelength_nm`, `power`; `mark_as_source` turns any optical part into a source |
+| `place_component` + `attach_to` | Port-relative placement: `attach_to="<component>.<pin>"`, `pin=<own pin>`, `gap_um` — rotation and position are solved so the pins face each other, and the wire is created (`connect=false` to skip) |
+| `connect_bundle` | Many wires (`[{from, to}]`) as one undo step, routed in one joint pass; reports each wire plus min/max length and skew |
+| `match_lengths` | Equalise the lengths of two or more wires with meanders (the Length Equalisation panel); `target_length_um`, meander radius limits |
+| `apply_design` | Build a whole circuit declaratively — Lunima JSON (instances with pose or `attach_to`, parameters, light sources; connections) or a gdsfactory netlist YAML (`instances`/`placements`/`connections`/`routes`; types matched by Lunima name, Nazca or gdsfactory function). Atomic; `clear=true` starts empty. Round-trips `export_netlist format=gdsfactory_yaml` |
+| `batch` | Several tool calls in one request; `atomic` (default) undoes the batch's edits when a step fails |
+
+Connections can be addressed by GUID or by an endpoint `component.pin` — GUIDs are regenerated
+when a design is loaded, endpoints stay stable across sessions.
 
 Analysis — structured results instead of a canvas overlay:
 

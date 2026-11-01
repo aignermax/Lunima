@@ -68,6 +68,12 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, DeleteConnectionTool>();
         services.AddTransient<IAgentBridgeTool, UndoTool>();
         services.AddTransient<IAgentBridgeTool, RedoTool>();
+        services.AddTransient<IAgentBridgeTool>(sp => new BatchTool(
+            sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>));
+        services.AddTransient<IAgentBridgeTool, ConnectBundleTool>();
+        services.AddTransient<IAgentBridgeTool, MatchLengthsTool>();
+        services.AddTransient<IAgentBridgeTool>(sp => new ApplyDesignTool(
+            sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>));
         services.AddTransient<IAgentBridgeTool, LoadExampleTool>();
         services.AddTransient<IAgentBridgeTool, ScreenshotTool>();
         services.AddTransient<IAgentBridgeTool, SaveDesignTool>();

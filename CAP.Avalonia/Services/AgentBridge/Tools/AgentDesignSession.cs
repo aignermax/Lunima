@@ -107,9 +107,19 @@ public sealed class AgentDesignSession
         return matches.Count == 1 ? matches[0] : null;
     }
 
-    /// <summary>Finds a connection view-model by its GUID.</summary>
-    public WaveguideConnectionViewModel? FindConnection(string id) =>
-        Guid.TryParse(id, out var guid)
-            ? Canvas.Connections.FirstOrDefault(c => c.Connection.Id == guid)
-            : null;
+    /// <summary>
+    /// Finds a connection by its GUID, or by one of its endpoints written <c>component.pin</c> —
+    /// GUIDs are regenerated when a design is loaded, endpoints are stable across sessions.
+    /// </summary>
+    public WaveguideConnectionViewModel? FindConnection(string id)
+    {
+        if (Guid.TryParse(id, out var guid))
+            return Canvas.Connections.FirstOrDefault(c => c.Connection.Id == guid);
+        var dot = id.LastIndexOf('.');
+        var component = dot > 0 ? FindComponent(id[..dot]) : null;
+        var pin = component == null ? null : Author.ComponentPins.Find(component.Component, id[(dot + 1)..]);
+        return pin == null
+            ? null
+            : Canvas.Connections.FirstOrDefault(c => c.Connection.StartPin == pin.Pin || c.Connection.EndPin == pin.Pin);
+    }
 }
