@@ -40,7 +40,7 @@ public class AgentFoundryDrcToolTests
         await using var session = HeadlessAgentSession.Create(TextWriter.Null,
             services => services.AddSingleton<IFoundryDrcRunner>(new StubRunner()));
         await Call(session, "new_design", "{}");
-        await Call(session, "place_component", """{"type":"1x2 MMI Splitter","x":100,"y":200,"name":"split"}""");
+        var placed = await Call(session, "place_component", """{"type":"1x2 MMI Splitter","x":100,"y":200,"name":"split"}""");
 
         (await Call(session, "check_foundry_drc", "{}")).GetProperty("decks")[0].GetString().ShouldBe("foundry_deck");
         var report = await Call(session, "check_foundry_drc", """{"deck":"foundry_deck","gds_path":"/tmp/any.gds"}""");
@@ -49,6 +49,6 @@ public class AgentFoundryDrcToolTests
         report.GetProperty("rules")[0].GetProperty("rule").GetString().ShouldBe("min_space", "worst rule first");
         var marker = report.GetProperty("markers")[0];
         marker.GetProperty("y").GetDouble().ShouldBe(225);
-        marker.GetProperty("component").GetString().ShouldBe("1x2 MMI Splitter_1");
+        marker.GetProperty("component").GetString().ShouldBe(placed.GetProperty("placed").GetProperty("id").GetString());
     }
 }

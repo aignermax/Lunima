@@ -792,6 +792,11 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             newGroup.AddExternalPin(clonedPin);
         }
 
+        // A group's pins are materialised from its external pins (normally by ComputeSMatrix).
+        // An enclosing group's copy resolves its own exposed pins into this copy by name, so
+        // the copy must carry them now — otherwise a cell exposing a nested gate's pin
+        // cannot be copied or instantiated from the library.
+        newGroup.SyncPhysicalPinsFromExternalPins();
         return newGroup;
     }
 

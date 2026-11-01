@@ -44,6 +44,7 @@ public static class ComponentDescriber
         return ComponentPins.Of(component).Select(pin =>
         {
             var (x, y) = pin.Pin.GetAbsolutePosition();
+            var inner = component is ComponentGroup ? pin.Pin.ParentComponent : null;
             return (object)new
             {
                 pin.Name,
@@ -52,9 +53,15 @@ public static class ComponentDescriber
                 AngleDeg = Math.Round(pin.Pin.GetAbsoluteAngle(), 1),
                 Domain = pin.Pin.MatterType.ToString().ToLowerInvariant(),
                 ConnectedTo = DescribeWire(wires, pin.Pin),
+                Inner = inner == null ? null : $"{(inner is ComponentGroup g ? g.GroupName : inner.Identifier)}.{pin.Pin.Name}",
+                Signal = inner is ComponentGroup { TruthTablePinAssignment: { } roles } ? SignalOf(roles, pin.Pin.Name) : null,
             };
         }).ToList();
     }
+
+    /// <summary>The logic signal a gate pin carries (its signal name, or the pin name for a gate input/output).</summary>
+    private static string? SignalOf(TruthTablePinAssignment roles, string pin) =>
+        roles.InputSignalNames?.GetValueOrDefault(pin) ?? roles.OutputSignalNames?.GetValueOrDefault(pin);
 
     /// <summary>The far end of the wire on <paramref name="pin"/> as <c>component.pin</c>, or null.</summary>
     private static object? DescribeWire(IReadOnlyList<WaveguideConnection> wires, PhysicalPin pin)
@@ -63,10 +70,12 @@ public static class ComponentDescriber
         if (wire == null)
             return null;
         var other = wire.StartPin == pin ? wire.EndPin : wire.StartPin;
+        var top = TopLevelName(other.ParentComponent);
         return new
         {
             ConnectionId = wire.Id,
-            Pin = $"{TopLevelName(other.ParentComponent)}.{other.Name}",
+            Pin = $"{top}.{other.Name}",
+            Inner = top == other.ParentComponent.Identifier ? null : $"{other.ParentComponent.Identifier}.{other.Name}",
             Blocked = wire.IsBlockedFallback,
         };
     }
