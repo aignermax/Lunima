@@ -4,9 +4,10 @@
     "prepare",
     "scout",
     "strategist",
-    "critic"
+    "critic",
+    "apply"
   ],
-  "pr": null,
+  "pr": 1601,
   "applied": {
     "A:designer-interviews-2026-w44": 1599,
     "I:foreign-layout-and-verification": 1596,
