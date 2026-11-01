@@ -54,7 +54,11 @@ internal static class PirSMatrixExtractor
         if (!comp.WaveLengthToSMatrixMap.TryGetValue(wavelengthNm, out var sMatrix))
             return null;
 
-        var transfers = sMatrix.GetNonNullValues();
+        // Parametric models keep their slider-driven entries as formulas; resolve them at the
+        // current parameter values, or such a component would export as an empty matrix.
+        var transfers = sMatrix.NonLinearConnections is { Count: > 0 }
+            ? sMatrix.CreateEvaluatedSnapshot().GetNonNullValues()
+            : sMatrix.GetNonNullValues();
         var result = new Dictionary<(int, int), Complex>();
 
         for (int outIdx = 0; outIdx < pins.Count; outIdx++)

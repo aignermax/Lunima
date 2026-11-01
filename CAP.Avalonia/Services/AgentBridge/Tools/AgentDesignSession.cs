@@ -17,6 +17,7 @@ public sealed class AgentDesignSession
     private readonly Func<IReadOnlyList<ComponentTemplate>> _templates;
     private readonly Func<IReadOnlyList<CAP_Core.Components.Process.ProcessGroup>> _processes;
     private readonly Func<CAP_Core.Components.Process.PlacementPolicyContext> _placement;
+    private readonly Func<ViewModels.MainViewModel?> _main;
 
     /// <summary>Creates the session.</summary>
     /// <param name="canvas">The design canvas the user sees.</param>
@@ -31,8 +32,10 @@ public sealed class AgentDesignSession
         ExampleDesignsService examples,
         Func<IReadOnlyList<ComponentTemplate>>? templates = null,
         Func<IReadOnlyList<CAP_Core.Components.Process.ProcessGroup>>? processes = null,
-        Func<CAP_Core.Components.Process.PlacementPolicyContext>? placement = null)
+        Func<CAP_Core.Components.Process.PlacementPolicyContext>? placement = null,
+        Func<ViewModels.MainViewModel?>? main = null)
     {
+        _main = main ?? (() => null);
         _processes = processes ?? (() => Array.Empty<CAP_Core.Components.Process.ProcessGroup>());
         _placement = placement ?? (() => CAP_Core.Components.Process.PlacementPolicyContext.Unrestricted);
         Canvas = canvas;
@@ -47,6 +50,12 @@ public sealed class AgentDesignSession
 
     /// <summary>The fabrication processes of the loaded PDKs (a die is bound to one of them).</summary>
     public IReadOnlyList<CAP_Core.Components.Process.ProcessGroup> Processes => _processes();
+
+    /// <summary>
+    /// The main view-model (analysis panels, design checks, logic, export), or null while it is
+    /// not built yet or in tests that only host a canvas.
+    /// </summary>
+    public ViewModels.MainViewModel? Main => _main();
 
     /// <summary>The single-process placement rules the canvas applies to manual placement.</summary>
     public CAP_Core.Components.Process.PlacementPolicyContext Placement => _placement();

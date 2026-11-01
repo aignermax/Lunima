@@ -6,9 +6,11 @@ using CAP.Avalonia.Services.AgentBridge.Hosting;
 using CAP.Avalonia.Services.AgentBridge.Protocol;
 using CAP.Avalonia.Services.AgentBridge.Registration;
 using CAP.Avalonia.Services.AgentBridge.Tools;
+using CAP.Avalonia.Services.AgentBridge.Tools.Analysis;
 using CAP.Avalonia.Services.AgentBridge.Tools.Author;
 using CAP.Avalonia.Services.AgentBridge.Tools.Dies;
 using CAP.Avalonia.Services.AgentBridge.Tools.Edit;
+using CAP.Avalonia.Services.AgentBridge.Tools.Exchange;
 using CAP.Avalonia.Services.AgentBridge.Tools.Inspect;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Cut;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Geometry;
@@ -50,7 +52,8 @@ internal static class AgentBridgeFeatureExtensions
                 ? CAP_Core.Components.Process.ProcessCatalog.BuildGroups(main.LeftPanel.GetLoadedPdkProcessEntries())
                 : Array.Empty<CAP_Core.Components.Process.ProcessGroup>(),
             () => sp.GetService<MainViewModel>()?.CanvasInteraction.PlacementContext
-                  ?? CAP_Core.Components.Process.PlacementPolicyContext.Unrestricted));
+                  ?? CAP_Core.Components.Process.PlacementPolicyContext.Unrestricted,
+            () => sp.GetService<MainViewModel>()));
         services.AddSingleton(sp => new CanvasSnapshotRenderer(() => sp.GetService<MainViewModel>()));
 
         services.AddTransient<IAgentBridgeTool, GetDesignSummaryTool>();
@@ -86,6 +89,14 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, ConnectPinsTool>();
         services.AddTransient<IAgentBridgeTool, SetParameterTool>();
         services.AddTransient<IAgentBridgeTool, SetLightSourceTool>();
+        services.AddTransient<IAgentBridgeTool, SimulateTool>();
+        services.AddTransient<IAgentBridgeTool>(sp => new SweepSpectrumTool(sp.GetRequiredService<AgentDesignSession>()));
+        services.AddTransient<IAgentBridgeTool, SweepParameterTool>();
+        services.AddTransient<IAgentBridgeTool, ValidateDesignTool>();
+        services.AddTransient<IAgentBridgeTool, ExportGdsTool>();
+        services.AddTransient<IAgentBridgeTool, ExportNetlistTool>();
+        services.AddTransient<IAgentBridgeTool, AnalyzeGdsTool>();
+        services.AddTransient<IAgentBridgeTool, ImportGdsTool>();
         services.AddSingleton<AgentToolCatalog>();
 
         services.AddSingleton(sp => new McpJsonRpcDispatcher(

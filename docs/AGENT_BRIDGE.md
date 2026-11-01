@@ -112,6 +112,24 @@ Authoring — build a design from nothing (all undoable):
 | `set_parameter` | Set a tunable parameter by name (e.g. `splitting_ratio`) or slider number, clamped to its range |
 | `set_light_source` | Laser on (input) / off (output), `wavelength_nm`, `power`; `mark_as_source` turns any optical part into a source |
 
+Analysis — structured results instead of a canvas overlay:
+
+| Tool | What it does |
+|---|---|
+| `simulate` | S-matrix simulation: enabled sources, every output (a light source with its laser off) with received power (linear, dB, `transmission_db` relative to the injected power, phase), `open_ends` where light leaves through an unwired pin, and with `include_connections` the power on every wire. Also refreshes the power overlay (visible in screenshots) |
+| `sweep_parameter` | Step one parameter (`id`, `parameter` or `slider`, `from`, `to`, `steps`), simulate each value and return every output's power curve with the values of maximum and minimum power. The parameter is restored afterwards |
+| `sweep_spectrum` | Wavelength sweep `start_nm`..`end_nm`: per output the transmission (dB) per sample, maximum/minimum with wavelength, extinction ratio and free spectral range |
+| `validate_design` | The Checks tab: DRC-lite per PDK process (width, spacing, bend radius), overlaps, unconnected pins, chip bounds, PDK/process compatibility, chiplet interfaces, die assembly. Each finding with severity (`problem`/`hint`), kind, position and wire; `min_severity=problem` skips hints |
+
+Exchange — GDS, layout scripts and netlists:
+
+| Tool | What it does |
+|---|---|
+| `export_gds` | Write the Nazca script (`path` ending in `.py`) and, unless `generate_gds=false`, run it with the configured Python+Nazca to produce the GDS beside it. Reports skipped blocked routes, unresolved crossings and placeholder geometry |
+| `export_netlist` | `gdsfactory_yaml` (inline or to `path`), `sax` and `photontorch` Python scripts, or `verilog_a` (modules + top-level netlist + SPICE test bench into a folder). Parametric components export their S-matrix at the current parameter values |
+| `analyze_gds` | Read a GDS without importing: library, top-cell candidates with their sub-cell instances, and the layer census (polygons / paths / texts per layer/datatype) |
+| `import_gds` | Import a cell like the GDS-import dialog: `explode` (sub-cells become components, abutments and drawn routes become connections) or `black_box`; layer roles as `"layer,datatype;..."`; optional `reroute`, `auto_connect`, `group` |
+
 All other tools of the in-app **AI assistant** (`get_grid_state`, `run_simulation`, `get_light_values`, `inspect_group`, `copy_component`,
 `create_group`, `ungroup`, `save_as_prefab`, `clear_grid`, `fit_to_view`,
 `get_available_types`) are exposed as well — the tool list is generated from the same
