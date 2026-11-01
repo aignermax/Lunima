@@ -312,3 +312,38 @@ The scores below are assessments **[A]**.
 5. Is the education ladder the product, with agents as a tutor that builds and explains circuits? Or is it professional design? The answer changes what "agent-first" should mean.
 6. Which inbound format matters most: gdsfactory netlist/YAML, Nazca, or GDS? Only build the one a user brings.
 7. How mature is `gfp-mcp` in practice? A hands-on comparison is needed before claiming any agent-related advantage.
+
+---
+
+## Addendum (same day): what was built and what the experiment showed
+
+The maintainer chose to go further than recommendation 8 and make the agent path fully
+headless. It was done without the Core extraction this review warned about. The production
+container, view-models included, now runs on Avalonia's headless platform
+(`HeadlessAgentSession`). That was the cheap route Section 4 identified.
+
+- **Interfaces [F].**
+  - `CAP.Desktop mcp` is a stdio MCP server.
+  - `CAP.Desktop agent tools|call|run|install` is a JSON command line.
+  - A Claude Code plugin with workflow skills (`claude-plugin/lunima`) is included.
+  - 73 tools in total, all on the desktop bridge's catalog, so the GUI and headless behave identically.
+- **Gaps from Section 3.2, closed [F]:**
+  - authoring: `place_component` with rotation and port-relative `attach_to`, `create_connection` with named pins, `connect_bundle`, `apply_design` (Lunima JSON and gdsfactory YAML)
+  - parameters and light sources
+  - structured `simulate`, `sweep_parameter`, `sweep_spectrum`, `optimize`
+  - `validate_design` and `check_foundry_drc` (KLayout)
+  - `compare_netlist` (LVS-style)
+  - `export_gds`, `export_netlist`, `analyze_gds` / `import_gds`
+  - floorplanning
+  - logic gates, networks, registers and `isa_run` on the photonic units
+- **Experiment task 2 [F]** (build an MZI from nothing, route, simulate, sweep, validate, save): a real Claude Sonnet agent with only the stdio server completed it in 23 tool turns, 31 s and $0.23. All routes were clean; it reported 55.8 dB extinction and switching at 90° and 270°.
+- **Bugs found on the way [F]:**
+  - SAX and Verilog-A export failed for every parametric component.
+  - Selecting inside a document commit crashed the selection panels.
+  - The assistant ignored rotation.
+  - Connection GUIDs are not stable across loads; tools now accept `component.pin`.
+- **Competitive note [F]** ([gfp-mcp on PyPI](https://pypi.org/project/gfp-mcp/)):
+  - GDSFactory+'s MCP server exposes about 11 tools (build cells, DRC, connectivity, LVS, SAX simulation) and no editing or routing.
+  - The gdsfactory-library features it relies on (YAML designs, `connect`, `route_bundle`, length matching, `add_fiber_array`) now have Lunima counterparts.
+
+The open questions in Section 10 are unchanged. They need real users, not more tools.

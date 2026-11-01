@@ -2,7 +2,7 @@
 
 Lunima's photonic design engine as a Claude Code plugin. It contains:
 
-- **MCP server `lunima`**: the full Lunima application without a window (`lunima mcp`). It has about 60 tools covering:
+- **MCP server `lunima`**: the full Lunima application without a window (`lunima mcp`). It has about 70 tools covering:
   - circuits, placement and routing
   - S-matrix simulation, parameter and wavelength sweeps, design checks (DRC-lite)
   - GDS analysis and import, Nazca/GDS export, netlists (gdsfactory YAML, SAX, Verilog-A)
