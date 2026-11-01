@@ -142,6 +142,15 @@ Hierarchy and logic — from optical gates to a processor:
 | `logic_step` | One clock cycle: settle, commit every register, settle again; `reset=true` clears the registers first |
 | `isa_run` | Assemble and run a program for the 4-bit learning ISA (docs/ISA.md) in the ISA playground: final ACC/PC/RAM, halt state and a step trace. `photonic=true` executes the operations the built network implements (e.g. ADD on the 4-bit adder chip), with the light's propagation time |
 
+Floorplan and chiplets:
+
+| Tool | What it does |
+|---|---|
+| `get_floorplan` | Chip bounds, the box the design uses, utilisation (parts with clearance + routed waveguides), dies, and the largest free rectangles |
+| `find_free_space` | Top-left spots for a `width` × `height` block, clear of parts and waveguides, nearest to `near_x`/`near_y` first |
+| `set_chip_size` | Resize the chip (placement area); not for multi-die assemblies |
+| `delete_die` | Delete a die with its parts and links (the die tools above create, bind, move and link dies) |
+
 All other tools of the in-app **AI assistant** (`get_grid_state`, `run_simulation`, `get_light_values`, `inspect_group`, `copy_component`,
 `create_group`, `ungroup`, `save_as_prefab`, `clear_grid`, `fit_to_view`,
 `get_available_types`) are exposed as well — the tool list is generated from the same

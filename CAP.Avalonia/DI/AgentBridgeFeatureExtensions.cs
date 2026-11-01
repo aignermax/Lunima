@@ -12,6 +12,7 @@ using CAP.Avalonia.Services.AgentBridge.Tools.Dies;
 using CAP.Avalonia.Services.AgentBridge.Tools.Edit;
 using CAP.Avalonia.Services.AgentBridge.Tools.Exchange;
 using CAP.Avalonia.Services.AgentBridge.Tools.Inspect;
+using CAP.Avalonia.Services.AgentBridge.Tools.Layout;
 using CAP.Avalonia.Services.AgentBridge.Tools.Logic;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Cut;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Geometry;
@@ -108,6 +109,10 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, LogicTruthTableTool>();
         services.AddTransient<IAgentBridgeTool, LogicStepTool>();
         services.AddTransient<IAgentBridgeTool, IsaRunTool>();
+        services.AddTransient<IAgentBridgeTool, GetFloorplanTool>();
+        services.AddTransient<IAgentBridgeTool, FindFreeSpaceTool>();
+        services.AddTransient<IAgentBridgeTool, SetChipSizeTool>();
+        services.AddTransient<IAgentBridgeTool, DeleteDieTool>();
         services.AddSingleton<AgentToolCatalog>();
 
         services.AddSingleton(sp => new McpJsonRpcDispatcher(
