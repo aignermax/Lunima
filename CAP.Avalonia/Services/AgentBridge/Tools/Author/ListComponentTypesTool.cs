@@ -22,7 +22,7 @@ public sealed class ListComponentTypesTool : IAgentBridgeTool
 
     /// <inheritdoc/>
     public string Description =>
-        "List placeable component types (the loaded PDK libraries): name, pdk, category, footprint " +
+        "List placeable component types (the loaded PDK libraries) and library groups/gates: name, pdk, category, footprint " +
         "(µm), pins with local offset from the top-left corner and facing angle, and tunable parameters. " +
         "Filter by text (name/category), pdk or category. allowed=false means the active process forbids it.";
 
@@ -37,6 +37,7 @@ public sealed class ListComponentTypesTool : IAgentBridgeTool
             category = new { type = "string", description = "Only this category." },
             include_pins = new { type = "boolean", description = "Include pins and parameters. Default true." },
             limit = new { type = "integer", description = $"Maximum entries (default {DefaultLimit})." },
+            include_groups = new { type = "boolean", description = "Also list library groups and gates (saved cells), placeable with place_component. Default true." },
         },
     };
 
@@ -61,8 +62,26 @@ public sealed class ListComponentTypesTool : IAgentBridgeTool
             Total = matching.Count,
             Pdks = _session.Templates.Select(t => t.PdkSource).Distinct().OrderBy(p => p).ToList(),
             Types = matching.Take(Math.Max(1, limit)).Select(t => Describe(t, placement.CheckPlacement(t.PdkSource).IsAllowed, includePins)).ToList(),
+            Groups = ToolArguments.GetBool(arguments, "include_groups", fallback: true) ? DescribeGroups(filter) : null,
         }));
     }
+
+    /// <summary>Library groups (saved cells and gates) with their external pins.</summary>
+    private IReadOnlyList<object>? DescribeGroups(string? filter) =>
+        _session.Main?.LeftPanel.ComponentLibrary.GetLibraryManager().Templates
+            .Where(t => Contains(t.Name, filter) || Contains(t.Category, filter))
+            .Select(t => (object)new
+            {
+                t.Name,
+                t.Source,
+                t.Category,
+                Width = t.WidthMicrometers,
+                Height = t.HeightMicrometers,
+                Components = t.ComponentCount,
+                IsGate = t.TemplateGroup?.TruthTablePinAssignment != null,
+                Pins = t.TemplateGroup?.ExternalPins.Select(p => new { p.Name, OffsetX = p.RelativeX, OffsetY = p.RelativeY, AngleDeg = p.AngleDegrees }).ToList(),
+            })
+            .ToList();
 
     private static bool Contains(string text, string? filter) =>
         filter == null || text.Contains(filter, StringComparison.OrdinalIgnoreCase);

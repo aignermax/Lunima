@@ -27,7 +27,7 @@ public sealed class PlaceComponentTool : IAgentBridgeTool
 
     /// <inheritdoc/>
     public string Description =>
-        "Place a component type (from list_component_types) with its top-left corner at x,y (µm), rotated " +
+        "Place a component type or a library group/gate (from list_component_types) with its top-left corner at x,y (µm), rotated " +
         "rotation_deg counter-clockwise (0/90/180/270). Refuses an occupied spot unless nudge=true (moves to the " +
         "nearest free spot). Optional name sets the display name. Undoable. Returns the new component with its pins.";
 
@@ -56,10 +56,16 @@ public sealed class PlaceComponentTool : IAgentBridgeTool
 
     private async Task<AgentToolResult> ExecuteCoreAsync(JsonElement arguments, AgentToolContext? context)
     {
-        var template = TemplateLookup.Find(_session.Templates,
-            ToolArguments.GetString(arguments, "type"), ToolArguments.GetString(arguments, "pdk"), out var error);
+        var type = ToolArguments.GetString(arguments, "type");
+        var template = TemplateLookup.Find(_session.Templates, type, ToolArguments.GetString(arguments, "pdk"), out var error);
         if (template == null)
-            return AgentToolResult.Error(error!);
+        {
+            var library = _session.Main?.LeftPanel.ComponentLibrary.GetLibraryManager();
+            var groupTemplate = library?.Templates.FirstOrDefault(t => string.Equals(t.Name, type, StringComparison.OrdinalIgnoreCase));
+            return groupTemplate != null
+                ? await new GroupTemplatePlacement(_session, library!).PlaceAsync(groupTemplate, arguments, context)
+                : AgentToolResult.Error(error!);
+        }
         var (allowed, reason) = _session.Placement.CheckPlacement(template.PdkSource);
         if (!allowed)
             return AgentToolResult.Error(reason ?? $"'{template.Name}' belongs to another fabrication process.");

@@ -130,6 +130,18 @@ Exchange — GDS, layout scripts and netlists:
 | `analyze_gds` | Read a GDS without importing: library, top-cell candidates with their sub-cell instances, and the layer census (polygons / paths / texts per layer/datatype) |
 | `import_gds` | Import a cell like the GDS-import dialog: `explode` (sub-cells become components, abutments and drawn routes become connections) or `black_box`; layer roles as `"layer,datatype;..."`; optional `reroute`, `auto_connect`, `group` |
 
+Hierarchy and logic — from optical gates to a processor:
+
+| Tool | What it does |
+|---|---|
+| `create_group` / `ungroup` | Group components into a cell (internal wires move inside; open pins and leaving wires become external pins), or dissolve one level. Undoable |
+| `make_gate` | Make a group a logic gate: name external pins as `inputs` (≤ 4), `outputs`, `bias`; the optical truth table is simulated and returned with output powers. Without `threshold` it is put into the widest gap between the output powers (reported with its noise margin). `register=true` for clocked registers. Undoable |
+| `save_as_prefab` / `delete_prefab` | Store a group or gate in the user's component library (refuses an existing name unless `replace=true`), or remove it. `list_component_types` lists library groups under `groups`; `place_component` places them by name |
+| `logic_build` | Build the logic network from the gates and the wires between them (Logic panel → Build): network inputs/outputs, gates, registers, critical-path delay, fan-out warnings |
+| `logic_evaluate` / `logic_truth_table` | One input combination, or all 2ⁿ (n ≤ 12) as compact bit strings |
+| `logic_step` | One clock cycle: settle, commit every register, settle again; `reset=true` clears the registers first |
+| `isa_run` | Assemble and run a program for the 4-bit learning ISA (docs/ISA.md) in the ISA playground: final ACC/PC/RAM, halt state and a step trace. `photonic=true` executes the operations the built network implements (e.g. ADD on the 4-bit adder chip), with the light's propagation time |
+
 All other tools of the in-app **AI assistant** (`get_grid_state`, `run_simulation`, `get_light_values`, `inspect_group`, `copy_component`,
 `create_group`, `ungroup`, `save_as_prefab`, `clear_grid`, `fit_to_view`,
 `get_available_types`) are exposed as well — the tool list is generated from the same

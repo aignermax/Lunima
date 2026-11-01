@@ -12,6 +12,7 @@ using CAP.Avalonia.Services.AgentBridge.Tools.Dies;
 using CAP.Avalonia.Services.AgentBridge.Tools.Edit;
 using CAP.Avalonia.Services.AgentBridge.Tools.Exchange;
 using CAP.Avalonia.Services.AgentBridge.Tools.Inspect;
+using CAP.Avalonia.Services.AgentBridge.Tools.Logic;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Cut;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Geometry;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Suggest;
@@ -97,6 +98,16 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, ExportNetlistTool>();
         services.AddTransient<IAgentBridgeTool, AnalyzeGdsTool>();
         services.AddTransient<IAgentBridgeTool, ImportGdsTool>();
+        services.AddTransient<IAgentBridgeTool, CreateGroupTool>();
+        services.AddTransient<IAgentBridgeTool, UngroupTool>();
+        services.AddTransient<IAgentBridgeTool, SavePrefabTool>();
+        services.AddTransient<IAgentBridgeTool, DeletePrefabTool>();
+        services.AddTransient<IAgentBridgeTool, MakeGateTool>();
+        services.AddTransient<IAgentBridgeTool, LogicBuildTool>();
+        services.AddTransient<IAgentBridgeTool, LogicEvaluateTool>();
+        services.AddTransient<IAgentBridgeTool, LogicTruthTableTool>();
+        services.AddTransient<IAgentBridgeTool, LogicStepTool>();
+        services.AddTransient<IAgentBridgeTool, IsaRunTool>();
         services.AddSingleton<AgentToolCatalog>();
 
         services.AddSingleton(sp => new McpJsonRpcDispatcher(
