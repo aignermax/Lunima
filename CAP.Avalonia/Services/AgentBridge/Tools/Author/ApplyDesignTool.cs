@@ -147,16 +147,10 @@ public sealed class ApplyDesignTool : IAgentBridgeTool
         return place;
     }
 
-    /// <summary>A library template by Lunima name, else by its Nazca or gdsfactory function.</summary>
-    private ComponentTemplate? ResolveType(string type, string? pdk)
-    {
-        var candidates = _session.Templates.Where(t => pdk == null || string.Equals(t.PdkSource, pdk, StringComparison.OrdinalIgnoreCase)).ToList();
-        return candidates.FirstOrDefault(t => string.Equals(t.Name, type, StringComparison.OrdinalIgnoreCase))
-            ?? candidates.FirstOrDefault(t => string.Equals(t.NazcaFunctionName, type, StringComparison.OrdinalIgnoreCase))
-            ?? candidates.FirstOrDefault(t => string.Equals(t.GdsFactoryFunction, type, StringComparison.OrdinalIgnoreCase));
-    }
+    private ComponentTemplate? ResolveType(string type, string? pdk) => TemplateLookup.ResolveAny(_session.Templates, type, pdk);
 
-    private static DesignSpec? ReadSpec(JsonElement arguments, out string? error)
+    /// <summary>The design described by the <c>design</c>, <c>text</c> or <c>path</c> argument.</summary>
+    internal static DesignSpec? ReadSpec(JsonElement arguments, out string? error)
     {
         error = null;
         if (arguments.TryGetProperty("design", out var design) && design.ValueKind == JsonValueKind.Object)

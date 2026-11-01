@@ -81,6 +81,27 @@ public class AgentEngineeringToolsTests
     }
 
     [AvaloniaFact]
+    public async Task CompareNetlist_FindsMissingWiresAndExtraParts()
+    {
+        await using var session = HeadlessAgentSession.Create(TextWriter.Null);
+        await Ok(session, "apply_design", Mzi);
+        var reference = (await session.Catalog.InvokeAsync("export_netlist",
+            JsonDocument.Parse("""{"format":"gdsfactory_yaml"}""").RootElement.Clone())).Content[0].Text!;
+        var args = JsonSerializer.Serialize(new { text = reference });
+
+        (await Ok(session, "compare_netlist", args)).GetProperty("match").GetBoolean().ShouldBeTrue();
+
+        await Ok(session, "delete_connection", """{"id":"comb.out2"}""");
+        await Ok(session, "place_component", """{"type":"1x2 MMI Splitter","x":2000,"y":2000}""");
+        var diff = await Ok(session, "compare_netlist", args);
+
+        diff.GetProperty("match").GetBoolean().ShouldBeFalse();
+        diff.GetProperty("missing_wires")[0].GetString().ShouldContain("2x2 MMI Coupler.out2");
+        var splitters = diff.GetProperty("types").EnumerateArray().Single(t => t.GetProperty("type").GetString() == "1x2 MMI Splitter");
+        (splitters.GetProperty("layout").GetInt32(), splitters.GetProperty("reference").GetInt32()).ShouldBe((2, 1));
+    }
+
+    [AvaloniaFact]
     public async Task FiberArray_WithAnUnknownPort_LeavesNothingBehind()
     {
         await using var session = HeadlessAgentSession.Create(TextWriter.Null);

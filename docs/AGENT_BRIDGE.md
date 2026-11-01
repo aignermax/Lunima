@@ -159,6 +159,7 @@ Exchange — GDS, layout scripts and netlists:
 | `analyze_gds` | Read a GDS without importing: library, top-cell candidates with their sub-cell instances, and the layer census (polygons / paths / texts per layer/datatype) |
 | `import_gds` | Import a cell like the GDS-import dialog: `explode` (sub-cells become components, abutments and drawn routes become connections) or `black_box`; layer roles as `"layer,datatype;..."`; optional `reroute`, `auto_connect`, `group` |
 | `check_foundry_drc` | Sign-off DRC: a foundry KLayout deck (`deck`: a shipped name from `scripts/drc`, e.g. `cornerstone_sin300_drc`, or a `.lydrc` path) on `gds_path` or on the open design (exported first). Every rule with its count, plus markers in the canvas frame with the component they lie on. Needs KLayout (`$KLAYOUT` or on `PATH`) |
+| `compare_netlist` | LVS-style: the open design (e.g. after `import_gds`) against a reference netlist (gdsfactory YAML or Lunima design JSON) — component counts per type, wires missing or extra as `Type.pin — Type.pin`, and per-instance wire differences when names match |
 
 Hierarchy and logic — from optical gates to a processor:
 

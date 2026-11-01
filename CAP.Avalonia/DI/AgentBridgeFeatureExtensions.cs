@@ -72,6 +72,7 @@ internal static class AgentBridgeFeatureExtensions
             sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>));
         services.AddTransient<IAgentBridgeTool, ConnectBundleTool>();
         services.AddTransient<IAgentBridgeTool, MatchLengthsTool>();
+        services.AddTransient<IAgentBridgeTool, CompareNetlistTool>();
         services.AddTransient<IAgentBridgeTool>(sp => new AddFiberArrayTool(
             sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>));
         services.AddTransient<IAgentBridgeTool>(sp => new ApplyDesignTool(

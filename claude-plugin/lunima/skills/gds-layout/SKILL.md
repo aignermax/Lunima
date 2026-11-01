@@ -50,6 +50,15 @@ Then inspect the result with `list_components`, `get_component` and `screenshot`
 - KLayout must be installed.
 - Every marker comes back in canvas coordinates with the component it lies on. Fix the design, then re-run the check until it reports `clean: true`.
 
+## Layout versus schematic
+
+After importing or editing a layout, run `compare_netlist {path: "schematic.yaml"}` against the intended netlist. It reports:
+- the component counts per type,
+- wires missing from the layout or extra in it,
+- exact per-instance differences, when the instance names match.
+
+Keep the gdsfactory YAML from `export_netlist` as the reference.
+
 ## Round-trip check
 
 After `export_gds`, run `analyze_gds` on the produced GDS. Expect the same number of instances, and port texts on the expected layers. Then `import_gds` it into a `new_design` and compare `list_connections` with the source design.
