@@ -99,8 +99,20 @@ The bridge's own tools:
 | `suggest_fixes` | For one blocked wire: try repair candidates on the live design, undo each, return them ranked (see below) |
 | `apply_suggestion` | Apply suggestion `s1`, `s2`, … of the last `suggest_fixes`. Refused if the design changed since, or if its trial ended with more blocked wires (unless `allow_worse=true`). One undo step (two for `reorder_neighbour`) |
 
-All tools of the in-app **AI assistant** (`get_grid_state`, `place_component`,
-`create_connection`, `run_simulation`, `get_light_values`, `inspect_group`, `copy_component`,
+Authoring — build a design from nothing (all undoable):
+
+| Tool | What it does |
+|---|---|
+| `new_design` / `open_design` | Start an empty untitled design, or open a `.lun` file by path (waits for routing) |
+| `list_component_types` | The loaded PDK libraries: type name, PDK, category, footprint, pins (local offset from the top-left corner, facing angle, domain), tunable parameters, and whether the active process allows it. Filters: `filter`, `pdk`, `category` |
+| `place_component` | Place a type with its top-left corner exactly at `x`,`y`, rotated `rotation_deg` counter-clockwise; refuses an occupied spot unless `nudge=true`; optional display `name` (usable as id). Returns the component with absolute pin positions. Supersedes the assistant's centred variant |
+| `create_connection` | Wire `from_component`[`.from_pin`] to `to_component`[`.to_pin`]; without pin names the closest free facing pair is used. Waits for routing; returns length, loss, blocked + reason. Supersedes the assistant's variant |
+| `get_component` | One component: type, PDK, pose, every pin's absolute position / facing / wired-to pin, parameters, light-source settings |
+| `rotate_component` | Rotate by 90/180/270° counter-clockwise; refused when locked or the rotated footprint collides |
+| `set_parameter` | Set a tunable parameter by name (e.g. `splitting_ratio`) or slider number, clamped to its range |
+| `set_light_source` | Laser on (input) / off (output), `wavelength_nm`, `power`; `mark_as_source` turns any optical part into a source |
+
+All other tools of the in-app **AI assistant** (`get_grid_state`, `run_simulation`, `get_light_values`, `inspect_group`, `copy_component`,
 `create_group`, `ungroup`, `save_as_prefab`, `clear_grid`, `fit_to_view`,
 `get_available_types`) are exposed as well — the tool list is generated from the same
 registry, so a new assistant tool appears here automatically. Note that these assistant
