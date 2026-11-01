@@ -104,7 +104,7 @@ The bridge's own tools:
 | `reroute_connections` | Run the router, wait for it, report blocked state (all, or the given `ids`) |
 | `delete_component` | Delete a component/group with its connections. Deleting a crossing component restores the two crossed nets. Undoable |
 | `delete_connection` | Delete one connection (a crossing piece dissolves its crossing). Undoable |
-| `undo` | Undo the most recent step of the shared history (the same step Ctrl+Z would undo) |
+| `undo` / `redo` | Undo the most recent step of the shared history (the same step Ctrl+Z would undo), or redo it |
 | `get_routing_timings` | Phase timings of the last routing pass (`LastRoutingPassTimings`) |
 | `screenshot` | PNG of the whole design, or of a µm region (`x`, `y`, `width`, `height`), returned as MCP image content; `width_px` up to 4096 |
 | `load_example` | Open a shipped example (e.g. `Logic Gate Counter 2-bit.lun`) as an untitled copy; without a name it lists the examples. Lunima still asks you about unsaved changes |

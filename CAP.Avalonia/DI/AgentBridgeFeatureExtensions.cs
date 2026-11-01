@@ -67,6 +67,7 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, DeleteComponentTool>();
         services.AddTransient<IAgentBridgeTool, DeleteConnectionTool>();
         services.AddTransient<IAgentBridgeTool, UndoTool>();
+        services.AddTransient<IAgentBridgeTool, RedoTool>();
         services.AddTransient<IAgentBridgeTool, LoadExampleTool>();
         services.AddTransient<IAgentBridgeTool, ScreenshotTool>();
         services.AddTransient<IAgentBridgeTool, SaveDesignTool>();
