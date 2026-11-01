@@ -76,6 +76,8 @@ public class AgentAuthoringToolsTests
         await Ok(session, "undo");
         await Ok(session, "undo");
         session.Main.Canvas.Components.ShouldBeEmpty("placement and naming are both undoable");
+        await Ok(session, "redo");
+        session.Main.Canvas.Components.Count.ShouldBe(1, "redo re-applies the placement");
     }
 
     [AvaloniaFact]

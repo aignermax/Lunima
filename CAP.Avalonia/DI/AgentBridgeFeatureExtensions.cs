@@ -12,6 +12,8 @@ using CAP.Avalonia.Services.AgentBridge.Tools.Dies;
 using CAP.Avalonia.Services.AgentBridge.Tools.Edit;
 using CAP.Avalonia.Services.AgentBridge.Tools.Exchange;
 using CAP.Avalonia.Services.AgentBridge.Tools.Inspect;
+using CAP.Avalonia.Services.AgentBridge.Tools.Layout;
+using CAP.Avalonia.Services.AgentBridge.Tools.Logic;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Cut;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Geometry;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Suggest;
@@ -65,6 +67,7 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, DeleteComponentTool>();
         services.AddTransient<IAgentBridgeTool, DeleteConnectionTool>();
         services.AddTransient<IAgentBridgeTool, UndoTool>();
+        services.AddTransient<IAgentBridgeTool, RedoTool>();
         services.AddTransient<IAgentBridgeTool, LoadExampleTool>();
         services.AddTransient<IAgentBridgeTool, ScreenshotTool>();
         services.AddTransient<IAgentBridgeTool, SaveDesignTool>();
@@ -97,6 +100,20 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, ExportNetlistTool>();
         services.AddTransient<IAgentBridgeTool, AnalyzeGdsTool>();
         services.AddTransient<IAgentBridgeTool, ImportGdsTool>();
+        services.AddTransient<IAgentBridgeTool, CreateGroupTool>();
+        services.AddTransient<IAgentBridgeTool, UngroupTool>();
+        services.AddTransient<IAgentBridgeTool, SavePrefabTool>();
+        services.AddTransient<IAgentBridgeTool, DeletePrefabTool>();
+        services.AddTransient<IAgentBridgeTool, MakeGateTool>();
+        services.AddTransient<IAgentBridgeTool, LogicBuildTool>();
+        services.AddTransient<IAgentBridgeTool, LogicEvaluateTool>();
+        services.AddTransient<IAgentBridgeTool, LogicTruthTableTool>();
+        services.AddTransient<IAgentBridgeTool, LogicStepTool>();
+        services.AddTransient<IAgentBridgeTool, IsaRunTool>();
+        services.AddTransient<IAgentBridgeTool, GetFloorplanTool>();
+        services.AddTransient<IAgentBridgeTool, FindFreeSpaceTool>();
+        services.AddTransient<IAgentBridgeTool, SetChipSizeTool>();
+        services.AddTransient<IAgentBridgeTool, DeleteDieTool>();
         services.AddSingleton<AgentToolCatalog>();
 
         services.AddSingleton(sp => new McpJsonRpcDispatcher(

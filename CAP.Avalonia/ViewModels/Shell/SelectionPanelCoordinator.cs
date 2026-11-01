@@ -24,7 +24,12 @@ internal sealed class SelectionPanelCoordinator : IDisposable
         interaction.PropertyChanged += InteractionChanged;
     }
 
-    private void SelectionChanged(ComponentViewModel? component)
+    // A command may select as part of its commit (grouping selects the new group); the panels
+    // bind to the document, so they follow the selection once that commit is complete.
+    private void SelectionChanged(ComponentViewModel? component) =>
+        _canvas.Document.AfterCommit(() => ProjectSelection(component));
+
+    private void ProjectSelection(ComponentViewModel? component)
     {
         _imported.ConfigureForSelection(component);
         _right.Sweep.ConfigureForComponent(component, _canvas);

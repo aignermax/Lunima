@@ -31,9 +31,40 @@ public static class HeadlessAgentProgram
             return error == null ? AgentCliRunner.Success : AgentCliRunner.UsageError;
         }
 
+        if (command.Verb == AgentCliVerb.Install)
+            return Install(command, output);
+
         App.HostsHeadlessAgent = true;
         buildHeadlessApp().SetupWithoutStarting();
         return RunInDispatcher(command, input, output);
+    }
+
+    private static int Install(AgentCliCommand command, TextWriter output)
+    {
+        var executable = Environment.ProcessPath
+            ?? throw new InvalidOperationException("The path of this executable is unknown.");
+        var launcher = AgentInstaller.InstallLauncher(executable);
+        Contracts.ClaudeRegistrationResult? registration = null;
+        if (command.Register)
+            registration = AgentInstaller.RegisterAsync(
+                new Registration.ClaudeCodeRegistrar(CAP_Core.Export.ProcessLaunchFactory.CreateDefault()), executable)
+                .GetAwaiter().GetResult();
+
+        output.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+        {
+            launcher = launcher.LauncherPath,
+            on_path = launcher.OnPath,
+            hint = launcher.OnPath ? null : $"Add {Path.GetDirectoryName(launcher.LauncherPath)} to PATH.",
+            claude_code = registration == null ? null : new
+            {
+                server = AgentInstaller.HeadlessServerName,
+                registered = registration.Success,
+                cli_found = registration.CliFound,
+                output = registration.Output,
+            },
+        }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        output.Flush();
+        return registration is { Success: false } ? AgentCliRunner.ToolFailed : AgentCliRunner.Success;
     }
 
     private static int RunInDispatcher(AgentCliCommand command, TextReader input, TextWriter output)

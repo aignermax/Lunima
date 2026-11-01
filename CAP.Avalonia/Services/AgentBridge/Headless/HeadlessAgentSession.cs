@@ -49,12 +49,14 @@ public sealed class HeadlessAgentSession : IAsyncDisposable
 
     /// <summary>Builds the container and the main view-model.</summary>
     /// <param name="diagnostics">Receives every error-console entry (the host writes them to stderr).</param>
-    public static HeadlessAgentSession Create(TextWriter diagnostics)
+    /// <param name="overrides">Last-registration-wins replacements, e.g. a test's private component library.</param>
+    public static HeadlessAgentSession Create(TextWriter diagnostics, Action<IServiceCollection>? overrides = null)
     {
         var preferencesCopy = CopyUserPreferences();
         var services = new ServiceCollection();
         App.ConfigureServices(services);
         services.AddSingleton(_ => new UserPreferencesService(preferencesCopy));
+        overrides?.Invoke(services);
         var provider = services.BuildServiceProvider();
 
         provider.GetRequiredService<ErrorConsoleService>().EntryAdded +=

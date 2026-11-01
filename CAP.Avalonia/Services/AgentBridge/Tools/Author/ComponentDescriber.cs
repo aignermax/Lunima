@@ -21,7 +21,7 @@ public static class ComponentDescriber
         return new
         {
             Id = component.Identifier,
-            Name = vm.Name,
+            Name = group?.GroupName ?? vm.Name,
             Type = group != null ? (group.IsDie ? "die" : "group") : component.TemplateName ?? component.NazcaFunctionName,
             Pdk = session.Placement.ResolveComponentPdkSource(component),
             X = Round(vm.X),

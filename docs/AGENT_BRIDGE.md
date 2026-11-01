@@ -36,6 +36,24 @@ interpreter, routing settings), so nothing it does — recent files, reopen-last
 changes the interactive app. Every session starts with an empty design unless `--design` is
 given.
 
+### Claude Code plugin
+
+The repository is a Claude Code plugin marketplace (`.claude-plugin/marketplace.json` →
+`claude-plugin/lunima/`). The plugin bundles the headless MCP server (started as `lunima mcp`)
+and four workflow skills: `photonic-circuit-design`, `gds-layout`, `logic-and-cpu` and
+`chiplet-assembly`.
+
+```bash
+CAP.Desktop agent install            # writes the `lunima` launcher (~/.local/bin, or %LOCALAPPDATA%\Lunima\bin)
+# in Claude Code:
+/plugin marketplace add aignermax/Lunima
+/plugin install lunima@lunima
+```
+
+`agent install --register` instead registers the server directly as `lunima-headless`
+(`claude mcp add --scope user lunima-headless -- <path>/CAP.Desktop mcp`). The plugin also honours
+`LUNIMA_EXE` (full path of `CAP.Desktop`) when no launcher is on `PATH`.
+
 ## Connect Claude Code (one click)
 
 **Settings → Agent bridge (MCP) → Connect Claude Code → Connect.** This turns the bridge on
@@ -86,7 +104,7 @@ The bridge's own tools:
 | `reroute_connections` | Run the router, wait for it, report blocked state (all, or the given `ids`) |
 | `delete_component` | Delete a component/group with its connections. Deleting a crossing component restores the two crossed nets. Undoable |
 | `delete_connection` | Delete one connection (a crossing piece dissolves its crossing). Undoable |
-| `undo` | Undo the most recent step of the shared history (the same step Ctrl+Z would undo) |
+| `undo` / `redo` | Undo the most recent step of the shared history (the same step Ctrl+Z would undo), or redo it |
 | `get_routing_timings` | Phase timings of the last routing pass (`LastRoutingPassTimings`) |
 | `screenshot` | PNG of the whole design, or of a µm region (`x`, `y`, `width`, `height`), returned as MCP image content; `width_px` up to 4096 |
 | `load_example` | Open a shipped example (e.g. `Logic Gate Counter 2-bit.lun`) as an untitled copy; without a name it lists the examples. Lunima still asks you about unsaved changes |
@@ -129,6 +147,27 @@ Exchange — GDS, layout scripts and netlists:
 | `export_netlist` | `gdsfactory_yaml` (inline or to `path`), `sax` and `photontorch` Python scripts, or `verilog_a` (modules + top-level netlist + SPICE test bench into a folder). Parametric components export their S-matrix at the current parameter values |
 | `analyze_gds` | Read a GDS without importing: library, top-cell candidates with their sub-cell instances, and the layer census (polygons / paths / texts per layer/datatype) |
 | `import_gds` | Import a cell like the GDS-import dialog: `explode` (sub-cells become components, abutments and drawn routes become connections) or `black_box`; layer roles as `"layer,datatype;..."`; optional `reroute`, `auto_connect`, `group` |
+
+Hierarchy and logic — from optical gates to a processor:
+
+| Tool | What it does |
+|---|---|
+| `create_group` / `ungroup` | Group components into a cell (internal wires move inside; open pins and leaving wires become external pins), or dissolve one level. Undoable |
+| `make_gate` | Make a group a logic gate: name external pins as `inputs` (≤ 4), `outputs`, `bias`; the optical truth table is simulated and returned with output powers. Without `threshold` it is put into the widest gap between the output powers (reported with its noise margin). `register=true` for clocked registers. Undoable |
+| `save_as_prefab` / `delete_prefab` | Store a group or gate in the user's component library (refuses an existing name unless `replace=true`), or remove it. `list_component_types` lists library groups under `groups`; `place_component` places them by name |
+| `logic_build` | Build the logic network from the gates and the wires between them (Logic panel → Build): network inputs/outputs, gates, registers, critical-path delay, fan-out warnings |
+| `logic_evaluate` / `logic_truth_table` | One input combination, or all 2ⁿ (n ≤ 12) as compact bit strings |
+| `logic_step` | One clock cycle: settle, commit every register, settle again; `reset=true` clears the registers first |
+| `isa_run` | Assemble and run a program for the 4-bit learning ISA (docs/ISA.md) in the ISA playground: final ACC/PC/RAM, halt state and a step trace. `photonic=true` executes the operations the built network implements (e.g. ADD on the 4-bit adder chip), with the light's propagation time |
+
+Floorplan and chiplets:
+
+| Tool | What it does |
+|---|---|
+| `get_floorplan` | Chip bounds, the box the design uses, utilisation (parts with clearance + routed waveguides), dies, and the largest free rectangles |
+| `find_free_space` | Top-left spots for a `width` × `height` block, clear of parts and waveguides, nearest to `near_x`/`near_y` first |
+| `set_chip_size` | Resize the chip (placement area); not for multi-die assemblies |
+| `delete_die` | Delete a die with its parts and links (the die tools above create, bind, move and link dies) |
 
 All other tools of the in-app **AI assistant** (`get_grid_state`, `run_simulation`, `get_light_values`, `inspect_group`, `copy_component`,
 `create_group`, `ungroup`, `save_as_prefab`, `clear_grid`, `fit_to_view`,
