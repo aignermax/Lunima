@@ -169,7 +169,7 @@ Hierarchy and logic — from optical gates to a processor:
 | `make_gate` | Make a group a logic gate: name external pins as `inputs` (≤ 4), `outputs`, `bias`; the optical truth table is simulated and returned with output powers. Without `threshold` it is put into the widest gap between the output powers (reported with its noise margin). `register=true` for clocked registers. Undoable |
 | `save_as_prefab` / `delete_prefab` | Store a group or gate in the user's component library (refuses an existing name unless `replace=true`), or remove it. `list_component_types` lists library groups under `groups`; `place_component` places them by name |
 | `logic_build` | Build the logic network from the gates and the wires between them (Logic panel → Build): network inputs/outputs, gates, registers, critical-path delay, fan-out warnings |
-| `logic_evaluate` / `logic_truth_table` | One input combination, or all 2ⁿ (n ≤ 12) as compact bit strings |
+| `logic_evaluate` / `logic_truth_table` | One input combination, or all 2ⁿ (n ≤ 12 free inputs) as compact bit strings — by default over the named primary outputs; `fixed` holds inputs constant (e.g. `{"Cin": 0}`) |
 | `logic_step` | One clock cycle: settle, commit every register, settle again; `reset=true` clears the registers first |
 | `isa_run` | Assemble and run a program for the 4-bit learning ISA (docs/ISA.md) in the ISA playground: final ACC/PC/RAM, halt state and a step trace. `photonic=true` executes the operations the built network implements (e.g. ADD on the 4-bit adder chip), with the light's propagation time |
 

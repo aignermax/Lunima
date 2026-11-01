@@ -75,6 +75,12 @@ public abstract class LogicNetworkToolBase : IAgentBridgeTool
         return bits;
     }
 
+    /// <summary>An arguments object whose <c>inputs</c> is the <paramref name="key"/> property (for <see cref="ReadInputs"/>).</summary>
+    protected static JsonElement Rename(JsonElement arguments, string key) =>
+        arguments.TryGetProperty(key, out var value)
+            ? JsonDocument.Parse($"{{\"inputs\":{value.GetRawText()}}}").RootElement.Clone()
+            : JsonDocument.Parse("{}").RootElement.Clone();
+
     /// <summary>The input-bits schema shared by evaluate and step.</summary>
     protected static object InputsSchema => new
     {
@@ -96,10 +102,15 @@ public sealed class LogicBuildTool : LogicNetworkToolBase
     public override string Description =>
         "Build the logic network from the design's gates (groups made with make_gate, nested in any cells) and the " +
         "wires between them: returns network inputs/outputs (named by the unconnected gate pins), gates, registers, " +
-        "critical-path delay (ps) and fan-out warnings. Required before logic_evaluate/truth_table/step and isa_run photonic=true.";
+        "critical-path delay (ps) and fan-out warnings; primary_outputs are the named signals. Large networks list gates " +
+        "and internal outputs only with detailed=true. Required before logic_evaluate/truth_table/step and isa_run photonic=true.";
 
     /// <inheritdoc/>
-    public override object InputSchema => new { type = "object", properties = new { } };
+    public override object InputSchema => new
+    {
+        type = "object",
+        properties = new { detailed = new { type = "boolean", description = "List every gate and output even for large networks." } },
+    };
 
     /// <inheritdoc/>
     public override async Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
@@ -110,7 +121,7 @@ public sealed class LogicBuildTool : LogicNetworkToolBase
         await logic.BuildNetworkCommand.ExecuteAsync(null);
         var network = logic.HasNetwork ? Networks.Network : null;
         return network != null
-            ? AgentToolResult.Json(LogicDescriber.Network(network))
+            ? AgentToolResult.Json(LogicDescriber.Network(network, ToolArguments.GetBool(arguments, "detailed")))
             : AgentToolResult.Error($"No logic network: {logic.StatusText}");
     }
 }
@@ -163,11 +174,20 @@ public sealed class LogicTruthTableTool : LogicNetworkToolBase
 
     /// <inheritdoc/>
     public override string Description =>
-        $"Enumerate all 2^n input combinations of the built network (n <= {MaxInputs}) and return the outputs as " +
-        "bit strings in input/output order — compact enough to compare with the intended function (adder, mux, …).";
+        $"Enumerate all 2^n combinations of the free inputs (n <= {MaxInputs}) and return the outputs as bit strings " +
+        "in input/output order. outputs: which outputs (default: the named primary outputs, e.g. S0..S3, Cout); " +
+        "fixed: inputs held constant, e.g. {\"Cin\": 0}.";
 
     /// <inheritdoc/>
-    public override object InputSchema => new { type = "object", properties = new { } };
+    public override object InputSchema => new
+    {
+        type = "object",
+        properties = new
+        {
+            outputs = new { type = "array", items = new { type = "string" }, description = "Outputs to report (default: primary outputs)." },
+            @fixed = new { type = "object", description = "Inputs held at a constant level, e.g. {\"Cin\": 0}." },
+        },
+    };
 
     /// <inheritdoc/>
     public override Task<AgentToolResult> ExecuteAsync(JsonElement arguments)
@@ -175,19 +195,37 @@ public sealed class LogicTruthTableTool : LogicNetworkToolBase
         var network = CurrentNetwork(out var error);
         if (network == null)
             return Task.FromResult(error!);
-        var inputs = network.InputPinNames;
+        var fixedBits = ReadInputs(network, Rename(arguments, "fixed"), out var reason);
+        if (fixedBits == null)
+            return Task.FromResult(AgentToolResult.Error(reason!));
+        var held = arguments.TryGetProperty("fixed", out var f) && f.ValueKind == JsonValueKind.Object
+            ? f.EnumerateObject().Select(p => p.Name).ToHashSet()
+            : new HashSet<string>();
+        var inputs = network.InputPinNames.Where(n => !held.Contains(n)).ToList();
         if (inputs.Count > MaxInputs)
-            return Task.FromResult(AgentToolResult.Error($"{inputs.Count} inputs; enumerate at most {MaxInputs} (use logic_evaluate for single cases)."));
+            return Task.FromResult(AgentToolResult.Error($"{inputs.Count} free inputs; enumerate at most {MaxInputs} (hold some with fixed)."));
 
-        var outputs = network.OutputPinNames;
+        var requested = ToolArguments.GetStringList(arguments, "outputs");
+        var unknown = requested.Where(o => !network.OutputPinNames.Contains(o)).ToList();
+        if (unknown.Count > 0)
+            return Task.FromResult(AgentToolResult.Error($"Unknown outputs {string.Join(", ", unknown)}; see logic_build."));
+        var outputs = requested.Count > 0 ? requested : LogicDescriber.PrimaryOutputs(network);
         var rows = new List<string>();
         for (var combination = 0; combination < 1 << inputs.Count; combination++)
         {
-            var bits = inputs.Select((name, i) => (name, on: (combination >> i & 1) == 1)).ToDictionary(x => x.name, x => x.on);
+            var bits = new Dictionary<string, bool>(fixedBits);
+            for (var i = 0; i < inputs.Count; i++)
+                bits[inputs[i]] = (combination >> i & 1) == 1;
             var result = network.Evaluate(bits);
             rows.Add(string.Concat(inputs.Select(n => bits[n] ? '1' : '0')) + " -> " + string.Concat(outputs.Select(n => result[n] ? '1' : '0')));
         }
-        return Task.FromResult(AgentToolResult.Json(new { InputOrder = inputs, OutputOrder = outputs, Rows = rows }));
+        return Task.FromResult(AgentToolResult.Json(new
+        {
+            Fixed = held.ToDictionary(n => n, n => fixedBits[n] ? 1 : 0),
+            InputOrder = inputs,
+            OutputOrder = outputs,
+            Rows = rows,
+        }));
     }
 }
 
