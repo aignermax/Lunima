@@ -71,7 +71,7 @@ public sealed class SweepSpectrumTool : IAgentBridgeTool
             return AgentToolResult.Error("No laser is on. Switch an input on with set_light_source.");
         var outputs = OutputPins();
         if (outputs.Count == 0)
-            return AgentToolResult.Error("No output: switch the laser off at the output couplers (set_light_source enabled=false).");
+            return AgentToolResult.Error("No output: wire a photodetector or switch the laser off at the output couplers (set_light_source enabled=false).");
 
         var result = await _runner.RunAsync(configuration, circuit.GridManager, circuit.Ports, context?.CancellationToken ?? default);
         var injected = _session.Canvas.Components
@@ -88,10 +88,9 @@ public sealed class SweepSpectrumTool : IAgentBridgeTool
         });
     }
 
-    /// <summary>Light pins (in-flow ids) of every output coupler, keyed by component id.</summary>
+    /// <summary>Light pins (in-flow ids) of every output coupler and sink, keyed by component id.</summary>
     private Dictionary<string, IReadOnlyList<Guid>> OutputPins() =>
-        _session.Canvas.Components
-            .Where(c => c.IsLaserOff)
+        SimulationReport.OutputComponents(_session.Canvas)
             .ToDictionary(c => c.Component.Identifier, c => (IReadOnlyList<Guid>)c.Component.PhysicalPins
                 .Where(p => p.LogicalPin?.MatterType == MatterType.Light)
                 .Select(p => p.LogicalPin.IDInFlow)
