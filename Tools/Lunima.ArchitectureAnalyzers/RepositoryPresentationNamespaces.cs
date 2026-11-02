@@ -42,13 +42,20 @@ internal static class RepositoryPresentationNamespaces
         yield return new("CAP.Avalonia.Selection", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AddCustomComponent", RepositoryModules.Presentation);
+        // The windowless agent host builds the production container and drives it: a composition root.
+        yield return new("CAP.Avalonia.Services.AgentBridge.Headless", RepositoryModules.Composition);
         yield return new("CAP.Avalonia.Services.AgentBridge.Hosting", RepositoryModules.Infrastructure);
         yield return new("CAP.Avalonia.Services.AgentBridge.Protocol", RepositoryModules.Contracts);
         yield return new("CAP.Avalonia.Services.AgentBridge.Registration", RepositoryModules.Infrastructure);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools", RepositoryModules.Presentation);
+        yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Analysis", RepositoryModules.Presentation);
+        yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Author", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Dies", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Edit", RepositoryModules.Presentation);
+        yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Exchange", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Inspect", RepositoryModules.Presentation);
+        yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Layout", RepositoryModules.Presentation);
+        yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Logic", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Repair", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Repair.Cut", RepositoryModules.Presentation);
         yield return new("CAP.Avalonia.Services.AgentBridge.Tools.Repair.Geometry", RepositoryModules.Presentation);

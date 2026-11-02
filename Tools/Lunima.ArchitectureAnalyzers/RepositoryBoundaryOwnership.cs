@@ -43,6 +43,10 @@ internal static class RepositoryBoundaryOwnership
         yield return new("CAP_Core.Export.PythonEnvironmentManager.PythonEnvironment", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.PythonEnvironmentManager.PythonEnvironmentStatus", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.PythonEnvironmentManager.IManagedPythonProvisioner", RepositoryModules.Contracts);
+        yield return new("CAP_Core.Export.FoundryDrc.IFoundryDrcRunner", RepositoryModules.Contracts);
+        yield return new("CAP_Core.Export.FoundryDrc.FoundryDrcResult", RepositoryModules.Contracts);
+        yield return new("CAP_Core.Export.FoundryDrc.DrcRuleSummary", RepositoryModules.Contracts);
+        yield return new("CAP_Core.Export.FoundryDrc.DrcMarker", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.PdkResolution.PdkResolutionStatus", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.PdkResolution.PdkResolutionEntry", RepositoryModules.Contracts);
         yield return new("CAP_Core.Export.PdkResolution.PdkResolutionResult", RepositoryModules.Contracts);

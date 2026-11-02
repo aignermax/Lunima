@@ -104,6 +104,9 @@ public partial class IsaPlaygroundViewModel : ObservableObject
     /// <summary>The sample programs shown in the picker.</summary>
     public IReadOnlyList<IsaSampleProgram> Samples { get; }
 
+    /// <summary>True once the assembled program executed HALT (further steps are no-ops).</summary>
+    public bool IsHalted => _emulator?.IsHalted ?? false;
+
     /// <summary>
     /// The 1-based editor line of the instruction the program counter points at — the
     /// editor highlights it in place — or null when not assembled or halted.

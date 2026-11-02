@@ -6,9 +6,14 @@ using CAP.Avalonia.Services.AgentBridge.Hosting;
 using CAP.Avalonia.Services.AgentBridge.Protocol;
 using CAP.Avalonia.Services.AgentBridge.Registration;
 using CAP.Avalonia.Services.AgentBridge.Tools;
+using CAP.Avalonia.Services.AgentBridge.Tools.Analysis;
+using CAP.Avalonia.Services.AgentBridge.Tools.Author;
 using CAP.Avalonia.Services.AgentBridge.Tools.Dies;
 using CAP.Avalonia.Services.AgentBridge.Tools.Edit;
+using CAP.Avalonia.Services.AgentBridge.Tools.Exchange;
 using CAP.Avalonia.Services.AgentBridge.Tools.Inspect;
+using CAP.Avalonia.Services.AgentBridge.Tools.Layout;
+using CAP.Avalonia.Services.AgentBridge.Tools.Logic;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Cut;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Geometry;
 using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Suggest;
@@ -47,7 +52,10 @@ internal static class AgentBridgeFeatureExtensions
                   ?? (IReadOnlyList<CAP.Avalonia.ViewModels.Library.ComponentTemplate>)Array.Empty<CAP.Avalonia.ViewModels.Library.ComponentTemplate>(),
             () => sp.GetService<MainViewModel>() is { } main
                 ? CAP_Core.Components.Process.ProcessCatalog.BuildGroups(main.LeftPanel.GetLoadedPdkProcessEntries())
-                : Array.Empty<CAP_Core.Components.Process.ProcessGroup>()));
+                : Array.Empty<CAP_Core.Components.Process.ProcessGroup>(),
+            () => sp.GetService<MainViewModel>()?.CanvasInteraction.PlacementContext
+                  ?? CAP_Core.Components.Process.PlacementPolicyContext.Unrestricted,
+            () => sp.GetService<MainViewModel>()));
         services.AddSingleton(sp => new CanvasSnapshotRenderer(() => sp.GetService<MainViewModel>()));
 
         services.AddTransient<IAgentBridgeTool, GetDesignSummaryTool>();
@@ -59,6 +67,16 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, DeleteComponentTool>();
         services.AddTransient<IAgentBridgeTool, DeleteConnectionTool>();
         services.AddTransient<IAgentBridgeTool, UndoTool>();
+        services.AddTransient<IAgentBridgeTool, RedoTool>();
+        services.AddTransient<IAgentBridgeTool>(sp => new BatchTool(
+            sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>));
+        services.AddTransient<IAgentBridgeTool, ConnectBundleTool>();
+        services.AddTransient<IAgentBridgeTool, MatchLengthsTool>();
+        services.AddTransient<IAgentBridgeTool, CompareNetlistTool>();
+        services.AddTransient<IAgentBridgeTool>(sp => new AddFiberArrayTool(
+            sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>));
+        services.AddTransient<IAgentBridgeTool>(sp => new ApplyDesignTool(
+            sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>));
         services.AddTransient<IAgentBridgeTool, LoadExampleTool>();
         services.AddTransient<IAgentBridgeTool, ScreenshotTool>();
         services.AddTransient<IAgentBridgeTool, SaveDesignTool>();
@@ -74,6 +92,45 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, SetDieProcessTool>();
         services.AddTransient<IAgentBridgeTool, MoveDieTool>();
         services.AddTransient<IAgentBridgeTool, LinkDiesTool>();
+        services.AddTransient<IAgentBridgeTool, NewDesignTool>();
+        services.AddTransient<IAgentBridgeTool, OpenDesignTool>();
+        services.AddTransient<IAgentBridgeTool, ListComponentTypesTool>();
+        services.AddTransient<IAgentBridgeTool, DescribeComponentTypeTool>();
+        services.AddTransient<IAgentBridgeTool, GetComponentTool>();
+        services.AddTransient<IAgentBridgeTool, PlaceComponentTool>();
+        services.AddTransient<IAgentBridgeTool, RotateComponentTool>();
+        services.AddTransient<IAgentBridgeTool, ConnectPinsTool>();
+        services.AddTransient<IAgentBridgeTool, SetParameterTool>();
+        services.AddTransient<IAgentBridgeTool, SetLightSourceTool>();
+        services.AddTransient<IAgentBridgeTool, SimulateTool>();
+        services.AddTransient<IAgentBridgeTool>(sp => new SweepSpectrumTool(sp.GetRequiredService<AgentDesignSession>()));
+        services.AddTransient<IAgentBridgeTool, SweepParameterTool>();
+        services.AddTransient<IAgentBridgeTool, OptimizeTool>();
+        services.AddTransient<IAgentBridgeTool, ValidateDesignTool>();
+        services.AddTransient<IAgentBridgeTool, ExportGdsTool>();
+        services.AddTransient<IAgentBridgeTool, ExportNetlistTool>();
+        services.AddTransient<IAgentBridgeTool, AnalyzeGdsTool>();
+        services.AddTransient<IAgentBridgeTool, ImportGdsTool>();
+        services.AddSingleton<CAP_Core.Export.FoundryDrc.IFoundryDrcRunner>(sp =>
+            new CAP_Core.Export.FoundryDrc.KLayoutDrcRunner(sp.GetRequiredService<CAP_Core.Export.ProcessLaunchFactory>()));
+        services.AddTransient<IAgentBridgeTool>(sp => new CheckFoundryDrcTool(
+            sp.GetRequiredService<AgentDesignSession>(), sp.GetRequiredService<AgentToolCatalog>,
+            sp.GetRequiredService<CAP_Core.Export.FoundryDrc.IFoundryDrcRunner>()));
+        services.AddTransient<IAgentBridgeTool, CreateGroupTool>();
+        services.AddTransient<IAgentBridgeTool, UngroupTool>();
+        services.AddTransient<IAgentBridgeTool, SavePrefabTool>();
+        services.AddTransient<IAgentBridgeTool, DeletePrefabTool>();
+        services.AddTransient<IAgentBridgeTool, MakeGateTool>();
+        services.AddTransient<IAgentBridgeTool, RenameSignalsTool>();
+        services.AddTransient<IAgentBridgeTool, LogicBuildTool>();
+        services.AddTransient<IAgentBridgeTool, LogicEvaluateTool>();
+        services.AddTransient<IAgentBridgeTool, LogicTruthTableTool>();
+        services.AddTransient<IAgentBridgeTool, LogicStepTool>();
+        services.AddTransient<IAgentBridgeTool, IsaRunTool>();
+        services.AddTransient<IAgentBridgeTool, GetFloorplanTool>();
+        services.AddTransient<IAgentBridgeTool, FindFreeSpaceTool>();
+        services.AddTransient<IAgentBridgeTool, SetChipSizeTool>();
+        services.AddTransient<IAgentBridgeTool, DeleteDieTool>();
         services.AddSingleton<AgentToolCatalog>();
 
         services.AddSingleton(sp => new McpJsonRpcDispatcher(

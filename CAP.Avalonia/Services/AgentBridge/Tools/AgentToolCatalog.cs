@@ -68,6 +68,22 @@ public sealed class AgentToolCatalog
         finally { _execution.Release(); }
     }
 
+    /// <summary>
+    /// Runs <paramref name="name"/> as part of an already admitted call (the <c>batch</c> tool):
+    /// same context and UI-thread turn, no second admission — the outer call holds the lock.
+    /// </summary>
+    internal async Task<AgentToolResult> InvokeWithinAsync(string name, JsonElement arguments, AgentToolContext context)
+    {
+        if (!_tools.TryGetValue(name, out var tool))
+            return AgentToolResult.Error($"Unknown tool '{name}'.");
+        context.ThrowIfStopped();
+        try { return await tool.ExecuteAsync(arguments, context); }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
+        {
+            return AgentToolResult.Error($"{name} failed: {ex.Message}");
+        }
+    }
+
     /// <summary>Opens fresh admission after the previous server generation drained.</summary>
     public void OpenAdmission() => _operations.Open();
 

@@ -12,6 +12,7 @@ public sealed class DocumentSession
     private bool _retired;
     private Task? _retirement;
     private DocumentOperation? _commitOwner;
+    private readonly List<Action> _afterCommit = new();
 
     /// <summary>Failure raised by a cancellation callback; never substitutes for draining work.</summary>
     public AggregateException? CancellationError { get; private set; }
@@ -146,6 +147,25 @@ public sealed class DocumentSession
         }
     }
 
+    /// <summary>
+    /// Runs <paramref name="reaction"/> now, or — when called from inside a commit on this
+    /// thread — right after that commit completes. For observers that bind to the document
+    /// (identity, revision): during a commit the document is partially changed and refuses that.
+    /// </summary>
+    public void AfterCommit(Action reaction)
+    {
+        ArgumentNullException.ThrowIfNull(reaction);
+        lock (_sync)
+        {
+            if (_commitOwner != null)
+            {
+                _afterCommit.Add(reaction);
+                return;
+            }
+        }
+        reaction();
+    }
+
     internal bool TryCommitAndAdvance(DocumentOperation operation, Action commit)
     {
         ArgumentNullException.ThrowIfNull(commit);
@@ -175,7 +195,24 @@ public sealed class DocumentSession
                 }
             }
         }
-        finally { _ = CancelAsync(obsolete); }
+        finally
+        {
+            _ = CancelAsync(obsolete);
+            RunDeferredReactions();
+        }
+    }
+
+    private void RunDeferredReactions()
+    {
+        Action[] reactions;
+        lock (_sync)
+        {
+            if (_commitOwner != null || _afterCommit.Count == 0) return;
+            reactions = _afterCommit.ToArray();
+            _afterCommit.Clear();
+        }
+        foreach (var reaction in reactions)
+            reaction();
     }
 
     private bool CanPublish(DocumentOperation operation) =>

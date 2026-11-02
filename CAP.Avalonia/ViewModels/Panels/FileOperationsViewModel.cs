@@ -535,11 +535,15 @@ public partial class FileOperationsViewModel : ObservableObject, IDisposable
     /// </summary>
     /// <param name="filePath">Absolute path to the .lun file to open.</param>
     /// <returns>True when the design was loaded; false when cancelled, missing, or failed.</returns>
-    public async Task<bool> LoadDesignFromPathAsync(string filePath)
+    public Task<bool> LoadDesignFromPathAsync(string filePath) => LoadDesignFromPathAsync(filePath, null);
+
+    /// <summary>Opens a design file only while its initiating request is still current (agent tools).</summary>
+    public async Task<bool> LoadDesignFromPathAsync(string filePath, Func<bool>? canProceed,
+        CAP_Contracts.ICommitPermission? permission = null, Action? onOpened = null)
     {
-        await using var request = NativeDesignRequest.Begin(_canvas.Document);
+        await using var request = NativeDesignRequest.Begin(_canvas.Document, permission, canProceed);
         if (request == null || !await ConfirmUnsavedChangesAsync(LoadPromptMessage, request)) return false;
-        return await LoadDesignFromFileAsync(filePath, permission: request);
+        return await LoadDesignFromFileAsync(filePath, permission: request, onOpened: onOpened);
     }
 
     /// <summary>

@@ -264,6 +264,30 @@ public class ComponentGroupCloningTests
     }
 
     /// <summary>
+    /// A cell that exposes a pin of a nested gate group — how a full adder made of gate groups
+    /// becomes a library cell — must clone. The nested group's pins exist only after its pins
+    /// are materialised from its external pins, so a fresh copy has to do that itself.
+    /// </summary>
+    [Fact]
+    public void Clone_OuterPinExposingANestedGroupPin_Resolves()
+    {
+        var gate = new ComponentGroup("Gate");
+        var leaf = CreateComponentWithPins("Leaf", 100, 100);
+        gate.AddChild(leaf);
+        gate.AddExternalPin(new GroupPin { Name = "A", InternalPin = leaf.PhysicalPins[0], RelativeX = 0, RelativeY = 125, AngleDegrees = 180 });
+        gate.SyncPhysicalPinsFromExternalPins();
+        var cell = new ComponentGroup("Cell");
+        cell.AddChild(gate);
+        cell.AddExternalPin(new GroupPin { Name = "CELL_A", InternalPin = gate.PhysicalPins.Single(p => p.Name == "A"), AngleDegrees = 180 });
+
+        var copy = (ComponentGroup)cell.Clone();
+
+        var exposed = copy.ExternalPins.Single().InternalPin;
+        exposed.Name.ShouldBe("A");
+        exposed.ParentComponent.ShouldBe(copy.ChildComponents[0], "the copy's pin points into the copied gate, not the original");
+    }
+
+    /// <summary>
     /// Verifies that cloning preserves group physical properties (position, size, rotation).
     /// </summary>
     [Fact]

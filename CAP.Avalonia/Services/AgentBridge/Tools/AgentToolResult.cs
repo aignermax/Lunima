@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace CAP.Avalonia.Services.AgentBridge.Tools;
@@ -20,6 +21,7 @@ public sealed record AgentToolResult(IReadOnlyList<AgentToolContent> Content, bo
     {
         WriteIndented = false,
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
     /// <summary>A single text block.</summary>

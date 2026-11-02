@@ -45,6 +45,9 @@ public class AiGridService : IAiGridService
         PlacementContext.ProcessAgnosticPdkNames,
         PlacementContext.LiveMemberPdkNames);
 
+    /// <summary>Counter-clockwise quarter turns for a rotation in degrees (non-multiples of 90 round down).</summary>
+    private static int QuarterTurns(int rotationDegrees) => ((rotationDegrees / 90) % 4 + 4) % 4;
+
     private static (bool IsAllowed, string? BlockReason) CheckProcess(string? pdkSource, ProcessGuard guard) =>
         SingleProcessPolicy.CheckPlacement(guard.Active, pdkSource, guard.AgnosticPdkNames, guard.LiveMemberPdkNames);
 
@@ -142,6 +145,8 @@ public class AiGridService : IAiGridService
         var placed = _canvas.Components.LastOrDefault();
         if (placed == null)
             return $"Failed to place '{componentType}'.";
+        for (var turn = 0; turn < QuarterTurns(rotation); turn++)
+            new RotateComponentCommand(_canvas, placed).Execute();
 
         var px = Math.Round(placed.Component.PhysicalX, 0);
         var py = Math.Round(placed.Component.PhysicalY, 0);

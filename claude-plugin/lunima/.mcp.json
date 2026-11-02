@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "lunima": {
+      "command": "${LUNIMA_EXE:-lunima}",
+      "args": ["mcp"]
+    }
+  }
+}

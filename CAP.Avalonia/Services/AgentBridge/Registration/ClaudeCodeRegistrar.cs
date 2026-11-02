@@ -55,6 +55,26 @@ public sealed class ClaudeCodeRegistrar
         return new ClaudeRegistrationResult(added.Succeeded, true, added.Output);
     }
 
+    /// <summary>
+    /// Registers a stdio MCP server <paramref name="serverName"/> that Claude Code starts as
+    /// <paramref name="command"/> <paramref name="arguments"/> (the headless engine), replacing
+    /// an earlier registration of that name.
+    /// </summary>
+    public async Task<ClaudeRegistrationResult> RegisterStdioAsync(string serverName, string command,
+        IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var cli = FindCli();
+        if (cli == null)
+            return NotFound();
+
+        await RunAsync(cli, new[] { "mcp", "remove", "--scope", "user", serverName }, cancellationToken);
+        var add = new List<string> { "mcp", "add", "--scope", "user", serverName, "--", command };
+        add.AddRange(arguments);
+        var added = await RunAsync(cli, add, cancellationToken);
+        return new ClaudeRegistrationResult(added.Succeeded, true, added.Output);
+    }
+
     /// <summary>Removes the <c>lunima</c> registration for the current user (best effort).</summary>
     public async Task<ClaudeRegistrationResult> UnregisterAsync(CancellationToken cancellationToken = default)
     {

@@ -7,6 +7,53 @@ their reasons, move a component, cut wires with crossings, slide crossings, shif
 segments, re-route, take a screenshot of a region, save — while you watch the canvas. Every
 edit goes through Lunima's undo history, so **Ctrl+Z** reverts whatever the agent did.
 
+## Headless: no window at all
+
+The same tools also run **without the desktop app**. The `CAP.Desktop` binary (`CAP.Desktop.exe`
+on Windows, `Lunima.app/Contents/MacOS/CAP.Desktop` on macOS) starts the production application
+on Avalonia's headless platform when its first argument is `mcp` or `agent`: the real
+view-models, routing, simulation and rendering (screenshots have real pixels), but no window, no
+HTTP socket and no update check.
+
+```bash
+# MCP server over stdin/stdout — Claude Code starts it on demand:
+claude mcp add --scope user lunima-headless -- /path/to/CAP.Desktop mcp
+
+# One-shot CLI: JSON on stdout, diagnostics on stderr
+CAP.Desktop agent tools                                   # every tool + argument schema
+CAP.Desktop agent call get_design_summary --design chip.lun
+CAP.Desktop agent call move_component '{"id":"mmi1","dx":20}' --design chip.lun --save
+CAP.Desktop agent run steps.json --design chip.lun --save out.lun --images shots/
+```
+
+A script for `agent run` is a JSON array of `{"tool": "...", "arguments": {...}}` steps (`-`
+reads it from stdin); it stops at the first failed step unless `--keep-going` is given. Text
+results that hold JSON are printed as JSON; images are written to PNG files and reported by
+path. Exit codes: `0` success, `1` a tool reported an error, `2` malformed command line.
+
+The headless session reads a private *copy* of your preferences (PDK libraries, Python
+interpreter, routing settings), so nothing it does — recent files, reopen-last-project —
+changes the interactive app. Every session starts with an empty design unless `--design` is
+given.
+
+### Claude Code plugin
+
+The repository is a Claude Code plugin marketplace (`.claude-plugin/marketplace.json` →
+`claude-plugin/lunima/`). The plugin bundles the headless MCP server (started as `lunima mcp`)
+and four workflow skills: `photonic-circuit-design`, `gds-layout`, `logic-and-cpu` and
+`chiplet-assembly`.
+
+```bash
+CAP.Desktop agent install            # writes the `lunima` launcher (~/.local/bin, or %LOCALAPPDATA%\Lunima\bin)
+# in Claude Code:
+/plugin marketplace add aignermax/Lunima
+/plugin install lunima@lunima
+```
+
+`agent install --register` instead registers the server directly as `lunima-headless`
+(`claude mcp add --scope user lunima-headless -- <path>/CAP.Desktop mcp`). The plugin also honours
+`LUNIMA_EXE` (full path of `CAP.Desktop`) when no launcher is on `PATH`.
+
 ## Connect Claude Code (one click)
 
 **Settings → Agent bridge (MCP) → Connect Claude Code → Connect.** This turns the bridge on
@@ -57,7 +104,7 @@ The bridge's own tools:
 | `reroute_connections` | Run the router, wait for it, report blocked state (all, or the given `ids`) |
 | `delete_component` | Delete a component/group with its connections. Deleting a crossing component restores the two crossed nets. Undoable |
 | `delete_connection` | Delete one connection (a crossing piece dissolves its crossing). Undoable |
-| `undo` | Undo the most recent step of the shared history (the same step Ctrl+Z would undo) |
+| `undo` / `redo` | Undo the most recent step of the shared history (the same step Ctrl+Z would undo), or redo it |
 | `get_routing_timings` | Phase timings of the last routing pass (`LastRoutingPassTimings`) |
 | `screenshot` | PNG of the whole design, or of a µm region (`x`, `y`, `width`, `height`), returned as MCP image content; `width_px` up to 4096 |
 | `load_example` | Open a shipped example (e.g. `Logic Gate Counter 2-bit.lun`) as an untitled copy; without a name it lists the examples. Lunima still asks you about unsaved changes |
@@ -70,8 +117,73 @@ The bridge's own tools:
 | `suggest_fixes` | For one blocked wire: try repair candidates on the live design, undo each, return them ranked (see below) |
 | `apply_suggestion` | Apply suggestion `s1`, `s2`, … of the last `suggest_fixes`. Refused if the design changed since, or if its trial ended with more blocked wires (unless `allow_worse=true`). One undo step (two for `reorder_neighbour`) |
 
-All tools of the in-app **AI assistant** (`get_grid_state`, `place_component`,
-`create_connection`, `run_simulation`, `get_light_values`, `inspect_group`, `copy_component`,
+Authoring — build a design from nothing (all undoable):
+
+| Tool | What it does |
+|---|---|
+| `new_design` / `open_design` | Start an empty untitled design, or open a `.lun` file by path (waits for routing) |
+| `list_component_types` | The loaded PDK libraries: type name, PDK, category, footprint, pins (local offset from the top-left corner, facing angle, domain), tunable parameters, and whether the active process allows it. Filters: `filter`, `pdk`, `category` |
+| `place_component` | Place a type with its top-left corner exactly at `x`,`y`, rotated `rotation_deg` counter-clockwise; refuses an occupied spot unless `nudge=true`; optional display `name` (usable as id). Returns the component with absolute pin positions. Supersedes the assistant's centred variant |
+| `create_connection` | Wire `from_component`[`.from_pin`] to `to_component`[`.to_pin`]; without pin names the closest free facing pair is used. Waits for routing; returns length, loss, blocked + reason. Supersedes the assistant's variant |
+| `get_component` | One component: type, PDK, pose, every pin's absolute position / facing / wired-to pin, parameters, light-source settings. For a cell, each pin also names the inner gate pin and the logic `signal` it carries; `pins=signals|connected|free` filters large cells |
+| `rotate_component` | Rotate by 90/180/270° counter-clockwise; refused when locked or the rotated footprint collides |
+| `set_parameter` | Set a tunable parameter by name (e.g. `splitting_ratio`) or slider number, clamped to its range |
+| `set_light_source` | Laser on (input) / off (output), `wavelength_nm`, `power`; `mark_as_source` turns any optical part into a source |
+| `place_component` + `attach_to` | Port-relative placement: `attach_to="<component>.<pin>"`, `pin=<own pin>`, `gap_um` — rotation and position are solved so the pins face each other, and the wire is created (`connect=false` to skip) |
+| `connect_bundle` | Many wires (`[{from, to}]`) as one undo step, routed in one joint pass; reports each wire plus min/max length and skew |
+| `match_lengths` | Equalise the lengths of two or more wires with meanders (the Length Equalisation panel); `target_length_um`, meander radius limits |
+| `apply_design` | Build a whole circuit declaratively — Lunima JSON (instances with pose or `attach_to`, parameters, light sources; connections) or a gdsfactory netlist YAML (`instances`/`placements`/`connections`/`routes`; types matched by Lunima name, Nazca or gdsfactory function). Atomic; `clear=true` starts empty. Round-trips `export_netlist format=gdsfactory_yaml` |
+| `batch` | Several tool calls in one request; `atomic` (default) undoes the batch's edits when a step fails |
+| `describe_component_type` | What a part does, from its own model: transmission (dB, phase) from every input to every output at a wavelength, modelled wavelengths, pins, parameters, Nazca/gdsfactory cell |
+| `add_fiber_array` | Bring ports out to a row of couplers at `pitch_um` (default 127) on a side of the device, turned to face it, ordered so wires do not cross, wired as one bundle. Atomic |
+
+Connections can be addressed by GUID or by an endpoint `component.pin` — GUIDs are regenerated
+when a design is loaded, endpoints stay stable across sessions.
+
+Analysis — structured results instead of a canvas overlay:
+
+| Tool | What it does |
+|---|---|
+| `simulate` | S-matrix simulation: enabled sources, every output (a light source with its laser off) with received power (linear, dB, `transmission_db` relative to the injected power, phase), `open_ends` where light leaves through an unwired pin, and with `include_connections` the power on every wire. Also refreshes the power overlay (visible in screenshots) |
+| `sweep_parameter` | Step one parameter (`id`, `parameter` or `slider`, `from`, `to`, `steps`), simulate each value and return every output's power curve with the values of maximum and minimum power. The parameter is restored afterwards |
+| `sweep_spectrum` | Wavelength sweep `start_nm`..`end_nm`: per output the transmission (dB) per sample, maximum/minimum with wavelength, extinction ratio and free spectral range |
+| `validate_design` | The Checks tab: DRC-lite per PDK process (width, spacing, bend radius), overlaps, unconnected pins, chip bounds, PDK/process compatibility, chiplet interfaces, die assembly. Each finding with severity (`problem`/`hint`), kind, position and wire; `min_severity=problem` skips hints |
+| `optimize` | Tune parameters (`[{id, parameter, min, max}]`) server-side for `{maximize: out}`, `{minimize: out}` or `{maximize_ratio: [a, b]}` — coarse scan plus golden-section per parameter, repeated `rounds` times; the best values are applied as one undo step |
+
+Exchange — GDS, layout scripts and netlists:
+
+| Tool | What it does |
+|---|---|
+| `export_gds` | Write the Nazca script (`path` ending in `.py`) and, unless `generate_gds=false`, run it with the configured Python+Nazca to produce the GDS beside it. Reports skipped blocked routes, unresolved crossings and placeholder geometry |
+| `export_netlist` | `gdsfactory_yaml` (inline or to `path`), `sax` and `photontorch` Python scripts, or `verilog_a` (modules + top-level netlist + SPICE test bench into a folder). Parametric components export their S-matrix at the current parameter values |
+| `analyze_gds` | Read a GDS without importing: library, top-cell candidates with their sub-cell instances, and the layer census (polygons / paths / texts per layer/datatype) |
+| `import_gds` | Import a cell like the GDS-import dialog: `explode` (sub-cells become components, abutments and drawn routes become connections) or `black_box`; layer roles as `"layer,datatype;..."`; optional `reroute`, `auto_connect`, `group` |
+| `check_foundry_drc` | Sign-off DRC: a foundry KLayout deck (`deck`: a shipped name from `scripts/drc`, e.g. `cornerstone_sin300_drc`, or a `.lydrc` path) on `gds_path` or on the open design (exported first). Every rule with its count, plus markers in the canvas frame with the component they lie on. Needs KLayout (`$KLAYOUT` or on `PATH`) |
+| `compare_netlist` | LVS-style: the open design (e.g. after `import_gds`) against a reference netlist (gdsfactory YAML or Lunima design JSON) — component counts per type, wires missing or extra as `Type.pin — Type.pin`, and per-instance wire differences when names match |
+
+Hierarchy and logic — from optical gates to a processor:
+
+| Tool | What it does |
+|---|---|
+| `create_group` / `ungroup` | Group components into a cell (internal wires move inside; open pins and leaving wires become external pins), or dissolve one level. Undoable |
+| `make_gate` | Make a group a logic gate: name external pins as `inputs` (≤ 4), `outputs`, `bias`; the optical truth table is simulated and returned with output powers. Without `threshold` it is put into the widest gap between the output powers (reported with its noise margin). `register=true` for clocked registers. Undoable |
+| `rename_signals` | Rename logic signals inside one placed cell (recursively), e.g. `{"S": "S1", "A": "A1"}` — so several instances of one library cell form one network (output names must be unique; same-named inputs merge). Undoable |
+| `save_as_prefab` / `delete_prefab` | Store a group or gate in the user's component library (refuses an existing name unless `replace=true`), or remove it. `list_component_types` lists library groups under `groups`; `place_component` places them by name |
+| `logic_build` | Build the logic network from the gates and the wires between them (Logic panel → Build): network inputs/outputs, gates, registers, critical-path delay, fan-out warnings |
+| `logic_evaluate` / `logic_truth_table` | One input combination, or all 2ⁿ (n ≤ 12 free inputs) as compact bit strings — by default over the named primary outputs; `fixed` holds inputs constant (e.g. `{"Cin": 0}`) |
+| `logic_step` | One clock cycle: settle, commit every register, settle again; `reset=true` clears the registers first |
+| `isa_run` | Assemble and run a program for the 4-bit learning ISA (docs/ISA.md) in the ISA playground: final ACC/PC/RAM, halt state and a step trace. `photonic=true` executes the operations the built network implements (e.g. ADD on the 4-bit adder chip), with the light's propagation time |
+
+Floorplan and chiplets:
+
+| Tool | What it does |
+|---|---|
+| `get_floorplan` | Chip bounds, the box the design uses, utilisation (parts with clearance + routed waveguides), dies, and the largest free rectangles |
+| `find_free_space` | Top-left spots for a `width` × `height` block, clear of parts and waveguides, nearest to `near_x`/`near_y` first |
+| `set_chip_size` | Resize the chip (placement area); not for multi-die assemblies |
+| `delete_die` | Delete a die with its parts and links (the die tools above create, bind, move and link dies) |
+
+All other tools of the in-app **AI assistant** (`get_grid_state`, `run_simulation`, `get_light_values`, `inspect_group`, `copy_component`,
 `create_group`, `ungroup`, `save_as_prefab`, `clear_grid`, `fit_to_view`,
 `get_available_types`) are exposed as well — the tool list is generated from the same
 registry, so a new assistant tool appears here automatically. Note that these assistant
@@ -173,6 +285,10 @@ Notes:
   `ProcessLaunchFactory`, 30 s timeout per call), `ClaudeCodeConnector` (enable + register) and
   the installer switches `--register-claude-code` / `--unregister-claude-code`.
 - `Hosting/` — `AgentBridgeHost` (start/stop per settings) and the UI dispatcher.
+- `Headless/` — the windowless host: `HeadlessAgentProgram` (headless Avalonia platform +
+  dispatcher loop), `HeadlessAgentSession` (production container over a preferences copy),
+  `AgentCliCommand` / `AgentCliRunner` (CLI verbs) and `AgentScript`. `Transport/McpStdioServer`
+  is the stdio transport over the same `McpJsonRpcDispatcher` the HTTP server uses.
 
 The server is hand-written instead of using ASP.NET Core / Kestrel: the Windows MSI is a
 framework-dependent build that only requires the .NET *Desktop* runtime, so adding the

@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -29,6 +30,10 @@ public static class JsonRpcMessages
 {
     private const string Version = "2.0";
 
+    // Responses go to agents, never into HTML: escaping quotes inside the embedded JSON tool
+    // results as \u0022 only triples their size in the agent's context.
+    private static readonly JsonSerializerOptions Compact = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
     /// <summary>A success response carrying <paramref name="result"/>.</summary>
     public static string Result(JsonNode? id, JsonNode result) =>
         new JsonObject
@@ -36,7 +41,7 @@ public static class JsonRpcMessages
             ["jsonrpc"] = Version,
             ["id"] = id?.DeepClone(),
             ["result"] = result,
-        }.ToJsonString();
+        }.ToJsonString(Compact);
 
     /// <summary>An error response (<paramref name="id"/> is null when the request id is unknown).</summary>
     public static string Error(JsonNode? id, int code, string message) =>
@@ -45,7 +50,7 @@ public static class JsonRpcMessages
             ["jsonrpc"] = Version,
             ["id"] = id?.DeepClone(),
             ["error"] = new JsonObject { ["code"] = code, ["message"] = message },
-        }.ToJsonString();
+        }.ToJsonString(Compact);
 
     /// <summary>Reads the request id (string or number) as a node, or null.</summary>
     public static JsonNode? ReadId(JsonElement message) =>

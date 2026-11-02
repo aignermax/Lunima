@@ -73,6 +73,17 @@ public class VerticalSliceConventionTests
     /// Platform and framework namespaces are implicitly allowed via the "System.", "Avalonia." etc.
     /// entries. Add domain-level shared types here as the codebase grows.
     /// </summary>
+    /// <summary>
+    /// Deliberate one-way feature dependencies. The agent bridge is the facade that exposes the
+    /// application's features to external agents (simulation, sweeps, design checks, exports),
+    /// so it may call into them; those features must never depend back on the bridge.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string[]> AllowedFeatureDependencies =
+        new Dictionary<string, string[]>
+        {
+            ["AgentBridge"] = new[] { "Analysis", "Export" },
+        };
+
     private static readonly string[] SharedKernelPrefixes = new[]
     {
         // Framework / tooling
@@ -113,8 +124,11 @@ public class VerticalSliceConventionTests
     public void Feature_OnlyReferencesItsOwnNamespaceOrSharedKernel(string featureName)
     {
         var repoRoot = FindRepoRoot();
+        var allowed = AllowedFeatureDependencies.TryGetValue(featureName, out var dependencies)
+            ? dependencies
+            : Array.Empty<string>();
         var siblingNamespaces = FeatureNamespaces
-            .Where(kv => kv.Key != featureName)
+            .Where(kv => kv.Key != featureName && !allowed.Contains(kv.Key))
             .SelectMany(kv => kv.Value)
             .ToArray();
 

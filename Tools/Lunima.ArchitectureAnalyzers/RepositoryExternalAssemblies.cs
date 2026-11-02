@@ -14,6 +14,7 @@ internal static class RepositoryExternalAssemblies
         yield return new("Avalonia.DesignerSupport", RepositoryModules.UiFramework);
         yield return new("Avalonia.Diagnostics", RepositoryModules.UiFramework);
         yield return new("Avalonia.Desktop", RepositoryModules.UiFramework);
+        yield return new("Avalonia.Headless", RepositoryModules.UiFramework);
         yield return new("Avalonia.Dialogs", RepositoryModules.UiFramework);
         yield return new("Avalonia.Fonts.Inter", RepositoryModules.UiFramework);
         yield return new("Avalonia.FreeDesktop", RepositoryModules.UiFramework);

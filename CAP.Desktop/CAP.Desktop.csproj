@@ -13,13 +13,15 @@
     <BuiltInComInteropSupport Condition="'$(RuntimeIdentifier)' == '' Or $(RuntimeIdentifier.StartsWith('win'))">true</BuiltInComInteropSupport>
     <!-- Add macOS ARM64 and x64 support alongside Windows and Linux -->
     <RuntimeIdentifiers>win-x64;linux-x64;osx-arm64;osx-x64</RuntimeIdentifiers>
-    <Version>0.21.0</Version>
+    <Version>0.22.0</Version>
     <!-- Windows icon (embedded in the .exe; macOS uses the .icns inside the bundle) -->
     <ApplicationIcon Condition="'$(RuntimeIdentifier)' == '' Or $(RuntimeIdentifier.StartsWith('win'))">LunimaIcon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+    <!-- Headless platform for the windowless agent interface (`mcp`, `agent …`). -->
+    <PackageReference Include="Avalonia.Headless" Version="$(AvaloniaVersion)" />
     <PackageReference Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" Condition="'$(Configuration)' == 'Debug'" />
     <!-- Explicit pin: Avalonia.FreeDesktop (via Avalonia.Desktop) still requests
          Tmds.DBus.Protocol 0.20.0, which carries GHSA-xrw6-gwf8-vvr9 (high severity).
@@ -87,6 +89,16 @@
          found" on every installed build. -->
     <Content Include="..\scripts\tidy3d_sparams.py"
              Link="scripts\tidy3d_sparams.py"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Foundry DRC decks for the agent tool check_foundry_drc: KLayoutDrcRunner.ShippedDecks()
+       looks for `scripts/drc/*.lydrc` beside the binary (all three OSes; the deck's licence
+       README ships with it). -->
+  <ItemGroup>
+    <Content Include="..\scripts\drc\*.lydrc;..\scripts\drc\README.md"
+             Link="scripts\drc\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
