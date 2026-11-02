@@ -4,9 +4,10 @@
     "prepare",
     "scout",
     "strategist",
-    "critic"
+    "critic",
+    "apply"
   ],
-  "pr": null,
+  "pr": 1612,
   "applied": {
     "I:returning-testers": 1610,
     "O:gds-foreign-layout-import": 1598,
