@@ -111,3 +111,45 @@ What the revisit DR would need:
 - [ ] Every agent-bridge issue opened from 2026-11-02 until the revisit names the exemption it
   falls under (defect / maintainer workflow / benchmark need). Acceptance: each such issue states
   its exemption in the body, and issues without one are parked with a link to DR-0001.
+
+## Critic
+- verdict: weaken
+- strongest counter-argument: The hold is right, but the measurement track rests on a claim
+  competitors already make, and on a factual error. Option B calls "Lunima's checking tools make an
+  agent's output more reliable" the one claim competitors do not obviously make. The gfp-mcp package
+  cited as E-2026-w45-07 lists `check_drc`, `check_connectivity`, `check_lvs` and
+  `simulate_component` as agent tools ("Run Design Rule Check verification with structured
+  violation reports"). GDSFactory+ is described as "a graphical interface for chip design … built
+  on top of GDSFactory and VSCode". The free PhotonForge Community edition includes DRC and LVS, and
+  "engineers and agents work on the same design" in a local GUI. PICopilot (E-2026-w45-09)
+  describes "a multi-agent architecture with a feedback mechanism". So a benchmark showing that
+  checking tools help an agent would hold for competitors too and would not set Lunima apart. Only
+  undo is left, and nobody has asked for it. The Evidence section's statement that the PhIDO
+  testbench has "no software licence stated" is wrong for the repository: its sidebar, its LICENSE
+  file and its README ("This project is licensed under the MIT License") all state MIT. Only the
+  paper page states no licence. Half of the spike's go-rule is therefore already answered. The
+  ≤ 15-component prompts (MZI, MMI cascades, MZI/MMI demux, built on a generic 34-PCell gdsfactory
+  PDK) map onto generic types Lunima ships, so the 60 % gate will very likely pass. That leads
+  straight to a benchmark with model spend and manual grading that nobody has costed. Published
+  2025 PhIDO numbers also cannot be a baseline for 2026 models in a different pipeline. The only
+  valid design is a within-Lunima ablation (checking tools on vs off, same model, same prompts),
+  which needs the prompts but no spike. Finally, exemption 2 ("the maintainer's own development or
+  example generation needs it") is self-certified and wide enough to cover almost any tool. Unless
+  each issue names the concrete maintainer task it unblocks, the hold will not bind.
+- alternative explanation: The 73 tools and the one successful MZI run reflect the maintainer's
+  own development loop (as Context already says), not external pull. PhIDO's ~43 % failure rate
+  (≤ 15 components, 2025 models, generic PDK, judged by manual review as "structural validity,
+  rather than true fabrication sign-off") says nothing about whether PIC designers want an agent in
+  their editor at all. They might reject agents outright, or use them only for scripting, which is
+  PICopilot's path.
+- already solved elsewhere: agent + verification tools: gfp-mcp for GDSFactory+
+  (https://pypi.org/project/gfp-mcp/; GDSFactory+ described at https://pypi.org/project/gdsfactory/),
+  and PhotonForge 2.0 Community, which offers MCP agents plus DRC/LVS plus a local GUI
+  (https://flexcompute.com/news/photonforge-2). Undo of agent edits as a stated feature: not found.
+- what would change my mind: An E2 entry in which a PIC designer describes a recent agent attempt
+  (gfp-mcp, PhotonForge or plain LLM scripting) that failed because they could not see or roll back
+  what the agent changed. In that case, register a within-Lunima ablation on the MIT-licensed
+  PhIDO prompts directly, with grading rules, the grader and a model budget fixed in advance, and
+  skip the spike. Until then: keep the option B hold, drop the spike, require exemption 2 to name
+  the maintainer task, and replace the option D trigger with "no conversation by 2026-12-07 reports
+  using an agent for PIC work".
