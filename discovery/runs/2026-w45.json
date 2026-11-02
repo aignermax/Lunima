@@ -7,10 +7,19 @@
     "critic"
   ],
   "pr": null,
-  "applied": {},
-  "created": [],
-  "summary": "",
-  "critic_summary": "",
+  "applied": {
+    "I:returning-testers": 1610,
+    "O:gds-foreign-layout-import": 1598,
+    "O:photonic-computing-course-ladder": 1611,
+    "X-2026-w45-returning-testers": 1609
+  },
+  "created": [
+    "X-2026-w45-returning-testers",
+    "I:returning-testers",
+    "O:photonic-computing-course-ladder"
+  ],
+  "summary": "All evidence is still E0/E1. No designer, tester or educator has been heard first-hand, and the w44 interview and outreach approvals (#1599, #1600) are unanswered. The strongest new signal works against our favourite ideas: Flexcompute's PhotonForge 2.0, free since 2026-10-15, claims MCP agent access, a GUI and circuit simulation in one tool, and documents a foreign-GDS → ports → circuit flow. H2 and H4 are therefore weakened as differentiators, and H3 can no longer rest on 'open tools lack it'. H3 keeps some ground, because Luceda and gdsfactory still set foreign-GDS ports by hand or from pin markers, but Lunima's import has never been tried on a third-party layout without labels; an autonomous benchmark on public openEBL layouts will measure that now. The cheapest route to real evidence is not more tools but asking people who already tried Lunima what they did with it afterwards; second-hand external feedback in issues #808 and #816–#819 is not yet indexed as evidence and is a lead for the scout.",
+  "critic_summary": "The direction this week is sound (hold, don't build), but two proposals should be dropped. Drop X-2026-w45-foreign-gds-reconstruction. By default Lunima's importer matches GDS cell names against the bundled SiEPIC EBeam PDK (ebeam_gc_te1550, ebeam_y_1550, …), so on openEBL layouts it would mostly measure that name matching, not the reconstruction of foreign, unlabelled layouts. No outcome would change an action either, and PhotonForge's free tier already auto-detects ports on unlabelled hierarchical layouts. Drop the PhIDO spike. DR-0001 misstates the licence (the PhIDO-Release repository is MIT), a 2025 published score cannot be a baseline for a different pipeline, and gfp-mcp (check_drc/check_lvs/check_connectivity/simulate_component) and PhotonForge (MCP plus DRC/LVS) already offer the 'agent checks its own work' claim it would measure, so even a win would not set Lunima apart. Keep the DR-0001 hold, but make its 'maintainer workflow' exemption name a concrete task, or the hold will not bind. The returning-tester interview is the one item worth the maintainer's time, after two fixes: an all-colleague first three currently yields neither success nor failure, and the 10-minute private list count should be done first. The course-ladder desk check would pass on neuromorphic-photonics courses alone and needs a digital-logic criterion and a real failure branch.",
   "notes": [
     "created the discovery skeleton (10 files)"
   ]

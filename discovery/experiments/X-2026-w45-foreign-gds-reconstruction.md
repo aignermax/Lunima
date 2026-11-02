@@ -1,5 +1,5 @@
 # X-2026-w45-foreign-gds-reconstruction: How much circuit structure does Lunima's current GDS import recover from third-party layouts without port labels?
-- status: proposed
+- status: rejected-by-critic
 - method: benchmark
 - autonomy: autonomous
 - assumption: On real third-party layouts with no port labels or pin markers, Lunima's existing import recovers most device-to-device connections without manual pin work. "Existing import" means explode mode, edge-heuristic pins, and abutment and drawn-route matching.
