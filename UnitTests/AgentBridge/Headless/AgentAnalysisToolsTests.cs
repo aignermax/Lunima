@@ -70,6 +70,24 @@ public class AgentAnalysisToolsTests
     }
 
     [AvaloniaFact]
+    public async Task Simulate_ReportsPhotodetectorsAsOutputs()
+    {
+        await using var session = HeadlessAgentSession.Create(TextWriter.Null);
+        var examples = new ExampleDesignsService(new FileExampleCatalog()).FindExamplesDirectory()!;
+        await session.OpenDesignAsync(Path.Combine(examples, "Mach-Zehnder Interferometer.lun"));
+
+        var report = await Ok(session, "simulate");
+
+        var outputs = report.GetProperty("outputs").EnumerateArray().ToList();
+        outputs.Select(o => o.GetProperty("component").GetString())
+            .ShouldBe(new[] { "mzi_detector_bar", "mzi_detector_cross" }, ignoreOrder: true);
+        outputs.ShouldAllBe(o => o.GetProperty("kind").GetString() == "sink");
+        outputs.Sum(o => o.GetProperty("power").GetDouble()).ShouldBeGreaterThan(0.01, "light reaches the detectors");
+        report.GetProperty("outputs").EnumerateArray()
+            .ShouldNotContain(o => o.GetProperty("component").GetString() == "mzi_input_coupler");
+    }
+
+    [AvaloniaFact]
     public async Task SweepParameter_ShowsComplementaryInterference_AndRestoresTheValue()
     {
         await using var session = await Mzi();

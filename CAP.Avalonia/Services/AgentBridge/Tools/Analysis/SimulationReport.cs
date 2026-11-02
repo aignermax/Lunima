@@ -8,7 +8,7 @@ namespace CAP.Avalonia.Services.AgentBridge.Tools.Analysis;
 /// <summary>
 /// Turns a <see cref="SimulationResult"/> into the structured answer an agent needs: what
 /// went in (enabled light sources), what came out (every output coupler — a light source with
-/// its laser off — with received power), where light escapes through unterminated pins, and
+/// its laser off — and every wired sink such as a photodetector, with received power), where light escapes through unterminated pins, and
 /// optionally the power on every wire. Powers are linear relative to a unit laser power and
 /// in dB of that; <c>transmission_db</c> is relative to the total injected power.
 /// </summary>
@@ -42,17 +42,42 @@ public static class SimulationReport
         };
     }
 
-    /// <summary>Received power of every output coupler (laser off), keyed <c>component</c>.</summary>
+    /// <summary>
+    /// Received power of every output — output couplers (laser off) and wired sinks such as
+    /// photodetectors — keyed <c>component</c>.
+    /// </summary>
     public static IReadOnlyList<OutputPower> MeasureOutputs(DesignCanvasViewModel canvas, IReadOnlyDictionary<Guid, Complex> fields) =>
-        canvas.Components
-            .Where(c => c.IsLaserOff)
+        OutputComponents(canvas)
             .Select(c => new OutputPower(c.Component.Identifier, LightPins(c.Component)
                 .Sum(p => Power(fields, p.LogicalPin.IDInFlow)), c.Name))
             .ToList();
 
+    /// <summary>
+    /// Output couplers with their laser off, plus sinks: non-source components whose only optical
+    /// pin is wired, so whatever arrives there ends the light path (detectors, terminators).
+    /// </summary>
+    public static IEnumerable<ComponentViewModel> OutputComponents(DesignCanvasViewModel canvas)
+    {
+        var wired = WiredPins(canvas);
+        return canvas.Components.Where(c => c.IsLaserOff || IsSink(c, wired));
+    }
+
+    private static bool IsSink(ComponentViewModel component, HashSet<PhysicalPin> wired)
+    {
+        if (component.IsLightSource)
+            return false;
+        var pins = LightPins(component.Component).Take(2).ToList();
+        return pins.Count == 1 && wired.Contains(pins[0]);
+    }
+
+    private static HashSet<PhysicalPin> WiredPins(DesignCanvasViewModel canvas) =>
+        canvas.Connections
+            .SelectMany(c => new[] { c.Connection.StartPin, c.Connection.EndPin })
+            .ToHashSet();
+
     private static IReadOnlyList<object> DescribeOutputs(
         DesignCanvasViewModel canvas, IReadOnlyDictionary<Guid, Complex> fields, double injected) =>
-        canvas.Components.Where(c => c.IsLaserOff).Select(c =>
+        OutputComponents(canvas).Select(c =>
         {
             var received = LightPins(c.Component).Sum(p => Power(fields, p.LogicalPin.IDInFlow));
             var phase = LightPins(c.Component)
@@ -63,6 +88,7 @@ public static class SimulationReport
             {
                 Component = c.Component.Identifier,
                 Name = c.Name,
+                Kind = c.IsLaserOff ? "coupler" : "sink",
                 Power = Math.Round(received, 8),
                 PowerDb = Db(received),
                 TransmissionDb = injected > 0 ? Db(received / injected) : (double?)null,
@@ -73,9 +99,7 @@ public static class SimulationReport
     /// <summary>Unwired optical pins where light leaves the circuit unused (lost power).</summary>
     private static IReadOnlyList<object> DescribeOpenEnds(DesignCanvasViewModel canvas, IReadOnlyDictionary<Guid, Complex> fields)
     {
-        var wired = canvas.Connections
-            .SelectMany(c => new[] { c.Connection.StartPin, c.Connection.EndPin })
-            .ToHashSet();
+        var wired = WiredPins(canvas);
         return canvas.Components
             .Where(c => !c.IsLightSource)
             .SelectMany(c => ComponentPins.Of(c.Component).Select(pin => (c, pin)))
