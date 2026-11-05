@@ -1,0 +1,22 @@
+name: Experiment pages guard
+
+# docs/ of main is published on lunima.org. Experiment pages (docs/x/<slug>/) need the
+# maintainer's approval stamp in discovery/pages/<slug>/page.json.
+on:
+  pull_request:
+    paths: ["docs/x/**", "discovery/pages/**", "scripts/check_experiment_pages.py"]
+  push:
+    branches: [dev, main]
+    paths: ["docs/x/**", "discovery/pages/**", "scripts/check_experiment_pages.py"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  approved-pages-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/check_experiment_pages.py --self-test
+      - run: python3 scripts/check_experiment_pages.py .
