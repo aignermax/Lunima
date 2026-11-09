@@ -383,6 +383,8 @@ jobs:
       - name: Create archives
         run: |
           cd win-x64 && zip -r ../Lunima-${{ steps.info.outputs.version }}-win-x64.zip . && cd ..
+          # upload/download-artifact@v4 drops Unix permissions; restore the executable bit.
+          chmod +x linux-x64/Lunima
           cd linux-x64 && tar czf ../Lunima-${{ steps.info.outputs.version }}-linux-x64.tar.gz . && cd ..
 
       - name: Stage the exact release inventory

@@ -12,8 +12,9 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// Drawing each arc as a run of separate lines cost tens of thousands of draw calls per frame on
 /// a chip full of meanders; here a route is a single geometry. The level of detail follows the
 /// zoom: points closer than about half a screen pixel are merged, so a zoomed-out meander is a
-/// few dozen points instead of thousands. A route edited in place is noticed by its signature
-/// (segment count, joints, bend radii) and rebuilt.
+/// few dozen points instead of thousands. A route edited in place is rebuilt when its owner
+/// reports the change (a version counter) and, as a safety net, when its signature (segment
+/// count, joints, bend radii) differs.
 /// </summary>
 internal static class RouteGeometryCache
 {
@@ -24,21 +25,24 @@ internal static class RouteGeometryCache
     private const int MinArcChords = 8;
     private const double HashFactor = 1.000003;
 
-    private sealed record Entry(int Level, Signature Key, Geometry Geometry);
+    private sealed record Entry(int Level, int Version, Signature Key, Geometry Geometry);
 
     private readonly record struct Signature(int Count, double StartX, double StartY, double EndX, double EndY, double Hash);
 
     private static readonly ConditionalWeakTable<RoutedPath, Entry> Cache = new();
 
     /// <summary>The route's geometry for <paramref name="zoom"/>, from the cache when it is still current.</summary>
-    public static Geometry For(RoutedPath path, double zoom)
+    /// <param name="path">The route.</param>
+    /// <param name="zoom">The canvas zoom.</param>
+    /// <param name="version">The owner's change counter; any new value forces a rebuild.</param>
+    public static Geometry For(RoutedPath path, double zoom, int version = 0)
     {
         int level = (int)Math.Floor(Math.Log2(Math.Max(zoom, 1e-6)));
         var key = SignatureOf(path.Segments);
-        if (Cache.TryGetValue(path, out var entry) && entry.Level == level && entry.Key == key)
+        if (Cache.TryGetValue(path, out var entry) && entry.Level == level && entry.Version == version && entry.Key == key)
             return entry.Geometry;
         var geometry = Build(path.Segments, MergeScreenPx / Math.Pow(2, level));
-        Cache.AddOrUpdate(path, new Entry(level, key, geometry));
+        Cache.AddOrUpdate(path, new Entry(level, version, key, geometry));
         return geometry;
     }
 

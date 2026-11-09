@@ -13,7 +13,7 @@ public sealed class UvProcessLifetimeTests
     public async Task RootExitsFirst_RetiresDescendantsBeforeSuccessfulReturn(bool inheritPipes)
     {
         await using var child = await ControlledSolverProcess.CreateAsync(OwnedToolProcessScenarios.RootExits(inheritPipes));
-        var running = RunAsync(child, CancellationToken.None);
+        var running = RunAsync(child, CancellationToken.None, timeoutMs: 5_000);
         try
         {
             var result = await running.WaitAsync(ControlledSolverProcess.GuardTimeout);
