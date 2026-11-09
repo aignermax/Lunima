@@ -48,6 +48,16 @@ public class RouteGeometryCacheTests
     }
 
     [AvaloniaFact]
+    public void ReportedChange_RebuildsEvenWhenTheShapeLooksTheSame()
+    {
+        var path = Meander();
+        var first = RouteGeometryCache.For(path, 1.0, version: 1);
+
+        RouteGeometryCache.For(path, 1.0, version: 1).ShouldBeSameAs(first);
+        RouteGeometryCache.For(path, 1.0, version: 2).ShouldNotBeSameAs(first);
+    }
+
+    [AvaloniaFact]
     public void ZoomedOut_KeepsTheExtent()
     {
         var path = Meander();
