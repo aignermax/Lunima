@@ -148,8 +148,8 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         else
         {
             if (!conn.IsSelected && LengthLockOverlay.GroupOf(conn) is { } group && lockGroups.Contains(group))
-                DrawRoute(context, rc.Pens.LengthPeer, conn.Connection.RoutedPath, segments, rc.Zoom);
-            DrawRoute(context, pen, conn.Connection.RoutedPath, segments, rc.Zoom);
+                DrawRoute(context, rc.Pens.LengthPeer, conn, segments, rc.Zoom);
+            DrawRoute(context, pen, conn, segments, rc.Zoom);
         }
         DrawConnectionOverlays(context, conn, vm, isHovered, rc.Zoom, rc.Labels, hasImportedEndpointMismatch);
         if (conn.Connection.TargetLengthMicrometers != null && rc.Zoom >= ComponentRenderer.GroupOverviewZoom)
@@ -291,11 +291,12 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
     /// Draws the route as one geometry, cached per route and zoom level (see
     /// <see cref="RouteGeometryCache"/>) — one draw call instead of one per arc chord.
     /// </summary>
-    private static void DrawRoute(DrawingContext context, IPen pen, CAP_Core.Routing.RoutedPath? path,
+    private static void DrawRoute(DrawingContext context, IPen pen, WaveguideConnectionViewModel conn,
         IReadOnlyList<CAP_Core.Routing.PathSegment> segments, double zoom)
     {
+        var path = conn.Connection.RoutedPath;
         var geometry = path != null && ReferenceEquals(path.Segments, segments)
-            ? RouteGeometryCache.For(path, zoom)
+            ? RouteGeometryCache.For(path, zoom, conn.PathVersion)
             : RouteGeometryCache.Build(segments, 0);
         context.DrawGeometry(null, pen, geometry);
     }

@@ -22,8 +22,15 @@ public partial class WaveguideConnectionViewModel : ObservableObject
         Connection = connection;
     }
 
+    /// <summary>
+    /// Counts reported route changes; the canvas's route geometry cache rebuilds on every new
+    /// value, so an edit made in place (a segment shift, a bend handle) is never drawn stale.
+    /// </summary>
+    public int PathVersion { get; private set; }
+
     public void NotifyPathChanged()
     {
+        PathVersion++;
         OnPropertyChanged(nameof(StartX));
         OnPropertyChanged(nameof(StartY));
         OnPropertyChanged(nameof(EndX));
