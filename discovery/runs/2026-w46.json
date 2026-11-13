@@ -4,9 +4,10 @@
     "prepare",
     "scout",
     "strategist",
-    "critic"
+    "critic",
+    "apply"
   ],
-  "pr": null,
+  "pr": 1621,
   "applied": {
     "I:returning-testers": 1610,
     "O:photonic-computing-course-ladder": 1611,
