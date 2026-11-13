@@ -96,3 +96,47 @@ Revisit rules, fixed now:
   - acceptance: it says a new tool needs either a bug it fixes or a `Failing task:` line (the
     task, the failing step, the date) in its issue, and it links this DR. No tool, test or code
     changes.
+
+## Critic
+- verdict: weaken
+- strongest counter-argument: Parking is right, but the stated reason overstates what the
+  sources show. GDSFactory+ 1.6.4 shows a diff preview "when writing or editing files", which
+  is a confirmation step on files, not on a canvas. The 2.0 launch says "Actions that change
+  files or run commands remain visible and subject to approval". Neither page mentions undo.
+  GDSFactory+ 2.0 is commercial ("New teams can request a trial"). So the sources do not show
+  that a competitor has taken the open, local, visual combination with canvas undo. The sound
+  reason to park is that no user has said they want agent help for PIC work at all. The drop
+  rule is also weak:
+  - The "first three conversations" will come from X-2026-w46-outside-users.
+  - Those people are chosen because they tried Lunima, not because they work with agents, and
+    the tool's author interviews them.
+  - 0 of 3 in that sample says little about the need.
+
+  Before merge, the Delivery correction must add three facts: the confirmation covers file
+  writes, undo is not mentioned, and GDSFactory+ is trial-gated commercial software. Without
+  them, the correction replaces one overclaim with another.
+- alternative explanation: HYPOTHESES.md counts vendor bets as support for H1 (E-2026-w46-03,
+  -05). Vendor investment in agents is the same kind of signal: GDSFactory+, Flexcompute and the
+  PhIDO authors. Read the same way, it supports the H2 user need and only weakens Lunima's
+  differentiation, yet HYPOTHESES.md scores it against H2 only. Separately, the maintainer is
+  the bridge's only demonstrated user. The bridge grew to 73 tools on the same day the review
+  advised against going headless (review Addendum), so parking may not change what gets built.
+- already solved elsewhere: partly.
+  - GDSFactory+ ships an agent with a file-diff confirmation and a verification mode
+    (https://doplaydo.github.io/gdsfactoryplus/changelog/). Its 2.0 agent edits component
+    settings and connections (https://gdsfactory.com/news/introducing-gdsfactory-plus-2-0/).
+  - KlayoutClaw is an MIT-licensed MCP plugin inside the KLayout GUI. It lets an agent create
+    layouts, run scripts and autoroute, and has version-control tools. It is not
+    photonics-specific, and its undo behaviour is not documented
+    (https://github.com/caidish/KlayoutClaw).
+  - klayout-mcp lets agents inspect photonic layouts, read-only
+    (https://klayout-mcp.readthedocs.io/).
+  - Flexcompute's PhotonForge agent loop is an announcement with no independent results
+    (https://flexcompute.com/news/agentic-photonic-design).
+  - Undo of agent edits on a canvas with photonic circuit simulation: not found.
+- what would change my mind:
+  - Towards reopening: one designer outside the maintainer's circle describes an
+    agent-assisted PIC task from the past 6 months where checking or reverting the agent's
+    output was the hard part.
+  - Towards dropping: GDSFactory+ documents undo or revert of agent edits on its Livewire
+    canvas. That would remove the last unclaimed element.
