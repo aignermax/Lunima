@@ -5,6 +5,10 @@ namespace UnitTests.Simulation.LiveSimulation;
 
 public sealed class LiveSimulationRetirementTests
 {
+    // CancelAsync delivers token callbacks on the thread pool; a loaded CI runner can take
+    // well over 250 ms to schedule them, so the success path gets a hang-guard deadline only.
+    private static readonly TimeSpan CancellationDeadline = TimeSpan.FromSeconds(5);
+
     [Fact]
     public async Task Stop_RejectsSubsequentRequests()
     {
@@ -37,7 +41,7 @@ public sealed class LiveSimulationRetirementTests
         var stopping = scheduler.StopAsync();
         try
         {
-            await Task.WhenAny(cancelled.Task, Task.Delay(250));
+            await Task.WhenAny(cancelled.Task, Task.Delay(CancellationDeadline));
             cancelled.Task.IsCompleted.ShouldBeTrue();
             stopping.IsCompleted.ShouldBeFalse();
         }
