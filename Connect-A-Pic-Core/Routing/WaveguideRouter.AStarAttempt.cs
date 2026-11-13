@@ -103,7 +103,7 @@ public partial class WaveguideRouter
                 UseHierarchicalPathfinding ? _hierarchicalPathfinder : null, crossingStep,
                 crossingStep != null ? CrossingRouting?.MaxNodesExpanded : null,
                 gridStartX, gridStartY, startDir, gridEndX, gridEndY, endDir, scaledEscape,
-                cancellationToken, out _lastFineAttemptGoalReachable);
+                _routeBudget, cancellationToken, out _lastFineAttemptGoalReachable);
 
             CostCalculator.MinStraightRunCells = originalStraightRun;
 

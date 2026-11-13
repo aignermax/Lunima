@@ -37,7 +37,7 @@ public partial class WaveguideRouter
             PreferDirectStyledRoutes = PreferDirectStyledRoutes,
             Phase1MaxNodes = Phase1MaxNodes,
             Phase2MaxNodes = Phase2MaxNodes,
-            MaxRouteDuration = MaxRouteDuration,
+            MaxRouteNodesExpanded = MaxRouteNodesExpanded,
             ConnectionProcessFloorProvider = ConnectionProcessFloorProvider,
             OnComplexRouteStarted = OnComplexRouteStarted,
         };
