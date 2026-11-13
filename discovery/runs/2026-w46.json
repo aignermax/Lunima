@@ -7,10 +7,18 @@
     "critic"
   ],
   "pr": null,
-  "applied": {},
-  "created": [],
-  "summary": "",
-  "critic_summary": "",
+  "applied": {
+    "I:returning-testers": 1610,
+    "O:photonic-computing-course-ladder": 1611,
+    "X-2026-w46-digital-photonic-courses": 1619,
+    "X-2026-w46-outside-users": 1620
+  },
+  "created": [
+    "X-2026-w46-digital-photonic-courses",
+    "X-2026-w46-outside-users"
+  ],
+  "summary": "All evidence is still E1: no designer, tester or educator has been heard, every approval since 2026-w44 (#1599, #1600, #1609) is unanswered, and the w44/w45 Decision Records, experiments and evidence files never reached this repository, so this run cites only w46 evidence and re-registers last week's corrected experiments. This week's evidence weakens three candidate differentiators (GDSFactory+ ships agent edits with diff preview, confirmation and a verification mode for H2; two commercial tools already recover pins and PDK cells from foreign GDS for H3; circulax gives the open gdsfactory stack transient simulation for H4), and a commercial desktop tool sits very close to Lunima's visual positioning (H1). What may still be distinctive is the gate-to-instruction photonic-computing stack, but nothing shows who wants it: the only course evidence points away from digital-logic teaching (H7), and the new agent hypothesis H9 (photonic-processor builders) has no evidence yet. So we park H2 as a differentiator (DR-0001), park the foreign-GDS opportunity, and propose holding the next ladder rung until two cheap tests report by 2026-12-11 (DR-0002). The cheapest route to a first E2 entry is a 15-minute private list the maintainer can write without contacting anyone (step 0 of X-2026-w46-outside-users); no new outreach or spike is proposed, because the open approvals already cover the next contact step and no technical question would change a decision this week.",
+  "critic_summary": "'Build nothing new' is the right call, but the evidence is thinner than the write-ups say, and two proposals need rework before the maintainer spends time on them. Drop DR-0002's hold as written: every pre-registered outcome ends with the on-chip datapath built and only labelled differently, so either add a one-line 'conviction bet, no user pull on record' note to ROADMAP.md now or make the hold binding on the outside-users result. The courses desk test will very likely fail, because my searches found no current course that teaches digital photonic logic hands-on. Its D rule could still pass on a single list item or on quantum-photonics courses, and its only effect is to retarget an interview that has never been approved, so tighten it or skip it. DR-0001's park decision stands, but its reason overreaches: the GDSFactory+ sources show a file-diff confirmation in a trial-gated commercial product and mention no undo, so the honest reason is that no user has asked for agent help, and the correction it writes into the public strategy review must say that. Three approvals have had no answer since 2026-w44, so before discovery files anything else, the maintainer should do the two steps that need no approval: write the 15-minute outside-users list, and turn the existing workshop transcript behind #816–#819 into an anonymised interview summary, the first E2 candidate on file.",
   "notes": [
     "created the discovery skeleton (10 files)"
   ]
