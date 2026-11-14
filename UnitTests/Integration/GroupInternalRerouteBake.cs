@@ -119,6 +119,7 @@ internal static class GroupInternalRerouteBake
         var router = new WaveguideRouter
         {
             MinBendRadiusMicrometers = bendRadiusMicrometers,
+            MaxRouteNodesExpanded = WaveguideRouter.UnlimitedRouteNodesExpanded,
             UsePinBreakouts = Environment.GetEnvironmentVariable("CAP_BAKE_NO_BREAKOUT") != "1",
         };
         router.InitializePathfindingGrid(

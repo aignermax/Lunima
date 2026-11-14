@@ -66,7 +66,11 @@ internal static class GroupCrossingChainBake
         IReadOnlyList<RoutedPath> topLevelWires)
     {
         var children = group.ChildComponents.Concat(extraChildren).ToList();
-        var router = new WaveguideRouter { MinBendRadiusMicrometers = bendRadiusMicrometers };
+        var router = new WaveguideRouter
+        {
+            MinBendRadiusMicrometers = bendRadiusMicrometers,
+            MaxRouteNodesExpanded = WaveguideRouter.UnlimitedRouteNodesExpanded,
+        };
         router.InitializePathfindingGrid(
             children.Min(c => c.PhysicalX) - GridMarginMicrometers,
             children.Min(c => c.PhysicalY) - GridMarginMicrometers,

@@ -91,6 +91,7 @@ public class ExampleTopLevelRebakeTests
         var binder = new CrossingInsertionCanvasBinder(
             canvas, () => CrossingComponentInstance.CreateFromTemplates(templates, preferred), action => action());
         binder.Service.ChainPassTimeBudget = TimeSpan.MaxValue;
+        canvas.Router.MaxRouteNodesExpanded = CAP_Core.Routing.WaveguideRouter.UnlimitedRouteNodesExpanded;
         binder.Service.FallbackChainSearches = new[] { (40_000_000, 1.0), (8_000_000, 2.5) };
         int connected = binder.Service.ConnectBlockedWiresThroughCrossings(canvas.ConnectionManager, canvas.Router);
         binder.IsEnabled = false;

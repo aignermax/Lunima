@@ -22,12 +22,12 @@ internal sealed class CoarseRouteRetry
     internal RoutedPath? TryRoute(PathfindingGrid fineGrid, Settings settings, CoarseRouteAcceptance accept,
         double bendRadius, double startX, double startY, double startAngle,
         double endX, double endY, double endInputAngle, PhysicalPin startPin, PhysicalPin endPin,
-        CancellationToken cancellationToken)
+        RouteWorkBudget? workBudget, CancellationToken cancellationToken)
     {
         var (path, provedNoPath) = TryAtFactor(
             fineGrid, settings, accept, settings.CellSizeFactor, bendRadius,
             startX, startY, startAngle, endX, endY, endInputAngle,
-            startPin, endPin, cancellationToken);
+            startPin, endPin, workBudget, cancellationToken);
         if (path != null || provedNoPath)
         {
             // A proven no-path verdict at the first factor holds at the coarser one too:
@@ -43,7 +43,7 @@ internal sealed class CoarseRouteRetry
             || NodesExpanded >= MaxNodes(settings)) return null;
         return TryAtFactor(fineGrid, settings, accept, settings.CellSizeFactor * 2, bendRadius,
             startX, startY, startAngle, endX, endY, endInputAngle,
-            startPin, endPin, cancellationToken).Path;
+            startPin, endPin, workBudget, cancellationToken).Path;
     }
 
     private static int MaxNodes(Settings settings) =>
@@ -61,7 +61,7 @@ internal sealed class CoarseRouteRetry
         double startX, double startY, double startAngle,
         double endX, double endY, double endInputAngle,
         PhysicalPin startPin, PhysicalPin endPin,
-        CancellationToken cancellationToken)
+        RouteWorkBudget? workBudget, CancellationToken cancellationToken)
     {
         var coarseGrid = fineGrid.CreateCoarseCopy(factor);
 
@@ -95,7 +95,8 @@ internal sealed class CoarseRouteRetry
         var astar = new AStarPathfinder.AStarPathfinder(coarseGrid, costCalculator)
         {
             MaxNodesExpanded = coarseBudget,
-            UseDiagonals = settings.UseDiagonals
+            UseDiagonals = settings.UseDiagonals,
+            WorkBudget = workBudget
         };
         var gridPath = astar.FindPath(gridStartX, gridStartY, startDir,
                                       gridEndX, gridEndY, endDir, cancellationToken);
@@ -117,7 +118,8 @@ internal sealed class CoarseRouteRetry
             {
                 MaxNodesExpanded = tolerantBudget,
                 AllowLateralGoalTolerance = true,
-                UseDiagonals = settings.UseDiagonals
+                UseDiagonals = settings.UseDiagonals,
+                WorkBudget = workBudget
             };
             gridPath = tolerantRetry.FindPath(gridStartX, gridStartY, startDir,
                                               gridEndX, gridEndY, endDir, cancellationToken);

@@ -63,11 +63,12 @@ public class RoutedPath
     public RoutingFailureReason FailureReason { get; set; } = RoutingFailureReason.None;
 
     /// <summary>
-    /// True when this blocked fallback exists only because the router's time budget ran out
-    /// (<see cref="WaveguideRouter.MaxRouteDuration"/>), not because no path exists. Such a wire
-    /// must not be remembered as unroutable: on a faster run or a less busy machine it may route.
+    /// True when this blocked fallback exists only because the route's work budget ran out
+    /// (<see cref="WaveguideRouter.MaxRouteNodesExpanded"/>), not because no path exists. Such a
+    /// wire must not be remembered as unroutable: once its neighbours settle, a later pass may
+    /// find its path within the budget.
     /// </summary>
-    public bool SearchTimedOut { get; set; }
+    public bool SearchBudgetExhausted { get; set; }
 
     /// <summary>
     /// True when this Auto route was produced by the direct/S-bend-first policy (issue #860):
@@ -126,7 +127,7 @@ public class RoutedPath
             IsInvalidGeometry = IsInvalidGeometry,
             IsPlaceholderGeometry = IsPlaceholderGeometry,
             FailureReason = FailureReason,
-            SearchTimedOut = SearchTimedOut,
+            SearchBudgetExhausted = SearchBudgetExhausted,
             ViolatesProcessMinBendRadius = ViolatesProcessMinBendRadius,
             PassesThroughComponent = PassesThroughComponent,
             IsDirectStyledRoute = IsDirectStyledRoute,

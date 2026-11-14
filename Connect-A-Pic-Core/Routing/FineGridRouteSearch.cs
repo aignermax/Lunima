@@ -19,7 +19,7 @@ internal sealed class FineGridRouteSearch
         HierarchicalPathfinder? hierarchicalPathfinder, CrossingStep? crossingStep, int? crossingMaxNodes,
         int gridStartX, int gridStartY, GridDirection startDir,
         int gridEndX, int gridEndY, GridDirection endDir, int scaledEscape,
-        CancellationToken cancellationToken, out bool lastGoalReachable)
+        RouteWorkBudget? workBudget, CancellationToken cancellationToken, out bool lastGoalReachable)
     {
         int gridDistance = Math.Abs(gridEndX - gridStartX) + Math.Abs(gridEndY - gridStartY);
         List<AStarNode>? gridPath = null;
@@ -49,7 +49,7 @@ internal sealed class FineGridRouteSearch
         else if (goalReachable)
         {
             gridPath = RunAStarPhases(grid, costCalculator, crossingMaxNodes, gridStartX, gridStartY, startDir,
-                                      gridEndX, gridEndY, endDir, crossingStep, cancellationToken);
+                                      gridEndX, gridEndY, endDir, crossingStep, workBudget, cancellationToken);
         }
 
         // Lateral-tolerance retry: the strict phases require an exact
@@ -65,7 +65,8 @@ internal sealed class FineGridRouteSearch
                 MaxNodesExpanded = Phase1MaxNodes,
                 AllowLateralGoalTolerance = true,
                 UseDiagonals = UseDiagonals,
-                Crossings = crossingStep
+                Crossings = crossingStep,
+                WorkBudget = workBudget
             };
             gridPath = tolerantRetry.FindPath(gridStartX, gridStartY, startDir,
                                               gridEndX, gridEndY, endDir, cancellationToken);
@@ -79,7 +80,8 @@ internal sealed class FineGridRouteSearch
             var retry = new AStarPathfinder.AStarPathfinder(grid, costCalculator)
             {
                 UseDiagonals = UseDiagonals,
-                Crossings = crossingStep
+                Crossings = crossingStep,
+                WorkBudget = workBudget
             };
             var retryPath = retry.FindPath(gridStartX, gridStartY, startDir,
                                            gridEndX, gridEndY, endDir, cancellationToken);
@@ -94,7 +96,8 @@ internal sealed class FineGridRouteSearch
             var fallback = new AStarPathfinder.AStarPathfinder(grid, costCalculator)
             {
                 UseDiagonals = UseDiagonals,
-                Crossings = crossingStep
+                Crossings = crossingStep,
+                WorkBudget = workBudget
             };
             gridPath = fallback.FindPath(gridStartX, gridStartY, startDir,
                                          gridEndX, gridEndY, endDir, cancellationToken);
@@ -107,7 +110,7 @@ internal sealed class FineGridRouteSearch
         PathfindingGrid grid, RoutingCostCalculator costCalculator, int? crossingMaxNodes,
         int gridStartX, int gridStartY, GridDirection startDir,
         int gridEndX, int gridEndY, GridDirection endDir,
-        CrossingStep? crossingStep,
+        CrossingStep? crossingStep, RouteWorkBudget? workBudget,
         CancellationToken cancellationToken)
     {
         var search = new AStarPathfinder.AStarPathfinder(grid, costCalculator)
@@ -120,7 +123,8 @@ internal sealed class FineGridRouteSearch
             UseDiagonals = UseDiagonals,
             EscalationThresholdNodes = Phase1MaxNodes,
             OnEscalationThresholdReached = () => OnComplexRouteStarted?.Invoke(),
-            Crossings = crossingStep
+            Crossings = crossingStep,
+            WorkBudget = workBudget
         };
         return search.FindPath(gridStartX, gridStartY, startDir,
                                gridEndX, gridEndY, endDir, cancellationToken);

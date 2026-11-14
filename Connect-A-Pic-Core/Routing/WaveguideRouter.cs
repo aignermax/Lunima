@@ -281,17 +281,19 @@ public partial class WaveguideRouter
         // Crossings belong to the route that planned them: a route found another way (direct,
         // coarse retry) must not inherit those of an earlier call.
         ResetPlannedCrossings();
-        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        budget.CancelAfter(MaxRouteDuration);
+        using var budget = new RouteWorkBudget(MaxRouteNodesExpanded, cancellationToken);
+        _routeBudget = budget;
         try
         {
             var path = RouteCore(startPin, endPin, budget.Token);
-            path.SearchTimedOut = path.IsBlockedFallback && budget.IsCancellationRequested
+            path.SearchBudgetExhausted = path.IsBlockedFallback && budget.IsExhausted
                 && !cancellationToken.IsCancellationRequested;
             return path;
         }
         finally
         {
+            _routeBudget = null;
+            LastRouteNodesExpanded = budget.NodesExpanded;
             OnRouteCoarseExpansionsRecorded?.Invoke(LastRouteCoarseNodesExpanded);
         }
     }

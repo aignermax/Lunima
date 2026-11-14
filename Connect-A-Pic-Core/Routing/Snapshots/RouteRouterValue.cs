@@ -7,7 +7,7 @@ namespace CAP_Core.Routing.Snapshots;
 internal sealed record RouteRouterValue(double Radius, double ProcessFloor, double MetalFloor,
     ImmutableArray<double> Radii, double Spacing, double CellSize, double Padding, bool Hierarchical,
     bool Direct, bool Diagonal, bool Breakouts, int Phase1, int Phase2, int CoarseFactor, int CoarseBudget,
-    ImmutableArray<(double X, double Y, double Width, double Height)>? Regions, RouteGridValue? Grid,
+    long RouteBudget, ImmutableArray<(double X, double Y, double Width, double Height)>? Regions, RouteGridValue? Grid,
     RouteCostValue Cost, ImmutableArray<RouteObstacleValue> Obstacles, CrossingRouteSettings? Crossings)
 {
     internal static RouteRouterValue Capture(WaveguideRouter router, bool preserveCachedGrid = true) => new(router.MinBendRadiusMicrometers,
@@ -16,7 +16,7 @@ internal sealed record RouteRouterValue(double Radius, double ProcessFloor, doub
         router.AStarCellSize, router.ObstaclePaddingMicrometers, router.UseHierarchicalPathfinding,
         router.PreferDirectStyledRoutes, router.UseDiagonalRouting, router.UsePinBreakouts,
         router.Phase1MaxNodes, router.Phase2MaxNodes, router.CoarseRetryCellSizeFactor, router.CoarseRetryBudgetMultiplier,
-        router.AllowedRoutingRegions?.ToImmutableArray(), RouteGridValue.Capture(router.PathfindingGrid, preserveCachedGrid),
+        router.MaxRouteNodesExpanded, router.AllowedRoutingRegions?.ToImmutableArray(), RouteGridValue.Capture(router.PathfindingGrid, preserveCachedGrid),
         RouteCostValue.Capture(router.CostCalculator), router.Obstacles.Select(obstacle => new RouteObstacleValue(
             obstacle.X, obstacle.Y, obstacle.Width, obstacle.Height, obstacle.SourceComponent?.Id)).ToImmutableArray(),
         router.CrossingRouting);
@@ -32,6 +32,7 @@ internal sealed record RouteRouterValue(double Radius, double ProcessFloor, doub
             UseHierarchicalPathfinding = Hierarchical, PreferDirectStyledRoutes = Direct, UseDiagonalRouting = Diagonal,
             UsePinBreakouts = Breakouts, Phase1MaxNodes = Phase1, Phase2MaxNodes = Phase2,
             CoarseRetryCellSizeFactor = CoarseFactor, CoarseRetryBudgetMultiplier = CoarseBudget,
+            MaxRouteNodesExpanded = RouteBudget,
             AllowedRoutingRegions = Regions is { } regions ? regions.ToArray() : null,
             // This closure owns a scalar table only. The caller's provider was evaluated at capture.
             ConnectionProcessFloorProvider = floors.Resolve,

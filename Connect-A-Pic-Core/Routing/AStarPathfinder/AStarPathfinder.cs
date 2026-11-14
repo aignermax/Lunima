@@ -72,6 +72,14 @@ public class AStarPathfinder
     public CrossingInsertion.CrossingStep? Crossings { get; set; }
 
     /// <summary>
+    /// The route's shared work budget, or null (default) when only <see cref="MaxNodesExpanded"/>
+    /// bounds the search. With a budget the search stops at whichever limit comes first and
+    /// charges its expansions to the budget, so later searches of the same route get only what
+    /// is left. A search cut short by the budget is not a proof that no path exists.
+    /// </summary>
+    internal RouteWorkBudget? WorkBudget { get; set; }
+
+    /// <summary>
     /// True when the last <see cref="FindPath"/> returned null because the open set emptied
     /// — a proof that no goal-reaching path exists in the reachable region — rather than
     /// because the node budget cut the search short or cancellation stopped it. Lets a
@@ -127,6 +135,17 @@ public class AStarPathfinder
                                       int endX, int endY, GridDirection endDirection,
                                       CancellationToken cancellationToken = default)
     {
+        var path = Search(startX, startY, startDirection, endX, endY, endDirection,
+                          WorkBudget?.Cap(MaxNodesExpanded) ?? MaxNodesExpanded, cancellationToken);
+        WorkBudget?.Charge(LastSearchNodesExpanded);
+        return path;
+    }
+
+    /// <summary>The search behind <see cref="FindPath"/>, stopping after <paramref name="maxNodes"/> expansions.</summary>
+    private List<AStarNode>? Search(int startX, int startY, GridDirection startDirection,
+                                    int endX, int endY, GridDirection endDirection,
+                                    int maxNodes, CancellationToken cancellationToken)
+    {
         LastSearchProvedNoPath = false;
         LastSearchReachedGoalVicinity = false;
         LastSearchNodesExpanded = 0;
@@ -154,7 +173,7 @@ public class AStarPathfinder
 
         int nodesExpanded = 0;
 
-        while (openSet.Count > 0 && nodesExpanded < MaxNodesExpanded)
+        while (openSet.Count > 0 && nodesExpanded < maxNodes)
         {
             // Check cancellation periodically to remain responsive
             if (nodesExpanded % CancellationCheckInterval == 0 && cancellationToken.IsCancellationRequested)

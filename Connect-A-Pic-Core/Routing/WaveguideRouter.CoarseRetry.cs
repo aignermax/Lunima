@@ -86,7 +86,7 @@ public partial class WaveguideRouter
             CoarseRetryBudgetMultiplier, UseDiagonalRouting);
         return _coarseRetry.TryRoute(PathfindingGrid!, settings, _acceptCoarseRoute ??= AcceptCoarseRoute,
             bendRadius, startX, startY, startAngle, endX, endY, endInputAngle,
-            startPin, endPin, cancellationToken);
+            startPin, endPin, _routeBudget, cancellationToken);
     }
 
     private RoutedPath? AcceptCoarseRoute(PathfindingGrid coarseGrid, List<AStarNode> gridPath,

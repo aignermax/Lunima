@@ -99,7 +99,10 @@ public class ExampleRouteBakeTests
             canvas.ConnectionManager.MaxRoutingAttempts = maxAttempts;
         if (int.TryParse(Environment.GetEnvironmentVariable(BakePhase2NodesVariable), out var phase2Nodes)
             && phase2Nodes > 0)
+        {
             canvas.Router.Phase2MaxNodes = phase2Nodes;
+            canvas.Router.MaxRouteNodesExpanded = WaveguideRouter.UnlimitedRouteNodesExpanded;
+        }
         (await fileOps.LoadDesignFromPathAsync(prep.TempPath)).ShouldBeTrue(
             $"'{exampleFileName}' must load with its route geometry stripped");
         await fileOps.PostLoadRouting;
