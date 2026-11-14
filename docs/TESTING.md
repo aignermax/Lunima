@@ -66,6 +66,14 @@ is defined in `.github/actions/setup-test-tools/`; use the relevant fixture's
 requirements locally. `LUNIMA_TEST_PYTHON3` selects the interpreter used by tests.
 Headless UI coverage does not replace native Windows/macOS/Linux desktop checks.
 
+`McpProcessJourneyTests` starts the built `CAP.Desktop.dll` as `lunima mcp` and drives a
+design journey over stdio. Build it in the test configuration first
+(`dotnet build CAP.Desktop/CAP.Desktop.csproj`, then
+`python3 scripts/run_tests.py McpProcessJourney`). The test is skipped when that build output
+is missing and fails when it carries a different `CAP.Avalonia` build than the tests (stale).
+`.github/workflows/NativeProcessTests.yaml` builds it and requires the class to execute on
+Linux, both macOS runners and Windows.
+
 ## CI test pipeline
 
 `.github/workflows/xUnitTests.yaml` runs the suite on GitHub Actions in four parts:
