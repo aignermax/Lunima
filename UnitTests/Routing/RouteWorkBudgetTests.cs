@@ -42,6 +42,19 @@ public class RouteWorkBudgetTests
     }
 
     [Fact]
+    public void Remaining_IsWhatIsLeft_AndNeverNegative()
+    {
+        using var budget = new RouteWorkBudget(10_000_000_000, CancellationToken.None);
+
+        budget.Charge(6_000_000_000);
+        budget.Remaining.ShouldBe(4_000_000_000);
+
+        budget.Charge(5_000_000_000);
+        budget.Remaining.ShouldBe(0);
+        budget.IsExhausted.ShouldBeTrue();
+    }
+
+    [Fact]
     public void ZeroBudget_StartsExhausted()
     {
         using var budget = new RouteWorkBudget(0, CancellationToken.None);

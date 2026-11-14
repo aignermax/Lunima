@@ -1,12 +1,13 @@
 namespace CAP_Core.Routing;
 
 /// <summary>
-/// Deterministic work budget of one <see cref="WaveguideRouter.Route"/> call: every A* search the
-/// call runs (fine phases and their retries, coarse retries, breakout middles) draws its node
-/// expansions from one shared counter. Once the counter reaches the limit, <see cref="Token"/> is
-/// cancelled, so the remaining searches stop exactly as if the caller had cancelled. Counting
-/// expansions instead of elapsed time makes a route end at the same point on every machine,
-/// however fast or busy it is.
+/// Deterministic work budget in A* node expansions, shared by every search it governs: the
+/// searches of one <see cref="WaveguideRouter.Route"/> call (fine phases and their retries,
+/// coarse retries, breakout middles), or the crossing-aware routes of one crossing chain pass
+/// (<see cref="CrossingInsertion.CrossingInsertionService.MaxChainPassNodesExpanded"/>). Once the
+/// counter reaches the limit, <see cref="Token"/> is cancelled, so the remaining searches stop
+/// exactly as if the caller had cancelled. Counting expansions instead of elapsed time makes the
+/// work end at the same point on every machine, however fast or busy it is.
 /// </summary>
 internal sealed class RouteWorkBudget : IDisposable
 {
@@ -37,13 +38,15 @@ internal sealed class RouteWorkBudget : IDisposable
 
     /// <summary>
     /// The node limit a search may actually use: its own <paramref name="searchMaxNodes"/>, cut
-    /// down to what the route has left.
+    /// down to what the budget has left.
     /// </summary>
-    internal int Cap(int searchMaxNodes) =>
-        (int)Math.Min(searchMaxNodes, Math.Max(0, MaxNodesExpanded - NodesExpanded));
+    internal int Cap(int searchMaxNodes) => (int)Math.Min(searchMaxNodes, Remaining);
+
+    /// <summary>Expansions still left; 0 once the budget is spent.</summary>
+    internal long Remaining => Math.Max(0, MaxNodesExpanded - NodesExpanded);
 
     /// <summary>Charges a finished search's expansions; cancels <see cref="Token"/> once the budget is spent.</summary>
-    internal void Charge(int nodesExpanded)
+    internal void Charge(long nodesExpanded)
     {
         NodesExpanded += Math.Max(0, nodesExpanded);
         if (IsExhausted && !_stop.IsCancellationRequested)

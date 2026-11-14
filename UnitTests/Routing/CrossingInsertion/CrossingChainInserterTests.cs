@@ -86,14 +86,14 @@ public class CrossingChainInserterTests
     }
 
     [Fact]
-    public async Task ChainPass_WithItsTimeBudgetSpent_LeavesTheBlockedWireAlone()
+    public async Task ChainPass_WithItsWorkBudgetSpent_LeavesTheBlockedWireAlone()
     {
         var (canvas, _, blocked) = await SceneAsync();
         var templates = TestPdkLoader.LoadAllTemplates();
         var service = new CrossingInsertionService(
             () => CrossingComponentInstance.CreateFromTemplates(templates, new[] { "Demo PDK" })?.Component)
         {
-            ChainPassTimeBudget = TimeSpan.Zero,
+            MaxChainPassNodesExpanded = 0,
         };
 
         service.ConnectBlockedWiresThroughCrossings(canvas.ConnectionManager, canvas.Router).ShouldBe(0);

@@ -26,6 +26,14 @@ public sealed class CrossingChainInserter
     /// </summary>
     public Action? LastUndo { get; private set; }
 
+    /// <summary>
+    /// The chain pass's shared work budget, or null (default) when only the router's own
+    /// <see cref="WaveguideRouter.MaxRouteNodesExpanded"/> bounds each route. With a budget every
+    /// crossing-aware route gets at most what the pass has left and charges what it spent; once
+    /// the budget is spent no further route starts.
+    /// </summary>
+    internal RouteWorkBudget? WorkBudget { get; set; }
+
     private sealed class Plan
     {
         public List<Component> Crossings { get; } = new();
@@ -51,6 +59,8 @@ public sealed class CrossingChainInserter
         LastUndo = null;
         var grid = router.PathfindingGrid;
         if (grid == null || blocked.StartPin == null || blocked.EndPin == null) return null;
+        if (WorkBudget is { IsExhausted: true })
+            return Reject("the chain pass's work budget is spent");
 
         // A blocked fallback is a placeholder line, not geometry — the caller keeps every
         // fallback out of the grid while it connects blocked wires (see the service).
@@ -75,11 +85,14 @@ public sealed class CrossingChainInserter
         return plan.Crossings;
     }
 
-    private static (RoutedPath? Route, IReadOnlyList<PlannedCrossing> Planned) RouteWithCrossings(
+    private (RoutedPath? Route, IReadOnlyList<PlannedCrossing> Planned) RouteWithCrossings(
         WaveguideConnection blocked, WaveguideRouter router, CrossingRouteSettings settings, CancellationToken cancellationToken)
     {
         var previous = router.CrossingRouting;
+        long routeBudget = router.MaxRouteNodesExpanded;
         router.CrossingRouting = settings;
+        if (WorkBudget != null)
+            router.MaxRouteNodesExpanded = Math.Min(routeBudget, WorkBudget.Remaining);
         try
         {
             var route = router.Route(blocked.StartPin, blocked.EndPin, cancellationToken);
@@ -88,6 +101,8 @@ public sealed class CrossingChainInserter
         }
         finally
         {
+            WorkBudget?.Charge(router.LastRouteNodesExpanded);
+            router.MaxRouteNodesExpanded = routeBudget;
             router.CrossingRouting = previous;
         }
     }

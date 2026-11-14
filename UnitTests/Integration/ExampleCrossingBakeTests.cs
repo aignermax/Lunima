@@ -68,7 +68,7 @@ public class ExampleCrossingBakeTests
         var preferred = CrossingComponentInstance.PreferredPdksOf(canvas.Components.Select(c => c.Component), templates);
         var binder = new CrossingInsertionCanvasBinder(
             canvas, () => CrossingComponentInstance.CreateFromTemplates(templates, preferred), action => action());
-        binder.Service.ChainPassTimeBudget = TimeSpan.MaxValue;
+        binder.Service.MaxChainPassNodesExpanded = CrossingInsertionService.UnlimitedChainPassNodesExpanded;
         // Offline there is time for the searches the interactive pass cannot afford.
         canvas.Router.MaxRouteNodesExpanded = CAP_Core.Routing.WaveguideRouter.UnlimitedRouteNodesExpanded;
         binder.Service.FallbackChainSearches = new[] { (40_000_000, 1.0), (8_000_000, 2.5) };
