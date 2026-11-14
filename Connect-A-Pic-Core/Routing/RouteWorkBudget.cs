@@ -1,12 +1,13 @@
 namespace CAP_Core.Routing;
 
 /// <summary>
-/// Deterministic work budget of one <see cref="WaveguideRouter.Route"/> call: every A* search the
-/// call runs (fine phases and their retries, coarse retries, breakout middles) draws its node
-/// expansions from one shared counter. Once the counter reaches the limit, <see cref="Token"/> is
-/// cancelled, so the remaining searches stop exactly as if the caller had cancelled. Counting
-/// expansions instead of elapsed time makes a route end at the same point on every machine,
-/// however fast or busy it is.
+/// Deterministic work budget in A* node expansions, shared by every search it governs: the
+/// searches of one <see cref="WaveguideRouter.Route"/> call (fine phases and their retries,
+/// coarse retries, breakout middles), or the crossing-aware routes of one crossing chain pass
+/// (<see cref="CrossingInsertion.CrossingInsertionService.MaxChainPassNodesExpanded"/>). Once the
+/// counter reaches the limit, <see cref="Token"/> is cancelled, so the remaining searches stop
+/// exactly as if the caller had cancelled. Counting expansions instead of elapsed time makes the
+/// work end at the same point on every machine, however fast or busy it is.
 /// <para>
 /// A budget may draw from an enclosing one that spans many routes (a contention-repair pass charges
 /// every route of every attempt to one pass budget): searches are then capped by whichever of the
@@ -64,17 +65,17 @@ internal sealed class RouteWorkBudget : IDisposable
     /// The node limit a search may actually use: its own <paramref name="searchMaxNodes"/>, cut
     /// down to what this budget and the enclosing one have left.
     /// </summary>
-    internal int Cap(int searchMaxNodes)
-    {
-        int enclosingCap = _enclosing?.Cap(searchMaxNodes) ?? searchMaxNodes;
-        return (int)Math.Min(enclosingCap, Math.Max(0, MaxNodesExpanded - NodesExpanded));
-    }
+    internal int Cap(int searchMaxNodes) => (int)Math.Min(searchMaxNodes, Remaining);
+
+    /// <summary>Expansions still left here and in the enclosing budget; 0 once either is spent.</summary>
+    internal long Remaining =>
+        Math.Min(_enclosing?.Remaining ?? long.MaxValue, Math.Max(0, MaxNodesExpanded - NodesExpanded));
 
     /// <summary>
     /// Charges a finished search's expansions here and to the enclosing budget; cancels
     /// <see cref="Token"/> once either is spent.
     /// </summary>
-    internal void Charge(int nodesExpanded)
+    internal void Charge(long nodesExpanded)
     {
         NodesExpanded += Math.Max(0, nodesExpanded);
         _enclosing?.Charge(nodesExpanded);

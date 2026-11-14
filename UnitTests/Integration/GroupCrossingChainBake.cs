@@ -90,7 +90,7 @@ internal static class GroupCrossingChainBake
         new(crossingFactory)
         {
             ComponentAdded = placed.Add,
-            ChainPassTimeBudget = TimeSpan.MaxValue,
+            MaxChainPassNodesExpanded = CrossingInsertionService.UnlimitedChainPassNodesExpanded,
             FallbackChainSearches = new[] { (40_000_000, 1.0), (8_000_000, 2.5) },
         };
 

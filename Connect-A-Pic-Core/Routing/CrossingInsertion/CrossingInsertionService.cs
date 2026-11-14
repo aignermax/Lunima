@@ -70,11 +70,34 @@ public partial class CrossingInsertionService
     }
 
     /// <summary>
-    /// Wall-clock budget of one chain pass. A blocked wire without any fitting route
-    /// exhausts its whole search, so a design with many of them would otherwise keep the
-    /// routing pass busy for minutes; offline bakes lift it.
+    /// Default for <see cref="MaxChainPassNodesExpanded"/>: six crossing-aware routes at the full
+    /// <see cref="WaveguideRouter.DefaultMaxRouteNodesExpanded"/>, which ends the chain pass on the
+    /// RAM 4x4 example sooner than the former 30 s wall-clock budget did.
     /// </summary>
-    public TimeSpan ChainPassTimeBudget { get; set; } = TimeSpan.FromSeconds(30);
+    public const long DefaultMaxChainPassNodesExpanded = 6 * WaveguideRouter.DefaultMaxRouteNodesExpanded;
+
+    /// <summary>
+    /// <see cref="MaxChainPassNodesExpanded"/> that never runs out — for offline work (example
+    /// bakes) that asks for searches an interactive routing pass cannot afford.
+    /// </summary>
+    public const long UnlimitedChainPassNodesExpanded = long.MaxValue;
+
+    /// <summary>
+    /// Work budget of one chain pass, in A* node expansions summed over every crossing-aware
+    /// route the pass runs (regular sweeps, pin-neighbour swaps, fallback searches). A blocked
+    /// wire without any fitting route exhausts its whole search, so a design with many of them
+    /// would otherwise keep the routing pass busy for minutes. Each route gets at most what is
+    /// left; once the budget is spent the pass stops, keeps what it connected so far and marks
+    /// no wire as chain-search-exhausted, so a later pass tries the rest again. Counting
+    /// expansions instead of time makes a design get the same crossings on every machine.
+    /// </summary>
+    public long MaxChainPassNodesExpanded { get; set; } = DefaultMaxChainPassNodesExpanded;
+
+    /// <summary>
+    /// Node expansions the most recent chain pass spent across all its crossing-aware routes.
+    /// Diagnostic surface for calibrating <see cref="MaxChainPassNodesExpanded"/>.
+    /// </summary>
+    public long LastChainPassNodesExpanded { get; private set; }
 
     /// <summary>
     /// Further searches tried, in order, for the wires still blocked after the regular chain
@@ -199,27 +222,32 @@ public partial class CrossingInsertionService
         // another blocked wire's search. Wires that stay blocked get theirs back below.
         foreach (var blocked in blockedWires)
             router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
-        var clock = System.Diagnostics.Stopwatch.StartNew();
+        using var budget = new RouteWorkBudget(MaxChainPassNodesExpanded, cancellationToken);
+        var outerBudget = _chainInserter.WorkBudget;
+        _chainInserter.WorkBudget = budget;
         try
         {
             RestoreDissolvedChains(manager, router, cancellationToken);
             for (int pass = 0; pass < MaxChainPasses && !cancellationToken.IsCancellationRequested; pass++)
             {
-                if (!ConnectBlockedOnce(manager, router, settings, clock, cancellationToken))
+                if (!ConnectBlockedOnce(manager, router, settings, budget, cancellationToken))
                     break;
             }
-            ResolvePinPairs(manager, router, settings, clock, cancellationToken);
+            ResolvePinPairs(manager, router, settings, budget, cancellationToken);
             foreach (var (maxNodes, weight) in FallbackChainSearches)
             {
                 if (cancellationToken.IsCancellationRequested || !manager.Connections.Any(c => IsChainCandidate(c, manager))) break;
                 var fallback = settings with { MaxNodesExpanded = maxNodes, HeuristicWeight = weight };
-                ConnectBlockedOnce(manager, router, fallback, clock, cancellationToken);
-                ResolvePinPairs(manager, router, fallback, clock, cancellationToken);
+                ConnectBlockedOnce(manager, router, fallback, budget, cancellationToken);
+                ResolvePinPairs(manager, router, fallback, budget, cancellationToken);
             }
         }
         finally
         {
-            bool searchedAll = !cancellationToken.IsCancellationRequested && clock.Elapsed <= ChainPassTimeBudget;
+            _chainInserter.WorkBudget = outerBudget;
+            LastChainPassNodesExpanded = budget.NodesExpanded;
+            // A pass cut short by its budget proves nothing about the wires it did not reach.
+            bool searchedAll = !cancellationToken.IsCancellationRequested && !budget.IsExhausted;
             foreach (var stillBlocked in blockedWires.Where(c => manager.Connections.Contains(c) && c.IsBlockedFallback))
             {
                 router.PathfindingGrid!.AddWaveguideObstacle(stillBlocked.Id, stillBlocked.RoutedPath!.Segments, manager.WaveguideWidthMicrometers);
@@ -242,11 +270,11 @@ public partial class CrossingInsertionService
     /// </summary>
     private void ResolvePinPairs(
         WaveguideConnectionManager manager, WaveguideRouter router, CrossingRouteSettings settings,
-        System.Diagnostics.Stopwatch clock, CancellationToken cancellationToken)
+        RouteWorkBudget budget, CancellationToken cancellationToken)
     {
         foreach (var blocked in manager.Connections.Where(c => IsChainCandidate(c, manager)).ToList())
         {
-            if (cancellationToken.IsCancellationRequested || clock.Elapsed > ChainPassTimeBudget)
+            if (cancellationToken.IsCancellationRequested || budget.IsExhausted)
                 return;
             if (!blocked.IsBlockedFallback || !manager.Connections.Contains(blocked)) continue;
             var before = Snapshot(manager);
@@ -264,12 +292,12 @@ public partial class CrossingInsertionService
     /// <summary>One sweep over the blocked wires; true when at least one was connected.</summary>
     private bool ConnectBlockedOnce(
         WaveguideConnectionManager manager, WaveguideRouter router, CrossingRouteSettings settings,
-        System.Diagnostics.Stopwatch clock, CancellationToken cancellationToken)
+        RouteWorkBudget budget, CancellationToken cancellationToken)
     {
         bool connectedAny = false;
         foreach (var blocked in manager.Connections.Where(c => IsChainCandidate(c, manager)).ToList())
         {
-            if (cancellationToken.IsCancellationRequested || clock.Elapsed > ChainPassTimeBudget)
+            if (cancellationToken.IsCancellationRequested || budget.IsExhausted)
                 return false;
             var before = Snapshot(manager);
             var placed = _chainInserter.TryInsert(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
