@@ -119,7 +119,9 @@ public sealed class AgentUndoDerivedWorkTests
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => heartbeat.TrySetResult());
             });
             worker.Release.TrySetResult();
-            await heartbeat.Task.WaitAsync(TimeSpan.FromMilliseconds(500));
+            // The window also covers the released snapshot work on a loaded runner; it stays below
+            // the callback's 2 s guard, so a UI thread blocked by the held callback still fails.
+            await heartbeat.Task.WaitAsync(TimeSpan.FromMilliseconds(1500));
             running.IsCompleted.ShouldBeFalse("cancellation callback cleanup is still owned, without blocking the UI");
             worker.CallbackRelease.Set();
             await posting.WaitAsync(TimeSpan.FromSeconds(5));
