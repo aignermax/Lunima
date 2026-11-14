@@ -126,13 +126,13 @@ public sealed class RoutingInputSnapshot
 internal sealed record RouteManagerValue(bool Sequential, int Attempts, double WaveguideWidth, double MetalWidth,
     double DefaultPropagationLoss, double DefaultExcessLoss, BendLossModel DefaultBendLoss, bool Coherent,
     bool PendingWireSetChange, ImmutableArray<UnroutableWireMemory.SnapshotEntry> Failures,
-    ImmutableArray<ContentionRepairService.Failure> ContentionFailures, TimeSpan ContentionBudget)
+    ImmutableArray<ContentionRepairService.Failure> ContentionFailures, long ContentionBudget)
 {
     internal static RouteManagerValue Capture(WaveguideConnectionManager manager) => new(manager.UseSequentialRouting,
         manager.MaxRoutingAttempts, manager.WaveguideWidthMicrometers, manager.MetalTraceWidthMicrometers,
         manager.DefaultPropagationLossDbPerCm, manager.DefaultExcessBendLossDbPer90Deg, manager.DefaultBendLossModel,
         manager.EnableCoherentPropagationPhase, manager.HasPendingWireSetChange, manager.UnroutableWires.CaptureState(),
-        manager.CaptureContentionFailures(), manager.ContentionRepairTimeBudget);
+        manager.CaptureContentionFailures(), manager.ContentionRepairWorkBudget);
 
     internal void RestoreFailures(WaveguideConnectionManager manager)
     {
@@ -145,6 +145,6 @@ internal sealed record RouteManagerValue(bool Sequential, int Attempts, double W
         UseSequentialRouting = Sequential, MaxRoutingAttempts = Attempts, WaveguideWidthMicrometers = WaveguideWidth,
         MetalTraceWidthMicrometers = MetalWidth, DefaultPropagationLossDbPerCm = DefaultPropagationLoss,
         DefaultExcessBendLossDbPer90Deg = DefaultExcessLoss, DefaultBendLossModel = DefaultBendLoss,
-        EnableCoherentPropagationPhase = Coherent, ContentionRepairTimeBudget = ContentionBudget
+        EnableCoherentPropagationPhase = Coherent, ContentionRepairWorkBudget = ContentionBudget
     };
 }

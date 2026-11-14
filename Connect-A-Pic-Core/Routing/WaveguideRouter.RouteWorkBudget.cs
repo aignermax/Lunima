@@ -34,4 +34,32 @@ public partial class WaveguideRouter
 
     /// <summary>The budget of the <see cref="Route"/> call in progress; null outside one.</summary>
     private RouteWorkBudget? _routeBudget;
+
+    /// <summary>
+    /// The multi-route budget every <see cref="Route"/> call also charges while a
+    /// <see cref="ChargeRoutesTo"/> scope is open; null outside one.
+    /// </summary>
+    private RouteWorkBudget? _passBudget;
+
+    /// <summary>
+    /// Makes every <see cref="Route"/> call until the returned scope is disposed also draw its node
+    /// expansions from <paramref name="passBudget"/>, so a pass that routes many wires stops after a
+    /// fixed amount of work in total. Each route keeps its own <see cref="MaxRouteNodesExpanded"/>
+    /// limit as well; once the pass budget is spent, an in-flight route stops as if cancelled.
+    /// </summary>
+    /// <param name="passBudget">The budget shared by every route of the pass.</param>
+    /// <returns>A scope that restores the previous pass budget when disposed.</returns>
+    internal IDisposable ChargeRoutesTo(RouteWorkBudget passBudget)
+    {
+        var scope = new PassBudgetScope(this, _passBudget);
+        _passBudget = passBudget;
+        return scope;
+    }
+
+    /// <summary>Restores the pass budget that was active before <see cref="ChargeRoutesTo"/>.</summary>
+    private sealed class PassBudgetScope(WaveguideRouter router, RouteWorkBudget? previous) : IDisposable
+    {
+        /// <inheritdoc />
+        public void Dispose() => router._passBudget = previous;
+    }
 }
