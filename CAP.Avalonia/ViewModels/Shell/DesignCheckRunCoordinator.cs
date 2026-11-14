@@ -52,19 +52,14 @@ internal sealed class DesignCheckRunCoordinator : ObservableObject
                 .Select(c => c.Component)
                 .ToList();
 
-            // PDK-process compatibility (issue #570 follow-up, LC-T4): resolve each placed
-            // component's PDK source the same way the placement/paste guards do — the snapshot
-            // TemplatePdkSource captured when it was placed, falling back to a live library match
-            // (see ComponentClipboard/FileOperationsViewModel for the same fallback) — so a process
+            // PDK-process compatibility: every placed component's
+            // PDK source is resolved the same way the placement/paste guards do, so a process
             // edit that diverges a PDK from the design's active process is flagged for review even
             // though the already-placed components themselves are never touched or deleted.
-            var pdkSourceByComponent = _canvas.Components.ToDictionary(
-                c => c.Component,
-                c => c.TemplatePdkSource ?? _process.Placement.ResolveComponentPdkSource(c.Component));
-            // Group children carry no template snapshot of their own; the PDK check walks
-            // them at every nesting depth, so resolve them through the live library too.
-            foreach (var nested in groups.SelectMany(g => g.GetAllComponentsRecursive()))
-                pdkSourceByComponent.TryAdd(nested, _process.Placement.ResolveComponentPdkSource(nested));
+            // Only the references are captured here; the per-component template lookups, nested
+            // group children included, scale with the gate count and run on the worker.
+            var libraryTemplates = _library.AllTemplates.ToList();
+            var pdkSources = ComponentPdkSourceSnapshot.Capture(_canvas.Components, groups, libraryTemplates);
 
             // Under a real process lock the allowed set is the lock-derived membership; without one
             // (Playground/no selection) nothing is locked, so GetProcessCompatiblePdkNames() equals
@@ -91,11 +86,10 @@ internal sealed class DesignCheckRunCoordinator : ObservableObject
             // canvas-wide values below, exactly like the #937 floor. Frozen group paths
             // carry no pins to resolve an owning process from, so they also keep the
             // canvas-wide spacing (0 in Playground = off, as before).
-            var drcTemplates = _library.AllTemplates.ToList();
             var drcDrafts = _library.GetLoadedPdkDrafts().ToList();
             string? DrcPdkSourceOf(PhysicalPin? pin) =>
                 pin?.ParentComponent is { } component
-                    ? ComponentPdkSourceResolver.Resolve(component, drcTemplates)
+                    ? ComponentPdkSourceResolver.Resolve(component, libraryTemplates)
                     : null;
             Func<CAP_Core.Components.Connections.WaveguideConnection, CAP_Core.Analysis.ConnectionDrcRules?> connectionDrcRuleProvider =
                 connection => ConnectionDrcRuleResolver.ResolveForEndpointPdkNames(
@@ -122,7 +116,7 @@ internal sealed class DesignCheckRunCoordinator : ObservableObject
                 // die checks; the single-chip bounds check only applies to single-die designs.
                 usesDieBounds ? 0 : _chipSize.CurrentWidthMicrometers,
                 usesDieBounds ? 0 : _chipSize.CurrentHeightMicrometers,
-                pdkSourceByComponent,
+                pdkSources.Resolve,
                 _library.GetProcessAgnosticPdkNames(),
                 compatiblePdkNames,
                 processLockActive,
