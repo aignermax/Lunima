@@ -149,7 +149,8 @@ public partial class DesignValidationViewModel : ObservableObject
         var request = new DesignValidationRequest(
             connections, groups, allComponents,
             chipWidthMicrometers, chipHeightMicrometers,
-            pdkSourceByComponent, processAgnosticPdkNames, enabledPdkNames,
+            pdkSourceByComponent is null ? null : () => pdkSourceByComponent,
+            processAgnosticPdkNames, enabledPdkNames,
             processLockActive, externalPortPins,
             minWaveguideSpacingMicrometers, minWaveguideWidthRules,
             connectionDrcRuleProvider, wavelengthNm);
@@ -159,18 +160,23 @@ public partial class DesignValidationViewModel : ObservableObject
 
     /// <summary>
     /// Async variant of <see cref="RunValidation"/> for the 100 ms UI-responsiveness
-    /// budget (issue #1150): the three <see cref="DesignValidator"/> passes run on a
-    /// worker thread while the <see cref="Issues"/> reset and result commit stay on the
-    /// caller's (UI) thread. On a loaded logic-gate example the synchronous prefix of
-    /// the old all-in-one path exceeded the budget by 6×.
+    /// budget: the <see cref="DesignValidator"/> passes and the PDK-source resolution run
+    /// on a worker thread while the <see cref="Issues"/> reset and result commit stay on
+    /// the caller's (UI) thread. Every input must therefore be a snapshot the UI cannot
+    /// mutate while the worker reads it.
     /// </summary>
+    /// <param name="resolvePdkSourceByComponent">
+    /// Builds each component's resolved PDK source name. Invoked on the worker thread, so it
+    /// may only read data captured beforehand. Optional — skips the PDK check when absent.
+    /// </param>
+    /// <remarks>The other parameters are those of <see cref="RunValidation"/>.</remarks>
     public async Task RunValidationAsync(
         IEnumerable<WaveguideConnection> connections,
         IEnumerable<ComponentGroup>? groups = null,
         IEnumerable<Component>? allComponents = null,
         double chipWidthMicrometers = 0,
         double chipHeightMicrometers = 0,
-        IReadOnlyDictionary<Component, string?>? pdkSourceByComponent = null,
+        Func<IReadOnlyDictionary<Component, string?>>? resolvePdkSourceByComponent = null,
         IReadOnlyCollection<string>? processAgnosticPdkNames = null,
         IReadOnlyCollection<string>? enabledPdkNames = null,
         bool processLockActive = true,
@@ -185,7 +191,7 @@ public partial class DesignValidationViewModel : ObservableObject
         var request = new DesignValidationRequest(
             connections, groups, allComponents,
             chipWidthMicrometers, chipHeightMicrometers,
-            pdkSourceByComponent, processAgnosticPdkNames, enabledPdkNames,
+            resolvePdkSourceByComponent, processAgnosticPdkNames, enabledPdkNames,
             processLockActive, externalPortPins,
             minWaveguideSpacingMicrometers, minWaveguideWidthRules,
             connectionDrcRuleProvider, wavelengthNm);
@@ -299,11 +305,11 @@ public partial class DesignValidationViewModel : ObservableObject
         }
 
         if (request.AllComponents is not null
-            && request.PdkSourceByComponent is not null
+            && request.ResolvePdkSourceByComponent is not null
             && request.EnabledPdkNames is not null)
         {
             results.AddRange(_validator.ValidateComponentPdkCompatibility(
-                request.AllComponents, request.PdkSourceByComponent,
+                request.AllComponents, request.ResolvePdkSourceByComponent(),
                 request.ProcessAgnosticPdkNames ?? Array.Empty<string>(),
                 request.EnabledPdkNames, request.ProcessLockActive));
         }
@@ -314,7 +320,8 @@ public partial class DesignValidationViewModel : ObservableObject
     /// <summary>
     /// Immutable bundle of every input a validation run needs — lets
     /// <see cref="ComputeIssues"/> cross a thread boundary without fourteen positional
-    /// parameters on the call site.
+    /// parameters on the call site. The PDK sources are resolved by
+    /// <see cref="ComputeIssues"/> itself, so their lookups run wherever it runs.
     /// </summary>
     private sealed record DesignValidationRequest(
         IEnumerable<WaveguideConnection> Connections,
@@ -322,7 +329,7 @@ public partial class DesignValidationViewModel : ObservableObject
         IEnumerable<Component>? AllComponents,
         double ChipWidthMicrometers,
         double ChipHeightMicrometers,
-        IReadOnlyDictionary<Component, string?>? PdkSourceByComponent,
+        Func<IReadOnlyDictionary<Component, string?>>? ResolvePdkSourceByComponent,
         IReadOnlyCollection<string>? ProcessAgnosticPdkNames,
         IReadOnlyCollection<string>? EnabledPdkNames,
         bool ProcessLockActive,

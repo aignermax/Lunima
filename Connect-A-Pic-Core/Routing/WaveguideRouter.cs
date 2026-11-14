@@ -281,7 +281,7 @@ public partial class WaveguideRouter
         // Crossings belong to the route that planned them: a route found another way (direct,
         // coarse retry) must not inherit those of an earlier call.
         ResetPlannedCrossings();
-        using var budget = new RouteWorkBudget(MaxRouteNodesExpanded, cancellationToken);
+        using var budget = new RouteWorkBudget(MaxRouteNodesExpanded, cancellationToken, _passBudget);
         _routeBudget = budget;
         try
         {

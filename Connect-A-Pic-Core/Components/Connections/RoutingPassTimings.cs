@@ -51,6 +51,9 @@ public sealed record RoutingPassTimings
     /// <summary>Contention-repair attempts accepted (blocked count strictly decreased, no new crossing).</summary>
     public int ContentionRepairAccepts { get; init; }
 
+    /// <summary>A* node expansions the contention-repair pass charged to its work budget.</summary>
+    public long ContentionRepairNodesExpanded { get; init; }
+
     /// <summary>True when cancellation cut the re-route short; the reported passes are what ran.</summary>
     public bool WasCancelled { get; init; }
 

@@ -1269,6 +1269,8 @@
   "Routing.Connection.EffectiveStyleFormat": "Auto (effective: {0})",
   "Routing.Connection.FreezeRoute": "Freeze Route",
   "Routing.Connection.BatchApply": "Applies to {0} selected connections",
+  "Routing.Connection.AutoLockMissed": "Auto can't keep the {0:F2} µm length lock on {1} of {2} routes (the arch bundle needs ≥ {3:F1} µm). Re-equalize the group or release the lock.",
+  "Routing.Connection.AutoLockMissedNoRoom": "Auto can't keep the {0:F2} µm length lock on {1} of {2} routes (no room for arches or meanders at that length). Re-equalize the group or release the lock.",
   "Routing.Connection.Radius": "Radius",
   "Routing.Connection.Style": "Style:",
   "Routing.Connection.Title": "Routing:",

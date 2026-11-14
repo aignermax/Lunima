@@ -24,6 +24,7 @@ public partial class WaveguideConnectionManager
         LastOrderingEarlyStopped = timings?.OrderingEarlyStopped ?? false;
         LastContentionRepairAttemptCount = timings?.ContentionRepairAttempts ?? 0;
         LastContentionRepairAcceptCount = timings?.ContentionRepairAccepts ?? 0;
+        LastContentionRepairNodesExpanded = timings?.ContentionRepairNodesExpanded ?? 0;
     }
 
     /// <summary>Measures one routing pass's wall-clock duration.</summary>
@@ -52,6 +53,7 @@ public partial class WaveguideConnectionManager
         public TimeSpan ContentionRepair;
         public int ContentionRepairAttempts;
         public int ContentionRepairAccepts;
+        public long ContentionRepairNodesExpanded;
         public bool OrderingEarlyStopped;
 
         public RoutingPassTimings Build(TimeSpan total, int orderingAttempts, bool wasCancelled) =>
@@ -70,6 +72,7 @@ public partial class WaveguideConnectionManager
                 ContentionRepair = ContentionRepair,
                 ContentionRepairAttempts = ContentionRepairAttempts,
                 ContentionRepairAccepts = ContentionRepairAccepts,
+                ContentionRepairNodesExpanded = ContentionRepairNodesExpanded,
                 WasCancelled = wasCancelled,
             };
     }
