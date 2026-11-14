@@ -47,7 +47,8 @@ internal sealed class LogicLifetimeFixture : IAsyncDisposable
         public int Calls { get; private set; }
         public bool Fail { get; set; }
         public async Task<LogicNetworkEvaluator> AssembleAsync(IReadOnlyList<Component> components,
-            IReadOnlyList<WaveguideConnection> connections, int wavelengthNm, CancellationToken cancellationToken = default)
+            IReadOnlyList<WaveguideConnection> connections, int wavelengthNm, ICaptureYield captureSlices,
+            CancellationToken cancellationToken = default)
         {
             Calls++;
             await Barrier.WaitAsync(cancellationToken);

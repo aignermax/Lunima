@@ -6,8 +6,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace CAP.Avalonia.ViewModels.Logic.GateView;
 
 /// <summary>
-/// Captures graph bindings and compact physics on the document owner, classifies detached
-/// inputs on a worker, and admits only the current document/request's result.
+/// Captures graph bindings and compact physics on the document owner (the physics in dispatcher
+/// frames), classifies detached inputs on a worker, and admits only the current document/request's result.
 /// </summary>
 public partial class GateViewViewModel
 {
@@ -84,7 +84,8 @@ public partial class GateViewViewModel
         {
             // Scheduled UI requests may supersede each other in the same owner turn.
             // Yield on that context before reading live inputs; explicit RebuildNowAsync
-            // retains its immediate capture contract. No live state moves to a worker.
+            // starts its capture immediately. Live state is read only on this context (in
+            // dispatcher frames for the physics); no live state moves to a worker.
             if (debounce)
                 await _delay(RebuildDebounce, token);
             if (deferCapture) await Task.Yield();
@@ -100,7 +101,8 @@ public partial class GateViewViewModel
             // Topology extraction is tolerant of partially edited wiring and retains the real
             // selection/layout bindings here. The worker receives only detached optical values.
             var graph = _extractor.Extract(components, connections, operation.Token);
-            var snapshot = GateViewClassificationSnapshot.Capture(graph, wavelength, operation.Token);
+            var snapshot = await GateViewClassificationSnapshot.CaptureAsync(graph, wavelength,
+                new DispatcherCaptureYield(operation.ThrowIfObsolete), operation.Token);
             operation.ThrowIfObsolete();
             var classifier = _classifier;
             var workerToken = operation.Token;

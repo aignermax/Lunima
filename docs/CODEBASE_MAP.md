@@ -39,6 +39,7 @@ dependency injection uses Microsoft.Extensions.DependencyInjection.
 | Document identity, revision and operations | `Connect-A-Pic-Core/Documents/` |
 | Immutable main/spectral simulation inputs | `Connect-A-Pic-Core/LightCalculation/Snapshots/` |
 | Truth-table and logic network input capture | `Connect-A-Pic-Core/Analysis/LogicAnalysis/TruthTableSnapshot.cs`, `LogicNetworkSnapshot.cs` |
+| Logic capture cut into UI dispatcher frames | `Connect-A-Pic-Core/Analysis/LogicAnalysis/ICaptureYield.cs`, `CAP.Avalonia/ViewModels/Analysis/DispatcherCaptureYield.cs` |
 | Private routing input and results | `Connect-A-Pic-Core/Routing/Snapshots/` |
 | Bounded exact outline raster reuse | `Connect-A-Pic-Core/Routing/AStarPathfinder/OutlineRasterCache.cs`, `OutlineRasterRows.cs` |
 | Application and feature retirement | `CAP.Avalonia/Services/Lifetime/` |

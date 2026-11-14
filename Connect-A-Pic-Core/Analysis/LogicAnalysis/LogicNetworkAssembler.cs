@@ -64,14 +64,26 @@ public class LogicNetworkAssembler : ILogicNetworkAssembler
     /// <paramref name="components"/> or <paramref name="connections"/> is null.
     /// </exception>
     /// <exception cref="InvalidOperationException">The design contains no gate group.</exception>
+    public Task<LogicNetworkEvaluator> AssembleAsync(
+        IReadOnlyList<Component> components,
+        IReadOnlyList<WaveguideConnection> connections,
+        int wavelengthNm,
+        CancellationToken cancellationToken = default) =>
+        AssembleAsync(components, connections, wavelengthNm, NoCaptureYield.Instance, cancellationToken);
+
+    /// <inheritdoc />
     public async Task<LogicNetworkEvaluator> AssembleAsync(
         IReadOnlyList<Component> components,
         IReadOnlyList<WaveguideConnection> connections,
         int wavelengthNm,
+        ICaptureYield captureSlices,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(captureSlices);
         cancellationToken.ThrowIfCancellationRequested();
-        var snapshot = LogicNetworkSnapshot.Capture(components, connections, wavelengthNm, _builder);
+        // Resumes on the owner: only the solve leaves the thread that owns the design.
+        var snapshot = await LogicNetworkSnapshot.CaptureAsync(
+            components, connections, wavelengthNm, _builder, captureSlices, cancellationToken);
         return await SolveSnapshotAsync(snapshot, cancellationToken).ConfigureAwait(false);
     }
 
