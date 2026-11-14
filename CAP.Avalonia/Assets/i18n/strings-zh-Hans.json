@@ -1269,6 +1269,8 @@
   "Routing.Connection.EffectiveStyleFormat": "自动（实际:{0}）",
   "Routing.Connection.FreezeRoute": "冻结布线",
   "Routing.Connection.BatchApply": "应用于 {0} 个选定的连接",
+  "Routing.Connection.AutoLockMissed": "自动布线无法为 {2} 条路径中的 {1} 条保持 {0:F2} µm 的长度锁定（拱形线束至少需要 {3:F1} µm）。请重新均衡整组或解除锁定。",
+  "Routing.Connection.AutoLockMissedNoRoom": "自动布线无法为 {2} 条路径中的 {1} 条保持 {0:F2} µm 的长度锁定（该长度下没有放置拱形或蛇形线的空间）。请重新均衡整组或解除锁定。",
   "Routing.Connection.Radius": "半径",
   "Routing.Connection.Style": "样式：",
   "Routing.Connection.Title": "布线：",

@@ -1269,6 +1269,8 @@
   "Routing.Connection.EffectiveStyleFormat": "自動（実効: {0}）",
   "Routing.Connection.FreezeRoute": "ルートを固定",
   "Routing.Connection.BatchApply": "選択した {0} 本の接続に適用されます",
+  "Routing.Connection.AutoLockMissed": "自動では {2} 本中 {1} 本のルートで {0:F2} µm の長さロックを維持できません（アーチ束には ≥ {3:F1} µm が必要です）。グループを再度揃えるか、ロックを解除してください。",
+  "Routing.Connection.AutoLockMissedNoRoom": "自動では {2} 本中 {1} 本のルートで {0:F2} µm の長さロックを維持できません（その長さではアーチやミアンダを配置する余地がありません）。グループを再度揃えるか、ロックを解除してください。",
   "Routing.Connection.Radius": "半径",
   "Routing.Connection.Style": "スタイル：",
   "Routing.Connection.Title": "ルーティング：",
