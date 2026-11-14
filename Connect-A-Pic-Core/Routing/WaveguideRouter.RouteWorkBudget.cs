@@ -2,7 +2,10 @@ namespace CAP_Core.Routing;
 
 public partial class WaveguideRouter
 {
-    /// <summary>Default for <see cref="MaxRouteNodesExpanded"/>.</summary>
+    /// <summary>
+    /// Default for <see cref="MaxRouteNodesExpanded"/>: three full phase-2 searches, which routes a
+    /// 64-wire fan-in with a loop-back in the same pass time as the former 5 s wall-clock budget.
+    /// </summary>
     public const long DefaultMaxRouteNodesExpanded = 6_000_000;
 
     /// <summary>
