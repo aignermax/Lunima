@@ -22,35 +22,10 @@ public class ContentionRepairTests
 {
     private const double BendRadius = 10.0;
 
-    /// <summary>Generous enough that a slow CI runner never cuts the textbook repair short.</summary>
-    private static readonly TimeSpan UnboundedRepairBudget = TimeSpan.FromMinutes(5);
-
     [Fact]
     public void ContentionBlockedWire_RipUpAndReroute_BothWiresRoute()
     {
-        // Single-file corridor (roof / floor walls): wire A's straight route occupies the
-        // corridor; wire B's target pin sits on the corridor roof and is only reachable
-        // through it. Greedy order (A first) blocks B; routing B first lets A detour
-        // north around the roof and both wires route.
-        var aWest = CreateTestComponent(-50, 140, width: 50, height: 40);
-        var aEast = CreateTestComponent(460, 140, width: 30, height: 40);
-        var bEast = CreateTestComponent(450, 170, width: 30, height: 40);
-        var roof = CreateTestComponent(60, 105, width: 280, height: 45);
-        var floor = CreateTestComponent(60, 170, width: 280, height: 45);
-
-        var router = CreateRouter(-100, -100, 600, 300, aWest, aEast, bEast, roof, floor);
-        var manager = new WaveguideConnectionManager(router)
-        {
-            UseSequentialRouting = true,
-            ContentionRepairTimeBudget = UnboundedRepairBudget,
-        };
-
-        var connA = manager.AddConnectionWithCachedRoute(
-            CreatePin(aWest, 50, 20, 0), CreatePin(aEast, 0, 20, 180),
-            CreateStraightPath(0, 160, 460, 160, blocked: false));
-        var connB = manager.AddConnectionWithCachedRoute(
-            CreatePin(bEast, 0, 20, 180), CreatePin(roof, 140, 45, 90),
-            CreateStraightPath(450, 190, 200, 150, blocked: true));
+        var (manager, connA, connB) = BuildCorridorDetourScene();
 
         connB.IsBlockedFallback.ShouldBeTrue();
         connB.FailureReason.ShouldBe(RoutingFailureReason.Contention,
@@ -165,6 +140,34 @@ public class ContentionRepairTests
         manager.LastContentionRepairAttemptCount.ShouldBe(0);
         frozen.RoutedPath.ShouldBeSameAs(pathBefore);
         frozen.IsBlockedFallback.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Single-file corridor (roof / floor walls): wire A's straight route occupies the
+    /// corridor; wire B's target pin sits on the corridor roof and is only reachable
+    /// through it. Greedy order (A first) blocks B; routing B first lets A detour
+    /// north around the roof and both wires route. The manager keeps the default repair
+    /// work budget.
+    /// </summary>
+    internal static (WaveguideConnectionManager Manager, WaveguideConnection ConnA, WaveguideConnection ConnB)
+        BuildCorridorDetourScene()
+    {
+        var aWest = CreateTestComponent(-50, 140, width: 50, height: 40);
+        var aEast = CreateTestComponent(460, 140, width: 30, height: 40);
+        var bEast = CreateTestComponent(450, 170, width: 30, height: 40);
+        var roof = CreateTestComponent(60, 105, width: 280, height: 45);
+        var floor = CreateTestComponent(60, 170, width: 280, height: 45);
+
+        var router = CreateRouter(-100, -100, 600, 300, aWest, aEast, bEast, roof, floor);
+        var manager = new WaveguideConnectionManager(router) { UseSequentialRouting = true };
+
+        var connA = manager.AddConnectionWithCachedRoute(
+            CreatePin(aWest, 50, 20, 0), CreatePin(aEast, 0, 20, 180),
+            CreateStraightPath(0, 160, 460, 160, blocked: false));
+        var connB = manager.AddConnectionWithCachedRoute(
+            CreatePin(bEast, 0, 20, 180), CreatePin(roof, 140, 45, 90),
+            CreateStraightPath(450, 190, 200, 150, blocked: true));
+        return (manager, connA, connB);
     }
 
     private static void AssertSameGeometry(RoutedPath expected, RoutedPath actual, string label)

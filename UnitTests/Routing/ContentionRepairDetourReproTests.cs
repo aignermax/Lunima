@@ -40,9 +40,6 @@ public class ContentionRepairDetourReproTests
     private const double GateWidth = 320;
     private const double GateHeight = 60;
 
-    /// <summary>Generous enough that a slow CI runner never cuts the repair short.</summary>
-    private static readonly TimeSpan UnboundedRepairBudget = TimeSpan.FromMinutes(5);
-
     [Fact]
     public void SelectTrunk_FreeHighwayDetourExists_RouterFindsDetour()
     {
@@ -204,7 +201,6 @@ public class ContentionRepairDetourReproTests
             var manager = new WaveguideConnectionManager(router)
             {
                 UseSequentialRouting = true,
-                ContentionRepairTimeBudget = UnboundedRepairBudget,
                 // One ordering pass: the contention stamp under test forms identically
                 // without the five extra full-cascade permutations.
                 MaxRoutingAttempts = 1,

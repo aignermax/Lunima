@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Collections.Immutable;
 using CAP_Core.Routing;
 using CAP_Core.Routing.AStarPathfinder;
@@ -18,9 +17,10 @@ namespace CAP_Core.Components.Connections;
 /// component footprint) and frozen/manual routes are never touched — no wire ordering
 /// can free a footprint, and manual edits are sacred.
 /// <para>
-/// The budget is hard: every attempt routes on a token that cancels when the remaining
-/// budget expires, so one stubborn in-flight A* search cannot overrun the pass — a
-/// budget-cut attempt is restored exactly and the caller's own token stays uncancelled.
+/// The budget is hard and deterministic: every route of every attempt charges its A* node
+/// expansions to one pass budget, and an attempt routes on that budget's token, so one
+/// stubborn in-flight A* search cannot overrun the pass — a budget-cut attempt is restored
+/// exactly and the caller's own token stays uncancelled.
 /// And an attempt that failed once is not repeated verbatim: its fingerprint (blocked
 /// wire, ripped-up siblings, their pin positions) is remembered, and an identical
 /// attempt is skipped on later passes until an involved component moves.
@@ -70,15 +70,29 @@ internal sealed class ContentionRepairService
     }
 
     /// <summary>
-    /// Wall-clock budget for one repair pass. Checked before every attempt, and enforced
-    /// INSIDE one through a linked cancellation token (<see cref="TryRepairWire"/>)
-    /// that interrupts an in-flight route when the remaining budget expires. One attempt is
-    /// a handful of A* routes and legitimately takes seconds, so the budget must be
-    /// generous — the bound on attempt COUNT is <see cref="MaxContentionRepairAttemptsPerPass"/>.
-    /// Settable so tests on slow CI runners can pin the repair outcome independently of
-    /// machine speed.
+    /// Default for <see cref="WorkBudget"/>: two worst-case wires, so the Register 2-bit pass
+    /// (8.2 M expansions) still ends unchanged in 5.9 s and any pass stops near 8.6 s at its
+    /// 1.4 M expansions/s, below the former 10 s wall-clock budget.
     /// </summary>
-    internal TimeSpan TimeBudget { get; set; } = TimeSpan.FromSeconds(10);
+    internal const long DefaultWorkBudget = 2 * WaveguideRouter.DefaultMaxRouteNodesExpanded;
+
+    /// <summary>
+    /// Work budget of one repair pass, in A* node expansions summed over every route of every
+    /// attempt (one <see cref="RouteWorkBudget"/> the router charges next to each route's own
+    /// budget). Checked before every attempt, and enforced INSIDE one: once spent, the in-flight
+    /// route stops as if cancelled and the attempt is restored (<see cref="TryRepairWire"/>).
+    /// An attempt that spends the budget's last expansion counts as cut short too: the route
+    /// that spent it may have stopped because of it. The bound on attempt COUNT is
+    /// <see cref="MaxContentionRepairAttemptsPerPass"/>. Counting expansions instead of time
+    /// makes the pass repair the same wires on every machine.
+    /// </summary>
+    internal long WorkBudget { get; set; } = DefaultWorkBudget;
+
+    /// <summary>
+    /// Node expansions the last pass charged to its budget. Diagnostic hook for tests and
+    /// calibration.
+    /// </summary>
+    internal long NodesExpanded { get; set; }
 
     /// <summary>
     /// Number of rip-up-and-reroute attempts the last <c>RecalculateAllTransmissions</c>
@@ -105,14 +119,20 @@ internal sealed class ContentionRepairService
 
         AttemptCount = 0;
         AcceptCount = 0;
-        var budget = Stopwatch.StartNew();
+        using var budget = new RouteWorkBudget(WorkBudget, cancellationToken);
+        RunAttempts(grid, budget, cancellationToken);
+        NodesExpanded = budget.NodesExpanded;
+    }
 
+    /// <summary>Walks the blocked wires and runs one bounded attempt per repairable wire.</summary>
+    private void RunAttempts(PathfindingGrid grid, RouteWorkBudget budget, CancellationToken cancellationToken)
+    {
         // Snapshot: runs on the routing thread while UI commands may mutate the list.
         foreach (var blocked in _snapshotConnections())
         {
             if (cancellationToken.IsCancellationRequested
                 || AttemptCount >= MaxContentionRepairAttemptsPerPass
-                || budget.Elapsed >= TimeBudget)
+                || budget.IsExhausted)
                 return;
             if (!IsContentionRepairCandidate(blocked))
                 continue;
@@ -146,18 +166,18 @@ internal sealed class ContentionRepairService
     /// route the blocked wire first, re-route the siblings, and keep the result only on
     /// a strict improvement. Returns true when the attempt was accepted.
     /// <para>
-    /// The attempt routes on a token linked to the caller's token that cancels when the
-    /// remaining pass budget expires: an in-flight A* search is interrupted instead of
-    /// overrunning the budget by its own routing time. A budget-cut (or caller-cancelled)
-    /// attempt is restored exactly; the caller's token itself is never cancelled by the
-    /// budget — only the linked attempt token fires.
+    /// Every route of the attempt charges <paramref name="passBudget"/>, and the attempt routes
+    /// on its token (linked to the caller's token): once the pass budget is spent, the in-flight
+    /// A* search stops instead of overrunning it. A budget-cut (or caller-cancelled) attempt is
+    /// restored exactly; the caller's token itself is never cancelled by the budget — only the
+    /// budget's own token fires.
     /// </para>
     /// </summary>
     internal bool TryRepairWire(
         WaveguideConnection blocked,
         List<WaveguideConnection> siblings,
         PathfindingGrid grid,
-        Stopwatch budget,
+        RouteWorkBudget passBudget,
         CancellationToken cancellationToken)
     {
         var all = _snapshotConnections();
@@ -170,14 +190,9 @@ internal sealed class ContentionRepairService
         foreach (var connection in touched)
             grid.RemoveWaveguideObstacle(connection.Id);
 
-        using var attemptTokens = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var remaining = TimeBudget - budget.Elapsed;
-        if (remaining <= TimeSpan.Zero)
-            attemptTokens.Cancel();
-        else
-            attemptTokens.CancelAfter(remaining);
-
-        bool completed = RouteTouched(touched, grid, attemptTokens.Token);
+        bool completed;
+        using (_router.ChargeRoutesTo(passBudget))
+            completed = RouteTouched(touched, grid, passBudget.Token);
 
         int crossingsAfter = CountCrossingsInvolving(touched, all);
         bool accept = completed
@@ -243,7 +258,7 @@ internal sealed class ContentionRepairService
     /// <summary>
     /// Routes the blocked wire first, then the ripped-up siblings, registering each valid
     /// result as a grid obstacle. False when the attempt token (caller cancellation OR the
-    /// expired time budget) cut the attempt short — the attempt must then be restored,
+    /// spent pass budget) cut the attempt short — the attempt must then be restored,
     /// because an un-rerouted sibling would be missing from the obstacle grid and a
     /// cancelled route's fallback geometry is not a repair result.
     /// </summary>

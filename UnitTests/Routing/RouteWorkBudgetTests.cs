@@ -8,7 +8,8 @@ namespace UnitTests.Routing;
 /// <summary>
 /// The shared node-expansion counter behind the router's per-route work budget, and how A*
 /// searches draw from it: each search is capped at what is left, charges what it spent, and the
-/// budget's token cancels the rest of the route once nothing is left.
+/// budget's token cancels the rest of the route once nothing is left. A route budget can draw
+/// from an enclosing pass budget, which then bounds every route of the pass together.
 /// </summary>
 public class RouteWorkBudgetTests
 {
@@ -61,6 +62,52 @@ public class RouteWorkBudgetTests
 
         budget.Token.IsCancellationRequested.ShouldBeTrue();
         budget.IsExhausted.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void EnclosingBudget_IsChargedByEveryRoute_AndCapsTheLastOne()
+    {
+        using var pass = new RouteWorkBudget(300, CancellationToken.None);
+        using var firstRoute = new RouteWorkBudget(250, CancellationToken.None, pass);
+        firstRoute.Cap(500).ShouldBe(250);
+        firstRoute.Charge(200);
+
+        using var secondRoute = new RouteWorkBudget(250, CancellationToken.None, pass);
+        secondRoute.Cap(500).ShouldBe(100, "the pass has less left than the route's own budget");
+        secondRoute.Charge(100);
+
+        pass.NodesExpanded.ShouldBe(300);
+        pass.IsExhausted.ShouldBeTrue();
+        secondRoute.NodesExpanded.ShouldBe(100);
+        secondRoute.IsExhausted.ShouldBeTrue("its pass is spent");
+        secondRoute.Token.IsCancellationRequested.ShouldBeTrue();
+        pass.Token.IsCancellationRequested.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void SpentEnclosingBudget_StartsANewRouteExhausted()
+    {
+        using var pass = new RouteWorkBudget(10, CancellationToken.None);
+        pass.Charge(10);
+
+        using var route = new RouteWorkBudget(1000, CancellationToken.None, pass);
+
+        route.IsExhausted.ShouldBeTrue();
+        route.Token.IsCancellationRequested.ShouldBeTrue();
+        route.Cap(500).ShouldBe(0);
+    }
+
+    [Fact]
+    public void SpentRouteBudget_LeavesTheEnclosingBudgetOpen()
+    {
+        using var pass = new RouteWorkBudget(1000, CancellationToken.None);
+        using var route = new RouteWorkBudget(100, CancellationToken.None, pass);
+
+        route.Charge(100);
+
+        route.IsExhausted.ShouldBeTrue();
+        pass.IsExhausted.ShouldBeFalse();
+        pass.Token.IsCancellationRequested.ShouldBeFalse("one wire's budget never ends the whole pass");
     }
 
     [Fact]

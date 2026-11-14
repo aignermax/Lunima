@@ -116,6 +116,30 @@ public class WaveguideRouterWorkBudgetTests
     }
 
     [Fact]
+    public void PassBudgetScope_IsChargedByEveryRouteInside_AndReleasedOnDispose()
+    {
+        var (unbounded, unboundedStart, unboundedEnd) = WallScene(long.MaxValue);
+        unbounded.Route(unboundedStart, unboundedEnd);
+        long needed = unbounded.LastRouteNodesExpanded;
+        var (router, start, end) = WallScene(WaveguideRouter.DefaultMaxRouteNodesExpanded);
+        using var pass = new RouteWorkBudget(needed + needed / 2, CancellationToken.None);
+
+        RoutedPath first, second;
+        using (router.ChargeRoutesTo(pass))
+        {
+            first = router.Route(start, end);
+            second = router.Route(start, end);
+        }
+        var afterScope = router.Route(start, end);
+
+        first.IsBlockedFallback.ShouldBeFalse();
+        second.IsBlockedFallback.ShouldBeTrue("the pass had only half a route left");
+        pass.NodesExpanded.ShouldBe(pass.MaxNodesExpanded);
+        afterScope.IsBlockedFallback.ShouldBeFalse("outside the scope only the route's own budget applies");
+        pass.NodesExpanded.ShouldBe(pass.MaxNodesExpanded);
+    }
+
+    [Fact]
     public void IsolatedClone_KeepsTheBudget()
     {
         var (router, _, _) = WallScene(1234);
