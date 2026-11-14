@@ -1,0 +1,33 @@
+{
+  "week": "2026-w44",
+  "stages_done": [
+    "prepare",
+    "scout",
+    "strategist",
+    "critic",
+    "apply"
+  ],
+  "pr": 1601,
+  "applied": {
+    "A:designer-interviews-2026-w44": 1599,
+    "I:foreign-layout-and-verification": 1596,
+    "I:photonics-course-tooling": 1597,
+    "O:gds-foreign-layout-import": 1598,
+    "R:outreach": 1600,
+    "X-2026-w44-designer-interviews": 1595
+  },
+  "created": [
+    "X-2026-w44-designer-interviews",
+    "I:foreign-layout-and-verification",
+    "I:photonics-course-tooling",
+    "O:gds-foreign-layout-import",
+    "A:designer-interviews-2026-w44",
+    "R:outreach"
+  ],
+  "summary": "This first week produced 13 public, indirect (E1) entries and one agent synthesis (E0). There is no direct user evidence (E2/E3) for any direction, so nothing is pursued. The evidence mostly weakens our favourite ideas. GDSFactory+ (gfp-mcp), Flexcompute PhotonForge and two academic frameworks already offer agent-driven PIC design, so agent access is not a differentiator (H2 weakened). Luceda and gdsfactory's circulax already pair circuit/transient simulation with layout (H4 weakened). Foreign-GDS reconstruction (H3) is the only gap no competitor visibly fills, but our sources show only that it exists and is hard, not that it is frequent. Calling it a gap is itself the scout's inference, so it is put under test rather than pursued. Two blind spots: education (H7), possibly Lunima's most distinctive asset, was not searched at all; and the evidence index lists E-2026-w45-01, which is the README's format example, not a real entry.",
+  "critic_summary": "The strategist is honest about the evidence level, and nothing is wrongly pursued. Two items should still be dropped. First, the flat-GDS benchmark (X-2026-w44-flat-gds-reconstruction and spike S:flat-gds-reconstruction-baseline): its result can be predicted from the code. GdsHierarchyImporter builds components only from the SREF instance tree, and GdsPinDetector finds pins only at a cell's bounding-box edges, on labels and on port-layer shapes. Open issue #814 confirms that routes are not reconstructed from flattened polygons. A flattened, label-stripped layout will therefore score close to zero by construction, and a failed benchmark says nothing about H3 demand. Second, O:agent-output-inspection: it is E1-only, depends on an import capability Lunima lacks, and would take one of the three opportunity slots for what are really two recorded interview questions. The evidence base is also weaker than the entries suggest. E-2026-w44-08, cited as evidence of an open, hard problem, was written by [outreach contact] in 2015 about the netlist extractor that grew into SiEPIC-Tools. That is an existing, marker-based solution, and the same person is this week's H7 outreach target. The Q1 interviews should run, but with the open 'what took most of your time' question asked first, so the H3 framing does not set the agenda of all three Q1 conversations. DR-0001's gate needs a single scored reopen criterion: as written ('…or a concrete need for … colleague-generated layouts') it would pass almost automatically.",
+  "notes": [
+    "created the discovery skeleton (10 files)",
+    "not filed (privacy): A:workshop-feedback-summary — confidentiality marker „confidential“"
+  ]
+}
