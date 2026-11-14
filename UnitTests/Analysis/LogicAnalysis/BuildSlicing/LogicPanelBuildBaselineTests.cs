@@ -42,6 +42,7 @@ public class LogicPanelBuildBaselineTests
     [AvaloniaFact]
     public async Task RunInLogic_OnDispatcher_MatchesPinnedBaseline()
     {
+        await CaptureSlicingFixture.ContinueInsideDispatcherJobAsync();
         var actual = await BuildAndDescribeAsync();
 
         await AssertMatchesBaselineAsync(actual);

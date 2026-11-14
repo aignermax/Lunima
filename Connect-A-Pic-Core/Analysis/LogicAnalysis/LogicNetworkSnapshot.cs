@@ -16,40 +16,88 @@ public sealed class LogicNetworkSnapshot
         _topology = topology;
     }
 
+    /// <summary>
+    /// Gates captured per owner-thread slice by <see cref="CaptureAsync"/>: small enough that a
+    /// slice stays far below the UI budget on slow machines, large enough that a design of a few
+    /// hundred gates yields only about ten times.
+    /// </summary>
+    internal const int GatesPerSlice = 32;
+
     /// <summary>Captures compact definitions and scalar timing without computing any gate truth table.</summary>
     public static LogicNetworkSnapshot Capture(IReadOnlyList<Component> components,
-        IReadOnlyList<WaveguideConnection> connections, int wavelength) =>
-        Capture(components, connections, wavelength, new LogicNetworkBuilder());
+        IReadOnlyList<WaveguideConnection> connections, int wavelength)
+    {
+        var gates = CollectGateGroups(components, connections, out var internalWires);
+        var captured = new CapturedGates(gates.Count);
+        foreach (var (group, id) in gates)
+            captured.Add(group, id, wavelength);
+        return captured.ToSnapshot(new LogicNetworkBuilder(), connections, internalWires, wavelength);
+    }
 
-    internal static LogicNetworkSnapshot Capture(IReadOnlyList<Component> components,
-        IReadOnlyList<WaveguideConnection> connections, int wavelength, LogicNetworkBuilder builder)
+    /// <summary>
+    /// Same capture, cut into owner-thread slices of <see cref="GatesPerSlice"/> gates with
+    /// <paramref name="slices"/> yielding between them and once before the topology. Every slice
+    /// reads live state on the owner thread; <paramref name="slices"/> rejects a resumption after
+    /// the design changed, so the parts of one snapshot always describe the same design.
+    /// </summary>
+    internal static async Task<LogicNetworkSnapshot> CaptureAsync(IReadOnlyList<Component> components,
+        IReadOnlyList<WaveguideConnection> connections, int wavelength, LogicNetworkBuilder builder,
+        ICaptureYield slices, CancellationToken cancellationToken)
+    {
+        var gates = CollectGateGroups(components, connections, out var internalWires);
+        var captured = new CapturedGates(gates.Count);
+        for (var index = 0; index < gates.Count; index++)
+        {
+            // No ConfigureAwait(false): the next slice must read live state on the owner thread.
+            if (index > 0 && index % GatesPerSlice == 0)
+                await slices.YieldAsync(cancellationToken);
+            captured.Add(gates[index].Group, gates[index].GateId, wavelength);
+        }
+        await slices.YieldAsync(cancellationToken);
+        return captured.ToSnapshot(builder, connections, internalWires, wavelength);
+    }
+
+    private static List<(ComponentGroup Group, string GateId)> CollectGateGroups(IReadOnlyList<Component> components,
+        IReadOnlyList<WaveguideConnection> connections, out List<WaveguideConnection> internalWires)
     {
         ArgumentNullException.ThrowIfNull(components);
         ArgumentNullException.ThrowIfNull(connections);
         var groups = new List<(ComponentGroup Group, string GateId)>();
-        var internalWires = new List<WaveguideConnection>();
+        internalWires = new List<WaveguideConnection>();
         LogicNetworkAssembler.CollectGates(components, null, groups, internalWires);
         if (groups.Count == 0)
             throw new InvalidOperationException(
                 "The design contains no logic gate: no group carries a persisted " +
                 "truth-table pin assignment. Extract a group's truth table in the Truth Table " +
                 "panel to turn the group into a gate.");
+        return groups;
+    }
 
-        var gates = ImmutableArray.CreateBuilder<(string, TruthTableSnapshot)>(groups.Count);
-        var topologyInputs = new List<LogicGateTopologyInput>(groups.Count);
-        foreach (var (group, id) in groups)
+    /// <summary>Gate physics and topology inputs accumulated in design order.</summary>
+    private sealed class CapturedGates(int capacity)
+    {
+        private readonly ImmutableArray<(string, TruthTableSnapshot)>.Builder _gates =
+            ImmutableArray.CreateBuilder<(string, TruthTableSnapshot)>(capacity);
+        private readonly List<LogicGateTopologyInput> _topologyInputs = new(capacity);
+
+        internal void Add(ComponentGroup group, string id, int wavelength)
         {
             var assignment = group.TruthTablePinAssignment!;
             var roles = new GateRoleAssignment(assignment.InputPinNames.ToImmutableArray(),
                 assignment.OutputPinNames.ToImmutableArray(), assignment.BiasPinNames.ToImmutableArray(),
                 assignment.Threshold, assignment.InputSignalNames?.ToImmutableDictionary(),
                 assignment.OutputSignalNames?.ToImmutableDictionary(), assignment.IsRegister);
-            gates.Add((id, TruthTableSnapshot.Capture(group, roles.InputPinNames, roles.OutputPinNames,
+            _gates.Add((id, TruthTableSnapshot.Capture(group, roles.InputPinNames, roles.OutputPinNames,
                 roles.BiasPinNames, roles.PowerThreshold, wavelength)));
-            topologyInputs.Add(new(group, roles, id));
+            _topologyInputs.Add(new(group, roles, id));
         }
-        var allConnections = connections.Concat(internalWires).ToList();
-        return new(gates.ToImmutable(), builder.CaptureTopology(topologyInputs, allConnections, wavelength));
+
+        internal LogicNetworkSnapshot ToSnapshot(LogicNetworkBuilder builder,
+            IReadOnlyList<WaveguideConnection> connections, List<WaveguideConnection> internalWires, int wavelength)
+        {
+            var allConnections = connections.Concat(internalWires).ToList();
+            return new(_gates.ToImmutable(), builder.CaptureTopology(_topologyInputs, allConnections, wavelength));
+        }
     }
 
     internal async Task<LogicNetworkEvaluator> SolveAsync(TruthTableExtractor extractor, CancellationToken cancellationToken)
