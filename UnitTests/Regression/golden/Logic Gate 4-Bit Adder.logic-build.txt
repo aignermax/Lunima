@@ -1,0 +1,713 @@
+status|Logic network built: 9 inputs, 344 outputs.
+wavelength|Wavelength: 1550 nm
+inputs|A0,B0,Cin,A1,B1,A2,B2,A3,B3
+input-rows|bus:A[A0 A1 A2 A3],bus:B[B0 B1 B2 B3],Cin
+output-rows|T0H1N1A1.Y,T0H1N1B1.Y,T0H1N21.Y,T0H1N31.Y,T0H1SUM1.Y,T0H1N1A2.Y,T0H1N1B2.Y,T0H1N22.Y,T0H1N32.Y,T0H1SUM2.Y,T0H1N1A3.Y,T0H1N1B3.Y,T0H1N23.Y,T0H1N33.Y,T0H1SUM3.Y,T0H1N1A4.Y,T0H1N1B4.Y,T0H1N24.Y,T0H1N34.Y,T0H1SUM4.Y,T0H1N1A5.Y,T0H1N1B5.Y,T0H1N25.Y,T0H1N35.Y,T0H1SUM5.Y,T0H1N1A6.Y,T0H1N1B6.Y,T0H1N26.Y,T0H1N36.Y,T0H1SUM6.Y,T0H1N1A7.Y,T0H1N1B7.Y,T0H1N27.Y,T0H1N37.Y,T0H1SUM7.Y,T0H1N1A8.Y,T0H1N1B8.Y,T0H1N28.Y,T0H1N38.Y,T0H1SUM8.Y,T0H1N1A9.Y,T0H1N1B9.Y,T0H1N29.Y,T0H1N39.Y,T0H1SUM9.Y,T0H1N1A10.Y,T0H1N1B10.Y,T0H1N210.Y,T0H1N310.Y,T0H1SUM10.Y,T0H1N1A11.Y,T0H1N1B11.Y,T0H1N211.Y,T0H1N311.Y,T0H1SUM11.Y,T0H1N1A12.Y,T0H1N1B12.Y,T0H1N212.Y,T0H1N312.Y,T0H1SUM12.Y,T0H1N1A13.Y,T0H1N1B13.Y,T0H1N213.Y,T0H1N313.Y,T0H1SUM13.Y,T0H2N1A.Y,T0H2N1B.Y,T0H2N2.Y,T0H2N3.Y,bus:S[S0 S1 S2 S3],T0H2N5.Y,T0H2CARRY.Y,T0H1N5.Y,T0H1CARRY.Y,T0ORNOT1.Y,T0ORNOT2.Y,T0OROUT.Y,T0H1N5C2.Y,T0H1CARRYC2.Y,T0H2N5C2.Y,T0H2CARRYC2.Y,T0ORNOT1C2.Y,T0ORNOT2C2.Y,T0OROUTC2.Y,T0H1N5C3.Y,T0H1CARRYC3.Y,T0H2N5C3.Y,T0H2CARRYC3.Y,T0ORNOT1C3.Y,T0ORNOT2C3.Y,T0OROUTC3.Y,T0H1N5C4.Y,T0H1CARRYC4.Y,T0H2N5C4.Y,T0H2CARRYC4.Y,T0ORNOT1C4.Y,T0ORNOT2C4.Y,T0OROUTC4.Y,T0H1N5C5.Y,T0H1CARRYC5.Y,T0H2N5C5.Y,T0H2CARRYC5.Y,T0ORNOT1C5.Y,T0ORNOT2C5.Y,T0OROUTC5.Y,T0H1N5C6.Y,T0H1CARRYC6.Y,T0H2N5C6.Y,T0H2CARRYC6.Y,T0ORNOT1C6.Y,T0ORNOT2C6.Y,T0OROUTC6.Y,T0H1N5C7.Y,T0H1CARRYC7.Y,T0H2N5C7.Y,T0H2CARRYC7.Y,T0ORNOT1C7.Y,T0ORNOT2C7.Y,T0OROUTC7.Y,T0H1N5C8.Y,T0H1CARRYC8.Y,T0H2N5C8.Y,T0H2CARRYC8.Y,T0ORNOT1C8.Y,T0ORNOT2C8.Y,T0OROUTC8.Y,T0H1N5C9.Y,T0H1CARRYC9.Y,T0H2N5C9.Y,T0H2CARRYC9.Y,T0ORNOT1C9.Y,T0ORNOT2C9.Y,T0OROUTC9.Y,T0H1N5C10.Y,T0H1CARRYC10.Y,T0H2N5C10.Y,T0H2CARRYC10.Y,T0ORNOT1C10.Y,T0ORNOT2C10.Y,T0OROUTC10.Y,T1H1N1A1.Y,T1H1N1B1.Y,T1H1N21.Y,T1H1N31.Y,T1H1SUM1.Y,T1H1N1A2.Y,T1H1N1B2.Y,T1H1N22.Y,T1H1N32.Y,T1H1SUM2.Y,T1H1N1A3.Y,T1H1N1B3.Y,T1H1N23.Y,T1H1N33.Y,T1H1SUM3.Y,T1H1N1A4.Y,T1H1N1B4.Y,T1H1N24.Y,T1H1N34.Y,T1H1SUM4.Y,T1H1N1A5.Y,T1H1N1B5.Y,T1H1N25.Y,T1H1N35.Y,T1H1SUM5.Y,T1H1N1A6.Y,T1H1N1B6.Y,T1H1N26.Y,T1H1N36.Y,T1H1SUM6.Y,T1H1N1A7.Y,T1H1N1B7.Y,T1H1N27.Y,T1H1N37.Y,T1H1SUM7.Y,T1H1N1A8.Y,T1H1N1B8.Y,T1H1N28.Y,T1H1N38.Y,T1H1SUM8.Y,T1H1N1A9.Y,T1H1N1B9.Y,T1H1N29.Y,T1H1N39.Y,T1H1SUM9.Y,T1H1N1A10.Y,T1H1N1B10.Y,T1H1N210.Y,T1H1N310.Y,T1H1SUM10.Y,T1H2N1A.Y,T1H2N1B.Y,T1H2N2.Y,T1H2N3.Y,T1H2N5.Y,T1H2CARRY.Y,T1H1N5.Y,T1H1CARRY.Y,T1ORNOT1.Y,T1ORNOT2.Y,T1OROUT.Y,T1H1N5C2.Y,T1H1CARRYC2.Y,T1H2N5C2.Y,T1H2CARRYC2.Y,T1ORNOT1C2.Y,T1ORNOT2C2.Y,T1OROUTC2.Y,T1H1N5C3.Y,T1H1CARRYC3.Y,T1H2N5C3.Y,T1H2CARRYC3.Y,T1ORNOT1C3.Y,T1ORNOT2C3.Y,T1OROUTC3.Y,T1H1N5C4.Y,T1H1CARRYC4.Y,T1H2N5C4.Y,T1H2CARRYC4.Y,T1ORNOT1C4.Y,T1ORNOT2C4.Y,T1OROUTC4.Y,T1H1N5C5.Y,T1H1CARRYC5.Y,T1H2N5C5.Y,T1H2CARRYC5.Y,T1ORNOT1C5.Y,T1ORNOT2C5.Y,T1OROUTC5.Y,T1H1N5C6.Y,T1H1CARRYC6.Y,T1H2N5C6.Y,T1H2CARRYC6.Y,T1ORNOT1C6.Y,T1ORNOT2C6.Y,T1OROUTC6.Y,T1H1N5C7.Y,T1H1CARRYC7.Y,T1H2N5C7.Y,T1H2CARRYC7.Y,T1ORNOT1C7.Y,T1ORNOT2C7.Y,T1OROUTC7.Y,T2H1N1A1.Y,T2H1N1B1.Y,T2H1N21.Y,T2H1N31.Y,T2H1SUM1.Y,T2H1N1A2.Y,T2H1N1B2.Y,T2H1N22.Y,T2H1N32.Y,T2H1SUM2.Y,T2H1N1A3.Y,T2H1N1B3.Y,T2H1N23.Y,T2H1N33.Y,T2H1SUM3.Y,T2H1N1A4.Y,T2H1N1B4.Y,T2H1N24.Y,T2H1N34.Y,T2H1SUM4.Y,T2H1N1A5.Y,T2H1N1B5.Y,T2H1N25.Y,T2H1N35.Y,T2H1SUM5.Y,T2H1N1A6.Y,T2H1N1B6.Y,T2H1N26.Y,T2H1N36.Y,T2H1SUM6.Y,T2H1N1A7.Y,T2H1N1B7.Y,T2H1N27.Y,T2H1N37.Y,T2H1SUM7.Y,T2H2N1A.Y,T2H2N1B.Y,T2H2N2.Y,T2H2N3.Y,T2H2N5.Y,T2H2CARRY.Y,T2H1N5.Y,T2H1CARRY.Y,T2ORNOT1.Y,T2ORNOT2.Y,T2OROUT.Y,T2H1N5C2.Y,T2H1CARRYC2.Y,T2H2N5C2.Y,T2H2CARRYC2.Y,T2ORNOT1C2.Y,T2ORNOT2C2.Y,T2OROUTC2.Y,T2H1N5C3.Y,T2H1CARRYC3.Y,T2H2N5C3.Y,T2H2CARRYC3.Y,T2ORNOT1C3.Y,T2ORNOT2C3.Y,T2OROUTC3.Y,T2H1N5C4.Y,T2H1CARRYC4.Y,T2H2N5C4.Y,T2H2CARRYC4.Y,T2ORNOT1C4.Y,T2ORNOT2C4.Y,T2OROUTC4.Y,T3H1N1A1.Y,T3H1N1B1.Y,T3H1N21.Y,T3H1N31.Y,T3H1SUM1.Y,T3H1N1A2.Y,T3H1N1B2.Y,T3H1N22.Y,T3H1N32.Y,T3H1SUM2.Y,T3H1N1A3.Y,T3H1N1B3.Y,T3H1N23.Y,T3H1N33.Y,T3H1SUM3.Y,T3H1N1A4.Y,T3H1N1B4.Y,T3H1N24.Y,T3H1N34.Y,T3H1SUM4.Y,T3H2N1A.Y,T3H2N1B.Y,T3H2N2.Y,T3H2N3.Y,T3H2N5.Y,T3H2CARRY.Y,T3H1N5.Y,T3H1CARRY.Y,T3ORNOT1.Y,T3ORNOT2.Y,Cout
+gates|344
+critical-path|1194.7717|T0H1N1A10,T0H1N210,T0H1SUM10,T0H2N5C7,T0H2CARRYC7,T0ORNOT2C7,T0OROUTC7,T1H2N5C4,T1H2CARRYC4,T1ORNOT2C4,T1OROUTC4,T2H2N5,T2H2CARRY,T2ORNOT2,T2OROUT,T3H2N1A,T3H2N2,T3H2SUM
+critical-path-text|Critical path: 1194.8 ps over 18 gates
+wire-delays|339|12301.438
+fan-out|True|True|9
+fan-out|Input signal 'A0' drives 49 gate inputs.|Ideal 1×49 split: 1 → 0.02 per branch (−16.90 dB)|✗ 'T0H1N1A1.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B1.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N21.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N22.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N23.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N24.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N25.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A6.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B6.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N26.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A7.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B7.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N27.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A8.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B8.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N28.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A9.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B9.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N29.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A10.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B10.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N210.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A11.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B11.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N211.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A12.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B12.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N212.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A13.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B13.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N213.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C6.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C7.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C8.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C9.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C10.A' would NOT read a 1 (threshold 0.125)
+fan-out|Input signal 'B0' drives 49 gate inputs.|Ideal 1×49 split: 1 → 0.02 per branch (−16.90 dB)|✗ 'T0H1N1A1.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B1.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N31.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N32.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N33.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A4.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B4.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N34.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N35.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A6.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B6.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N36.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A7.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B7.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N37.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A8.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B8.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N38.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A9.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B9.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N39.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A10.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B10.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N310.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A11.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B11.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N311.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A12.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B12.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N312.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1A13.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N1B13.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N313.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C4.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C6.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C7.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C8.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C9.B' would NOT read a 1 (threshold 0.125) / ✗ 'T0H1N5C10.B' would NOT read a 1 (threshold 0.125)
+fan-out|Input signal 'Cin' drives 13 gate inputs.|Ideal 1×13 split: 1 → 0.077 per branch (−11.14 dB)|✗ 'T0H2N1A.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N1B.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N5C2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N5C3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N5C4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N5C5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N5C6.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N5C7.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N5C8.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N5C9.A' would NOT read a 1 (threshold 0.125) / ✗ 'T0H2N5C10.A' would NOT read a 1 (threshold 0.125)
+fan-out|Input signal 'A1' drives 37 gate inputs.|Ideal 1×37 split: 1 → 0.027 per branch (−15.68 dB)|✗ 'T1H1N1A1.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B1.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N21.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N22.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N23.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N24.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N25.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A6.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B6.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N26.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A7.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B7.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N27.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A8.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B8.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N28.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A9.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B9.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N29.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A10.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B10.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N210.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C6.A' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C7.A' would NOT read a 1 (threshold 0.125)
+fan-out|Input signal 'B1' drives 37 gate inputs.|Ideal 1×37 split: 1 → 0.027 per branch (−15.68 dB)|✗ 'T1H1N1A1.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B1.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N31.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N32.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N33.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A4.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B4.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N34.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N35.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A6.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B6.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N36.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A7.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B7.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N37.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A8.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B8.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N38.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A9.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B9.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N39.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1A10.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N1B10.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N310.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C4.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C6.B' would NOT read a 1 (threshold 0.125) / ✗ 'T1H1N5C7.B' would NOT read a 1 (threshold 0.125)
+fan-out|Input signal 'A2' drives 25 gate inputs.|Ideal 1×25 split: 1 → 0.04 per branch (−13.98 dB)|✗ 'T2H1N1A1.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B1.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N21.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N22.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N23.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N24.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N25.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A6.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B6.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N26.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A7.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B7.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N27.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N5.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N5C2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N5C3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N5C4.A' would NOT read a 1 (threshold 0.125)
+fan-out|Input signal 'B2' drives 25 gate inputs.|Ideal 1×25 split: 1 → 0.04 per branch (−13.98 dB)|✗ 'T2H1N1A1.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B1.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N31.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N32.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N33.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A4.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B4.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N34.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N35.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A6.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B6.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N36.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1A7.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N1B7.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N37.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N5.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N5C2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N5C3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T2H1N5C4.B' would NOT read a 1 (threshold 0.125)
+fan-out|Input signal 'A3' drives 13 gate inputs.|Ideal 1×13 split: 1 → 0.077 per branch (−11.14 dB)|✗ 'T3H1N1A1.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1B1.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N21.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1A2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1B2.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N22.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1A3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1B3.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N23.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1A4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1B4.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N24.A' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N5.A' would NOT read a 1 (threshold 0.125)
+fan-out|Input signal 'B3' drives 13 gate inputs.|Ideal 1×13 split: 1 → 0.077 per branch (−11.14 dB)|✗ 'T3H1N1A1.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1B1.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N31.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1A2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1B2.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N32.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1A3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1B3.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N33.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1A4.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N1B4.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N34.B' would NOT read a 1 (threshold 0.125) / ✗ 'T3H1N5.B' would NOT read a 1 (threshold 0.125)
+output|T0H1N1A1.Y|T0H1N1A1.Y|23.6 ps|1
+output|T0H1N1B1.Y|T0H1N1B1.Y|23.6 ps|1
+output|T0H1N21.Y|T0H1N21.Y|23.6 ps|1
+output|T0H1N31.Y|T0H1N31.Y|23.6 ps|1
+output|T0H1SUM1.Y|T0H1SUM1.Y|23.6 ps|0
+output|T0H1N1A2.Y|T0H1N1A2.Y|23.6 ps|1
+output|T0H1N1B2.Y|T0H1N1B2.Y|23.6 ps|1
+output|T0H1N22.Y|T0H1N22.Y|23.6 ps|1
+output|T0H1N32.Y|T0H1N32.Y|23.6 ps|1
+output|T0H1SUM2.Y|T0H1SUM2.Y|23.6 ps|0
+output|T0H1N1A3.Y|T0H1N1A3.Y|23.6 ps|1
+output|T0H1N1B3.Y|T0H1N1B3.Y|23.6 ps|1
+output|T0H1N23.Y|T0H1N23.Y|23.6 ps|1
+output|T0H1N33.Y|T0H1N33.Y|23.6 ps|1
+output|T0H1SUM3.Y|T0H1SUM3.Y|23.6 ps|0
+output|T0H1N1A4.Y|T0H1N1A4.Y|23.6 ps|1
+output|T0H1N1B4.Y|T0H1N1B4.Y|23.6 ps|1
+output|T0H1N24.Y|T0H1N24.Y|23.6 ps|1
+output|T0H1N34.Y|T0H1N34.Y|23.6 ps|1
+output|T0H1SUM4.Y|T0H1SUM4.Y|23.6 ps|0
+output|T0H1N1A5.Y|T0H1N1A5.Y|23.6 ps|1
+output|T0H1N1B5.Y|T0H1N1B5.Y|23.6 ps|1
+output|T0H1N25.Y|T0H1N25.Y|23.6 ps|1
+output|T0H1N35.Y|T0H1N35.Y|23.6 ps|1
+output|T0H1SUM5.Y|T0H1SUM5.Y|23.6 ps|0
+output|T0H1N1A6.Y|T0H1N1A6.Y|23.6 ps|1
+output|T0H1N1B6.Y|T0H1N1B6.Y|23.6 ps|1
+output|T0H1N26.Y|T0H1N26.Y|23.6 ps|1
+output|T0H1N36.Y|T0H1N36.Y|23.6 ps|1
+output|T0H1SUM6.Y|T0H1SUM6.Y|23.6 ps|0
+output|T0H1N1A7.Y|T0H1N1A7.Y|23.6 ps|1
+output|T0H1N1B7.Y|T0H1N1B7.Y|23.6 ps|1
+output|T0H1N27.Y|T0H1N27.Y|23.6 ps|1
+output|T0H1N37.Y|T0H1N37.Y|23.6 ps|1
+output|T0H1SUM7.Y|T0H1SUM7.Y|23.6 ps|0
+output|T0H1N1A8.Y|T0H1N1A8.Y|23.6 ps|1
+output|T0H1N1B8.Y|T0H1N1B8.Y|23.6 ps|1
+output|T0H1N28.Y|T0H1N28.Y|23.6 ps|1
+output|T0H1N38.Y|T0H1N38.Y|23.6 ps|1
+output|T0H1SUM8.Y|T0H1SUM8.Y|23.6 ps|0
+output|T0H1N1A9.Y|T0H1N1A9.Y|23.6 ps|1
+output|T0H1N1B9.Y|T0H1N1B9.Y|23.6 ps|1
+output|T0H1N29.Y|T0H1N29.Y|23.6 ps|1
+output|T0H1N39.Y|T0H1N39.Y|23.6 ps|1
+output|T0H1SUM9.Y|T0H1SUM9.Y|23.6 ps|0
+output|T0H1N1A10.Y|T0H1N1A10.Y|23.6 ps|1
+output|T0H1N1B10.Y|T0H1N1B10.Y|23.6 ps|1
+output|T0H1N210.Y|T0H1N210.Y|23.6 ps|1
+output|T0H1N310.Y|T0H1N310.Y|23.6 ps|1
+output|T0H1SUM10.Y|T0H1SUM10.Y|23.6 ps|0
+output|T0H1N1A11.Y|T0H1N1A11.Y|23.6 ps|1
+output|T0H1N1B11.Y|T0H1N1B11.Y|23.6 ps|1
+output|T0H1N211.Y|T0H1N211.Y|23.6 ps|1
+output|T0H1N311.Y|T0H1N311.Y|23.6 ps|1
+output|T0H1SUM11.Y|T0H1SUM11.Y|23.6 ps|0
+output|T0H1N1A12.Y|T0H1N1A12.Y|23.6 ps|1
+output|T0H1N1B12.Y|T0H1N1B12.Y|23.6 ps|1
+output|T0H1N212.Y|T0H1N212.Y|23.6 ps|1
+output|T0H1N312.Y|T0H1N312.Y|23.6 ps|1
+output|T0H1SUM12.Y|T0H1SUM12.Y|23.6 ps|0
+output|T0H1N1A13.Y|T0H1N1A13.Y|23.6 ps|1
+output|T0H1N1B13.Y|T0H1N1B13.Y|23.6 ps|1
+output|T0H1N213.Y|T0H1N213.Y|23.6 ps|1
+output|T0H1N313.Y|T0H1N313.Y|23.6 ps|1
+output|T0H1SUM13.Y|T0H1SUM13.Y|23.6 ps|0
+output|T0H2N1A.Y|T0H2N1A.Y|23.6 ps|1
+output|T0H2N1B.Y|T0H2N1B.Y|23.6 ps|1
+output|T0H2N2.Y|T0H2N2.Y|23.6 ps|1
+output|T0H2N3.Y|T0H2N3.Y|23.6 ps|1
+output|S0|T0H2SUM.Y|23.6 ps|0
+output|T0H2N5.Y|T0H2N5.Y|23.6 ps|1
+output|T0H2CARRY.Y|T0H2CARRY.Y|23.6 ps|0
+output|T0H1N5.Y|T0H1N5.Y|23.6 ps|1
+output|T0H1CARRY.Y|T0H1CARRY.Y|23.6 ps|0
+output|T0ORNOT1.Y|T0ORNOT1.Y|23.6 ps|1
+output|T0ORNOT2.Y|T0ORNOT2.Y|23.6 ps|1
+output|T0OROUT.Y|T0OROUT.Y|23.6 ps|0
+output|T0H1N5C2.Y|T0H1N5C2.Y|23.6 ps|1
+output|T0H1CARRYC2.Y|T0H1CARRYC2.Y|23.6 ps|0
+output|T0H2N5C2.Y|T0H2N5C2.Y|23.6 ps|1
+output|T0H2CARRYC2.Y|T0H2CARRYC2.Y|23.6 ps|0
+output|T0ORNOT1C2.Y|T0ORNOT1C2.Y|23.6 ps|1
+output|T0ORNOT2C2.Y|T0ORNOT2C2.Y|23.6 ps|1
+output|T0OROUTC2.Y|T0OROUTC2.Y|23.6 ps|0
+output|T0H1N5C3.Y|T0H1N5C3.Y|23.6 ps|1
+output|T0H1CARRYC3.Y|T0H1CARRYC3.Y|23.6 ps|0
+output|T0H2N5C3.Y|T0H2N5C3.Y|23.6 ps|1
+output|T0H2CARRYC3.Y|T0H2CARRYC3.Y|23.6 ps|0
+output|T0ORNOT1C3.Y|T0ORNOT1C3.Y|23.6 ps|1
+output|T0ORNOT2C3.Y|T0ORNOT2C3.Y|23.6 ps|1
+output|T0OROUTC3.Y|T0OROUTC3.Y|23.6 ps|0
+output|T0H1N5C4.Y|T0H1N5C4.Y|23.6 ps|1
+output|T0H1CARRYC4.Y|T0H1CARRYC4.Y|23.6 ps|0
+output|T0H2N5C4.Y|T0H2N5C4.Y|23.6 ps|1
+output|T0H2CARRYC4.Y|T0H2CARRYC4.Y|23.6 ps|0
+output|T0ORNOT1C4.Y|T0ORNOT1C4.Y|23.6 ps|1
+output|T0ORNOT2C4.Y|T0ORNOT2C4.Y|23.6 ps|1
+output|T0OROUTC4.Y|T0OROUTC4.Y|23.6 ps|0
+output|T0H1N5C5.Y|T0H1N5C5.Y|23.6 ps|1
+output|T0H1CARRYC5.Y|T0H1CARRYC5.Y|23.6 ps|0
+output|T0H2N5C5.Y|T0H2N5C5.Y|23.6 ps|1
+output|T0H2CARRYC5.Y|T0H2CARRYC5.Y|23.6 ps|0
+output|T0ORNOT1C5.Y|T0ORNOT1C5.Y|23.6 ps|1
+output|T0ORNOT2C5.Y|T0ORNOT2C5.Y|23.6 ps|1
+output|T0OROUTC5.Y|T0OROUTC5.Y|23.6 ps|0
+output|T0H1N5C6.Y|T0H1N5C6.Y|23.6 ps|1
+output|T0H1CARRYC6.Y|T0H1CARRYC6.Y|23.6 ps|0
+output|T0H2N5C6.Y|T0H2N5C6.Y|23.6 ps|1
+output|T0H2CARRYC6.Y|T0H2CARRYC6.Y|23.6 ps|0
+output|T0ORNOT1C6.Y|T0ORNOT1C6.Y|23.6 ps|1
+output|T0ORNOT2C6.Y|T0ORNOT2C6.Y|23.6 ps|1
+output|T0OROUTC6.Y|T0OROUTC6.Y|23.7 ps|0
+output|T0H1N5C7.Y|T0H1N5C7.Y|23.6 ps|1
+output|T0H1CARRYC7.Y|T0H1CARRYC7.Y|23.6 ps|0
+output|T0H2N5C7.Y|T0H2N5C7.Y|23.6 ps|1
+output|T0H2CARRYC7.Y|T0H2CARRYC7.Y|23.6 ps|0
+output|T0ORNOT1C7.Y|T0ORNOT1C7.Y|23.6 ps|1
+output|T0ORNOT2C7.Y|T0ORNOT2C7.Y|23.6 ps|1
+output|T0OROUTC7.Y|T0OROUTC7.Y|23.6 ps|0
+output|T0H1N5C8.Y|T0H1N5C8.Y|23.6 ps|1
+output|T0H1CARRYC8.Y|T0H1CARRYC8.Y|23.6 ps|0
+output|T0H2N5C8.Y|T0H2N5C8.Y|23.6 ps|1
+output|T0H2CARRYC8.Y|T0H2CARRYC8.Y|23.6 ps|0
+output|T0ORNOT1C8.Y|T0ORNOT1C8.Y|23.6 ps|1
+output|T0ORNOT2C8.Y|T0ORNOT2C8.Y|23.6 ps|1
+output|T0OROUTC8.Y|T0OROUTC8.Y|23.7 ps|0
+output|T0H1N5C9.Y|T0H1N5C9.Y|23.6 ps|1
+output|T0H1CARRYC9.Y|T0H1CARRYC9.Y|23.6 ps|0
+output|T0H2N5C9.Y|T0H2N5C9.Y|23.6 ps|1
+output|T0H2CARRYC9.Y|T0H2CARRYC9.Y|23.6 ps|0
+output|T0ORNOT1C9.Y|T0ORNOT1C9.Y|23.6 ps|1
+output|T0ORNOT2C9.Y|T0ORNOT2C9.Y|23.6 ps|1
+output|T0OROUTC9.Y|T0OROUTC9.Y|23.6 ps|0
+output|T0H1N5C10.Y|T0H1N5C10.Y|23.6 ps|1
+output|T0H1CARRYC10.Y|T0H1CARRYC10.Y|23.6 ps|0
+output|T0H2N5C10.Y|T0H2N5C10.Y|23.6 ps|1
+output|T0H2CARRYC10.Y|T0H2CARRYC10.Y|23.6 ps|0
+output|T0ORNOT1C10.Y|T0ORNOT1C10.Y|23.6 ps|1
+output|T0ORNOT2C10.Y|T0ORNOT2C10.Y|23.6 ps|1
+output|T0OROUTC10.Y|T0OROUTC10.Y|23.6 ps|0
+output|T1H1N1A1.Y|T1H1N1A1.Y|23.6 ps|1
+output|T1H1N1B1.Y|T1H1N1B1.Y|23.6 ps|1
+output|T1H1N21.Y|T1H1N21.Y|23.6 ps|1
+output|T1H1N31.Y|T1H1N31.Y|23.6 ps|1
+output|T1H1SUM1.Y|T1H1SUM1.Y|23.6 ps|0
+output|T1H1N1A2.Y|T1H1N1A2.Y|23.6 ps|1
+output|T1H1N1B2.Y|T1H1N1B2.Y|23.6 ps|1
+output|T1H1N22.Y|T1H1N22.Y|23.6 ps|1
+output|T1H1N32.Y|T1H1N32.Y|23.6 ps|1
+output|T1H1SUM2.Y|T1H1SUM2.Y|23.6 ps|0
+output|T1H1N1A3.Y|T1H1N1A3.Y|23.6 ps|1
+output|T1H1N1B3.Y|T1H1N1B3.Y|23.6 ps|1
+output|T1H1N23.Y|T1H1N23.Y|23.6 ps|1
+output|T1H1N33.Y|T1H1N33.Y|23.6 ps|1
+output|T1H1SUM3.Y|T1H1SUM3.Y|23.6 ps|0
+output|T1H1N1A4.Y|T1H1N1A4.Y|23.6 ps|1
+output|T1H1N1B4.Y|T1H1N1B4.Y|23.6 ps|1
+output|T1H1N24.Y|T1H1N24.Y|23.6 ps|1
+output|T1H1N34.Y|T1H1N34.Y|23.6 ps|1
+output|T1H1SUM4.Y|T1H1SUM4.Y|23.6 ps|0
+output|T1H1N1A5.Y|T1H1N1A5.Y|23.6 ps|1
+output|T1H1N1B5.Y|T1H1N1B5.Y|23.6 ps|1
+output|T1H1N25.Y|T1H1N25.Y|23.6 ps|1
+output|T1H1N35.Y|T1H1N35.Y|23.6 ps|1
+output|T1H1SUM5.Y|T1H1SUM5.Y|23.6 ps|0
+output|T1H1N1A6.Y|T1H1N1A6.Y|23.6 ps|1
+output|T1H1N1B6.Y|T1H1N1B6.Y|23.6 ps|1
+output|T1H1N26.Y|T1H1N26.Y|23.6 ps|1
+output|T1H1N36.Y|T1H1N36.Y|23.6 ps|1
+output|T1H1SUM6.Y|T1H1SUM6.Y|23.6 ps|0
+output|T1H1N1A7.Y|T1H1N1A7.Y|23.6 ps|1
+output|T1H1N1B7.Y|T1H1N1B7.Y|23.6 ps|1
+output|T1H1N27.Y|T1H1N27.Y|23.6 ps|1
+output|T1H1N37.Y|T1H1N37.Y|23.6 ps|1
+output|T1H1SUM7.Y|T1H1SUM7.Y|23.6 ps|0
+output|T1H1N1A8.Y|T1H1N1A8.Y|23.6 ps|1
+output|T1H1N1B8.Y|T1H1N1B8.Y|23.6 ps|1
+output|T1H1N28.Y|T1H1N28.Y|23.6 ps|1
+output|T1H1N38.Y|T1H1N38.Y|23.6 ps|1
+output|T1H1SUM8.Y|T1H1SUM8.Y|23.6 ps|0
+output|T1H1N1A9.Y|T1H1N1A9.Y|23.6 ps|1
+output|T1H1N1B9.Y|T1H1N1B9.Y|23.6 ps|1
+output|T1H1N29.Y|T1H1N29.Y|23.6 ps|1
+output|T1H1N39.Y|T1H1N39.Y|23.6 ps|1
+output|T1H1SUM9.Y|T1H1SUM9.Y|23.6 ps|0
+output|T1H1N1A10.Y|T1H1N1A10.Y|23.6 ps|1
+output|T1H1N1B10.Y|T1H1N1B10.Y|23.6 ps|1
+output|T1H1N210.Y|T1H1N210.Y|23.6 ps|1
+output|T1H1N310.Y|T1H1N310.Y|23.6 ps|1
+output|T1H1SUM10.Y|T1H1SUM10.Y|23.6 ps|0
+output|T1H2N1A.Y|T1H2N1A.Y|23.6 ps|1
+output|T1H2N1B.Y|T1H2N1B.Y|23.6 ps|1
+output|T1H2N2.Y|T1H2N2.Y|23.6 ps|1
+output|T1H2N3.Y|T1H2N3.Y|23.6 ps|1
+output|S1|T1H2SUM.Y|23.6 ps|0
+output|T1H2N5.Y|T1H2N5.Y|23.6 ps|1
+output|T1H2CARRY.Y|T1H2CARRY.Y|23.6 ps|0
+output|T1H1N5.Y|T1H1N5.Y|23.6 ps|1
+output|T1H1CARRY.Y|T1H1CARRY.Y|23.6 ps|0
+output|T1ORNOT1.Y|T1ORNOT1.Y|23.6 ps|1
+output|T1ORNOT2.Y|T1ORNOT2.Y|23.6 ps|1
+output|T1OROUT.Y|T1OROUT.Y|23.6 ps|0
+output|T1H1N5C2.Y|T1H1N5C2.Y|23.6 ps|1
+output|T1H1CARRYC2.Y|T1H1CARRYC2.Y|23.6 ps|0
+output|T1H2N5C2.Y|T1H2N5C2.Y|23.6 ps|1
+output|T1H2CARRYC2.Y|T1H2CARRYC2.Y|23.6 ps|0
+output|T1ORNOT1C2.Y|T1ORNOT1C2.Y|23.6 ps|1
+output|T1ORNOT2C2.Y|T1ORNOT2C2.Y|23.6 ps|1
+output|T1OROUTC2.Y|T1OROUTC2.Y|23.7 ps|0
+output|T1H1N5C3.Y|T1H1N5C3.Y|23.6 ps|1
+output|T1H1CARRYC3.Y|T1H1CARRYC3.Y|23.6 ps|0
+output|T1H2N5C3.Y|T1H2N5C3.Y|23.7 ps|1
+output|T1H2CARRYC3.Y|T1H2CARRYC3.Y|23.6 ps|0
+output|T1ORNOT1C3.Y|T1ORNOT1C3.Y|23.6 ps|1
+output|T1ORNOT2C3.Y|T1ORNOT2C3.Y|23.6 ps|1
+output|T1OROUTC3.Y|T1OROUTC3.Y|23.7 ps|0
+output|T1H1N5C4.Y|T1H1N5C4.Y|23.6 ps|1
+output|T1H1CARRYC4.Y|T1H1CARRYC4.Y|23.6 ps|0
+output|T1H2N5C4.Y|T1H2N5C4.Y|23.6 ps|1
+output|T1H2CARRYC4.Y|T1H2CARRYC4.Y|23.6 ps|0
+output|T1ORNOT1C4.Y|T1ORNOT1C4.Y|23.6 ps|1
+output|T1ORNOT2C4.Y|T1ORNOT2C4.Y|23.6 ps|1
+output|T1OROUTC4.Y|T1OROUTC4.Y|23.7 ps|0
+output|T1H1N5C5.Y|T1H1N5C5.Y|23.6 ps|1
+output|T1H1CARRYC5.Y|T1H1CARRYC5.Y|23.6 ps|0
+output|T1H2N5C5.Y|T1H2N5C5.Y|23.7 ps|1
+output|T1H2CARRYC5.Y|T1H2CARRYC5.Y|23.6 ps|0
+output|T1ORNOT1C5.Y|T1ORNOT1C5.Y|23.6 ps|1
+output|T1ORNOT2C5.Y|T1ORNOT2C5.Y|23.6 ps|1
+output|T1OROUTC5.Y|T1OROUTC5.Y|23.6 ps|0
+output|T1H1N5C6.Y|T1H1N5C6.Y|23.6 ps|1
+output|T1H1CARRYC6.Y|T1H1CARRYC6.Y|23.6 ps|0
+output|T1H2N5C6.Y|T1H2N5C6.Y|23.6 ps|1
+output|T1H2CARRYC6.Y|T1H2CARRYC6.Y|23.6 ps|0
+output|T1ORNOT1C6.Y|T1ORNOT1C6.Y|23.6 ps|1
+output|T1ORNOT2C6.Y|T1ORNOT2C6.Y|23.6 ps|1
+output|T1OROUTC6.Y|T1OROUTC6.Y|23.6 ps|0
+output|T1H1N5C7.Y|T1H1N5C7.Y|23.6 ps|1
+output|T1H1CARRYC7.Y|T1H1CARRYC7.Y|23.6 ps|0
+output|T1H2N5C7.Y|T1H2N5C7.Y|23.6 ps|1
+output|T1H2CARRYC7.Y|T1H2CARRYC7.Y|23.6 ps|0
+output|T1ORNOT1C7.Y|T1ORNOT1C7.Y|23.6 ps|1
+output|T1ORNOT2C7.Y|T1ORNOT2C7.Y|23.6 ps|1
+output|T1OROUTC7.Y|T1OROUTC7.Y|23.6 ps|0
+output|T2H1N1A1.Y|T2H1N1A1.Y|23.6 ps|1
+output|T2H1N1B1.Y|T2H1N1B1.Y|23.6 ps|1
+output|T2H1N21.Y|T2H1N21.Y|23.6 ps|1
+output|T2H1N31.Y|T2H1N31.Y|23.6 ps|1
+output|T2H1SUM1.Y|T2H1SUM1.Y|23.6 ps|0
+output|T2H1N1A2.Y|T2H1N1A2.Y|23.6 ps|1
+output|T2H1N1B2.Y|T2H1N1B2.Y|23.6 ps|1
+output|T2H1N22.Y|T2H1N22.Y|23.6 ps|1
+output|T2H1N32.Y|T2H1N32.Y|23.6 ps|1
+output|T2H1SUM2.Y|T2H1SUM2.Y|23.6 ps|0
+output|T2H1N1A3.Y|T2H1N1A3.Y|23.6 ps|1
+output|T2H1N1B3.Y|T2H1N1B3.Y|23.6 ps|1
+output|T2H1N23.Y|T2H1N23.Y|23.6 ps|1
+output|T2H1N33.Y|T2H1N33.Y|23.6 ps|1
+output|T2H1SUM3.Y|T2H1SUM3.Y|23.6 ps|0
+output|T2H1N1A4.Y|T2H1N1A4.Y|23.6 ps|1
+output|T2H1N1B4.Y|T2H1N1B4.Y|23.6 ps|1
+output|T2H1N24.Y|T2H1N24.Y|23.6 ps|1
+output|T2H1N34.Y|T2H1N34.Y|23.6 ps|1
+output|T2H1SUM4.Y|T2H1SUM4.Y|23.6 ps|0
+output|T2H1N1A5.Y|T2H1N1A5.Y|23.6 ps|1
+output|T2H1N1B5.Y|T2H1N1B5.Y|23.6 ps|1
+output|T2H1N25.Y|T2H1N25.Y|23.6 ps|1
+output|T2H1N35.Y|T2H1N35.Y|23.6 ps|1
+output|T2H1SUM5.Y|T2H1SUM5.Y|23.6 ps|0
+output|T2H1N1A6.Y|T2H1N1A6.Y|23.6 ps|1
+output|T2H1N1B6.Y|T2H1N1B6.Y|23.6 ps|1
+output|T2H1N26.Y|T2H1N26.Y|23.6 ps|1
+output|T2H1N36.Y|T2H1N36.Y|23.6 ps|1
+output|T2H1SUM6.Y|T2H1SUM6.Y|23.6 ps|0
+output|T2H1N1A7.Y|T2H1N1A7.Y|23.6 ps|1
+output|T2H1N1B7.Y|T2H1N1B7.Y|23.6 ps|1
+output|T2H1N27.Y|T2H1N27.Y|23.6 ps|1
+output|T2H1N37.Y|T2H1N37.Y|23.6 ps|1
+output|T2H1SUM7.Y|T2H1SUM7.Y|23.6 ps|0
+output|T2H2N1A.Y|T2H2N1A.Y|23.6 ps|1
+output|T2H2N1B.Y|T2H2N1B.Y|23.7 ps|1
+output|T2H2N2.Y|T2H2N2.Y|23.7 ps|1
+output|T2H2N3.Y|T2H2N3.Y|23.6 ps|1
+output|S2|T2H2SUM.Y|23.6 ps|0
+output|T2H2N5.Y|T2H2N5.Y|23.7 ps|1
+output|T2H2CARRY.Y|T2H2CARRY.Y|23.6 ps|0
+output|T2H1N5.Y|T2H1N5.Y|23.6 ps|1
+output|T2H1CARRY.Y|T2H1CARRY.Y|23.6 ps|0
+output|T2ORNOT1.Y|T2ORNOT1.Y|23.6 ps|1
+output|T2ORNOT2.Y|T2ORNOT2.Y|23.6 ps|1
+output|T2OROUT.Y|T2OROUT.Y|23.6 ps|0
+output|T2H1N5C2.Y|T2H1N5C2.Y|23.6 ps|1
+output|T2H1CARRYC2.Y|T2H1CARRYC2.Y|23.6 ps|0
+output|T2H2N5C2.Y|T2H2N5C2.Y|23.6 ps|1
+output|T2H2CARRYC2.Y|T2H2CARRYC2.Y|23.6 ps|0
+output|T2ORNOT1C2.Y|T2ORNOT1C2.Y|23.6 ps|1
+output|T2ORNOT2C2.Y|T2ORNOT2C2.Y|23.6 ps|1
+output|T2OROUTC2.Y|T2OROUTC2.Y|23.6 ps|0
+output|T2H1N5C3.Y|T2H1N5C3.Y|23.6 ps|1
+output|T2H1CARRYC3.Y|T2H1CARRYC3.Y|23.6 ps|0
+output|T2H2N5C3.Y|T2H2N5C3.Y|23.6 ps|1
+output|T2H2CARRYC3.Y|T2H2CARRYC3.Y|23.6 ps|0
+output|T2ORNOT1C3.Y|T2ORNOT1C3.Y|23.6 ps|1
+output|T2ORNOT2C3.Y|T2ORNOT2C3.Y|23.6 ps|1
+output|T2OROUTC3.Y|T2OROUTC3.Y|23.6 ps|0
+output|T2H1N5C4.Y|T2H1N5C4.Y|23.6 ps|1
+output|T2H1CARRYC4.Y|T2H1CARRYC4.Y|23.6 ps|0
+output|T2H2N5C4.Y|T2H2N5C4.Y|23.6 ps|1
+output|T2H2CARRYC4.Y|T2H2CARRYC4.Y|23.6 ps|0
+output|T2ORNOT1C4.Y|T2ORNOT1C4.Y|23.6 ps|1
+output|T2ORNOT2C4.Y|T2ORNOT2C4.Y|23.6 ps|1
+output|T2OROUTC4.Y|T2OROUTC4.Y|23.6 ps|0
+output|T3H1N1A1.Y|T3H1N1A1.Y|23.6 ps|1
+output|T3H1N1B1.Y|T3H1N1B1.Y|23.6 ps|1
+output|T3H1N21.Y|T3H1N21.Y|23.6 ps|1
+output|T3H1N31.Y|T3H1N31.Y|23.6 ps|1
+output|T3H1SUM1.Y|T3H1SUM1.Y|23.6 ps|0
+output|T3H1N1A2.Y|T3H1N1A2.Y|23.6 ps|1
+output|T3H1N1B2.Y|T3H1N1B2.Y|23.6 ps|1
+output|T3H1N22.Y|T3H1N22.Y|23.6 ps|1
+output|T3H1N32.Y|T3H1N32.Y|23.6 ps|1
+output|T3H1SUM2.Y|T3H1SUM2.Y|23.6 ps|0
+output|T3H1N1A3.Y|T3H1N1A3.Y|23.6 ps|1
+output|T3H1N1B3.Y|T3H1N1B3.Y|23.6 ps|1
+output|T3H1N23.Y|T3H1N23.Y|23.6 ps|1
+output|T3H1N33.Y|T3H1N33.Y|23.6 ps|1
+output|T3H1SUM3.Y|T3H1SUM3.Y|23.6 ps|0
+output|T3H1N1A4.Y|T3H1N1A4.Y|23.6 ps|1
+output|T3H1N1B4.Y|T3H1N1B4.Y|23.6 ps|1
+output|T3H1N24.Y|T3H1N24.Y|23.6 ps|1
+output|T3H1N34.Y|T3H1N34.Y|23.6 ps|1
+output|T3H1SUM4.Y|T3H1SUM4.Y|23.6 ps|0
+output|T3H2N1A.Y|T3H2N1A.Y|23.6 ps|1
+output|T3H2N1B.Y|T3H2N1B.Y|23.6 ps|1
+output|T3H2N2.Y|T3H2N2.Y|23.6 ps|1
+output|T3H2N3.Y|T3H2N3.Y|23.6 ps|1
+output|S3|T3H2SUM.Y|23.6 ps|0
+output|T3H2N5.Y|T3H2N5.Y|23.6 ps|1
+output|T3H2CARRY.Y|T3H2CARRY.Y|23.6 ps|0
+output|T3H1N5.Y|T3H1N5.Y|23.6 ps|1
+output|T3H1CARRY.Y|T3H1CARRY.Y|23.6 ps|0
+output|T3ORNOT1.Y|T3ORNOT1.Y|23.6 ps|1
+output|T3ORNOT2.Y|T3ORNOT2.Y|23.6 ps|1
+output|Cout|T3OROUT.Y|23.6 ps|0
+badges|605
+gate|T0H1N1A1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N21|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N31|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N22|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N32|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N23|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N33|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N24|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N34|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N25|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N35|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N26|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N36|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N27|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N37|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A8|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B8|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N28|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N38|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM8|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A9|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B9|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N29|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N39|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM9|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A10|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B10|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N210|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N310|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM10|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A11|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B11|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N211|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N311|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM11|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A12|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B12|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N212|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N312|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM12|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N1A13|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N1B13|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1N213|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0
+gate|T0H1N313|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B0 = 0
+gate|T0H1SUM13|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H2N1A|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2N1B|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2N2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2N3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T0H2SUM|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y:S0 = 0
+gate|T0H2N5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2CARRY|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0H1N5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1CARRY|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0ORNOT1|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0ORNOT2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0OROUT|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N5C2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1CARRYC2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0H2N5C2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2CARRYC2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0ORNOT1C2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0ORNOT2C2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0OROUTC2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N5C3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1CARRYC3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0H2N5C3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2CARRYC3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0ORNOT1C3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0ORNOT2C3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0OROUTC3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N5C4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1CARRYC4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0H2N5C4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2CARRYC4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0ORNOT1C4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0ORNOT2C4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0OROUTC4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N5C5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1CARRYC5|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0H2N5C5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2CARRYC5|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0ORNOT1C5|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0ORNOT2C5|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0OROUTC5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N5C6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1CARRYC6|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0H2N5C6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2CARRYC6|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0ORNOT1C6|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0ORNOT2C6|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0OROUTC6|23.6709|A,B>Y|00>1:0.5 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N5C7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1CARRYC7|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0H2N5C7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2CARRYC7|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0ORNOT1C7|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0ORNOT2C7|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0OROUTC7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N5C8|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1CARRYC8|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0H2N5C8|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2CARRYC8|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0ORNOT1C8|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0ORNOT2C8|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0OROUTC8|23.6709|A,B>Y|00>1:0.5 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N5C9|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1CARRYC9|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0H2N5C9|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2CARRYC9|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0ORNOT1C9|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0ORNOT2C9|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0OROUTC9|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T0H1N5C10|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A0 = 0 B:B0 = 0
+gate|T0H1CARRYC10|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0H2N5C10|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:Cin = 0
+gate|T0H2CARRYC10|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T0ORNOT1C10|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0ORNOT2C10|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T0OROUTC10|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N1A1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N1B1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N21|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0
+gate|T1H1N31|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B1 = 0
+gate|T1H1SUM1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N1A2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N1B2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N22|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0
+gate|T1H1N32|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B1 = 0
+gate|T1H1SUM2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N1A3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N1B3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N23|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0
+gate|T1H1N33|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B1 = 0
+gate|T1H1SUM3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N1A4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N1B4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N24|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0
+gate|T1H1N34|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B1 = 0
+gate|T1H1SUM4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N1A5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N1B5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N25|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0
+gate|T1H1N35|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B1 = 0
+gate|T1H1SUM5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N1A6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N1B6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N26|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0
+gate|T1H1N36|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B1 = 0
+gate|T1H1SUM6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N1A7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N1B7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N27|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0
+gate|T1H1N37|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B1 = 0
+gate|T1H1SUM7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N1A8|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N1B8|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N28|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0
+gate|T1H1N38|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B1 = 0
+gate|T1H1SUM8|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N1A9|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N1B9|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N29|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0
+gate|T1H1N39|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B1 = 0
+gate|T1H1SUM9|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N1A10|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N1B10|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1N210|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0
+gate|T1H1N310|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B1 = 0
+gate|T1H1SUM10|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H2N1A|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2N1B|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2N2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2N3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2SUM|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y:S1 = 0
+gate|T1H2N5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2CARRY|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1H1N5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1CARRY|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1ORNOT1|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1ORNOT2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1OROUT|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N5C2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1CARRYC2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1H2N5C2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2CARRYC2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1ORNOT1C2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1ORNOT2C2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1OROUTC2|23.6709|A,B>Y|00>1:0.5 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N5C3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1CARRYC3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1H2N5C3|23.6709|A,B>Y|00>1:0.5 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2CARRYC3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1ORNOT1C3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1ORNOT2C3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1OROUTC3|23.6709|A,B>Y|00>1:0.5 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N5C4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1CARRYC4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1H2N5C4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2CARRYC4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1ORNOT1C4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1ORNOT2C4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1OROUTC4|23.6709|A,B>Y|00>1:0.5 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N5C5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1CARRYC5|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1H2N5C5|23.6709|A,B>Y|00>1:0.5 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2CARRYC5|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1ORNOT1C5|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1ORNOT2C5|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1OROUTC5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N5C6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1CARRYC6|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1H2N5C6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2CARRYC6|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1ORNOT1C6|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1ORNOT2C6|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1OROUTC6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T1H1N5C7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A1 = 0 B:B1 = 0
+gate|T1H1CARRYC7|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1H2N5C7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T1H2CARRYC7|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T1ORNOT1C7|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1ORNOT2C7|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T1OROUTC7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H1N1A1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N1B1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N21|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0
+gate|T2H1N31|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B2 = 0
+gate|T2H1SUM1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H1N1A2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N1B2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N22|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0
+gate|T2H1N32|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B2 = 0
+gate|T2H1SUM2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H1N1A3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N1B3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N23|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0
+gate|T2H1N33|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B2 = 0
+gate|T2H1SUM3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H1N1A4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N1B4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N24|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0
+gate|T2H1N34|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B2 = 0
+gate|T2H1SUM4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H1N1A5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N1B5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N25|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0
+gate|T2H1N35|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B2 = 0
+gate|T2H1SUM5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H1N1A6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N1B6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N26|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0
+gate|T2H1N36|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B2 = 0
+gate|T2H1SUM6|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H1N1A7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N1B7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1N27|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0
+gate|T2H1N37|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B2 = 0
+gate|T2H1SUM7|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H2N1A|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T2H2N1B|23.6709|A,B>Y|00>1:0.5 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T2H2N2|23.6709|A,B>Y|00>1:0.5 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T2H2N3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T2H2SUM|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y:S2 = 0
+gate|T2H2N5|23.6709|A,B>Y|00>1:0.5 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T2H2CARRY|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T2H1N5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1CARRY|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T2ORNOT1|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T2ORNOT2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T2OROUT|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H1N5C2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1CARRYC2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T2H2N5C2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T2H2CARRYC2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T2ORNOT1C2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T2ORNOT2C2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T2OROUTC2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H1N5C3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1CARRYC3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T2H2N5C3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T2H2CARRYC3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T2ORNOT1C3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T2ORNOT2C3|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T2OROUTC3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T2H1N5C4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A2 = 0 B:B2 = 0
+gate|T2H1CARRYC4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T2H2N5C4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T2H2CARRYC4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T2ORNOT1C4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T2ORNOT2C4|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T2OROUTC4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T3H1N1A1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0 B:B3 = 0
+gate|T3H1N1B1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0 B:B3 = 0
+gate|T3H1N21|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0
+gate|T3H1N31|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B3 = 0
+gate|T3H1SUM1|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T3H1N1A2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0 B:B3 = 0
+gate|T3H1N1B2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0 B:B3 = 0
+gate|T3H1N22|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0
+gate|T3H1N32|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B3 = 0
+gate|T3H1SUM2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T3H1N1A3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0 B:B3 = 0
+gate|T3H1N1B3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0 B:B3 = 0
+gate|T3H1N23|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0
+gate|T3H1N33|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B3 = 0
+gate|T3H1SUM3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T3H1N1A4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0 B:B3 = 0
+gate|T3H1N1B4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0 B:B3 = 0
+gate|T3H1N24|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0
+gate|T3H1N34|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 B:B3 = 0
+gate|T3H1SUM4|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=0
+gate|T3H2N1A|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T3H2N1B|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T3H2N2|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T3H2N3|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T3H2SUM|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y:S3 = 0
+gate|T3H2N5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1
+gate|T3H2CARRY|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T3H1N5|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y=1 A:A3 = 0 B:B3 = 0
+gate|T3H1CARRY|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=0
+gate|T3ORNOT1|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T3ORNOT2|23.6402|A>Y|0>1:0.4999 1>0:0.25|badges Y=1
+gate|T3OROUT|23.6402|A,B>Y|00>1:0.4999 10>1:0.25 01>1:0.25 11>0:0|badges Y:Cout = 0
+vector-outputs|00110001100011000110001100011000110001100011000110001100011000110110111001011011001101100110110011011001101100110110011011001101100110110011111011110111101111011110111101111011110111101111010011001101011001101100110110011011001101100110110011011101111011110111101111011110111101100110011010110011011001101100110111110111101111011110110111010110
+vector-named|S0=1,S1=0,S2=0,S3=1,Cout=0
+vector-badges|00110001100011000110001100011000110001100011000110001100011000110110111001011011001101100110110011011001101100110110011011001101100110110011111011110111101111011110111101111011110111101111010011001101011001101100110110011011001101100110110011011101111011110111101111011110111101100110011010110011011001101100110111110111101111011110110111010110111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111010101010101010101010101010101010101010101010101010101010101010101010101011010101010101010101010101010101010101010101010101000000000000000000000000000
+vector-timeline|36|True
+step|enabled=False|registers=0|events=0|
