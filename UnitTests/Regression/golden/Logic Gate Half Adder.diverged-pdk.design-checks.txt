@@ -1,0 +1,56 @@
+Hint|UnconnectedPin|770|131.5|Unconnected pin: NAND1A/combine_c6fa9fad4c6a4ea898e396d22ab43d34.out2 at (770, 131.5)
+Hint|UnconnectedPin|1200|131.5|Unconnected pin: NAND1A/recombine_ca8a0309e2bf4380b6bef5fc03d488c1.out2 at (1200, 131.5)
+Hint|UnconnectedPin|1970|131.5|Unconnected pin: NAND2/combine_93630ef7e87f400daa3304c627414d47.out2 at (1970, 131.5)
+Hint|UnconnectedPin|2400|131.5|Unconnected pin: NAND2/recombine_bc428bd12f604ca8b3e918c960adb104.out2 at (2400, 131.5)
+Hint|UnconnectedPin|3170|131.5|Unconnected pin: NAND4/combine_f1caab734d104653bcccf9704e6f635c.out2 at (3170, 131.5)
+Hint|UnconnectedPin|3600|131.5|Unconnected pin: NAND4/recombine_c938e2581e204e7f826a3ecd277b3b8c.out2 at (3600, 131.5)
+Hint|UnconnectedPin|770|531.5|Unconnected pin: NAND1B/combine_9568c03ab4a8469185cf79064cf1bf18.out2 at (770, 531.5)
+Hint|UnconnectedPin|1200|531.5|Unconnected pin: NAND1B/recombine_5f9c938d094a4d0b85888fac521d6068.out2 at (1200, 531.5)
+Hint|UnconnectedPin|1970|531.5|Unconnected pin: NAND3/combine_57d294750e3e43dda00a0f0412e44570.out2 at (1970, 531.5)
+Hint|UnconnectedPin|2400|531.5|Unconnected pin: NAND3/recombine_ed2aad53de074220a28b6b8059c1e658.out2 at (2400, 531.5)
+Hint|UnconnectedPin|770|931.5|Unconnected pin: NAND5/combine_c1c2b2888a414ec18d10f3fc00193e2b.out2 at (770, 931.5)
+Hint|UnconnectedPin|1200|931.5|Unconnected pin: NAND5/recombine_58d9a9ffd3384da393511c3d7f0f0819.out2 at (1200, 931.5)
+Hint|UnconnectedPin|1970|931.5|Unconnected pin: NOT1/combine_244fe2cc285045d3b718e3dc92fadc21.out2 at (1970, 931.5)
+Hint|UnconnectedPin|2400|931.5|Unconnected pin: NOT1/recombine_ea8e856db559458ab14a567ac49c73a2.out2 at (2400, 931.5)
+Problem|PdkProcessMismatch|450|123.5|'NAND1A/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|450|131.5|'NAND1A/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|645|127.5|'NAND1A/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|650|237.5|'NAND1A/Phase Shifter' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1075|127.5|'NAND1A/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1270|123.5|'NAND1A/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1650|123.5|'NAND2/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1650|131.5|'NAND2/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1845|127.5|'NAND2/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1850|237.5|'NAND2/Phase Shifter' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|2275|127.5|'NAND2/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|2470|123.5|'NAND2/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|2850|123.5|'NAND4/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|2850|131.5|'NAND4/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|3045|127.5|'NAND4/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|3050|237.5|'NAND4/Phase Shifter' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|3475|127.5|'NAND4/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|3670|123.5|'NAND4/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|450|523.5|'NAND1B/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|450|531.5|'NAND1B/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|645|527.5|'NAND1B/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|650|637.5|'NAND1B/Phase Shifter' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1075|527.5|'NAND1B/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1270|523.5|'NAND1B/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1650|523.5|'NAND3/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1650|531.5|'NAND3/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1845|527.5|'NAND3/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1850|637.5|'NAND3/Phase Shifter' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|2275|527.5|'NAND3/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|2470|523.5|'NAND3/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|450|923.5|'NAND5/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|450|931.5|'NAND5/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|645|927.5|'NAND5/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|650|1037.5|'NAND5/Phase Shifter' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1075|927.5|'NAND5/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1270|923.5|'NAND5/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1650|923.5|'NOT1/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1650|931.5|'NOT1/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1845|927.5|'NOT1/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|1850|1037.5|'NOT1/Phase Shifter' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|2275|927.5|'NOT1/2x2 MMI Coupler' belongs to 'Demo PDK', which no longer matches the active process.
+Problem|PdkProcessMismatch|2470|923.5|'NOT1/Straight Waveguide 100µm' belongs to 'Demo PDK', which no longer matches the active process.
