@@ -100,9 +100,11 @@ jobs:
           - os: windows-latest
             rid: win-x64
             artifact: Lunima-win-x64
+            executable: Lunima.exe
           - os: ubuntu-latest
             rid: linux-x64
             artifact: Lunima-linux-x64
+            executable: Lunima
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -114,35 +116,23 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Publish
-        run: >
-          dotnet publish CAP.Desktop/CAP.Desktop.csproj
-          -c Release
-          -r ${{ matrix.rid }}
-          --self-contained true
-          -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:DebugType=none
-          -o publish
+      - name: Setup Python (packaged-app smoke)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-      - name: Rename executable
-        run: |
-          cd publish
-          if [ -f CAP.Desktop ]; then
-            mv CAP.Desktop Lunima
-            chmod +x Lunima
-          fi
-          if [ -f CAP.Desktop.exe ]; then
-            mv CAP.Desktop.exe Lunima.exe
-          fi
+      # Self-contained single file renamed to Lunima[.exe], with the repo's example designs
+      # merged in beside it (the Home screen's Examples section and the ISA playground find
+      # them by walking up from the app base directory). PackagedAppSmoke.yaml publishes
+      # pull requests through the same script, so the two cannot drift.
+      - name: Publish portable build
+        run: bash scripts/publish_desktop.sh portable ${{ matrix.rid }} publish
         shell: bash
 
-      # Ship the repo's example designs beside the binary so the Home screen's
-      # Examples section (walk-up discovery from the app base directory) also
-      # works in the portable zip/tar layout, not just the dev tree.
-      - name: Bundle example designs
-        run: cp -r examples publish/examples
-        shell: bash
+      # Start the binary users download before it is uploaded: a build that does not start,
+      # leaks logs onto the agent CLI's stdout or misses shipped files fails the release here.
+      - name: Smoke-test the packaged app
+        run: python -I scripts/smoke_published_app.py publish/${{ matrix.executable }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -192,20 +182,16 @@ jobs:
           wix extension add WixToolset.UI.wixext/4.0.5
           wix extension add WixToolset.NetFx.wixext/4.0.5
 
+      # Framework-dependent publish with examples/ merged in BEFORE harvesting, so the MSI
+      # installs them next to CAP.Desktop.exe (same discovery as portable). Shared with
+      # PackagedAppSmoke.yaml's MSI-folder leg.
       - name: Publish app for MSI
-        run: >
-          dotnet publish CAP.Desktop/CAP.Desktop.csproj
-          -c Release
-          -r win-x64
-          --self-contained false
-          -p:Version=${{ steps.version.outputs.version }}
-          -o publish/win-x64-msi
-
-      # Examples must land in the publish dir BEFORE harvesting so the MSI
-      # installs them next to CAP.Desktop.exe (same discovery as portable).
-      - name: Bundle example designs
-        run: cp -r examples publish/win-x64-msi/examples
+        run: bash scripts/publish_desktop.sh msi win-x64 publish/win-x64-msi -p:Version=${{ steps.version.outputs.version }}
         shell: bash
+
+      # The folder the MSI installs, started before it is harvested.
+      - name: Smoke-test the published app
+        run: python -I scripts/smoke_published_app.py publish/win-x64-msi/CAP.Desktop.exe
 
       - name: Generate HarvestedFiles.wxs
         shell: pwsh
@@ -238,8 +224,8 @@ jobs:
       matrix:
         include:
           # Both slices build on the Apple-Silicon runner. The x64 slice is cross-compiled
-          # via `dotnet publish -r osx-x64` (the bundle script never runs the produced binary,
-          # and hdiutil/.dmg packaging is arch-agnostic). This avoids the macos-13 Intel
+          # via `dotnet publish -r osx-x64` (hdiutil/.dmg packaging is arch-agnostic) and its
+          # smoke test runs under Rosetta 2. This avoids the macos-13 Intel
           # runners, which are scarce/deprecated — the x64 job previously queued 24h with no
           # runner and was auto-cancelled, skipping the release.
           - os: macos-latest
@@ -279,6 +265,11 @@ jobs:
 
       - name: Build Lunima.app bundle (self-contained, unsigned)
         run: bash scripts/build_macos_bundle.sh ${{ matrix.rid }}
+
+      # Start the bundled executable before packaging. The cross-compiled osx-x64 slice runs
+      # through `arch -x86_64`; without Rosetta 2 the script logs an explicit skip warning.
+      - name: Smoke-test the packaged app
+        run: python -I scripts/smoke_published_app.py dist/Lunima.app/Contents/MacOS/CAP.Desktop ${{ matrix.rid == 'osx-x64' && '--rosetta' || '' }}
 
       # Unsigned .dmg with an /Applications drop-target. Signing/notarization is a
       # follow-up gated on an Apple Developer ID + CI secrets (none configured yet);

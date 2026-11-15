@@ -8,7 +8,7 @@ namespace UnitTests.Architecture;
 /// base directory (<see cref="CAP.Avalonia.Services.ExampleDesignsService"/>),
 /// so each packaging path must place an <c>examples/</c> folder beside the
 /// executable — otherwise the Home screen's Examples section is silently empty
-/// in installed builds (issue #768).
+/// in installed builds — and every artifact is started before it is packaged.
 /// </summary>
 public class ExamplesPackagingTests
 {
@@ -26,36 +26,62 @@ public class ExamplesPackagingTests
     }
 
     [Fact]
-    public void PortableBuildJob_CopiesExamplesIntoPublishOutput()
+    public void PortableBuildJob_PublishesThroughTheSharedScript()
     {
-        var workflow = ReadWorkflow();
-
-        workflow.Contains("cp -r examples publish/examples").ShouldBeTrue(
-            "The portable win-x64/linux-x64 artifacts must contain examples/ beside the binary.");
+        ReadWorkflow().ShouldContain("bash scripts/publish_desktop.sh portable ${{ matrix.rid }} publish", Case.Sensitive,
+            "The portable win-x64/linux-x64 artifacts must be published (examples/ included) by " +
+            "the script PackagedAppSmoke.yaml smoke-tests.");
     }
 
     [Fact]
-    public void MsiBuildJob_CopiesExamplesIntoPublishOutput_BeforeHarvesting()
+    public void PublishScript_MergesExamplesBesideTheBinary()
+    {
+        ReadScript("publish_desktop.sh").ShouldContain(MergeExamplesInto("${OUTPUT_DIR}"), Case.Sensitive,
+            "The publish already holds examples/*.lun; copying the folder itself nests it at " +
+            "examples/examples/ and leaves examples/isa/ unreachable.");
+    }
+
+    [Fact]
+    public void MsiBuildJob_PublishesWithExamples_BeforeHarvesting()
     {
         var workflow = ReadWorkflow();
 
-        var copyIndex = workflow.IndexOf("cp -r examples publish/win-x64-msi/examples", StringComparison.Ordinal);
-        copyIndex.ShouldBeGreaterThanOrEqualTo(0,
-            "The MSI job must copy examples/ into publish/win-x64-msi so harvesting picks it up.");
+        var publishIndex = workflow.IndexOf(
+            "bash scripts/publish_desktop.sh msi win-x64 publish/win-x64-msi", StringComparison.Ordinal);
+        publishIndex.ShouldBeGreaterThanOrEqualTo(0,
+            "The MSI job must publish publish/win-x64-msi (examples/ included) through the shared script.");
 
         var harvestIndex = workflow.IndexOf("Generate-HarvestedFiles.ps1", StringComparison.Ordinal);
-        harvestIndex.ShouldBeGreaterThan(copyIndex,
-            "examples/ must be copied before Generate-HarvestedFiles.ps1 runs, otherwise the MSI misses them.");
+        harvestIndex.ShouldBeGreaterThan(publishIndex,
+            "examples/ must be in the publish folder before Generate-HarvestedFiles.ps1 runs, otherwise the MSI misses them.");
     }
 
     [Fact]
-    public void MacOsBundleScript_CopiesExamplesBesideTheExecutable()
+    public void MacOsBundleScript_MergesExamplesBesideTheExecutable()
     {
-        var script = File.ReadAllText(Path.Combine(RepoRoot, "scripts", "build_macos_bundle.sh"));
-
-        script.Contains("\"${MACOS_DIR}/examples\"").ShouldBeTrue(
-            "The .app bundle must contain examples/ in Contents/MacOS (the app base directory).");
+        ReadScript("build_macos_bundle.sh").ShouldContain(MergeExamplesInto("${MACOS_DIR}"), Case.Sensitive,
+            "The .app bundle must contain examples/ and examples/isa/ in Contents/MacOS (the app base directory).");
     }
+
+    [Theory]
+    [InlineData("smoke_published_app.py publish/${{ matrix.executable }}", "name: Upload artifact")]
+    [InlineData("smoke_published_app.py publish/win-x64-msi/CAP.Desktop.exe", "Generate-HarvestedFiles.ps1")]
+    [InlineData("smoke_published_app.py dist/Lunima.app/Contents/MacOS/CAP.Desktop", "name: Package unsigned .dmg")]
+    public void EveryReleaseArtifact_IsStartedBeforeItIsPackaged(string smokeCommand, string packagingStep)
+    {
+        var workflow = ReadWorkflow();
+
+        var smokeIndex = workflow.IndexOf(smokeCommand, StringComparison.Ordinal);
+        smokeIndex.ShouldBeGreaterThanOrEqualTo(0, $"Build_Exe.yaml must run `{smokeCommand}`.");
+        workflow.IndexOf(packagingStep, smokeIndex, StringComparison.Ordinal).ShouldBeGreaterThan(smokeIndex,
+            $"`{smokeCommand}` must run before `{packagingStep}`, so a broken artifact fails the release.");
+    }
+
+    private static string MergeExamplesInto(string destination) =>
+        $"cp -R \"${{REPO_ROOT}}/examples/.\" \"{destination}/examples/\"";
+
+    private static string ReadScript(string fileName) =>
+        File.ReadAllText(Path.Combine(RepoRoot, "scripts", fileName));
 
     private static string ReadWorkflow()
     {
