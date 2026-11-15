@@ -120,4 +120,20 @@
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- Every script the app resolves under scripts/ must be listed here;
+       UnitTests/Architecture/Packaging/ShippedHelperScriptsTests enforces it. -->
+  <ItemGroup>
+    <!-- Mode Solver (toolbar) and the canvas mode probe's FDE backend:
+         ModeSolverFeatureExtensions resolves PythonResolution.FindScript("mode_solve.py"). -->
+    <Content Include="..\scripts\mode_solve.py"
+             Link="scripts\mode_solve.py"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <!-- PDK Import Wizard: PdkImportService.FindParserScript() looks for scripts/parse_pdk.py. -->
+    <Content Include="..\scripts\parse_pdk.py"
+             Link="scripts\parse_pdk.py"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
