@@ -8,7 +8,7 @@
 
 Connect-A-PIC ist ein **Architecture-Level Design Tool** für Photonic Integrated Circuits.
 
-Es richtet sich **nicht** an Tape-out, Foundry-Flows oder physikalische Verifikation, sondern an die **frühe Phase des Denkens und Entwerfens** photonischer Systeme.
+Es beginnt bei der **frühen Phase des Denkens und Entwerfens** photonischer Systeme und reicht bis zu einem **digitalen Produktionsrun**: einer modellbasierten Prüfung, ob ein Entwurf physikalisch funktionieren würde. Echte Foundry-Sign-off-Flows ersetzt es nicht.
 
 **Ziel:** Schnell prüfen, ob eine photonic architecture prinzipiell funktionieren kann, bevor Zeit und Geld in detaillierte PDK-basierte Simulationen investiert werden.
 
@@ -42,9 +42,22 @@ Modelle sind:
 - systemischem Verhalten
 
 **Keine Garantie auf Foundry-Genauigkeit.**
-**Keine Aussage über Yield oder Tape-out-Reife.**
+**Aussagen über Funktion und Ausbeute sind modellbasiert:** Jeder Prüfbericht nennt die verwendeten Modelle, ihre Quelle (`foundry`, `literature`, `generic`) und ihre Grenzen. Eine Tape-out-Garantie gibt es nicht.
 
 Diese Abstraktion ist **Absicht, nicht Limitation**.
+
+---
+
+## Digitaler Produktionsrun (seit November 2026)
+
+Ein echter MPW-Run ist derzeit nicht bezahlbar. Damit Lunima trotzdem glaubwürdig bleibt, prüft es Entwürfe gegen die **Physik** und nicht nur gegen ideale Logik: absolute Lichtleistung, Detektorempfindlichkeit, Verstärkung und Pegelregeneration, Kaskadierbarkeit über viele Gatter, Rauschen und Fertigungsstreuung. Am Ende steht ein reproduzierbarer Prüfbericht für „virtuelle Dies“ (ROADMAP Stufe 8, #1638).
+
+Ehrlichkeitsregeln:
+- Ein Logikgatter gilt erst als funktionierend, wenn seine Pegel die Kette physikalisch überstehen. Eine Tabelle, die nach jedem Gatter perfekte Pegel wiederherstellt, ist eine Abstraktion, kein Nachweis.
+- Jedes Modell trägt seine Quelle. Ohne gekennzeichnetes Modell gibt es kein Urteil.
+- Vorhandene Open-Source-Werkzeuge werden genutzt oder zum Gegenprüfen herangezogen, bevor eigene Modelle entstehen.
+
+Die schnelle, abstrahierte Exploration bleibt der Einstieg; der digitale Produktionsrun ist die zusätzliche, strengere Sicht darauf.
 
 ---
 
@@ -106,7 +119,7 @@ These features don't change Connect-A-PIC's core mission as a thinking tool, but
 
 **Oder kurz:**
 
-> Connect-A-PIC optimiert für **Denken**, nicht für **Tape-out**.
+> Connect-A-PIC optimiert für **Denken** — und prüft ehrlich, ob das Gedachte physikalisch tragen würde.
 
 ---
 
@@ -157,4 +170,4 @@ These features extend Connect-A-PIC's reach while preserving its core focus on f
 
 ---
 
-*Last updated: March 2026*
+*Last updated: November 2026*
