@@ -431,6 +431,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, Services.Lif
         _bindings.Bind(() => ViewportControl.UpdateStatus, value => ViewportControl.UpdateStatus = value, UpdateStatusText);
         _bindings.Bind(() => LeftPanel.UpdateStatus, value => LeftPanel.UpdateStatus = value, UpdateStatusText);
         _bindings.Bind(() => GdsImport.UpdateStatus, value => GdsImport.UpdateStatus = value, UpdateStatusText);
+        _bindings.Bind(() => BottomPanel.ConnectionRouting.UpdateStatus,
+            value => BottomPanel.ConnectionRouting.UpdateStatus = value, UpdateStatusText);
         // A .gds/.gdsii pick in the File→Open dialog routes into the GDS import
         // flow (FileOperations owns no import knowledge beyond the callback).
         FileOperations.OpenGdsImportRequested = GdsImport.OpenGdsImportDialogForFileAsync;

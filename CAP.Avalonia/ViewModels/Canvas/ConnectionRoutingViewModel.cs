@@ -50,6 +50,12 @@ public partial class ConnectionRoutingViewModel : ObservableObject
     [ObservableProperty]
     private int _targetConnectionCount;
 
+    /// <summary>
+    /// Publishes a line to the main status bar, e.g. that Auto could not keep a bundle's length
+    /// lock; wired by the main view model.
+    /// </summary>
+    public Action<string>? UpdateStatus { get; set; }
+
     /// <summary>True when the style control targets more than one connection.</summary>
     public bool IsBatchSelection => TargetConnectionCount > 1;
 
@@ -158,11 +164,14 @@ public partial class ConnectionRoutingViewModel : ObservableObject
     /// <summary>
     /// Auto for several connections: a bundle of facing pins is laid out at once, off the UI
     /// thread, instead of being searched for wire by wire; the routing pass routes only the rest.
+    /// Routes that miss the bundle's length lock are installed only with a status line saying so.
     /// </summary>
     private async Task ApplyAutoAsync(List<WaveguideConnectionViewModel> targets)
     {
-        var routes = await BundleAutoRouting.TryLayOutAsync(_canvas, targets);
-        Execute(new ChangeRoutingStyleCommand(_canvas, targets, WaveguideType.Auto, routes), targets);
+        var layout = await BundleAutoRouting.TryLayOutAsync(_canvas, targets);
+        Execute(new ChangeRoutingStyleCommand(_canvas, targets, WaveguideType.Auto, layout?.Routes), targets);
+        if (layout?.LockMiss is { } miss)
+            UpdateStatus?.Invoke(miss.Describe());
     }
 
     private void Execute(ChangeRoutingStyleCommand command, List<WaveguideConnectionViewModel> targets)

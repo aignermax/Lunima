@@ -127,8 +127,9 @@ public class GdsCoordinateVerificationBinaryTests
             var reportJson = await File.ReadAllTextAsync(reportPath);
             _output.WriteLine($"Report: {reportJson}");
 
-            // Copy to /tmp for permanent access
-            await File.WriteAllTextAsync("/tmp/comparison_report.json", reportJson);
+            // Copy outside the per-test directory so the report survives the run.
+            var keptReportPath = Path.Combine(Path.GetTempPath(), "comparison_report.json");
+            await File.WriteAllTextAsync(keptReportPath, reportJson);
 
             double maxDev = ParseMaxDeviation(reportJson);
             _output.WriteLine($"Max deviation: {maxDev:F4} µm  (tolerance={PinAlignmentTolerance} µm)");
@@ -136,7 +137,7 @@ public class GdsCoordinateVerificationBinaryTests
             // FAILS when coordinate bug is present
             maxDev.ShouldBeLessThan(PinAlignmentTolerance,
                 $"GDS coordinate deviation {maxDev:F4} µm exceeds tolerance. " +
-                $"See /tmp/comparison_report.json");
+                $"See {keptReportPath}");
         }
         finally
         {

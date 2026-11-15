@@ -6,7 +6,8 @@ namespace CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 /// Assembly half of <see cref="LogicPanelViewModel"/>: runs the
 /// <see cref="CAP_Core.Analysis.LogicAnalysis.LogicNetworkAssembler"/> asynchronously
 /// over the current design with cancellation and maps the result (or any failure)
-/// onto the panel's display state.
+/// onto the panel's display state. The capture of the live design stays on the UI thread
+/// but is cut into dispatcher frames; a frame that saw the design change ends the build.
 /// </summary>
 public partial class LogicPanelViewModel
 {
@@ -36,8 +37,8 @@ public partial class LogicPanelViewModel
             var wavelengthNm = ResolveWavelengthNm();
             WavelengthText = string.Format(Translate("LogicPanel.Wavelength"), wavelengthNm);
 
-            var network = await _assembler.AssembleAsync(
-                components, connections, wavelengthNm, operation.Token);
+            var network = await _assembler.AssembleAsync(components, connections, wavelengthNm,
+                new DispatcherCaptureYield(operation.ThrowIfObsolete), operation.Token);
             operation.ThrowIfObsolete();
             operation.TryPublish(() =>
             {

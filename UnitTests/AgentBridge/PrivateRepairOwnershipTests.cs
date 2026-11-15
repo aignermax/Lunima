@@ -43,7 +43,7 @@ public sealed class PrivateRepairOwnershipTests
             live.ConnectionManager.WaveguideWidthMicrometers = 1.75;
             live.ConnectionManager.UseSequentialRouting = false;
             live.ConnectionManager.MaxRoutingAttempts = 7;
-            live.ConnectionManager.ContentionRepairTimeBudget = TimeSpan.FromMilliseconds(31);
+            live.ConnectionManager.ContentionRepairWorkBudget = 31_337;
             live.ConnectionManager.EnableCoherentPropagationPhase = false;
             var input = RoutingInputSnapshot.Capture(live.Components.Select(view => view.Component).ToArray(),
                 live.Router, live.ConnectionManager);
@@ -59,7 +59,7 @@ public sealed class PrivateRepairOwnershipTests
             trial.ConnectionManager.WaveguideWidthMicrometers.ShouldBe(1.75);
             trial.ConnectionManager.UseSequentialRouting.ShouldBeFalse();
             trial.ConnectionManager.MaxRoutingAttempts.ShouldBe(7);
-            trial.ConnectionManager.ContentionRepairTimeBudget.ShouldBe(TimeSpan.FromMilliseconds(31));
+            trial.ConnectionManager.ContentionRepairWorkBudget.ShouldBe(31_337);
             trial.ConnectionManager.EnableCoherentPropagationPhase.ShouldBeFalse();
             (trial.ChipMinX, trial.ChipMinY, trial.ChipMaxX, trial.ChipMaxY).ShouldBe((-15d, -20d, 345d, 210d));
             var first = live.Components[0];

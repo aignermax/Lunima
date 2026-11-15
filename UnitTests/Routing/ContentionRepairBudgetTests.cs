@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
@@ -12,12 +11,12 @@ using Xunit;
 namespace UnitTests.Routing;
 
 /// <summary>
-/// Hardening of the contention rip-up-and-reroute pass (issue #1297): the pass budget is
-/// HARD — every attempt routes on a linked token that cancels when the remaining budget
-/// expires, so one stubborn in-flight A* search cannot overrun the pass; and an attempt
-/// that failed once is not repeated verbatim — its fingerprint (blocked wire, ripped-up
-/// siblings, their pin positions) is skipped on later full re-routes until an involved
-/// component moves.
+/// Hardening of the contention rip-up-and-reroute pass: the pass budget is HARD — every
+/// route of an attempt charges one pass work budget and runs on its token, which cancels
+/// once the budget is spent, so one stubborn in-flight A* search cannot overrun the pass;
+/// and an attempt that failed once is not repeated verbatim — its fingerprint (blocked
+/// wire, ripped-up siblings, their pin positions) is skipped on later full re-routes until
+/// an involved component moves.
 /// </summary>
 public class ContentionRepairBudgetTests
 {
@@ -29,20 +28,41 @@ public class ContentionRepairBudgetTests
         // Single-corridor fixture: whoever routes first wins the corridor, the other wire
         // stays blocked — a repair attempt always runs and never gains anything.
         var (manager, router, wire1, wire2, _) = CreateSingleCorridorFixture();
-        // A zero remaining budget cancels the attempt token before the first route —
-        // the same restore path a mid-route budget expiry takes.
-        manager.ContentionRepairTimeBudget = TimeSpan.Zero;
         var wire1Before = wire1.RoutedPath!.DeepCopy();
         var wire2Before = wire2.RoutedPath!.DeepCopy();
         using var outerTokens = new CancellationTokenSource();
+        // A spent budget cancels its token before the first route — the same restore
+        // path a mid-route budget cut takes.
+        using var passBudget = new RouteWorkBudget(0, outerTokens.Token);
 
         bool accepted = manager.TryRepairContentionWire(
             wire2, new List<WaveguideConnection> { wire1 },
-            router.PathfindingGrid!, Stopwatch.StartNew(), outerTokens.Token);
+            router.PathfindingGrid!, passBudget, outerTokens.Token);
 
         accepted.ShouldBeFalse("a budget-cut attempt can never be accepted");
         outerTokens.IsCancellationRequested.ShouldBeFalse(
-            "the budget cancels only the linked attempt token, never the caller's token");
+            "the budget cancels only its own token, never the caller's token");
+        AssertSameGeometry(wire1Before, wire1.RoutedPath!, "wire 1");
+        AssertSameGeometry(wire2Before, wire2.RoutedPath!, "wire 2");
+    }
+
+    [Fact]
+    public void BudgetSpentMidRoute_StopsTheInFlightSearch_AndRestoresTheAttempt()
+    {
+        var (manager, router, wire1, wire2, _) = CreateSingleCorridorFixture();
+        var wire1Before = wire1.RoutedPath!.DeepCopy();
+        var wire2Before = wire2.RoutedPath!.DeepCopy();
+        using var outerTokens = new CancellationTokenSource();
+        using var passBudget = new RouteWorkBudget(1, outerTokens.Token);
+
+        bool accepted = manager.TryRepairContentionWire(
+            wire2, new List<WaveguideConnection> { wire1 },
+            router.PathfindingGrid!, passBudget, outerTokens.Token);
+
+        accepted.ShouldBeFalse("the budget ran out inside the first route of the attempt");
+        passBudget.NodesExpanded.ShouldBe(1,
+            "the in-flight search stops at the one expansion the pass had left; later searches get none");
+        outerTokens.IsCancellationRequested.ShouldBeFalse();
         AssertSameGeometry(wire1Before, wire1.RoutedPath!, "wire 1");
         AssertSameGeometry(wire2Before, wire2.RoutedPath!, "wire 2");
     }

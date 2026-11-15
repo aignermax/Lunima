@@ -6,7 +6,7 @@ using CAP_Core.Routing.CrossingInsertion;
 namespace CAP_Core.Routing.Snapshots;
 
 internal sealed record RouteCrossingValue(bool Insert, CrossingPrototypeValue? Prototype,
-    TimeSpan Budget, int Maximum, ImmutableArray<(int MaxNodesExpanded, double HeuristicWeight)> Searches,
+    long Budget, int Maximum, ImmutableArray<(int MaxNodesExpanded, double HeuristicWeight)> Searches,
     ImmutableArray<RouteCrossingRecordValue> Records, ImmutableDictionary<(Guid, Guid), double> Floors,
     ImmutableArray<Guid> PendingReroutes)
 {
@@ -18,7 +18,7 @@ internal sealed record RouteCrossingValue(bool Insert, CrossingPrototypeValue? P
         // Resolve at most one PDK instance while still on the owning thread. Maintenance needs no PDK.
         var prototype = manager.CrossingInsertion == null ? null : service.CrossingComponentFactory();
         return new(manager.CrossingInsertion != null, prototype == null ? null : CrossingPrototypeValue.Capture(prototype),
-            service.ChainPassTimeBudget, service.MaxCrossingsPerPass, service.FallbackChainSearches.ToImmutableArray(),
+            service.MaxChainPassNodesExpanded, service.MaxCrossingsPerPass, service.FallbackChainSearches.ToImmutableArray(),
             service.Records.Select(RouteCrossingRecordValue.Capture).ToImmutableArray(), prototype == null
                 ? ImmutableDictionary<(Guid, Guid), double>.Empty
                 : RouteProcessFloorTable.CapturePrototypePairs(prototype, components, router),
@@ -30,7 +30,7 @@ internal sealed record RouteCrossingValue(bool Insert, CrossingPrototypeValue? P
     {
         var service = new CrossingInsertionService(() => Prototype?.Build(floors))
         {
-            ChainPassTimeBudget = Budget, MaxCrossingsPerPass = Maximum, FallbackChainSearches = Searches,
+            MaxChainPassNodesExpanded = Budget, MaxCrossingsPerPass = Maximum, FallbackChainSearches = Searches,
             ComponentAdded = graph.AddCrossing, ComponentRemoved = graph.RemoveCrossing,
             ChangeRecorded = graph.RecordCrossingChange
         };

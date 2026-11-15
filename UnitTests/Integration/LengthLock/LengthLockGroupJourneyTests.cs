@@ -20,13 +20,6 @@ namespace UnitTests.Integration.LengthLock;
 /// </summary>
 public class LengthLockGroupJourneyTests : IDisposable
 {
-    /// <summary>Why the journey with the Bend → Auto step is skipped until the defect is fixed.</summary>
-    private const string BendAutoDefect =
-        "Defect: Bend → Auto drops all 16 equalized routes of the shipped fan-in off their 1800.93 µm lock. "
-        + "BundleAutoRouting cannot lay the arches out at the lock (outer arch 2080.9 µm) and silently "
-        + "installs the shortest arches (1450–2081 µm) instead; routing them with A* instead still leaves "
-        + "5 off the lock, partly because Equalize stamped its 250 µm max radius on the un-meandered channel.";
-
     private const int ChannelCount = FiberArrayExampleBuilder.ChannelCount;
     private const double MinimumShippedSpreadMicrometers = 200;
     private const double EqualizeToleranceMicrometers = 0.1;
@@ -62,8 +55,11 @@ public class LengthLockGroupJourneyTests : IDisposable
     public Task ShippedFanIn_StaysOneLockGroupOf16_ThroughReopen_MoveReEqualize_Export_AndReopen() =>
         RunJourneyAsync(withBendThenAuto: false);
 
-    /// <summary>The whole journey as specified, Bend → Auto included; un-skip once the defect is fixed.</summary>
-    [Fact(Skip = BendAutoDefect)]
+    /// <summary>
+    /// The whole journey as specified, Bend → Auto included: the arches cannot reach the lock, so
+    /// Auto routes the bundle and meanders it back onto the lock.
+    /// </summary>
+    [Fact]
     public Task ShippedFanIn_BendThenAuto_KeepsAll16OnTheLock_ThroughTheWholeJourney() =>
         RunJourneyAsync(withBendThenAuto: true);
 

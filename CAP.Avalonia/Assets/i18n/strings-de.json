@@ -1269,6 +1269,8 @@
   "Routing.Connection.EffectiveStyleFormat": "Auto (effektiv: {0})",
   "Routing.Connection.FreezeRoute": "Route einfrieren",
   "Routing.Connection.BatchApply": "Gilt für {0} ausgewählte Verbindungen",
+  "Routing.Connection.AutoLockMissed": "Auto kann die Längensperre von {0:F2} µm bei {1} von {2} Routen nicht halten (das Bogenbündel braucht ≥ {3:F1} µm). Gruppe neu angleichen oder die Sperre lösen.",
+  "Routing.Connection.AutoLockMissedNoRoom": "Auto kann die Längensperre von {0:F2} µm bei {1} von {2} Routen nicht halten (bei dieser Länge ist kein Platz für Bögen oder Mäander). Gruppe neu angleichen oder die Sperre lösen.",
   "Routing.Connection.Radius": "Radius",
   "Routing.Connection.Style": "Stil:",
   "Routing.Connection.Title": "Routing:",

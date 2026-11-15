@@ -1,4 +1,5 @@
 using CAP_Core.Components.Core;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP_Core.Routing.Snapshots;
 using Shouldly;
 using UnitTests.Routing.CrossingInsertion;
@@ -147,6 +148,20 @@ public sealed class RoutingSnapshotCrossingTests
         graph.Manager.Connections.Count.ShouldBe(4);
         graph.CrossingChanges.ShouldBeEmpty();
         fixture.Manager.Connections.Single(wire => wire.Id == record.SubConnectionsA[0].Id).RoutedPath.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData(4321L)]
+    [InlineData(0L)]
+    [InlineData(CrossingInsertionService.UnlimitedChainPassNodesExpanded)]
+    public void Snapshot_KeepsTheChainPassWorkBudget(long budget)
+    {
+        var fixture = CrossingTestCircuit.Build(0.5);
+        fixture.Service.MaxChainPassNodesExpanded = budget;
+
+        var graph = RoutingInputSnapshot.Capture(Components(fixture), fixture.Router, fixture.Manager).CreatePrivateGraph();
+
+        graph.Manager.CrossingInsertion.ShouldNotBeNull().MaxChainPassNodesExpanded.ShouldBe(budget);
     }
 
     private static Component[] Components(CrossingTestCircuit.CrossLayout fixture) =>

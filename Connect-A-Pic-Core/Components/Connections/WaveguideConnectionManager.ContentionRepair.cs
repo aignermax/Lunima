@@ -1,5 +1,5 @@
 using System.Collections.Immutable;
-using System.Diagnostics;
+using CAP_Core.Routing;
 using CAP_Core.Routing.AStarPathfinder;
 
 namespace CAP_Core.Components.Connections;
@@ -14,11 +14,21 @@ public partial class WaveguideConnectionManager
     internal void RestoreContentionFailures(IEnumerable<ContentionRepairService.Failure> failures) =>
         _contentionRepair.RestoreFailures(failures);
 
-    /// <summary>Hard wall-clock budget for the targeted contention-repair pass.</summary>
-    internal TimeSpan ContentionRepairTimeBudget
+    /// <summary>
+    /// Hard work budget for the targeted contention-repair pass, in A* node expansions shared by
+    /// every route of every attempt (<see cref="ContentionRepairService.WorkBudget"/>).
+    /// </summary>
+    internal long ContentionRepairWorkBudget
     {
-        get => _contentionRepair.TimeBudget;
-        set => _contentionRepair.TimeBudget = value;
+        get => _contentionRepair.WorkBudget;
+        set => _contentionRepair.WorkBudget = value;
+    }
+
+    /// <summary>Node expansions the last contention-repair pass charged to its work budget.</summary>
+    internal long LastContentionRepairNodesExpanded
+    {
+        get => _contentionRepair.NodesExpanded;
+        private set => _contentionRepair.NodesExpanded = value;
     }
 
     /// <summary>Number of attempts made by the last contention-repair pass.</summary>
@@ -39,8 +49,8 @@ public partial class WaveguideConnectionManager
         _contentionRepair.Run(UseSequentialRouting, cancellationToken);
 
     internal bool TryRepairContentionWire(WaveguideConnection blocked, List<WaveguideConnection> siblings,
-        PathfindingGrid grid, Stopwatch budget, CancellationToken cancellationToken) =>
-        _contentionRepair.TryRepairWire(blocked, siblings, grid, budget, cancellationToken);
+        PathfindingGrid grid, RouteWorkBudget passBudget, CancellationToken cancellationToken) =>
+        _contentionRepair.TryRepairWire(blocked, siblings, grid, passBudget, cancellationToken);
 
     private bool IsCrossingParticipant(WaveguideConnection connection) =>
         CrossingService?.IsSubConnection(connection) == true;

@@ -473,6 +473,7 @@ public partial class WaveguideConnectionManager
                 timings.ContentionRepair = MeasurePass(() => RepairContentionBlockedWires(cancellationToken));
                 timings.ContentionRepairAttempts = LastContentionRepairAttemptCount;
                 timings.ContentionRepairAccepts = LastContentionRepairAcceptCount;
+                timings.ContentionRepairNodesExpanded = LastContentionRepairNodesExpanded;
             }
         }
         RememberPersistentCascadeFailures(cancellationToken);

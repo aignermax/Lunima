@@ -1269,6 +1269,8 @@
   "Routing.Connection.EffectiveStyleFormat": "Auto (efectivo: {0})",
   "Routing.Connection.FreezeRoute": "Congelar ruta",
   "Routing.Connection.BatchApply": "Se aplica a {0} conexiones seleccionadas",
+  "Routing.Connection.AutoLockMissed": "Auto no puede mantener el bloqueo de longitud de {0:F2} µm en {1} de {2} rutas (el haz de arcos necesita ≥ {3:F1} µm). Vuelva a igualar el grupo o libere el bloqueo.",
+  "Routing.Connection.AutoLockMissedNoRoom": "Auto no puede mantener el bloqueo de longitud de {0:F2} µm en {1} de {2} rutas (no hay espacio para arcos ni meandros con esa longitud). Vuelva a igualar el grupo o libere el bloqueo.",
   "Routing.Connection.Radius": "Radio",
   "Routing.Connection.Style": "Estilo:",
   "Routing.Connection.Title": "Enrutamiento:",

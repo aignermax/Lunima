@@ -43,6 +43,24 @@ public class RoutingPassTimingsTests
         timings.OrderingAttempts.ShouldBe(manager.LastOrderingAttemptCount);
         timings.ContentionRepairAttempts.ShouldBe(manager.LastContentionRepairAttemptCount);
         timings.ContentionRepairAccepts.ShouldBe(manager.LastContentionRepairAcceptCount);
+        timings.ContentionRepairNodesExpanded.ShouldBe(manager.LastContentionRepairNodesExpanded);
+    }
+
+    [Fact]
+    public void AppliedDiagnostics_PublishTheRepairCounters_ToTheLiveManager()
+    {
+        var manager = CreateManager(out _, out _);
+
+        manager.ApplyCompletedDiagnostics(new RoutingPassTimings
+        {
+            ContentionRepairAttempts = 3,
+            ContentionRepairAccepts = 1,
+            ContentionRepairNodesExpanded = 4_200_000,
+        });
+
+        manager.LastContentionRepairAttemptCount.ShouldBe(3);
+        manager.LastContentionRepairAcceptCount.ShouldBe(1);
+        manager.LastContentionRepairNodesExpanded.ShouldBe(4_200_000);
     }
 
     [Fact]
@@ -66,6 +84,7 @@ public class RoutingPassTimingsTests
         timings.ContentionRepairAttempts.ShouldBe(0,
             "the contention-repair pass never ran — a stale count from an earlier pass must not leak in");
         timings.ContentionRepairAccepts.ShouldBe(0);
+        timings.ContentionRepairNodesExpanded.ShouldBe(0);
         timings.MeasuredPassSum.ShouldBeLessThanOrEqualTo(timings.Total);
     }
 
