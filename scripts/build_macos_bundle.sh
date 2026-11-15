@@ -134,9 +134,13 @@ else
 fi
 
 # Ship the repo's example designs beside the executable: the app discovers
-# examples/ by walking up from its base directory (Contents/MacOS/).
+# examples/ by walking up from its base directory (Contents/MacOS/). The publish
+# output already holds examples/*.lun (csproj Content), so merge the folder's
+# contents; copying the folder itself would nest it at examples/examples/ and
+# leave examples/isa/ (the ISA playground samples) out of reach.
 if [[ -d "${REPO_ROOT}/examples" ]]; then
-  cp -R "${REPO_ROOT}/examples" "${MACOS_DIR}/examples"
+  mkdir -p "${MACOS_DIR}/examples"
+  cp -R "${REPO_ROOT}/examples/." "${MACOS_DIR}/examples/"
   echo "      Bundled examples/ into Contents/MacOS/."
 else
   echo "      NOTE: No examples/ directory at ${REPO_ROOT}; skipping examples."

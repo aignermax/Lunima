@@ -1,0 +1,89 @@
+name: Packaged app smoke
+
+# Starts the binary a user downloads on every OS, published by the same scripts as
+# Build_Exe.yaml, and checks the headless agent CLI and the shipped bundle content
+# (scripts/smoke_published_app.py). Covers every layout the release smoke-tests, so a
+# change here is proven before it can block a release.
+on:
+  pull_request:
+    paths:
+      - 'CAP.Desktop/**'
+      - 'scripts/build_macos_bundle.sh'
+      - 'scripts/publish_desktop.sh'
+      - 'scripts/smoke_published_app.py'
+      - '.github/workflows/Build_Exe.yaml'
+      - '.github/workflows/PackagedAppSmoke.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packaged-app-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+
+jobs:
+  smoke:
+    name: Smoke ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64 portable
+            os: ubuntu-latest
+            rid: linux-x64
+            layout: portable
+            binary: publish/Lunima
+          - name: win-x64 portable
+            os: windows-latest
+            rid: win-x64
+            layout: portable
+            binary: publish/Lunima.exe
+          - name: win-x64 MSI folder
+            os: windows-latest
+            rid: win-x64
+            layout: msi
+            binary: publish/CAP.Desktop.exe
+          - name: osx-arm64 app
+            os: macos-latest
+            rid: osx-arm64
+            layout: macos
+            binary: dist/Lunima.app/Contents/MacOS/CAP.Desktop
+          # Cross-compiled on the Apple-Silicon runner exactly like the release, started
+          # through Rosetta 2 (an explicit skip warning when the runner has none).
+          - name: osx-x64 app (Rosetta 2)
+            os: macos-latest
+            rid: osx-x64
+            layout: macos
+            binary: dist/Lunima.app/Contents/MacOS/CAP.Desktop
+            smoke_args: --rosetta
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Publish ${{ matrix.layout }} ${{ matrix.rid }} (as Build_Exe.yaml)
+        if: matrix.layout != 'macos'
+        run: bash scripts/publish_desktop.sh ${{ matrix.layout }} ${{ matrix.rid }} publish
+        shell: bash
+
+      - name: Build Lunima.app ${{ matrix.rid }} (as Build_Exe.yaml)
+        if: matrix.layout == 'macos'
+        run: bash scripts/build_macos_bundle.sh ${{ matrix.rid }}
+
+      - name: Smoke-test the packaged app
+        run: python -I scripts/smoke_published_app.py ${{ matrix.binary }} ${{ matrix.smoke_args }}

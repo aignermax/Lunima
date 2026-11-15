@@ -116,3 +116,16 @@ commit) decide what runs:
 
 When in doubt the selection runs everything. Each push to `dev` runs the full suite
 including Heavy, so anything a PR run skipped is caught right after merge.
+
+## Packaged-app smoke
+
+`scripts/smoke_published_app.py <app-binary>` starts the binary a user downloads from a
+sandboxed copy of its bundle, with a sandboxed HOME/XDG/APPDATA. It checks `agent tools`,
+that the bundle holds every design in `examples/examples.json` plus the ISA samples and openEBL
+scripts, `get_design_summary` on a shipped design and one `simulate` run. Every stdout must be
+pure JSON. `Build_Exe.yaml` runs it on each artifact before upload; osx-x64 runs through
+Rosetta 2 and is skipped with a warning when Rosetta is missing.
+`PackagedAppSmoke.yaml` runs the same publish scripts (`scripts/publish_desktop.sh`,
+`scripts/build_macos_bundle.sh`) and the smoke on PRs that touch packaging. Locally on
+Linux: `bash scripts/publish_desktop.sh portable linux-x64 /tmp/lunima` then
+`python3 -I scripts/smoke_published_app.py /tmp/lunima/Lunima`.
