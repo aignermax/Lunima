@@ -8,6 +8,11 @@ on:
       - 'CAP.Avalonia/Services/Solvers/**'
       - 'CAP.Avalonia/Services/AgentBridge/Registration/**'
       - 'CAP-DataAccess/Persistence/**'
+      - 'CAP.Desktop/**'
+      - 'CAP.Avalonia/App.axaml.cs'
+      - 'CAP.Avalonia/Services/AgentBridge/Headless/**'
+      - 'CAP.Avalonia/Services/AgentBridge/Protocol/**'
+      - 'CAP.Avalonia/Services/AgentBridge/Transport/**'
       - 'CAP-DataAccess/Components/ComponentDraftMapper/BundledPdkPaths.cs'
       - 'CAP-DataAccess/Components/ComponentDraftMapper/PdkJsonSaver.cs'
       - 'UnitTests/Architecture/BundledPdkDirectoryAliasTests.cs'
@@ -16,6 +21,7 @@ on:
       - 'UnitTests/Solvers/**'
       - 'UnitTests/AgentBridge/ClaudeCliProcessLifetimeTests.cs'
       - 'UnitTests/AgentBridge/ClaudeBatchCli*.cs'
+      - 'UnitTests/AgentBridge/Headless/McpProcess/**'
       - 'UnitTests/Export/PdkResolution/PdkResolutionProcessLifetimeTests.cs'
       - 'UnitTests/Export/*ProcessLifetimeTests.cs'
       - 'UnitTests/Export/GdsCoordinateInterpreterTests.cs'
@@ -59,13 +65,16 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Build the lunima executable for the stdio MCP journey
+        run: dotnet build CAP.Desktop/CAP.Desktop.csproj
+
       - name: Exercise actual cmd and bat forwarding with owned child processes
         env:
           LUNIMA_TEST_PYTHON3: ${{ steps.python.outputs.python-path }}
         run: |
           New-Item -ItemType Directory -Force UnitTests/TestResults | Out-Null
           dotnet test UnitTests/UnitTests.csproj `
-            --filter 'FullyQualifiedName~ClaudeBatchCliArgumentTests|FullyQualifiedName~ClaudeBatchCliLifetimeTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~ControlledSolverCleanupTests|FullyQualifiedName~OwnedProcessCaptureCommandTests|FullyQualifiedName~UvProcessLifetimeTests|FullyQualifiedName~PdkNazcaParserLifetimeTests|FullyQualifiedName~NazcaPreviewProcessLifetimeTests|FullyQualifiedName~GdsScriptProcessLifetimeTests|FullyQualifiedName~GdsCoordinateProcessLifetimeTests|FullyQualifiedName~GdsComparisonProcessLifetimeTests|FullyQualifiedName~GdsCoordinateInterpreterTests|FullyQualifiedName~OwnedToolProcessPublicationTests' `
+            --filter 'FullyQualifiedName~ClaudeBatchCliArgumentTests|FullyQualifiedName~ClaudeBatchCliLifetimeTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~ControlledSolverCleanupTests|FullyQualifiedName~OwnedProcessCaptureCommandTests|FullyQualifiedName~UvProcessLifetimeTests|FullyQualifiedName~PdkNazcaParserLifetimeTests|FullyQualifiedName~NazcaPreviewProcessLifetimeTests|FullyQualifiedName~GdsScriptProcessLifetimeTests|FullyQualifiedName~GdsCoordinateProcessLifetimeTests|FullyQualifiedName~GdsComparisonProcessLifetimeTests|FullyQualifiedName~GdsCoordinateInterpreterTests|FullyQualifiedName~OwnedToolProcessPublicationTests|FullyQualifiedName~McpProcessJourneyTests' `
             --blame-hang --blame-hang-timeout 2m --blame-hang-dump-type none `
             --results-directory UnitTests/TestResults `
             --logger 'trx;LogFileName=windows-batch-cli.trx' `
@@ -87,7 +96,7 @@ jobs:
                       'NazcaPreviewProcessLifetimeTests': 7, 'GdsScriptProcessLifetimeTests': 7,
                       'GdsCoordinateProcessLifetimeTests': 6, 'GdsComparisonProcessLifetimeTests': 4,
                       'GdsCoordinateInterpreterTests': 2, 'OwnedToolProcessPublicationTests': 2,
-                      'OwnedProcessCaptureCommandTests': 4}
+                      'OwnedProcessCaptureCommandTests': 4, 'McpProcessJourneyTests': 1}
           for family, count in expected.items():
               actual = sum(family + '.' in r.attrib['testName'] for r in results)
               assert actual == count, f'{family}: expected {count} executed cases, found {actual}'
@@ -162,12 +171,16 @@ jobs:
           PY
 
       - name: Build native test host
-        run: dotnet build UnitTests/UnitTests.csproj
+        run: |
+          set -euo pipefail
+          dotnet build UnitTests/UnitTests.csproj
+          # McpProcessJourneyTests starts this build of the real `lunima mcp` executable.
+          dotnet build CAP.Desktop/CAP.Desktop.csproj
 
       - name: Exercise real child processes and descendant cleanup
         env:
           LUNIMA_TEST_PYTHON3: ${{ steps.python.outputs.python-path }}
-          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~PdkResolutionProcessLifetimeTests|FullyQualifiedName~UvProcessLifetimeTests|FullyQualifiedName~PdkNazcaParserLifetimeTests|FullyQualifiedName~NazcaPreviewProcessLifetimeTests|FullyQualifiedName~GdsScriptProcessLifetimeTests|FullyQualifiedName~GdsCoordinateProcessLifetimeTests|FullyQualifiedName~GdsComparisonProcessLifetimeTests|FullyQualifiedName~GdsCoordinateInterpreterTests|FullyQualifiedName~OwnedToolProcessPublicationTests
+          PROCESS_FILTER: FullyQualifiedName~SubprocessJsonRunnerTests|FullyQualifiedName~SubprocessDescendantContainmentTests|FullyQualifiedName~OwnedProcessLaunchContractTests|FullyQualifiedName~PythonModeSolverLifecycleTests|FullyQualifiedName~ClaudeCliProcessLifetimeTests|FullyQualifiedName~PdkResolutionProcessLifetimeTests|FullyQualifiedName~UvProcessLifetimeTests|FullyQualifiedName~PdkNazcaParserLifetimeTests|FullyQualifiedName~NazcaPreviewProcessLifetimeTests|FullyQualifiedName~GdsScriptProcessLifetimeTests|FullyQualifiedName~GdsCoordinateProcessLifetimeTests|FullyQualifiedName~GdsComparisonProcessLifetimeTests|FullyQualifiedName~GdsCoordinateInterpreterTests|FullyQualifiedName~OwnedToolProcessPublicationTests|FullyQualifiedName~McpProcessJourneyTests
         run: |
           set -euo pipefail
           dotnet test UnitTests/UnitTests.csproj --no-build --filter "$PROCESS_FILTER" \
@@ -202,7 +215,8 @@ jobs:
           expected = {'UvProcessLifetimeTests': 4, 'PdkNazcaParserLifetimeTests': 5,
                       'NazcaPreviewProcessLifetimeTests': 7, 'GdsScriptProcessLifetimeTests': 7,
                       'GdsCoordinateProcessLifetimeTests': 6, 'GdsComparisonProcessLifetimeTests': 4,
-                      'GdsCoordinateInterpreterTests': 2, 'OwnedToolProcessPublicationTests': 2}
+                      'GdsCoordinateInterpreterTests': 2, 'OwnedToolProcessPublicationTests': 2,
+                      'McpProcessJourneyTests': 1}
           for family, count in expected.items():
               actual = sum(family + '.' in r.attrib['testName'] for r in results)
               assert actual == count, f'{family}: expected {count} executed cases, found {actual}'
