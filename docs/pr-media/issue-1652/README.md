@@ -66,3 +66,24 @@ Local diagnostic logs are in `TestResults/local/` (ignored):
 `tests-20261116-151652-42456.log`, `qa-retry-stacks.txt`, and
 `tests-20261116-152355-8448.log`. Packaged journeys and other operating systems
 were not rerun for this test-only retry. Full-suite QA remains required.
+
+## QA runner configuration retry (2026-11-16)
+
+The next QA report again recorded a memory guard abort (1,989 MB free,
+2,048 MB required). `.agent.toml` still invoked `dotnet test` directly.
+Its default test command now uses `scripts/run_tests.py`, applying the existing
+two-processor setting, serial build, expensive-test exclusions, and shared
+worktree lock to automated QA as well. This does not impose a memory cap or
+weaken the external memory guard.
+
+- `python -m unittest scripts.tests.test_run_tests`: 10 passed. New regressions
+  pin the QA command and verify across real Python processes that a held lock
+  prevents launching tests and becomes available again after release.
+- `python scripts/check_source_size.py`: passed (4,408 files).
+- `git diff --check`: passed.
+- Both requested `tools/` commands were attempted again; neither file exists.
+- `python scripts/run_tests.py`: refused to start because another QA run held
+  the shared lock. That run was identified in the separate QA checkout and
+  left untouched. No new .NET build or full-suite pass is claimed for this retry.
+
+Production export code and packaged verification artifacts are unchanged.

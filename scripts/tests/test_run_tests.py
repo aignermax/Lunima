@@ -19,6 +19,31 @@ SPEC.loader.exec_module(runner)
 
 
 class TestRunnerTests(unittest.TestCase):
+    def test_qa_uses_the_constrained_shared_runner(self):
+        config = (RUNNER.parents[1] / ".agent.toml").read_text(encoding="utf-8")
+        self.assertIn("test_cmd = 'python scripts/run_tests.py'", config.splitlines())
+
+    def test_concurrent_run_is_rejected_before_launch_and_lock_is_released(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(runner.tempfile, "gettempdir", return_value=directory):
+            child = (
+                "import importlib.util, sys; from unittest import mock; "
+                f"spec = importlib.util.spec_from_file_location('runner', {str(RUNNER)!r}); "
+                "runner = importlib.util.module_from_spec(spec); spec.loader.exec_module(runner); "
+                f"runner.tempfile.gettempdir = lambda: {directory!r}; "
+                "launch = mock.Mock(return_value=0); runner.run = launch; "
+                "code = runner.main([]); "
+                "assert launch.call_count == int(code == 0); sys.exit(code)"
+            )
+            with runner.test_lock():
+                blocked = subprocess.run([sys.executable, "-c", child],
+                                         capture_output=True, text=True, timeout=10)
+                self.assertEqual(2, blocked.returncode, blocked.stderr)
+                self.assertIn("shared lock", blocked.stderr)
+            released = subprocess.run([sys.executable, "-c", child],
+                                      capture_output=True, text=True, timeout=10)
+            self.assertEqual(0, released.returncode, released.stderr)
+
     def test_aborted_run_cannot_be_masked_by_a_passing_summary(self):
         self.assertEqual(137, self.run_child(137, "Passed! Failed: 0, Passed: 1, Total: 1"))
 
