@@ -1,4 +1,6 @@
 {
+  "Export.ScriptWarnings.Placeholders": "GDS 已写入，但包含占位单元。请在导出所用的 Python 环境中安装 klayout siepic_ebeam_pdk SiEPIC，然后重新导出。请查看错误控制台。",
+  "Export.ScriptWarnings.Warning": "GDS 导出产生了警告。制造前请检查错误控制台。",
   "Load.VerticalPortConnectionsDropped": "已跳过 {0} 条连接：垂直光纤端口不能连接芯片平面内的波导。详情请查看错误控制台。",
   "Tutorial.Process.Title": "学习工艺",
   "Tutorial.Process.NewProjectBody": "本章使用 Demo SOI 220nm。是否新建独立的学习项目？切换前可以保存当前工作。",

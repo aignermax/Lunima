@@ -1,19 +1,66 @@
-"""Check that the supported test entry point keeps local expensive work opt-in."""
+"""Check constrained test selection and honest reporting of incomplete runs."""
+import contextlib
+import importlib.util
+import io
 import json
+import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 import tomllib
 import unittest
+from unittest import mock
 
 
 RUNNER = pathlib.Path(__file__).resolve().parents[1] / "run_tests.py"
+SPEC = importlib.util.spec_from_file_location("run_tests", RUNNER)
+runner = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(runner)
 
 
 class TestRunnerTests(unittest.TestCase):
-    def test_agent_qa_uses_guarded_test_entry_point(self):
+    def test_qa_uses_the_constrained_shared_runner(self):
         config = tomllib.loads((RUNNER.parents[1] / ".agent.toml").read_text(encoding="utf-8"))
         self.assertEqual("python scripts/run_tests.py", config["test_cmd"])
+
+    def test_concurrent_run_is_rejected_before_launch_and_lock_is_released(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(runner.tempfile, "gettempdir", return_value=directory):
+            child = (
+                "import importlib.util, sys; from unittest import mock; "
+                f"spec = importlib.util.spec_from_file_location('runner', {str(RUNNER)!r}); "
+                "runner = importlib.util.module_from_spec(spec); spec.loader.exec_module(runner); "
+                f"runner.tempfile.gettempdir = lambda: {directory!r}; "
+                "launch = mock.Mock(return_value=0); runner.run = launch; "
+                "code = runner.main(['--lock-timeout', '1']); "
+                "assert launch.call_count == int(code == 0); sys.exit(code)"
+            )
+            with runner.test_lock():
+                blocked = subprocess.run([sys.executable, "-c", child],
+                                         capture_output=True, text=True, timeout=10)
+                self.assertEqual(2, blocked.returncode, blocked.stderr)
+                self.assertIn("Timed out after 1s waiting for shared test lock", blocked.stderr)
+            released = subprocess.run([sys.executable, "-c", child],
+                                      capture_output=True, text=True, timeout=10)
+            self.assertEqual(0, released.returncode, released.stderr)
+
+    def test_aborted_run_cannot_be_masked_by_a_passing_summary(self):
+        self.assertEqual(137, self.run_child(137, "Passed! Failed: 0, Passed: 1, Total: 1"))
+
+    def test_zero_exit_without_executed_tests_is_not_success(self):
+        self.assertEqual(1, self.run_child(0, "Test run aborted: insufficient memory"))
+
+    def test_completed_passing_run_is_success(self):
+        self.assertEqual(0, self.run_child(0, "Passed! Failed: 0, Passed: 1, Total: 1"))
+
+    def run_child(self, exit_code, output):
+        command = [sys.executable, "-c", f"print({output!r}); raise SystemExit({exit_code})"]
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(runner, "ROOT", pathlib.Path(directory)), \
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
+            return runner.run(command, os.environ.copy(), timeout=10)
 
     def dry_run(self, *args):
         result = subprocess.run([sys.executable, str(RUNNER), "--dry-run", *args],

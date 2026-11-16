@@ -29,4 +29,7 @@ public class GdsExportResult
     /// Error message if export failed.
     /// </summary>
     public string? ErrorMessage { get; init; }
+
+    /// <summary>Warnings emitted by the export script, including degraded geometry.</summary>
+    public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
 }

@@ -15,6 +15,15 @@ public static class ExportWarningMessages
     /// <summary>Named individually before a message falls back to "… and N more".</summary>
     private const int MaxNamedConnections = 5;
 
+    /// <summary>Summarizes script warnings; original diagnostics remain available in the error console.</summary>
+    public static string? BuildScriptWarnings(IReadOnlyList<string> warnings)
+    {
+        if (warnings.Count == 0) return null;
+        var placeholders = warnings.Any(warning => warning.Contains("stub box", StringComparison.Ordinal));
+        return LocalizationService.Instance.Translate(placeholders
+            ? "Export.ScriptWarnings.Placeholders" : "Export.ScriptWarnings.Warning");
+    }
+
     /// <summary>
     /// Builds the "N connections skipped" warning for connections/frozen paths left out of
     /// the geometry (placeholder or invalid route), or null when nothing was skipped.

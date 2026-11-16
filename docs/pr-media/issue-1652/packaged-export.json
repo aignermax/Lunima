@@ -1,0 +1,156 @@
+[
+  {
+    "environment": "placeholder",
+    "bytes": 8778,
+    "warnings": [
+      "[Lunima] WARN: SiEPIC real-geometry upgrade skipped (No module named 'klayout'); stub boxes kept.",
+      "[Lunima] WARN: DevRec emission skipped (No module named 'klayout').",
+      "[Lunima] WARN: Waveguide spine emission skipped (No module named 'klayout')."
+    ],
+    "status": "Script and GDS exported with warnings:\r\n[Lunima] WARN: SiEPIC real-geometry upgrade skipped (No module named 'klayout'); stub boxes kept.\r\n[Lunima] WARN: DevRec emission skipped (No module named 'klayout').\r\n[Lunima] WARN: Waveguide spine emission skipped (No module named 'klayout').",
+    "cells": [
+      {
+        "name": "Waveguide_5",
+        "shapes": 1,
+        "children": 0,
+        "layers": [
+          "1/0"
+        ]
+      },
+      {
+        "name": "Waveguide_4",
+        "shapes": 9,
+        "children": 0,
+        "layers": [
+          "1/0"
+        ]
+      },
+      {
+        "name": "Waveguide_3",
+        "shapes": 6,
+        "children": 0,
+        "layers": [
+          "1/0"
+        ]
+      },
+      {
+        "name": "Waveguide_2",
+        "shapes": 1,
+        "children": 0,
+        "layers": [
+          "1/0"
+        ]
+      },
+      {
+        "name": "Waveguide_1",
+        "shapes": 1,
+        "children": 0,
+        "layers": [
+          "1/0"
+        ]
+      },
+      {
+        "name": "Waveguide_0",
+        "shapes": 1,
+        "children": 0,
+        "layers": [
+          "1/0"
+        ]
+      },
+      {
+        "name": "ebeam_gc_te1550",
+        "shapes": 3,
+        "children": 0,
+        "layers": [
+          "1/0",
+          "1/10"
+        ]
+      }
+    ]
+  },
+  {
+    "environment": "real",
+    "bytes": 138434,
+    "warnings": [],
+    "status": "Script and GDS exported successfully",
+    "cells": [
+      {
+        "name": "Waveguide_5",
+        "shapes": 7,
+        "children": 0,
+        "layers": [
+          "1/0",
+          "1/10",
+          "68/0",
+          "1/99"
+        ]
+      },
+      {
+        "name": "Waveguide_4",
+        "shapes": 15,
+        "children": 0,
+        "layers": [
+          "1/0",
+          "1/10",
+          "68/0",
+          "1/99"
+        ]
+      },
+      {
+        "name": "Waveguide_3",
+        "shapes": 12,
+        "children": 0,
+        "layers": [
+          "1/0",
+          "1/10",
+          "68/0",
+          "1/99"
+        ]
+      },
+      {
+        "name": "Waveguide_2",
+        "shapes": 7,
+        "children": 0,
+        "layers": [
+          "1/0",
+          "1/10",
+          "68/0",
+          "1/99"
+        ]
+      },
+      {
+        "name": "Waveguide_1",
+        "shapes": 7,
+        "children": 0,
+        "layers": [
+          "1/0",
+          "1/10",
+          "68/0",
+          "1/99"
+        ]
+      },
+      {
+        "name": "Waveguide_0",
+        "shapes": 7,
+        "children": 0,
+        "layers": [
+          "1/0",
+          "1/10",
+          "68/0",
+          "1/99"
+        ]
+      },
+      {
+        "name": "ebeam_gc_te1550",
+        "shapes": 8,
+        "children": 3,
+        "layers": [
+          "1/0",
+          "1/10",
+          "68/0",
+          "81/0"
+        ]
+      }
+    ]
+  }
+]

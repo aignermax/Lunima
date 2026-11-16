@@ -153,6 +153,10 @@ public class GdsExportService : IGdsExportSession
             var gdsPath = Path.ChangeExtension(scriptPath, ".gds");
             var (exitCode, output, error) = await ExecutePythonScriptAsync(scriptPath, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            var warnings = error.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.Trim())
+                .Where(line => line.StartsWith("[Lunima] WARN:", StringComparison.Ordinal))
+                .ToArray();
 
             if (exitCode == 0 && File.Exists(gdsPath))
             {
@@ -161,7 +165,10 @@ public class GdsExportService : IGdsExportSession
                     ScriptPath = scriptPath,
                     GdsPath = gdsPath,
                     Success = true,
-                    Status = $"Script and GDS exported successfully"
+                    Warnings = warnings,
+                    Status = warnings.Length == 0 ? "Script and GDS exported successfully"
+                        : "Script and GDS exported with warnings:" + Environment.NewLine
+                            + string.Join(Environment.NewLine, warnings)
                 };
             }
 
@@ -171,6 +178,7 @@ public class GdsExportService : IGdsExportSession
                 ScriptPath = scriptPath,
                 Success = false,
                 Status = "GDS generation failed",
+                Warnings = warnings,
                 ErrorMessage = $"Python script execution failed (exit code {exitCode}): {errorMsg}"
             };
         }

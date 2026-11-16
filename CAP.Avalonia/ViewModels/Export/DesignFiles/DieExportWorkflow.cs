@@ -44,6 +44,7 @@ public sealed class DieExportWorkflow
         var warnings = new List<string>();
         var skippedConnections = new List<string>();
         var failures = new List<string>();
+        var scriptWarnings = new List<string>();
         foreach (var die in dies)
         {
             var name = $"{stem}_{SimpleNazcaExporter.DieCellName(die)}";
@@ -87,6 +88,8 @@ public sealed class DieExportWorkflow
                         try
                         {
                             var result = await GdsExport.ExportScriptToGdsAsync(path, exportRequestId);
+                            scriptWarnings.AddRange(result.Warnings);
+                            foreach (var warning in result.Warnings) _errorConsole?.LogWarning(warning);
                             if (result.Success && !string.IsNullOrWhiteSpace(result.GdsPath)) gdsCount++;
                             else
                             {
@@ -112,7 +115,8 @@ public sealed class DieExportWorkflow
         var status = string.Format(CultureInfo.CurrentCulture, localization.Translate("Dies.Export.Summary"), written.Count, gdsCount);
         if (gdsSkipped) status += localization.Translate("Dies.Export.GdsSkipped");
         if (failures.Count > 0) status += string.Format(CultureInfo.CurrentCulture, localization.Translate("Dies.Export.Failures"), failures.Count, string.Join("; ", failures));
-        updateStatus?.Invoke(NazcaExportWorkflow.WithWarnings(status, skippedWarning, sourceWarning));
+        updateStatus?.Invoke(NazcaExportWorkflow.WithWarnings(status, skippedWarning, sourceWarning,
+            ExportWarningMessages.BuildScriptWarnings(scriptWarnings)));
     }
 
 }
