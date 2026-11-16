@@ -46,6 +46,9 @@ KLAYOUT_MISSING = "KLayout was not found"
 HEURISTIC_PIN_PREFIX = "heur_"
 MESSAGE_LIMIT = 600
 SIDE_TIMEOUT_SECONDS = 600
+# PythonDiscoveryService.GetPackageVersion gives `import nazca` this long before it gives up.
+APP_NAZCA_PROBE_SECONDS = 20
+PROBE_ATTEMPTS = 2
 
 
 @dataclass
@@ -207,6 +210,17 @@ def export_ring(app: InstalledApp) -> tuple:
     return (Path(gds) if gds and Path(gds).is_file() else None), messages, launch
 
 
+def gds_by_hand(app: InstalledApp, python: Optional[str]) -> Optional[Path]:
+    """Not the CLI: runs the Nazca script export_gds wrote with ``python``; the GDS or None."""
+    script = app.sandbox / "export" / EXPORT_SCRIPT_NAME
+    if not python or not script.is_file():
+        return None
+    subprocess.run([python, script.name], cwd=script.parent, capture_output=True,
+                   timeout=SIDE_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL)
+    gds = script.with_suffix(".gds")
+    return gds if gds.is_file() else None
+
+
 def foundry_drc(app: InstalledApp, gds: Path, klayout: Optional[str]) -> Outcome:
     """The shipped Cornerstone deck on ``gds``; retries with KLAYOUT when the app asks for it."""
     arguments = json.dumps({"deck": CORNERSTONE_DECK, "gds_path": str(gds)})
@@ -257,6 +271,27 @@ def openebl_side_measurement(app: InstalledApp, gds: Optional[Path], python: Opt
                    seconds=time.monotonic() - started)
 
 
+def nazca_probe(app: InstalledApp, python: Optional[str]) -> Outcome:
+    """The app's own Nazca check (``import nazca``, 20 s) repeated in the app's environment."""
+    name = "3e diag: app's import-nazca probe"
+    if not python:
+        return Outcome(name, "CANNOT_RUN", "no venv / --python")
+    attempts = []
+    for _ in range(PROBE_ATTEMPTS):
+        started = time.monotonic()
+        try:
+            done = subprocess.run([python, "-c", "import nazca; print(nazca.__version__)"], cwd=app.sandbox,
+                                  env=app.environment, capture_output=True, text=True,
+                                  timeout=SIDE_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL)
+            code, tail = done.returncode, (done.stdout + done.stderr).strip().splitlines()[-3:]
+        except subprocess.TimeoutExpired:
+            code, tail = None, ["no result"]
+        attempts.append((code, time.monotonic() - started, tail))
+    ok = all(code == 0 and seconds < APP_NAZCA_PROBE_SECONDS for code, seconds, _ in attempts)
+    detail = "; ".join(f"exit {code} after {seconds:.1f} s: {' | '.join(tail)}" for code, seconds, tail in attempts)
+    return Outcome(name, "PASS" if ok else "FAIL", clip(detail))
+
+
 def journey_export(app: InstalledApp, python: Optional[str], klayout: Optional[str]) -> List[Outcome]:
     """Journey 3: export to GDS, then the Cornerstone and openEBL pre-flights."""
     gds, messages, launch = export_ring(app)
@@ -264,9 +299,13 @@ def journey_export(app: InstalledApp, python: Optional[str], klayout: Optional[s
                      f"gds {gds.name} ({gds.stat().st_size} B)" if gds
                      else f"no GDS produced (exit {launch.exit_code}){smoke.excerpt('stderr', launch.stderr)}",
                      messages, seconds=launch.seconds)
-    drc = foundry_drc(app, gds, klayout) if gds else Outcome(
-        "3b Cornerstone DRC", "FAIL", "no GDS to check: the export produced none")
-    return [export, drc, openebl_via_cli(app), openebl_side_measurement(app, gds, python)]
+    outcomes = [export]
+    if gds is None and (gds := gds_by_hand(app, python)) is not None:
+        outcomes.append(Outcome("3a' GDS by hand from the exported script", "PASS",
+                                f"python {EXPORT_SCRIPT_NAME} wrote {gds.name}; 3b/3d below check that GDS"))
+    outcomes.append(foundry_drc(app, gds, klayout) if gds else Outcome(
+        "3b Cornerstone DRC", "FAIL", "no GDS to check: the export produced none"))
+    return outcomes + [openebl_via_cli(app), openebl_side_measurement(app, gds, python), nazca_probe(app, python)]
 
 
 def run_journeys(app: InstalledApp, journeys: Sequence[str], gds: Path,

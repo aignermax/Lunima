@@ -34,12 +34,14 @@ env:
   # OpenEblToolchainRequirements.PipInstallCommand, verbatim, then the PyPI package names.
   APP_OPENEBL_PIP: klayout siepic_ebeam_pdk SiEPIC-Tools
   PYPI_OPENEBL_PIP: klayout siepic_ebeam_pdk SiEPIC
+  # klayout.de/build.html: standalone arm64 bundle for the runner's macOS 26 (Homebrew's cask is disabled).
+  KLAYOUT_MAC_DMG: https://www.klayout.org/downloads/MacOS/ARM64/arm64ST-klayout-0.30.13-macOS-Tahoe-C32-1-qt5MP-RsysPsys.dmg
 
 jobs:
   journeys:
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -143,6 +145,7 @@ jobs:
 
       - name: Provision Nazca in a venv (what export_gds asks for)
         continue-on-error: true
+        timeout-minutes: 20
         run: |
           ${{ matrix.py }} -m venv "$VENV"
           vpy="$VENV/bin/python"; [ -x "$VENV/Scripts/python.exe" ] && vpy="$VENV/Scripts/python.exe"
@@ -160,6 +163,7 @@ jobs:
 
       - name: Provision the openEBL packages the app names
         continue-on-error: true
+        timeout-minutes: 15
         run: |
           if "$VPY" -m pip install -q $APP_OPENEBL_PIP > "$RUNNER_TEMP/pip-app.log" 2>&1; then
             echo "pip install $APP_OPENEBL_PIP (as the app shows it): ok" | tee -a "$OUT/installs.txt"
@@ -171,29 +175,41 @@ jobs:
 
       - name: Install KLayout (apt)
         continue-on-error: true
+        timeout-minutes: 10
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq klayout > /dev/null
           echo "apt-get install klayout: $(klayout -v)" | tee -a "$OUT/installs.txt"
           echo "KLAYOUT_EXE=$(command -v klayout)" >> "$GITHUB_ENV"
 
-      - name: Install KLayout (Homebrew cask)
-        continue-on-error: true
+      - name: Install KLayout (Homebrew cask, else the klayout.org dmg)
         if: runner.os == 'macOS'
+        continue-on-error: true
+        timeout-minutes: 15
         run: |
-          brew install --cask klayout > /dev/null
-          exe=$(find /Applications/KLayout /Applications -maxdepth 4 -path '*klayout.app/Contents/MacOS/klayout' -type f 2>/dev/null | head -1)
-          echo "brew install --cask klayout: $exe (on PATH: $(command -v klayout || echo no))" | tee -a "$OUT/installs.txt"
+          if brew install --cask klayout > "$RUNNER_TEMP/brew.log" 2>&1; then
+            echo "brew install --cask klayout: ok" | tee -a "$OUT/installs.txt"
+          else
+            echo "brew install --cask klayout: FAILED — $(grep -m1 -iE 'disabled|error'\|error' "$RUNNER_TEMP/brew.log")" | tee -a "$OUT/installs.txt"
+            curl -sSfL -o "$RUNNER_TEMP/klayout.dmg" "$KLAYOUT_MAC_DMG"
+            hdiutil attach -nobrowse -readonly -mountpoint /Volumes/KLayoutDmg "$RUNNER_TEMP/klayout.dmg" > /dev/null
+            cp -R /Volumes/KLayoutDmg/klayout.app /Applications/
+            hdiutil detach /Volumes/KLayoutDmg > /dev/null
+            echo "klayout.org dmg $(basename "$KLAYOUT_MAC_DMG"): copied klayout.app to /Applications" | tee -a "$OUT/installs.txt"
+          fi
+          exe=$(find /Applications -maxdepth 4 -path '*klayout.app/Contents/MacOS/klayout' -type f 2>/dev/null | head -1)
+          echo "klayout executable: ${exe:-none} (on PATH: $(command -v klayout || echo no)); $("$exe" -b -v 2>&1 | head -1)" | tee -a "$OUT/installs.txt"
           echo "KLAYOUT_EXE=$exe" >> "$GITHUB_ENV"
 
       - name: Install KLayout (Chocolatey)
         continue-on-error: true
+        timeout-minutes: 12
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           choco install klayout -y --no-progress | Select-Object -Last 3
-          $roots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:APPDATA, $env:LOCALAPPDATA, $env:ChocolateyInstall)
-          $exe = $roots | Where-Object { $_ } | ForEach-Object { Get-ChildItem $_ -Recurse -Filter klayout_app.exe -ErrorAction SilentlyContinue } | Select-Object -First 1
+          $roots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:APPDATA, $env:LOCALAPPDATA, "$env:ChocolateyInstall/lib/klayout")
+          $exe = $roots | Where-Object { $_ -and (Test-Path $_) } | ForEach-Object { Get-ChildItem $_ -Recurse -Depth 3 -Filter klayout_app.exe -ErrorAction SilentlyContinue } | Select-Object -First 1
           $onPath = (Get-Command klayout_app, klayout -ErrorAction SilentlyContinue | Select-Object -First 1).Source
           "choco install klayout: $($exe.FullName) (on PATH: $(if ($onPath) { $onPath } else { 'no' }))" | Tee-Object -Append "$env:OUT/installs.txt"
           "KLAYOUT_EXE=$($exe.FullName)" >> $env:GITHUB_ENV
