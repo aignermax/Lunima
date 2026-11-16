@@ -7,10 +7,19 @@
     "critic"
   ],
   "pr": null,
-  "applied": {},
-  "created": [],
-  "summary": "",
-  "critic_summary": "",
+  "applied": {
+    "O:photonic-computing-course-ladder": 1611,
+    "S:installed-release-pilot-journeys": 1647,
+    "X-2026-w47-openebl-outcome": 1645,
+    "X-2026-w47-public-footprint": 1646
+  },
+  "created": [
+    "X-2026-w47-openebl-outcome",
+    "X-2026-w47-public-footprint",
+    "S:installed-release-pilot-journeys"
+  ],
+  "summary": "All 15 entries this week are public, indirect evidence (E1) or agent inference (E0); discovery still has no E2 or E3 entry and no conversation toward the Q1 target of 3–5, and the external-contact approvals from w44–w46 are unanswered. The agent direction lost ground as a differentiator: GDSFactory+ shipped an MCP server (2026-01) and a verify-before-commit agent mode (2026-03), and the evidence backs only the need for a review surface (a research agent reached about 57 % end-to-end success and needed human checks at every stage). Semantic GDS reconstruction narrowed: three competitors, like Lunima's rung 1, already turn a foreign GDS into a black box with ports, and nobody was found asking for routes or sub-components. The most concrete friction found is on the design-to-fab side (a foundry plans 2–5 DRC iterations per MPW design), though incumbent DRC decks already cover its rule-checkable part; no course teaching digital, logic-level photonic computing turned up, so the education bet remains untested. Rung 8's outputs will be simulated (E0) until someone outside checks a verdict. Record gaps: the w44–w46 experiment files are missing from discovery/experiments/, and docs/ROADMAP.md cites a DR-0002 that does not exist in discovery/decisions/.",
+  "critic_summary": "None of the five items rests on E2 or E3 evidence. None can produce demand evidence on its own: each is an E0/E1 lookup or internal QA. Drop O:first-foundry-submission. Its 'friction' is a foundry describing its own planned DRC service (customer edits and manual staff inspection included) at a fab whose PDK Lunima cannot use; incumbent tools (KLayout DRC via gdsfactory, PhotonForge, openEBL's automated check on every submission PR) already catch the rule-checkable part; and Lunima already ships the pre-flight, so opening it would confirm work already done, not discover anything. As pre-registered, X-2026-w47-openebl-outcome can barely fail: Lunima's pre-flight is a vendored port of the openEBL-2026-10 repository's own verification scripts, and re-export round-trips are not counted. The external validation worth pre-registering is openEBL's measurement of the fabricated device against Lunima's simulation. The public-footprint audit is a third open test of the assumption #1609 and #1620 already test; it looks only at this repo's issue tracker and reads 'no outside issues' as 'H0 weakened'. The installed-release spike re-tests what the #1635 release smoke already runs on all three OSes, and its CLI-on-CI method cannot see GUI failures such as #1155 or a missing Python/KLayout stack. The course ladder can stay open at no cost, but its only cited support is a quantum-optics course, and the likeliest reason no course teaches digital photonic logic is that the field considers it impractical (Miller, Nature Photonics 2010), not that a gap is waiting.",
   "notes": [
     "created the discovery skeleton (10 files)"
   ]
