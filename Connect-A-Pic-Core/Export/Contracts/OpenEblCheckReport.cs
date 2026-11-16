@@ -10,7 +10,7 @@ public enum OpenEblCheckStatus
     Failed,
 
     /// <summary>
-    /// No Python interpreter with klayout / siepic_ebeam_pdk / SiEPIC-Tools could be found
+    /// No Python interpreter with klayout / siepic_ebeam_pdk / SiEPIC could be found
     /// or probed. The report carries an actionable message naming the pip packages.
     /// </summary>
     ToolchainMissing,

@@ -13,7 +13,8 @@
 # failing run names the rules instead of just counting them.
 #
 # Usage: python openebl_verification.py <file.gds>
-# Requires: klayout, SiEPIC-Tools (import SiEPIC), siepic_ebeam_pdk.
+# Requires (pip): klayout siepic_ebeam_pdk SiEPIC
+# (SiEPIC is the PyPI name of the SiEPIC-Tools project; "SiEPIC-Tools" is not on PyPI.)
 #
 # Lunima's OpenEblSubmissionChecker service and the UnitTests/Export/OpenEbl tests
 # both load THIS file — edit it here only, never inline a copy elsewhere.
