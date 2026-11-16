@@ -1,15 +1,41 @@
-"""Check that the supported test entry point keeps local expensive work opt-in."""
+"""Check constrained test selection and honest reporting of incomplete runs."""
+import contextlib
+import importlib.util
+import io
 import json
+import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 import unittest
+from unittest import mock
 
 
 RUNNER = pathlib.Path(__file__).resolve().parents[1] / "run_tests.py"
+SPEC = importlib.util.spec_from_file_location("run_tests", RUNNER)
+runner = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(runner)
 
 
 class TestRunnerTests(unittest.TestCase):
+    def test_aborted_run_cannot_be_masked_by_a_passing_summary(self):
+        self.assertEqual(137, self.run_child(137, "Passed! Failed: 0, Passed: 1, Total: 1"))
+
+    def test_zero_exit_without_executed_tests_is_not_success(self):
+        self.assertEqual(1, self.run_child(0, "Test run aborted: insufficient memory"))
+
+    def test_completed_passing_run_is_success(self):
+        self.assertEqual(0, self.run_child(0, "Passed! Failed: 0, Passed: 1, Total: 1"))
+
+    def run_child(self, exit_code, output):
+        command = [sys.executable, "-c", f"print({output!r}); raise SystemExit({exit_code})"]
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(runner, "ROOT", pathlib.Path(directory)), \
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
+            return runner.run(command, os.environ.copy(), timeout=10)
+
     def dry_run(self, *args):
         result = subprocess.run([sys.executable, str(RUNNER), "--dry-run", *args],
                                 capture_output=True, text=True, encoding="utf-8")
