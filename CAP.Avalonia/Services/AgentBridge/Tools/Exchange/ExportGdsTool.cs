@@ -79,7 +79,7 @@ public sealed class ExportGdsTool : IAgentBridgeTool
         string? gdsPath = null;
         string? gdsStatus = null;
         if (ToolArguments.GetBool(arguments, "generate_gds", fallback: true))
-            (gdsPath, gdsStatus) = await GenerateGdsAsync(fileOps.GdsExport, scriptPath, context);
+            (gdsPath, gdsStatus) = await GenerateGdsAsync(fileOps.GdsExport, scriptPath, warnings, context);
 
         return AgentToolResult.Json(new
         {
@@ -93,7 +93,7 @@ public sealed class ExportGdsTool : IAgentBridgeTool
     }
 
     private static async Task<(string? Path, string Status)> GenerateGdsAsync(
-        ViewModels.Export.GdsExportViewModel gds, string scriptPath, AgentToolContext? context)
+        ViewModels.Export.GdsExportViewModel gds, string scriptPath, List<string> warnings, AgentToolContext? context)
     {
         var token = context?.CancellationToken ?? default;
         if (!gds.IsEnvironmentReady)
@@ -105,6 +105,7 @@ public sealed class ExportGdsTool : IAgentBridgeTool
             return (null, "Skipped: no Python with Nazca found. Install Nazca in Lunima's Python environment (Settings → Python), or run the script yourself.");
 
         var result = await gds.ExportScriptToGdsAsync(scriptPath, cancellationToken: token);
+        warnings.AddRange(result.Warnings);
         return result.Success
             ? (result.GdsPath, result.Status)
             : (null, $"GDS generation failed: {result.ErrorMessage}");

@@ -1,4 +1,6 @@
 {
+  "Export.ScriptWarnings.Placeholders": "プレースホルダーセルを含むGDSを書き込みました。エクスポート用Python環境に klayout siepic_ebeam_pdk SiEPIC をインストールして再度エクスポートしてください。エラーコンソールを確認してください。",
+  "Export.ScriptWarnings.Warning": "GDSエクスポートで警告が発生しました。製造前にエラーコンソールを確認してください。",
   "Load.VerticalPortConnectionsDropped": "{0} 件の接続をスキップしました。垂直ファイバーポートはチップ面内の導波路に接続できません。詳細はエラーコンソールを確認してください。",
   "Tutorial.Process.Title": "学習用プロセス",
   "Tutorial.Process.NewProjectBody": "この章では Demo SOI 220nm を使用します。別の学習プロジェクトを開始しますか？切り替える前に現在の作業を保存できます。",

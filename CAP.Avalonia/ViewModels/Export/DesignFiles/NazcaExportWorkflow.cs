@@ -91,12 +91,14 @@ public sealed class NazcaExportWorkflow
 
             // Attempt GDS generation if enabled
             var result = await GdsExport.ExportScriptToGdsAsync(filePath, exportRequestId);
+            foreach (var warning in result.Warnings) _errorConsole?.LogWarning(warning);
+            var scriptWarning = ExportWarningMessages.BuildScriptWarnings(result.Warnings);
 
             if (result.Success && result.GdsPath != null)
             {
                 updateStatus?.Invoke(WithWarnings(
                     $"Exported {Path.GetFileName(filePath)} and {Path.GetFileName(result.GdsPath)}",
-                    skippedConnectionsWarning, unresolvedCrossingsWarning, missingSourcesWarning));
+                    skippedConnectionsWarning, unresolvedCrossingsWarning, missingSourcesWarning, scriptWarning));
 
                 // Try to open the generated GDS file in the default viewer (KLayout etc.) —
                 // this is a content launch, not a file-manager open, so it stays useful even

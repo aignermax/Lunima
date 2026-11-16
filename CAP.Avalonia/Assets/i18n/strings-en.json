@@ -1,4 +1,6 @@
 {
+  "Export.ScriptWarnings.Placeholders": "GDS written with placeholder cells. Install klayout siepic_ebeam_pdk SiEPIC in the export Python environment, then export again. See the error console.",
+  "Export.ScriptWarnings.Warning": "GDS export reported warnings. See the error console before fabrication.",
   "Load.VerticalPortConnectionsDropped": "{0} connection(s) skipped: vertical fiber ports cannot carry planar waveguides. See the error console.",
   "Tutorial.Process.Title": "Learning process",
   "Tutorial.Process.NewProjectBody": "This chapter uses Demo SOI 220nm. Start a separate learning project? You can save your current work before switching.",

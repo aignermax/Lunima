@@ -1,4 +1,6 @@
 {
+  "Export.ScriptWarnings.Placeholders": "GDS mit Platzhalterzellen geschrieben. Installieren Sie klayout siepic_ebeam_pdk SiEPIC in der Python-Exportumgebung und exportieren Sie erneut. Siehe Fehlerkonsole.",
+  "Export.ScriptWarnings.Warning": "Der GDS-Export hat Warnungen gemeldet. Prüfen Sie vor der Fertigung die Fehlerkonsole.",
   "Load.VerticalPortConnectionsDropped": "{0} Verbindung(en) übersprungen: Senkrechte Faseranschlüsse können nicht mit Wellenleitern auf dem Chip verbunden werden. Details stehen in der Fehlerkonsole.",
   "Tutorial.Process.Title": "Prozess für den Lernpfad",
   "Tutorial.Process.NewProjectBody": "Dieses Kapitel verwendet Demo SOI 220nm. Ein eigenes Lernprojekt starten? Vor dem Wechsel kannst du deine aktuelle Arbeit speichern.",

@@ -18,6 +18,29 @@ public class ExportWarningMessagesTests
         LocalizationService.Instance.SetLanguage(SupportedLanguage.English.Code);
     }
 
+    [Theory]
+    [InlineData("en")]
+    [InlineData("de")]
+    [InlineData("es")]
+    [InlineData("ja")]
+    [InlineData("zh-Hans")]
+    public void ScriptWarnings_LocalizeCorrectiveActionAndPreservePackageNames(string language)
+    {
+        try
+        {
+            LocalizationService.Instance.SetLanguage(language);
+            var message = ExportWarningMessages.BuildScriptWarnings(new[]
+                { "[Lunima] WARN: SiEPIC real-geometry upgrade skipped; stub boxes kept." });
+            message.ShouldNotBeNull();
+            message.ShouldContain("klayout siepic_ebeam_pdk SiEPIC");
+            message.ShouldNotContain("Export.ScriptWarnings");
+            ExportWarningMessages.BuildScriptWarnings(Array.Empty<string>()).ShouldBeNull();
+            ExportWarningMessages.BuildScriptWarnings(new[] { "[Lunima] WARN: DevRec emission skipped." })
+                .ShouldNotBe(message);
+        }
+        finally { LocalizationService.Instance.SetLanguage("en"); }
+    }
+
     [Fact]
     public void BuildSkipped_NoSkippedConnections_ReturnsNull()
     {
