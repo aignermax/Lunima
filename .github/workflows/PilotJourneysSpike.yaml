@@ -1,0 +1,233 @@
+name: Spike pilot journeys (installed release)
+
+# Throwaway spike (#1647): installs the newest PUBLISHED release the way a user does
+# (MSI, portable zip, tar.gz, dmg) on hosted runners and runs scripts/spikes/pilot_journeys.py
+# through the installed binary's headless agent CLI in three phases:
+#   1-bare   nothing but the release (whatever the runner image already has);
+#   2-nazca  + a venv with Nazca, which export_gds asks for;
+#   3-full   + the openEBL packages (first the exact pip command the app shows) and KLayout.
+# The summary job prints the journey x OS table. Nothing of the repo except the two spike
+# scripts, the smoke helper and one GDS fixture is checked out, and the app runs from a
+# sandbox, so no file of a checkout can stand in for a missing one in the release.
+on:
+  push:
+    branches:
+      - 'agent/issue-1647-*'
+      - 'spike/installed-release-pilot-journeys'
+    paths:
+      - 'scripts/spikes/**'
+      - '.github/workflows/PilotJourneysSpike.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pilot-journeys-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RELEASE_TAG: latest
+  GDS_FIXTURE: Tools/gds-test-data/gdsfactory_mzi_like.gds
+  # NazcaPackageInstaller.NazcaTarballUrl, and the repo's vendor cache as fallback.
+  NAZCA_URL: https://nazca-design.org/dist/nazca-0.6.1.tar.gz
+  NAZCA_MIRROR: https://github.com/aignermax/Lunima/releases/download/vendor-cache-nazca-0.6.1/nazca-0.6.1.tar.gz
+  # OpenEblToolchainRequirements.PipInstallCommand, verbatim, then the PyPI package names.
+  APP_OPENEBL_PIP: klayout siepic_ebeam_pdk SiEPIC-Tools
+  PYPI_OPENEBL_PIP: klayout siepic_ebeam_pdk SiEPIC
+
+jobs:
+  journeys:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: windows-msi
+            os: windows-latest
+            asset: 'Lunima-Setup-*.msi'
+            py: python
+          - label: windows-zip
+            os: windows-latest
+            asset: 'Lunima-*-win-x64.zip'
+            py: python
+          - label: linux-tar
+            os: ubuntu-latest
+            asset: 'Lunima-*-linux-x64.tar.gz'
+            py: python3
+          - label: macos-arm64-dmg
+            os: macos-latest
+            asset: 'Lunima-*-osx-arm64.dmg'
+            py: python3
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OUT: ${{ github.workspace }}/results/${{ matrix.label }}
+      VENV: ${{ runner.temp }}/pilot-venv
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/smoke_published_app.py
+            scripts/spikes
+            Tools/gds-test-data/gdsfactory_mzi_like.gds
+          sparse-checkout-cone-mode: false
+
+      - name: Record the runner baseline (what a fresh machine would NOT have)
+        run: |
+          mkdir -p "$OUT"
+          {
+            echo "image: $ImageOS $ImageVersion"
+            for tool in python python3 py pip klayout klayout_app; do
+              printf '%-12s %s\n' "$tool" "$(command -v $tool || echo '-')"
+            done
+            ${{ matrix.py }} --version
+            ${{ matrix.py }} -c "import importlib.util as u; print('nazca importable:', bool(u.find_spec('nazca')), '| klayout importable:', bool(u.find_spec('klayout')))"
+          } | tee "$OUT/baseline.txt"
+
+      - name: Download the newest published release
+        run: |
+          tag="$RELEASE_TAG"
+          if [ "$tag" = latest ]; then tag=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName -q .tagName); fi
+          mkdir -p "$RUNNER_TEMP/download"
+          gh release download "$tag" -R "$GITHUB_REPOSITORY" -p '${{ matrix.asset }}' -D "$RUNNER_TEMP/download"
+          echo "$tag $(ls "$RUNNER_TEMP/download")" | tee "$OUT/tag.txt"
+
+      - name: Install the MSI (silent, per machine)
+        if: matrix.label == 'windows-msi'
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem "$env:RUNNER_TEMP/download/*.msi" | Select-Object -First 1
+          $p = Start-Process msiexec.exe -Wait -PassThru -ArgumentList "/i `"$($msi.FullName)`" /qn /l*v `"$env:RUNNER_TEMP/msi.log`""
+          "msiexec exit code $($p.ExitCode)" | Tee-Object -Append "$env:OUT/installs.txt"
+          $exe = Join-Path $env:ProgramFiles 'Lunima/CAP.Desktop.exe'
+          if (-not (Test-Path $exe)) { throw "the MSI installed no $exe" }
+          "BINARY=$exe" >> $env:GITHUB_ENV
+
+      - name: Unpack the portable zip
+        if: matrix.label == 'windows-zip'
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem "$env:RUNNER_TEMP/download/*.zip" | Select-Object -First 1
+          $target = Join-Path $env:LOCALAPPDATA 'Programs/Lunima'
+          Expand-Archive $zip.FullName -DestinationPath $target
+          "BINARY=$(Join-Path $target 'Lunima.exe')" >> $env:GITHUB_ENV
+
+      - name: Unpack the tar.gz
+        if: matrix.label == 'linux-tar'
+        run: |
+          target="$HOME/.local/opt/Lunima"
+          mkdir -p "$target"
+          tar xzf "$RUNNER_TEMP"/download/*.tar.gz -C "$target"
+          echo "BINARY=$target/Lunima" >> "$GITHUB_ENV"
+
+      - name: Install the .app from the dmg
+        if: matrix.label == 'macos-arm64-dmg'
+        run: |
+          hdiutil attach -nobrowse -readonly -mountpoint /Volumes/LunimaDmg "$RUNNER_TEMP"/download/*.dmg
+          cp -R /Volumes/LunimaDmg/Lunima.app /Applications/
+          hdiutil detach /Volumes/LunimaDmg
+          {
+            echo "spctl status: $(spctl --status 2>&1)"
+            echo "Gatekeeper assessment of a browser download: $(spctl -a -vv -t exec /Applications/Lunima.app 2>&1 | tr '\n' ' ')"
+            echo "signature: $(codesign -dv /Applications/Lunima.app 2>&1 | grep -E 'Signature|TeamIdentifier' | tr '\n' ' ')"
+          } | tee -a "$OUT/installs.txt"
+          echo "BINARY=/Applications/Lunima.app/Contents/MacOS/CAP.Desktop" >> "$GITHUB_ENV"
+
+      - name: Phase 1-bare — nothing but the release
+        if: always() && env.BINARY != ''
+        run: ${{ matrix.py }} -I scripts/spikes/pilot_journeys.py "$BINARY" --gds "$GDS_FIXTURE" --label ${{ matrix.label }} --phase 1-bare --out "$OUT/1-bare.json"
+
+      - name: Provision Nazca in a venv (what export_gds asks for)
+        continue-on-error: true
+        run: |
+          ${{ matrix.py }} -m venv "$VENV"
+          vpy="$VENV/bin/python"; [ -x "$VENV/Scripts/python.exe" ] && vpy="$VENV/Scripts/python.exe"
+          echo "VPY=$vpy" >> "$GITHUB_ENV"
+          if "$vpy" -m pip install -q "$NAZCA_URL"; then
+            echo "pip install $NAZCA_URL: ok" | tee -a "$OUT/installs.txt"
+          else
+            echo "pip install $NAZCA_URL: FAILED, used the repo mirror" | tee -a "$OUT/installs.txt"
+            "$vpy" -m pip install -q "$NAZCA_MIRROR"
+          fi
+
+      - name: Phase 2-nazca — export with Nazca
+        if: always() && env.BINARY != ''
+        run: ${{ matrix.py }} -I scripts/spikes/pilot_journeys.py "$BINARY" --gds "$GDS_FIXTURE" --label ${{ matrix.label }} --phase 2-nazca --journeys 3 --venv "$VENV" --out "$OUT/2-nazca.json"
+
+      - name: Provision the openEBL packages the app names
+        continue-on-error: true
+        run: |
+          if "$VPY" -m pip install -q $APP_OPENEBL_PIP > "$RUNNER_TEMP/pip-app.log" 2>&1; then
+            echo "pip install $APP_OPENEBL_PIP (as the app shows it): ok" | tee -a "$OUT/installs.txt"
+          else
+            echo "pip install $APP_OPENEBL_PIP (as the app shows it): FAILED — $(grep -m1 ERROR "$RUNNER_TEMP/pip-app.log")" | tee -a "$OUT/installs.txt"
+            "$VPY" -m pip install -q $PYPI_OPENEBL_PIP
+            echo "pip install $PYPI_OPENEBL_PIP (PyPI names): ok" | tee -a "$OUT/installs.txt"
+          fi
+
+      - name: Install KLayout (apt)
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq klayout > /dev/null
+          echo "apt-get install klayout: $(klayout -v)" | tee -a "$OUT/installs.txt"
+          echo "KLAYOUT_EXE=$(command -v klayout)" >> "$GITHUB_ENV"
+
+      - name: Install KLayout (Homebrew cask)
+        continue-on-error: true
+        if: runner.os == 'macOS'
+        run: |
+          brew install --cask klayout > /dev/null
+          exe=$(find /Applications/KLayout /Applications -maxdepth 4 -path '*klayout.app/Contents/MacOS/klayout' -type f 2>/dev/null | head -1)
+          echo "brew install --cask klayout: $exe (on PATH: $(command -v klayout || echo no))" | tee -a "$OUT/installs.txt"
+          echo "KLAYOUT_EXE=$exe" >> "$GITHUB_ENV"
+
+      - name: Install KLayout (Chocolatey)
+        continue-on-error: true
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install klayout -y --no-progress | Select-Object -Last 3
+          $roots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:APPDATA, $env:LOCALAPPDATA, $env:ChocolateyInstall)
+          $exe = $roots | Where-Object { $_ } | ForEach-Object { Get-ChildItem $_ -Recurse -Filter klayout_app.exe -ErrorAction SilentlyContinue } | Select-Object -First 1
+          $onPath = (Get-Command klayout_app, klayout -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+          "choco install klayout: $($exe.FullName) (on PATH: $(if ($onPath) { $onPath } else { 'no' }))" | Tee-Object -Append "$env:OUT/installs.txt"
+          "KLAYOUT_EXE=$($exe.FullName)" >> $env:GITHUB_ENV
+
+      - name: Phase 3-full — export, Cornerstone DRC, openEBL
+        if: always() && env.BINARY != ''
+        run: ${{ matrix.py }} -I scripts/spikes/pilot_journeys.py "$BINARY" --gds "$GDS_FIXTURE" --label ${{ matrix.label }} --phase 3-full --journeys 3 --venv "$VENV" --klayout "$KLAYOUT_EXE" --out "$OUT/3-full.json"
+
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-journeys-${{ matrix.label }}
+          path: results/${{ matrix.label }}
+
+  summary:
+    name: Journey x OS table
+    needs: journeys
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/spikes
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pilot-journeys-*
+          path: results
+      - name: Fold the results into one table
+        run: |
+          for dir in results/pilot-journeys-*; do mv "$dir" "results/${dir#results/pilot-journeys-}"; done
+          python3 -I scripts/spikes/summarize_pilot_journeys.py results | tee pilot-journeys.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pilot-journeys-report
+          path: pilot-journeys.md
