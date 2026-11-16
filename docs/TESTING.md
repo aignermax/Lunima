@@ -34,6 +34,19 @@ prints its location; inspect that log when a run fails. Test collections run
 serially as configured by `UnitTests/xunit.runner.json` because Avalonia headless
 state is process-wide. Do not start competing test hosts in the same worktree.
 Use `--timeout <seconds>` to change the overall timeout for a selected run.
+If another worktree holds the lock, the helper waits up to 600 seconds before
+reporting a lock timeout. Use `--lock-timeout <seconds>` to change that wait;
+the test execution timeout starts after the lock is acquired. The default
+combined budget is 1500 seconds, within agent QA's 1800-second command timeout.
+
+Agent QA uses the same helper through `.agent.toml`. Keep that entry point so QA
+shares the worktree lock and CPU settings. Check this wiring with
+`python -m unittest scripts.tests.test_run_tests scripts.tests.test_run_tests_lock`.
+The architecture workflow runs these checks on Windows, Linux and macOS,
+including lock contention, timeout reporting and release after process termination.
+A host-memory guard abort is
+an incomplete run, not a failed assertion or a passing test result; retry after
+host memory is available without lowering the guard's threshold.
 
 Use `--filter` when you need a VSTest expression rather than a name substring.
 The helper still appends the Slow/Heavy exclusions:

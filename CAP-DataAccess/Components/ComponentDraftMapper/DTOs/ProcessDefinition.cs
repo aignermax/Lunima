@@ -13,6 +13,11 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
     /// </summary>
     public class ProcessDefinition
     {
+        /// <summary>Optional absolute receiver description. Absence retains legacy simulation behavior.</summary>
+        [JsonPropertyName("photodetector")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public CAP_Core.LightCalculation.Photodetection.PhotodetectorDescription? Photodetector { get; set; }
+
         /// <summary>Process name (e.g. "HHI-MPW", "Generic SOI 220nm").</summary>
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;

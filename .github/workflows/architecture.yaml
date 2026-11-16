@@ -10,6 +10,21 @@ permissions:
   contents: read
 
 jobs:
+  test-runner-lock:
+    name: Shared test lock (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test QA entry point and native process locks
+        run: python -m unittest scripts.tests.test_run_tests scripts.tests.test_run_tests_lock -v
   resolved-dependencies:
     name: Resolved architecture dependencies
     runs-on: ubuntu-latest

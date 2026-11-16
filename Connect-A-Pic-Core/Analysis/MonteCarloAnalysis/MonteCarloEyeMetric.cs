@@ -12,6 +12,9 @@ namespace CAP_Core.Analysis.MonteCarloAnalysis;
 /// </summary>
 public sealed class MonteCarloEyeMetric
 {
+    /// <summary>Explicit resolved receiver; absent for the legacy normalized calculation.</summary>
+    public CAP_Core.LightCalculation.Photodetection.PhotodetectorDescription? Detector { get; init; }
+
     private const double BitRateHz = 25e9;
     private readonly TransientCircuitSnapshot _circuit;
     private readonly TransientExcitationSnapshot _excitation;
@@ -63,12 +66,12 @@ public sealed class MonteCarloEyeMetric
         return height;
     }
 
-    private static double EstimateEyeHeight(double[] trace, double sampleRateHz, EyeSimulationPlan plan)
+    private double EstimateEyeHeight(double[] trace, double sampleRateHz, EyeSimulationPlan plan)
     {
         var bins = Math.Min(EyeDiagramBuilder.DefaultTimeBins, plan.SamplesPerBit);
         var histogram = EyeDiagramBuilder.Build(trace, sampleRateHz, plan.BitPeriodSeconds, bins);
         var threshold = histogram.MinAmplitude + 0.5 * (histogram.MaxAmplitude - histogram.MinAmplitude);
-        var noise = new NoiseModel { BandwidthHz = 0.75 * BitRateHz };
+        var noise = new NoiseModel { Detector = Detector, BandwidthHz = 0.75 * BitRateHz };
         return BerEstimator.Estimate(trace, sampleRateHz, plan.BitPeriodSeconds, threshold, noise, bins).EyeHeight;
     }
 }
