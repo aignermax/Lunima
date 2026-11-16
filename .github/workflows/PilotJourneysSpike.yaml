@@ -139,6 +139,26 @@ jobs:
           } | tee -a "$OUT/installs.txt"
           echo "BINARY=/Applications/Lunima.app/Contents/MacOS/CAP.Desktop" >> "$GITHUB_ENV"
 
+      # A browser marks the download as quarantined; gh does not. Repeat the install from a
+      # quarantined copy of the dmg and see whether macOS lets the CLI start at all.
+      - name: Gatekeeper probe (dmg quarantined like a browser download)
+        if: matrix.label == 'macos-arm64-dmg'
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          cp "$RUNNER_TEMP"/download/*.dmg "$RUNNER_TEMP/quarantined.dmg"
+          xattr -w com.apple.quarantine "0083;$(printf %x "$(date +%s)");Safari;$(uuidgen)" "$RUNNER_TEMP/quarantined.dmg"
+          hdiutil attach -nobrowse -readonly -mountpoint /Volumes/LunimaQ "$RUNNER_TEMP/quarantined.dmg" > /dev/null
+          mkdir -p "$RUNNER_TEMP/quarantined-apps"
+          cp -R /Volumes/LunimaQ/Lunima.app "$RUNNER_TEMP/quarantined-apps/"
+          hdiutil detach /Volumes/LunimaQ > /dev/null
+          app="$RUNNER_TEMP/quarantined-apps/Lunima.app"
+          {
+            echo "quarantined copy: $(xattr -p com.apple.quarantine "$app" 2>&1)"
+            echo "spctl verdict on the quarantined app: $(spctl -a -vv -t exec "$app" 2>&1 | tr '\n' ' ')"
+            python3 -c "import subprocess,sys; r=subprocess.run([sys.argv[1],'agent','tools'],capture_output=True,timeout=120); print('quarantined CLI start: exit', r.returncode, '|', r.stderr.decode(errors='replace')[-300:])" "$app/Contents/MacOS/CAP.Desktop"
+          } 2>&1 | tee -a "$OUT/installs.txt"
+
       - name: Phase 1-bare — nothing but the release
         if: always() && env.BINARY != ''
         run: ${{ matrix.py }} -I scripts/spikes/pilot_journeys.py "$BINARY" --gds "$GDS_FIXTURE" --label ${{ matrix.label }} --phase 1-bare --out "$OUT/1-bare.json"

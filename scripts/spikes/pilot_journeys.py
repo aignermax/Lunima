@@ -272,16 +272,19 @@ def openebl_side_measurement(app: InstalledApp, gds: Optional[Path], python: Opt
 
 
 def nazca_probe(app: InstalledApp, python: Optional[str]) -> Outcome:
-    """The app's own Nazca check (``import nazca``, 20 s) repeated in the app's environment."""
-    name = "3e diag: app's import-nazca probe"
+    """The app's own Nazca check (``import nazca``, 20 s), cold then warm, in a fresh profile like the app's."""
+    name = "3e diag: app's import-nazca probe (cold, warm)"
     if not python:
         return Outcome(name, "CANNOT_RUN", "no venv / --python")
+    profile = Path(tempfile.mkdtemp(prefix="lunima-probe-"))
+    environment = {**smoke.sandbox_environment(profile, os.environ),
+                   **{key: app.environment[key] for key in ("VIRTUAL_ENV", "PATH") if key in app.environment}}
     attempts = []
     for _ in range(PROBE_ATTEMPTS):
         started = time.monotonic()
         try:
-            done = subprocess.run([python, "-c", "import nazca; print(nazca.__version__)"], cwd=app.sandbox,
-                                  env=app.environment, capture_output=True, text=True,
+            done = subprocess.run([python, "-c", "import nazca; print(nazca.__version__)"], cwd=profile,
+                                  env=environment, capture_output=True, text=True,
                                   timeout=SIDE_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL)
             code, tail = done.returncode, (done.stdout + done.stderr).strip().splitlines()[-3:]
         except subprocess.TimeoutExpired:
@@ -294,6 +297,7 @@ def nazca_probe(app: InstalledApp, python: Optional[str]) -> Outcome:
 
 def journey_export(app: InstalledApp, python: Optional[str], klayout: Optional[str]) -> List[Outcome]:
     """Journey 3: export to GDS, then the Cornerstone and openEBL pre-flights."""
+    probe = nazca_probe(app, python)
     gds, messages, launch = export_ring(app)
     export = Outcome("3a export GDS", "PASS" if gds else "FAIL",
                      f"gds {gds.name} ({gds.stat().st_size} B)" if gds
@@ -305,7 +309,7 @@ def journey_export(app: InstalledApp, python: Optional[str], klayout: Optional[s
                                 f"python {EXPORT_SCRIPT_NAME} wrote {gds.name}; 3b/3d below check that GDS"))
     outcomes.append(foundry_drc(app, gds, klayout) if gds else Outcome(
         "3b Cornerstone DRC", "FAIL", "no GDS to check: the export produced none"))
-    return outcomes + [openebl_via_cli(app), openebl_side_measurement(app, gds, python), nazca_probe(app, python)]
+    return outcomes + [openebl_via_cli(app), openebl_side_measurement(app, gds, python), probe]
 
 
 def run_journeys(app: InstalledApp, journeys: Sequence[str], gds: Path,
