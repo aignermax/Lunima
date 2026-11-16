@@ -190,7 +190,7 @@ jobs:
           if brew install --cask klayout > "$RUNNER_TEMP/brew.log" 2>&1; then
             echo "brew install --cask klayout: ok" | tee -a "$OUT/installs.txt"
           else
-            echo "brew install --cask klayout: FAILED — $(grep -m1 -iE 'disabled|error'\|error' "$RUNNER_TEMP/brew.log")" | tee -a "$OUT/installs.txt"
+            echo "brew install --cask klayout: FAILED — $(grep -m1 -iE 'disabled|error' "$RUNNER_TEMP/brew.log")" | tee -a "$OUT/installs.txt"
             curl -sSfL -o "$RUNNER_TEMP/klayout.dmg" "$KLAYOUT_MAC_DMG"
             hdiutil attach -nobrowse -readonly -mountpoint /Volumes/KLayoutDmg "$RUNNER_TEMP/klayout.dmg" > /dev/null
             cp -R /Volumes/KLayoutDmg/klayout.app /Applications/
