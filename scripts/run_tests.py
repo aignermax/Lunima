@@ -3,6 +3,7 @@
 import argparse
 import contextlib
 import datetime
+import errno
 import json
 import os
 import pathlib
@@ -11,6 +12,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -18,7 +20,7 @@ EXCLUSIONS = "Category!=Slow&Category!=Heavy"
 
 
 @contextlib.contextmanager
-def test_lock():
+def test_lock(timeout=600):
     """One advisory lock across all Lunima worktrees for this user's temp area."""
     path = pathlib.Path(tempfile.gettempdir()) / "lunima-dotnet-tests.lock"
     with path.open("a+b") as handle:
@@ -27,12 +29,29 @@ def test_lock():
             handle.write(b"0")
             handle.flush()
         handle.seek(0)
-        if os.name == "nt":
-            import msvcrt
-            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        deadline = time.monotonic() + timeout
+        announced = False
+        while True:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as exc:
+                if exc.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                    raise
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError(
+                        f"Timed out after {timeout:g}s waiting for shared test lock: {path}") from exc
+                if not announced:
+                    print("Waiting for another test run to release the shared lock...",
+                          file=sys.stderr, flush=True)
+                    announced = True
+                time.sleep(min(0.25, remaining))
         try:
             yield
         finally:
@@ -98,6 +117,8 @@ def main(argv=None):
     parser.add_argument("--include-expensive", action="store_true",
                         help="allow Slow/Heavy only for a specifically selected run")
     parser.add_argument("--timeout", type=int, default=900, help="overall timeout in seconds")
+    parser.add_argument("--lock-timeout", type=int, default=600,
+                        help="maximum wait for another test run in seconds (default: 600)")
     parser.add_argument("--dry-run", action="store_true", help="print the exact command as JSON")
     args = parser.parse_args(argv)
     if args.pattern and args.filter:
@@ -107,6 +128,8 @@ def main(argv=None):
         parser.error("--include-expensive requires a specific filter")
     if args.timeout <= 0:
         parser.error("--timeout must be positive")
+    if args.lock_timeout <= 0:
+        parser.error("--lock-timeout must be positive")
     if args.pattern and any(char in args.pattern for char in "|&()=!"):
         parser.error("use --filter for a filter expression")
     expression = selected if args.include_expensive else (
@@ -119,10 +142,10 @@ def main(argv=None):
         print(json.dumps({"command": command, "environment": overrides}, indent=2))
         return 0
     try:
-        with test_lock():
+        with test_lock(args.lock_timeout):
             return run(command, {**os.environ, **overrides}, args.timeout)
     except (OSError, subprocess.SubprocessError) as exc:
-        print(f"Cannot run tests (another run may hold the shared lock): {exc}", file=sys.stderr)
+        print(f"Cannot run tests: {exc}", file=sys.stderr)
         return 2
 
 
