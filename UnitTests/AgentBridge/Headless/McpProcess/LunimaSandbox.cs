@@ -14,6 +14,7 @@ internal sealed class LunimaSandbox : IAsyncDisposable
     private static readonly TimeSpan DeleteRetryWindow = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan DeleteRetryDelay = TimeSpan.FromMilliseconds(50);
     private const int ShortIdLength = 12;
+    private static readonly EnumerationOptions EveryEntry = new() { RecurseSubdirectories = true, AttributesToSkip = 0 };
 
     private LunimaSandbox(string root)
     {
@@ -53,13 +54,30 @@ internal sealed class LunimaSandbox : IAsyncDisposable
         var elapsed = Stopwatch.StartNew();
         while (Directory.Exists(Root))
         {
-            try { Directory.Delete(Root, recursive: true); }
+            try
+            {
+                ClearReadOnlyAttributes();
+                Directory.Delete(Root, recursive: true);
+            }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                 && OperatingSystem.IsWindows() && elapsed.Elapsed < DeleteRetryWindow)
             {
                 // A just-exited child's file handles can linger briefly on Windows.
                 await Task.Delay(DeleteRetryDelay);
             }
+        }
+    }
+
+    /// <summary>
+    /// A Windows child leaves <c>Start Menu\Programs</c> under the redirected APPDATA marked
+    /// read-only, and a recursive delete refuses read-only entries however long it retries.
+    /// </summary>
+    private void ClearReadOnlyAttributes()
+    {
+        foreach (var entry in new DirectoryInfo(Root).EnumerateFileSystemInfos("*", EveryEntry))
+        {
+            if (entry.Attributes.HasFlag(FileAttributes.ReadOnly))
+                entry.Attributes &= ~FileAttributes.ReadOnly;
         }
     }
 }
