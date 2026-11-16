@@ -42,6 +42,8 @@ combined budget is 1500 seconds, within agent QA's 1800-second command timeout.
 Agent QA uses the same helper through `.agent.toml`. Keep that entry point so QA
 shares the worktree lock and CPU settings. Check this wiring with
 `python -m unittest scripts.tests.test_run_tests scripts.tests.test_run_tests_lock`.
+The architecture workflow runs these checks on Windows, Linux and macOS,
+including lock contention, timeout reporting and release after process termination.
 A host-memory guard abort is
 an incomplete run, not a failed assertion or a passing test result; retry after
 host memory is available without lowering the guard's threshold.

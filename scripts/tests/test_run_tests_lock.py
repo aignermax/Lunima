@@ -78,6 +78,31 @@ class TestLockTests(unittest.TestCase):
         self.assertEqual(0, contender.returncode, errors)
         self.assertEqual("acquired\n", output)
 
+    def test_terminated_owner_releases_lock(self):
+        owner = self.worker()
+        self.assertEqual("acquired\n", owner.stdout.readline())
+        contender = self.worker()
+        self.assertIn("Waiting for another test run", contender.stderr.readline())
+        owner.kill()
+        owner.communicate(timeout=10)
+        output, errors = contender.communicate(input="\n", timeout=10)
+        self.assertEqual(0, contender.returncode, errors)
+        self.assertEqual("acquired\n", output)
+
+    def test_main_reports_lock_timeout_without_starting_tests(self):
+        owner = self.worker()
+        self.assertEqual("acquired\n", owner.stdout.readline())
+        errors = io.StringIO()
+        with mock.patch.object(run_tests, "run") as run, contextlib.redirect_stderr(errors):
+            result = run_tests.main(["--lock-timeout", "1"])
+        self.assertEqual(2, result)
+        run.assert_not_called()
+        self.assertIn("Timed out after 1s waiting for shared test lock", errors.getvalue())
+        owner.communicate(input="\n", timeout=10)
+        with mock.patch.object(run_tests, "run", return_value=0) as run:
+            self.assertEqual(0, run_tests.main(["--lock-timeout", "1"]))
+        run.assert_called_once()
+
     def test_file_permission_error_is_not_retried_as_contention(self):
         with mock.patch.object(pathlib.Path, "open", side_effect=PermissionError(errno.EACCES, "denied")):
             with self.assertRaises(PermissionError):
