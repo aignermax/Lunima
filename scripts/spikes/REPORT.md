@@ -9,7 +9,7 @@ with spurious pins). Journey 3 (export GDS + pre-flight) needs Python, Nazca, th
 packages and KLayout everywhere. With those it passes on Windows only:
 
 - On **Linux** the release cannot launch any external process (#1653).
-- On **macOS** the Nazca check times out on a cold profile, failing 2 of 3 runs (#1654).
+- On **macOS** the Nazca check times out on a cold profile, failing 3 of 4 runs (#1654).
 - The **openEBL** half has no CLI entry point on any OS (#1651).
 
 ## Method
@@ -37,7 +37,8 @@ packages and KLayout everywhere. With those it passes on Windows only:
     `scripts/drc`, and both shipped openEBL scripts.
 - Runs: [1](https://github.com/aignermax/Lunima/actions/runs/43844901858),
   [2](https://github.com/aignermax/Lunima/actions/runs/43846795813),
-  [3, final](https://github.com/aignermax/Lunima/actions/runs/43847949372). The job
+  [3](https://github.com/aignermax/Lunima/actions/runs/43847949372),
+  [4, final](https://github.com/aignermax/Lunima/actions/runs/43849824501). The job
   summary of each run holds the machine-made table and every app message.
 
 ## Result (v0.23.0)
@@ -46,7 +47,7 @@ packages and KLayout everywhere. With those it passes on Windows only:
 |---|---|---|---|
 | **1** open MZI, simulate, read port powers | ✅ PASS, nothing extra. Powers 0.1389 / 0.1389 | ✅ PASS, nothing extra, same powers | ✅ PASS, nothing extra, same powers |
 | **2** import GDS with port markers, get pins | ✅ PASS, nothing extra. 4 cells, 3 abutments, all 9 labelled pins, **plus 8 spurious `heur_*` pins** (#1650) | ✅ same (#1650) | ✅ same (#1650) |
-| **3** export GDS + Cornerstone pre-flight | ✅ PASS with extras: Python venv + Nazca, `klayout siepic_ebeam_pdk SiEPIC` (else a stub GDS, #1652), KLayout (choco) + `KLAYOUT` env var | ❌ FAIL in every phase: no child process can start (#1653). The app says "no Python with Nazca found", then "Unable to load shared library 'System.Native'" | ⚠️ FAIL in 2 of 3 runs: the Nazca probe times out (#1654). When it runs: PASS with the same extras + KLayout from the klayout.org dmg (Homebrew cask disabled) + `KLAYOUT` |
+| **3** export GDS + Cornerstone pre-flight | ✅ PASS with extras: Python venv + Nazca, `klayout siepic_ebeam_pdk SiEPIC` (else a stub GDS, #1652), KLayout (choco) + `KLAYOUT` env var | ❌ FAIL in every phase: no child process can start (#1653). The app says "no Python with Nazca found", then "Unable to load shared library 'System.Native'" | ⚠️ FAIL in 3 of 4 runs: the Nazca probe times out (#1654). When it runs: PASS with the same extras + KLayout from the klayout.org dmg (Homebrew cask disabled) + `KLAYOUT` |
 | **3** openEBL pre-flight | ⛔ cannot run through the CLI: no tool (#1651). By hand: ✅ 0 errors with the PyPI names (#1649) | ⛔ same (#1651). By hand on a hand-made GDS: ✅ 0 errors | ⛔ same (#1651). By hand: ✅ 0 errors |
 
 ### Extra installs per cell, and whether the app named them
@@ -63,7 +64,7 @@ packages and KLayout everywhere. With those it passes on Windows only:
 | # | Cell | Summary |
 |---|---|---|
 | #1653 | J3 × Linux | Single-file Linux build cannot P/Invoke `System.Native`, so every Python/KLayout launch fails. Since v0.21.0 |
-| #1654 | J3 × macOS | The 20 s `import nazca` probe kills matplotlib's first font-cache build (cold 31 s, warm 3.7 s) |
+| #1654 | J3 × macOS | The 20 s `import nazca` probe kills matplotlib's first font-cache build (cold 27–31 s, warm 2.5–3.7 s) |
 | #1652 | J3 × all | `export_gds` drops the script's `[Lunima] WARN … stub boxes kept` and reports success |
 | #1649 | J3 openEBL × all | The install hint names `SiEPIC-Tools`, which is not on PyPI (404); the package is `SiEPIC` |
 | #1650 | J2 × all | Spurious `heur_*` pins on fully labelled cells (regression against #879) |
@@ -81,7 +82,7 @@ packages and KLayout everywhere. With those it passes on Windows only:
   signature indicates they must be present"; ad-hoc signed, no Team ID). The CLI still
   started from a dmg quarantined like a browser download (exit 0). A Finder launch was
   not measured.
-- `nazca-design.org` failed once in 12 installs (run 1, Windows MSI); the repo's vendor
+- `nazca-design.org` failed once in 16 installs (run 1, Windows MSI); the repo's vendor
   mirror covered it.
 - The Cornerstone SiN deck on an EBeam (SOI) design is only a "does the pre-flight run"
   check. Its single marker ("Correct design area") is expected, not a design verdict.
