@@ -28,7 +28,10 @@ public class PythonEnvironmentInfo
     /// <summary>
     /// True if both Python and Nazca are available.
     /// </summary>
-    public bool IsReady => PythonAvailable && NazcaAvailable;
+    public bool IsReady => PythonAvailable && NazcaAvailable && ProbeError == null;
+
+    /// <summary>Diagnostic for an inconclusive package probe.</summary>
+    public string? ProbeError { get; set; }
 
     /// <summary>
     /// Descriptive status message for UI display.
@@ -37,6 +40,7 @@ public class PythonEnvironmentInfo
     {
         get
         {
+            if (ProbeError != null) return ProbeError;
             if (!PythonAvailable)
                 return "Python not found";
             if (!NazcaAvailable)

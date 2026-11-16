@@ -102,7 +102,7 @@ public sealed class ExportGdsTool : IAgentBridgeTool
             else await gds.CheckEnvironmentAsync(token);
         }
         if (!gds.IsEnvironmentReady)
-            return (null, "Skipped: no Python with Nazca found. Install Nazca in Lunima's Python environment (Settings → Python), or run the script yourself.");
+            return (null, $"Skipped: {gds.PythonStatus}. {gds.NazcaStatus}. Check Settings → Python, or run the script yourself.");
 
         var result = await gds.ExportScriptToGdsAsync(scriptPath, cancellationToken: token);
         return result.Success

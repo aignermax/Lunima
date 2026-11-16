@@ -12,14 +12,17 @@ namespace CAP_Core.Export;
 public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
 {
     private readonly ProcessLaunchFactory _launchFactory;
+    private readonly TimeSpan _packageProbeTimeout;
 
     /// <summary>
     /// Initializes a new instance of <see cref="PythonDiscoveryService"/>.
     /// </summary>
     /// <param name="launchFactory">Factory used to build process start infos.</param>
-    public PythonDiscoveryService(ProcessLaunchFactory? launchFactory = null)
+    /// <param name="packageProbeTimeout">Optional deadline for package metadata probes.</param>
+    public PythonDiscoveryService(ProcessLaunchFactory? launchFactory = null, TimeSpan? packageProbeTimeout = null)
     {
         _launchFactory = launchFactory ?? ProcessLaunchFactory.CreateDefault();
+        _packageProbeTimeout = packageProbeTimeout ?? PythonPackageProbe.DefaultTimeout;
     }
 
     /// <summary>
@@ -30,6 +33,12 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
     public virtual async Task<List<PythonInstallation>> DiscoverPythonWithNazcaAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        TimeoutException? timeout = null;
+        async Task<PythonInstallation?> CheckCandidate(string path, string source, bool probeGdsFactory, CancellationToken cancellationToken)
+        {
+            try { return await CheckPythonInstallation(path, source, probeGdsFactory, cancellationToken); }
+            catch (TimeoutException ex) { timeout = ex; return null; }
+        }
         var found = new List<PythonInstallation>();
         var checkedPaths = new HashSet<string>();
 
@@ -37,7 +46,7 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
         var venvPython = GetActiveVenvPython();
         if (venvPython != null && checkedPaths.Add(venvPython))
         {
-            var installation = await CheckPythonInstallation(venvPython, "Active venv", probeGdsFactory: true, cancellationToken: cancellationToken);
+            var installation = await CheckCandidate(venvPython, "Active venv", probeGdsFactory: true, cancellationToken: cancellationToken);
             if (installation?.HasNazca == true)
                 found.Add(installation);
         }
@@ -50,7 +59,7 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
         {
             if (checkedPaths.Add(installPath))
             {
-                var installation = await CheckPythonInstallation(installPath, "Installed", probeGdsFactory: true, cancellationToken: cancellationToken);
+                var installation = await CheckCandidate(installPath, "Installed", probeGdsFactory: true, cancellationToken: cancellationToken);
                 if (installation?.HasNazca == true)
                     found.Add(installation);
             }
@@ -61,7 +70,7 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
         {
             if (checkedPaths.Add(installPath))
             {
-                var installation = await CheckPythonInstallation(installPath, "Installed", probeGdsFactory: true, cancellationToken: cancellationToken);
+                var installation = await CheckCandidate(installPath, "Installed", probeGdsFactory: true, cancellationToken: cancellationToken);
                 if (installation?.HasNazca == true)
                     found.Add(installation);
             }
@@ -74,7 +83,7 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
             var resolvedPath = ResolvePythonPath(cmd);
             if (resolvedPath != null && checkedPaths.Add(resolvedPath))
             {
-                var installation = await CheckPythonInstallation(resolvedPath, "System", probeGdsFactory: true, cancellationToken: cancellationToken);
+                var installation = await CheckCandidate(resolvedPath, "System", probeGdsFactory: true, cancellationToken: cancellationToken);
                 if (installation?.HasNazca == true)
                     found.Add(installation);
             }
@@ -86,17 +95,18 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
         {
             if (checkedPaths.Add(venvPath))
             {
-                var installation = await CheckPythonInstallation(venvPath, GetVenvSource(venvPath), probeGdsFactory: true, cancellationToken: cancellationToken);
+                var installation = await CheckCandidate(venvPath, GetVenvSource(venvPath), probeGdsFactory: true, cancellationToken: cancellationToken);
                 if (installation?.HasNazca == true)
                     found.Add(installation);
             }
         }
 
+        if (found.Count == 0 && timeout != null) throw timeout;
         return found;
     }
 
     /// <summary>
-    /// Returns the path of the first discovered Python that can import nazca, checking
+    /// Returns the path of the first discovered Python with a Nazca module, checking
     /// sources in priority order (active venv → installed interpreters → "py" launcher →
     /// common venvs) and stopping at the first match. Cheaper than
     /// <see cref="DiscoverPythonWithNazcaAsync"/> for the common "just give me one that
@@ -106,26 +116,33 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
     public async Task<string?> FindFirstNazcaPythonPathAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        TimeoutException? timeout = null;
+        async Task<string?> CheckCandidate(string path, string source, CancellationToken token)
+        {
+            try { return await FirstWithNazca(path, source, token); }
+            catch (TimeoutException ex) { timeout = ex; return null; }
+        }
         var venv = GetActiveVenvPython();
-        if (venv != null && await FirstWithNazca(venv, "Active venv", cancellationToken) is { } v)
+        if (venv != null && await CheckCandidate(venv, "Active venv", cancellationToken) is { } v)
             return v;
 
         foreach (var installPath in GetWindowsPythonInstallPaths())
-            if (await FirstWithNazca(installPath, "Installed", cancellationToken) is { } p)
+            if (await CheckCandidate(installPath, "Installed", cancellationToken) is { } p)
                 return p;
 
         foreach (var installPath in GetMacOsPythonInstallPaths())
-            if (await FirstWithNazca(installPath, "Installed", cancellationToken) is { } p)
+            if (await CheckCandidate(installPath, "Installed", cancellationToken) is { } p)
                 return p;
 
         foreach (var cmd in GetSystemPythonCommands())
-            if (await FirstWithNazca(cmd, "System", cancellationToken) is { } p)
+            if (await CheckCandidate(cmd, "System", cancellationToken) is { } p)
                 return p;
 
         foreach (var venvPath in GetCommonVenvDirectories())
-            if (await FirstWithNazca(venvPath, GetVenvSource(venvPath), cancellationToken) is { } p)
+            if (await CheckCandidate(venvPath, GetVenvSource(venvPath), cancellationToken) is { } p)
                 return p;
 
+        if (timeout != null) throw timeout;
         return null;
     }
 
@@ -142,8 +159,7 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
     /// <param name="pythonPath">Path to Python executable or command name.</param>
     /// <param name="source">Human-readable origin label for the installation.</param>
     /// <param name="probeGdsFactory">When true, additionally probes the gdsfactory version
-    /// (issue #645). Off by default so the startup fast-path and health checks — which only
-    /// care about Nazca — do not pay for the extra import probe.</param>
+    /// Off by default so health checks that only need Nazca avoid an extra subprocess.</param>
     /// <returns>Installation info with versions, or null if Python not accessible.</returns>
     public virtual async Task<PythonInstallation?> CheckPythonInstallation(
         string pythonPath, string source, bool probeGdsFactory = false, CancellationToken cancellationToken = default)
@@ -166,7 +182,7 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
                 GdsFactoryVersion = gdsFactoryVersion
             };
         }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (ex is not TimeoutException && !cancellationToken.IsCancellationRequested)
         {
             return null;
         }
@@ -340,12 +356,8 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
         return parts.Length >= 2 ? parts[1] : result.Output.Trim();
     }
 
-    private async Task<string?> GetPackageVersion(string pythonPath, string moduleName, CancellationToken cancellationToken)
-    {
-        var result = await RunCommandAsync(pythonPath, new[] { "-c", $"import {moduleName}; print({moduleName}.__version__)" },
-            TimeSpan.FromSeconds(20), cancellationToken);
-        return result.ExitCode == 0 && !string.IsNullOrWhiteSpace(result.Output) ? result.Output.Trim() : null;
-    }
+    private Task<string?> GetPackageVersion(string pythonPath, string moduleName, CancellationToken cancellationToken) =>
+        PythonPackageProbe.GetVersionAsync(_launchFactory, pythonPath, moduleName, cancellationToken, _packageProbeTimeout);
 
     private Task<(int ExitCode, string Output, string Error)> RunCommandAsync(
         string fileName, IReadOnlyList<string> arguments, TimeSpan timeout, CancellationToken cancellationToken)

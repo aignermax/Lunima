@@ -172,7 +172,7 @@ public partial class GdsExportViewModel : ObservableObject, IAsyncDisposable
             }
             else if (envInfo.PythonAvailable)
             {
-                operation.Publish(() => NazcaStatus = "✗ Not installed");
+                operation.Publish(() => NazcaStatus = envInfo.ProbeError ?? "✗ Not installed");
             }
             else
             {
@@ -352,7 +352,7 @@ public partial class GdsExportViewModel : ObservableObject, IAsyncDisposable
             return GdsPreflightDecision.Proceed;
 
         var choice = await messageBox.ShowChoicePromptAsync(
-            "Nazca is required to generate a GDS file, but no Python environment with Nazca is available. "
+            $"The Python/Nazca check did not succeed: {PythonStatus}. {NazcaStatus}. "
             + "The Nazca Python script itself has been exported.",
             "Nazca required",
             new[] { "Install Nazca now", "Open Settings", "Skip GDS" });

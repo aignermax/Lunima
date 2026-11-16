@@ -17,12 +17,13 @@ public class GdsExportService : IGdsExportSession
     private readonly ProcessLaunchFactory _launchFactory;
     private readonly IPythonDiscovery _pythonDiscovery;
     private readonly TimeSpan _scriptTimeout;
+    private readonly TimeSpan _packageProbeTimeout;
     private string? _customPythonPath;
 
     /// <summary>
     /// The last READY environment and the interpreter setting it was probed with. An export
-    /// reuses it instead of re-probing (each probe spawns python and imports Nazca —
-    /// seconds); a not-ready result is never kept, so a fresh Nazca install is seen at once.
+    /// reuses it instead of spawning Python again; a not-ready result is never kept,
+    /// so a fresh Nazca install is seen at once.
     /// </summary>
     private (string? Interpreter, PythonEnvironmentInfo Info)? _readyEnvironment;
 
@@ -32,12 +33,14 @@ public class GdsExportService : IGdsExportSession
     /// <param name="launchFactory">Factory used to build process start info.</param>
     /// <param name="pythonDiscovery">Service used to locate a Python interpreter with Nazca.</param>
     /// <param name="scriptTimeout">Optional deadline for actual GDS script execution.</param>
+    /// <param name="packageProbeTimeout">Optional deadline for package metadata probes.</param>
     public GdsExportService(ProcessLaunchFactory? launchFactory = null, IPythonDiscovery? pythonDiscovery = null,
-        TimeSpan? scriptTimeout = null)
+        TimeSpan? scriptTimeout = null, TimeSpan? packageProbeTimeout = null)
     {
         _launchFactory   = launchFactory   ?? ProcessLaunchFactory.CreateDefault();
-        _pythonDiscovery = pythonDiscovery ?? new PythonDiscoveryService(_launchFactory);
+        _pythonDiscovery = pythonDiscovery ?? new PythonDiscoveryService(_launchFactory, packageProbeTimeout);
         _scriptTimeout = scriptTimeout ?? DefaultScriptTimeout;
+        _packageProbeTimeout = packageProbeTimeout ?? PythonPackageProbe.DefaultTimeout;
     }
 
     /// <summary>
@@ -66,14 +69,19 @@ public class GdsExportService : IGdsExportSession
     /// <returns>Environment information including versions.</returns>
     public async Task<PythonEnvironmentInfo> CheckPythonEnvironmentAsync(CancellationToken cancellationToken = default)
     {
-        var result = await ProbeEnvironmentAsync(cancellationToken);
+        PythonEnvironmentInfo result;
+        try { result = await ProbeEnvironmentAsync(cancellationToken); }
+        catch (TimeoutException ex)
+        {
+            result = new PythonEnvironmentInfo { PythonAvailable = true, ProbeError = ex.Message };
+        }
         cancellationToken.ThrowIfCancellationRequested();
         _readyEnvironment = result.IsReady ? (_customPythonPath, result) : null;
         return result;
     }
 
     /// <summary>
-    /// Probes the configured interpreter: its version, then whether it imports Nazca.
+    /// Probes the configured interpreter's version and installed Nazca metadata without importing Nazca.
     /// </summary>
     /// <returns>Environment information including versions.</returns>
     protected virtual async Task<PythonEnvironmentInfo> ProbeEnvironmentAsync(CancellationToken cancellationToken = default)
@@ -213,8 +221,11 @@ public class GdsExportService : IGdsExportSession
         return parts.Length >= 2 ? parts[1] : output.Trim();
     }
 
-    private Task<string?> GetNazcaVersionAsync(CancellationToken cancellationToken) =>
-        ProbeVersionAsync(new[] { "-c", "import nazca; print(nazca.__version__)" }, TimeSpan.FromSeconds(20), cancellationToken);
+    private async Task<string?> GetNazcaVersionAsync(CancellationToken cancellationToken)
+    {
+        var command = await ResolvePythonCommandAsync(cancellationToken);
+        return await PythonPackageProbe.GetVersionAsync(_launchFactory, command, "nazca", cancellationToken, _packageProbeTimeout);
+    }
 
     private async Task<string?> ProbeVersionAsync(string[] arguments, TimeSpan timeout, CancellationToken cancellationToken)
     {
@@ -226,7 +237,7 @@ public class GdsExportService : IGdsExportSession
             var result = await PythonProbeRunner.RunAsync(startInfo, timeout, cancellationToken);
             return result.ExitCode == 0 && !string.IsNullOrWhiteSpace(result.Output) ? result.Output.Trim() : null;
         }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested) { return null; }
+        catch (Exception ex) when (ex is not TimeoutException && !cancellationToken.IsCancellationRequested) { return null; }
     }
     /// <summary>
     /// Executes a Python script file.
