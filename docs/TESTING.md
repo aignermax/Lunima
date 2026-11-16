@@ -35,6 +35,12 @@ serially as configured by `UnitTests/xunit.runner.json` because Avalonia headles
 state is process-wide. Do not start competing test hosts in the same worktree.
 Use `--timeout <seconds>` to change the overall timeout for a selected run.
 
+Agent QA uses the same helper through `.agent.toml`. Keep that entry point so QA
+shares the worktree lock and CPU settings. Check this wiring with
+`python -m unittest scripts.tests.test_run_tests`. A host-memory guard abort is
+an incomplete run, not a failed assertion or a passing test result; retry after
+host memory is available without lowering the guard's threshold.
+
 Use `--filter` when you need a VSTest expression rather than a name substring.
 The helper still appends the Slow/Heavy exclusions:
 

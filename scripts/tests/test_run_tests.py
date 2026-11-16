@@ -3,6 +3,7 @@ import json
 import pathlib
 import subprocess
 import sys
+import tomllib
 import unittest
 
 
@@ -10,6 +11,10 @@ RUNNER = pathlib.Path(__file__).resolve().parents[1] / "run_tests.py"
 
 
 class TestRunnerTests(unittest.TestCase):
+    def test_agent_qa_uses_guarded_test_entry_point(self):
+        config = tomllib.loads((RUNNER.parents[1] / ".agent.toml").read_text(encoding="utf-8"))
+        self.assertEqual("python scripts/run_tests.py", config["test_cmd"])
+
     def dry_run(self, *args):
         result = subprocess.run([sys.executable, str(RUNNER), "--dry-run", *args],
                                 capture_output=True, text=True, encoding="utf-8")
