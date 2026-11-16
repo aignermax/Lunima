@@ -1,4 +1,5 @@
 using CAP_Core.LightCalculation.TimeDomainSimulation.CompactModels.Models;
+using CAP_Core.LightCalculation.Photodetection;
 
 namespace CAP_Core.LightCalculation.TimeDomainSimulation.CompactModels;
 
@@ -30,12 +31,16 @@ public static class CompactModelRegistry
     /// </summary>
     /// <param name="modelName">PDK compact-model name (case-sensitive).</param>
     /// <param name="parameters">Optional model-specific parameters from the PDK JSON.</param>
+    /// <param name="detector">Explicit absolute receiver selection; null preserves legacy defaults.</param>
     /// <exception cref="InvalidOperationException">
     /// Thrown for unknown model names — no silent fallback to passive.
     /// </exception>
     public static ICompactModel Create(
-        string modelName, IReadOnlyDictionary<string, double>? parameters = null)
+        string modelName, IReadOnlyDictionary<string, double>? parameters = null,
+        PhotodetectorDescription? detector = null)
     {
+        if (modelName == PhotodiodeRcModel.ModelName && detector != null)
+            return new PhotodiodeRcModel(parameters, detector);
         if (!Factories.TryGetValue(modelName, out var factory))
         {
             throw new InvalidOperationException(

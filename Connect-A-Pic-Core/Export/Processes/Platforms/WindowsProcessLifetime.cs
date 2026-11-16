@@ -84,6 +84,8 @@ internal sealed class WindowsProcessLifetime : IProcessLifetime
             };
             var flags = WindowsProcessNative.CreateSuspended | WindowsProcessNative.UnicodeEnvironment |
                 WindowsProcessNative.ExtendedStartupInfo | WindowsProcessNative.CreateNoWindow;
+            // A broken executable must report its launch error without a modal Windows loader dialog.
+            using var errorMode = new ProcessLaunchErrorMode();
             Check(WindowsProcessNative.CreateProcessW(null, new StringBuilder(ProcessArguments.WindowsCommandLine(info)),
                 0, 0, true, flags, environment, string.IsNullOrEmpty(info.WorkingDirectory) ? null : info.WorkingDirectory,
                 ref startup, out var process));

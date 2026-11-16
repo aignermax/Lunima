@@ -8,6 +8,7 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from unittest import mock
 
@@ -20,8 +21,8 @@ SPEC.loader.exec_module(runner)
 
 class TestRunnerTests(unittest.TestCase):
     def test_qa_uses_the_constrained_shared_runner(self):
-        config = (RUNNER.parents[1] / ".agent.toml").read_text(encoding="utf-8")
-        self.assertIn("test_cmd = 'python scripts/run_tests.py'", config.splitlines())
+        config = tomllib.loads((RUNNER.parents[1] / ".agent.toml").read_text(encoding="utf-8"))
+        self.assertEqual("python scripts/run_tests.py", config["test_cmd"])
 
     def test_concurrent_run_is_rejected_before_launch_and_lock_is_released(self):
         with tempfile.TemporaryDirectory() as directory, \
@@ -32,14 +33,14 @@ class TestRunnerTests(unittest.TestCase):
                 "runner = importlib.util.module_from_spec(spec); spec.loader.exec_module(runner); "
                 f"runner.tempfile.gettempdir = lambda: {directory!r}; "
                 "launch = mock.Mock(return_value=0); runner.run = launch; "
-                "code = runner.main([]); "
+                "code = runner.main(['--lock-timeout', '1']); "
                 "assert launch.call_count == int(code == 0); sys.exit(code)"
             )
             with runner.test_lock():
                 blocked = subprocess.run([sys.executable, "-c", child],
                                          capture_output=True, text=True, timeout=10)
                 self.assertEqual(2, blocked.returncode, blocked.stderr)
-                self.assertIn("shared lock", blocked.stderr)
+                self.assertIn("Timed out after 1s waiting for shared test lock", blocked.stderr)
             released = subprocess.run([sys.executable, "-c", child],
                                       capture_output=True, text=True, timeout=10)
             self.assertEqual(0, released.returncode, released.stderr)

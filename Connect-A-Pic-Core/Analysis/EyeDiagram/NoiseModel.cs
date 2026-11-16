@@ -1,3 +1,5 @@
+using CAP_Core.LightCalculation.Photodetection;
+
 namespace CAP_Core.Analysis.EyeDiagram;
 
 /// <summary>
@@ -14,7 +16,21 @@ public class NoiseModel
     private const double DecibelsPerDecade = 10.0;
 
     /// <summary>Photodiode responsivity in A/W (typical InGaAs PIN ≈ 0.8).</summary>
-    public double ResponsivityAPerW { get; init; } = 0.8;
+    public double ResponsivityAPerW
+    {
+        get => Detector?.ResponsivityAmpsPerWatt ?? _responsivity;
+        init => _responsivity = value;
+    }
+
+    private readonly double _responsivity = PhotodetectorResolver.LegacyResponsivityAmpsPerWatt;
+
+    /// <summary>Resolved absolute receiver; its responsivity takes precedence over the legacy setting.</summary>
+    public PhotodetectorDescription? Detector { get; init; }
+
+    /// <summary>Signal photocurrent in A, using the same resolved responsivity as receiver noise.</summary>
+    public double PhotocurrentAmps(double opticalPowerW)
+        => Detector == null ? ResponsivityAPerW * Math.Max(opticalPowerW, 0)
+            : Detector.PhotocurrentAmps(opticalPowerW);
 
     /// <summary>Receiver electrical bandwidth in Hz (typically ≈ 0.75 × bit rate).</summary>
     public double BandwidthHz { get; init; } = 18.75e9;
@@ -29,19 +45,19 @@ public class NoiseModel
     public double LoadResistanceOhm { get; init; } = 50;
 
     /// <summary>Shot-noise photocurrent σ in A at the given optical power: σ² = 2·q·R·P·B.</summary>
-    /// <param name="opticalPowerW">Received optical power in W (clamped at 0).</param>
+    /// <param name="opticalPowerW">Received power in W; negatives are clamped only in legacy mode.</param>
     public double ShotNoiseSigmaAmpere(double opticalPowerW)
-        => Math.Sqrt(2 * ElementaryChargeCoulomb * ResponsivityAPerW * Math.Max(opticalPowerW, 0) * BandwidthHz);
+        => Math.Sqrt(2 * ElementaryChargeCoulomb * PhotocurrentAmps(opticalPowerW) * BandwidthHz);
 
     /// <summary>Thermal-noise photocurrent σ in A: σ² = 4·k·T·B / R_load.</summary>
     public double ThermalNoiseSigmaAmpere()
         => Math.Sqrt(4 * BoltzmannJoulePerKelvin * TemperatureKelvin * BandwidthHz / LoadResistanceOhm);
 
     /// <summary>RIN photocurrent σ in A: σ² = 10^(RIN/10) · (R·P)² · B.</summary>
-    /// <param name="opticalPowerW">Received optical power in W (clamped at 0).</param>
+    /// <param name="opticalPowerW">Received power in W; negatives are clamped only in legacy mode.</param>
     public double RinNoiseSigmaAmpere(double opticalPowerW)
     {
-        double photocurrent = ResponsivityAPerW * Math.Max(opticalPowerW, 0);
+        double photocurrent = PhotocurrentAmps(opticalPowerW);
         return Math.Sqrt(Math.Pow(10, RinDbPerHz / DecibelsPerDecade) * photocurrent * photocurrent * BandwidthHz);
     }
 

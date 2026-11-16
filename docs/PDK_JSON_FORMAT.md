@@ -567,3 +567,9 @@ See the bundled example PDKs for reference:
 - `PDKs/siepic-ebeam-pdk.json` — Real-world SiEPIC EBeam foundry components
 
 These files show correct usage of all fields including multi-pin components, optional parameters, and S-matrix definitions.
+
+## Photodetector extension
+
+The optional `process.photodetector` schema, provenance rules, generic literature
+references and receiver resolution precedence are documented in
+[PDK_PHOTODETECTOR.md](PDK_PHOTODETECTOR.md).
