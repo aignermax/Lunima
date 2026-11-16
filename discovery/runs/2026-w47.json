@@ -3,7 +3,8 @@
   "stages_done": [
     "prepare",
     "scout",
-    "strategist"
+    "strategist",
+    "critic"
   ],
   "pr": null,
   "applied": {},
