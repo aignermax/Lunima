@@ -11,15 +11,25 @@ namespace CAP_Core.Export;
 /// </summary>
 public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
 {
+    private const int FileNotFound = 2;
+    private const int WindowsPathNotFound = 3;
     private readonly ProcessLaunchFactory _launchFactory;
+    private readonly Func<ProcessStartInfo, TimeSpan, CancellationToken, Task<(int ExitCode, string Output, string Error)>> _runProbe;
 
     /// <summary>
     /// Initializes a new instance of <see cref="PythonDiscoveryService"/>.
     /// </summary>
     /// <param name="launchFactory">Factory used to build process start infos.</param>
     public PythonDiscoveryService(ProcessLaunchFactory? launchFactory = null)
+        : this(launchFactory, PythonProbeRunner.RunAsync)
+    {
+    }
+
+    internal PythonDiscoveryService(ProcessLaunchFactory? launchFactory,
+        Func<ProcessStartInfo, TimeSpan, CancellationToken, Task<(int ExitCode, string Output, string Error)>> runProbe)
     {
         _launchFactory = launchFactory ?? ProcessLaunchFactory.CreateDefault();
+        _runProbe = runProbe;
     }
 
     /// <summary>
@@ -145,6 +155,7 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
     /// (issue #645). Off by default so the startup fast-path and health checks — which only
     /// care about Nazca — do not pay for the extra import probe.</param>
     /// <returns>Installation info with versions, or null if Python not accessible.</returns>
+    /// <remarks>Missing executables and failed probes are ignored; launcher failures propagate.</remarks>
     public virtual async Task<PythonInstallation?> CheckPythonInstallation(
         string pythonPath, string source, bool probeGdsFactory = false, CancellationToken cancellationToken = default)
     {
@@ -166,7 +177,9 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
                 GdsFactoryVersion = gdsFactoryVersion
             };
         }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        catch (System.ComponentModel.Win32Exception error) when (
+            !cancellationToken.IsCancellationRequested && (error.NativeErrorCode == FileNotFound ||
+                OperatingSystem.IsWindows() && error.NativeErrorCode == WindowsPathNotFound))
         {
             return null;
         }
@@ -353,6 +366,6 @@ public class PythonDiscoveryService : CAP_Core.Export.Contracts.IPythonDiscovery
         cancellationToken.ThrowIfCancellationRequested();
         if (!_launchFactory.TryBuild(fileName, arguments, null, null, out var startInfo, out _))
             return Task.FromResult((-1, string.Empty, "Failed to build process start info."));
-        return PythonProbeRunner.RunAsync(startInfo, timeout, cancellationToken);
+        return _runProbe(startInfo, timeout, cancellationToken);
     }
 }

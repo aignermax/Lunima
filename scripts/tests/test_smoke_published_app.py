@@ -10,6 +10,7 @@ import stat
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 SCRIPT = pathlib.Path(__file__).resolve().parents[1] / "smoke_published_app.py"
@@ -35,6 +36,9 @@ args = sys.argv[1:]
 if args == ["agent", "tools"]:
     print(json.dumps([{{"name": "get_design_summary"}}, {{"name": "simulate"}}], indent=2))
     sys.exit(0)
+if args[2] == "check_foundry_drc":
+    print(json.dumps({{"is_error": True, "result": "KLayout wrote no report (exit 2): Unknown option: -r"}}))
+    sys.exit(1)
 tool, design = args[2], Path(args[args.index("--design") + 1])
 if not design.is_file():
     sys.exit(1)
@@ -158,6 +162,26 @@ class OutputValidationTests(unittest.TestCase):
 
 
 class ProcessTests(SmokeTestCase):
+    def test_child_probe_accepts_only_child_diagnostic_and_restores_environment(self):
+        app = self.in_place()
+        app.environment["KLAYOUT"] = "original"
+        response = {"is_error": True, "result": "KLayout wrote no report (exit 2): Unknown option: -r"}
+        with patch.object(app, "run_json", return_value=response) as run:
+            smoke.check_child_process(app)
+        self.assertEqual("original", app.environment["KLAYOUT"])
+        self.assertEqual("check_foundry_drc", run.call_args.args[2])
+        self.assertTrue(pathlib.Path(json.loads(run.call_args.args[3])["gds_path"]).is_file())
+
+    def test_child_probe_rejects_loader_failure_and_missing_tools(self):
+        for message in ("Unable to load shared library System.Native", "KLayout was not found",
+                        "DRC deck not found", "KLayout wrote no report (exit 2)"):
+            with self.subTest(message=message):
+                app = self.in_place()
+                app.environment.pop("KLAYOUT", None)
+                with patch.object(app, "run_json", return_value={"is_error": True, "result": message}):
+                    self.assertRaises(smoke.CheckFailed, smoke.check_child_process, app)
+                self.assertNotIn("KLAYOUT", app.environment)
+
     @POSIX_ONLY
     def test_complete_app_passes_from_a_sandboxed_copy(self):
         code, output = self.run_main()
@@ -170,7 +194,7 @@ class ProcessTests(SmokeTestCase):
         self.write_app(leak=True)
         code, output = self.run_main()
         self.assertEqual(1, code, output)
-        self.assertEqual(3, output.count("stdout is not a single JSON document"), output)
+        self.assertEqual(4, output.count("stdout is not a single JSON document"), output)
 
     @POSIX_ONLY
     def test_failed_exit_code_shows_stderr(self):

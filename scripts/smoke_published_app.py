@@ -16,6 +16,7 @@ LOCALAPPDATA, a closed stdin and a timeout.
 Checks: ``agent tools`` lists the tools; every design of the bundled examples/examples.json,
 the ISA sample programs and the openEBL scripts sit where the app looks for them;
 ``get_design_summary`` opens a shipped design; ``simulate`` returns plausible output powers.
+The foundry DRC launcher starts a Python child and captures its expected option diagnostic.
 Every stdout must be a single JSON document, so a log line leaking onto it fails the run.
 
 Exit code: 0 every check passed (or ``--rosetta`` without Rosetta 2: skipped, logged),
@@ -140,8 +141,8 @@ class PackagedApp:
             raise CheckFailed(f"the bundle ships no {EXAMPLES.as_posix()}/{file_name}")
         return examples / file_name
 
-    def run_json(self, *args: str) -> object:
-        """Starts the app with ``args``; requires exit code 0 and a pure-JSON stdout."""
+    def run_json(self, *args: str, expected_exit: int = 0) -> object:
+        """Starts the app, requiring the expected exit code and a pure-JSON stdout."""
         command = [*self.prefix, str(self.binary), *args]
         shown = " ".join([self.binary.name, *args])
         started = time.monotonic()
@@ -156,7 +157,7 @@ class PackagedApp:
         finally:
             self.launch_seconds.append(time.monotonic() - started)
         stdout, stderr = (stream.decode("utf-8", "replace") for stream in (done.stdout, done.stderr))
-        if done.returncode != 0:
+        if done.returncode != expected_exit:
             raise CheckFailed(f"`{shown}` exited with {done.returncode}"
                               f"{excerpt('stdout', stdout)}{excerpt('stderr', stderr)}")
         return parse_json_stdout(stdout)
@@ -251,6 +252,30 @@ def check_simulation(app: PackagedApp) -> str:
     return validate_output_powers([output.get("power") for output in outputs if isinstance(output, dict)])
 
 
+def check_child_process(app: PackagedApp) -> str:
+    """Exercise the packaged native launcher with a known executable on every OS."""
+    gds = app.sandbox / "launcher-probe.gds"
+    gds.write_bytes(b"launcher probe")
+    previous = app.environment.get("KLAYOUT")
+    # The smoke interpreter is always available. Python rejects KLayout's -r option;
+    # its diagnostic proves a child actually ran, without requiring KLayout installed.
+    app.environment["KLAYOUT"] = sys.executable
+    try:
+        result = app.run_json("agent", "call", "check_foundry_drc", json.dumps({
+            "deck": "cornerstone_sin300_drc", "gds_path": str(gds)}), expected_exit=1)
+    finally:
+        if previous is None:
+            app.environment.pop("KLAYOUT", None)
+        else:
+            app.environment["KLAYOUT"] = previous
+    diagnostic = json.dumps(result)
+    if (not isinstance(result, dict) or result.get("is_error") is not True
+            or "KLayout wrote no report (exit 2)" not in diagnostic
+            or "Unknown option: -r" not in diagnostic):
+        raise CheckFailed(f"packaged child process did not run: {diagnostic[:800]}")
+    return "Python child started through the foundry DRC launcher"
+
+
 CHECKS: Tuple[Tuple[str, Callable[[PackagedApp], str]], ...] = (
     ("agent tools", check_tool_list),
     ("bundled example designs", check_example_designs),
@@ -258,6 +283,7 @@ CHECKS: Tuple[Tuple[str, Callable[[PackagedApp], str]], ...] = (
     ("bundled openEBL scripts", bundled_files(OPENEBL_DIR, OPENEBL_SCRIPTS)),
     (f"{SUMMARY_TOOL} on {SUMMARY_DESIGN}", check_design_summary),
     (f"{SIMULATE_TOOL} on {SIMULATION_DESIGN}", check_simulation),
+    ("packaged child process", check_child_process),
 )
 
 
