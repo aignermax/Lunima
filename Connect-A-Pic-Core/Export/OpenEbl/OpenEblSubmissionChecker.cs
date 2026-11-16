@@ -10,7 +10,7 @@ namespace CAP_Core.Export.OpenEbl;
 /// <c>scripts/openebl/openebl_verification.py</c>) against an exported GDS file and
 /// returns a typed <see cref="OpenEblCheckReport"/>. Async and cancellable; nothing
 /// touches the UI thread. A missing toolchain (klayout / siepic_ebeam_pdk /
-/// SiEPIC-Tools not importable) yields <see cref="OpenEblCheckStatus.ToolchainMissing"/>
+/// SiEPIC not importable) yields <see cref="OpenEblCheckStatus.ToolchainMissing"/>
 /// with an actionable pip hint — never a crash and never a false "passed".
 /// </summary>
 public class OpenEblSubmissionChecker : IOpenEblSubmissionChecker
@@ -83,9 +83,7 @@ public class OpenEblSubmissionChecker : IOpenEblSubmissionChecker
                 Status = OpenEblCheckStatus.ToolchainMissing,
                 SubmissionChecksPassed = false,
                 VerificationPassed = false,
-                ToolchainMessage =
-                    "The openEBL check needs a Python toolchain with klayout, the SiEPIC EBeam " +
-                    "PDK and SiEPIC-Tools. Install them with: " + OpenEblPythonLocator.PipInstallHint,
+                ToolchainMessage = OpenEblToolchainRequirements.ToolchainMissingMessage,
             };
 
         var submission = await RunScriptAsync(

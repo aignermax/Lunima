@@ -14,6 +14,7 @@
 # openEBL's run_verification.py (SiEPIC layout_check) requires.
 #
 # Usage: python openebl_submission_check.py <file.gds>
+# Requires (pip): klayout siepic_ebeam_pdk
 # Last stdout line is the error count, like the original.
 #
 # Lunima's OpenEblSubmissionChecker service and the UnitTests/Export/OpenEbl tests

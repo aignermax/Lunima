@@ -1,5 +1,4 @@
 using CAP_Core.Export.Contracts;
-using CAP_Core.Export.OpenEbl;
 using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -66,9 +65,7 @@ public class Issue1361OpenEblCheckScreenshotTests
                 Status = OpenEblCheckStatus.ToolchainMissing,
                 SubmissionChecksPassed = false,
                 VerificationPassed = false,
-                ToolchainMessage =
-                    "The openEBL check needs a Python toolchain with klayout, the SiEPIC EBeam " +
-                    "PDK and SiEPIC-Tools. Install them with: " + OpenEblPythonLocator.PipInstallHint,
+                ToolchainMessage = OpenEblToolchainRequirements.ToolchainMissingMessage,
             }),
     };
 

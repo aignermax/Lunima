@@ -31,7 +31,8 @@ public class OpenEblSubmissionCheckerTests
 
             report.Status.ShouldBe(OpenEblCheckStatus.ToolchainMissing);
             report.ToolchainMessage.ShouldNotBeNullOrEmpty();
-            report.ToolchainMessage.ShouldContain("pip install klayout siepic_ebeam_pdk SiEPIC-Tools");
+            report.ToolchainMessage.ShouldContain("pip install klayout siepic_ebeam_pdk SiEPIC");
+            report.ToolchainMessage.ShouldNotContain("SiEPIC-Tools");
             report.SubmissionChecksPassed.ShouldBeFalse();
             report.VerificationPassed.ShouldBeFalse();
         }
