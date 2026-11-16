@@ -1,4 +1,5 @@
 using System.Numerics;
+using CAP_Core.LightCalculation.Photodetection;
 
 namespace CAP_Core.LightCalculation.TimeDomainSimulation.CompactModels.Models;
 
@@ -21,13 +22,13 @@ public class PhotodiodeRcModel : ICompactModel
     public const string ModelName = "PhotodiodeRc";
 
     /// <summary>Parameter key: responsivity in A/W.</summary>
-    public const string ResponsivityKey = "responsivityAmpsPerWatt";
+    public const string ResponsivityKey = PhotodetectorResolver.ResponsivityKey;
 
     /// <summary>Parameter key: RC time constant in seconds.</summary>
     public const string TimeConstantKey = "rcTimeConstantSeconds";
 
     /// <summary>Default responsivity in A/W (typical InGaAs pin diode at 1550 nm).</summary>
-    public const double DefaultResponsivityAmpsPerWatt = 0.8;
+    public const double DefaultResponsivityAmpsPerWatt = PhotodetectorResolver.LegacyResponsivityAmpsPerWatt;
 
     /// <summary>Default RC time constant in seconds (≈ 16 GHz bandwidth).</summary>
     public const double DefaultRcTimeConstantSeconds = 1e-11;
@@ -35,6 +36,7 @@ public class PhotodiodeRcModel : ICompactModel
     private const string PhotocurrentStateKey = "photocurrentAmps";
 
     private readonly double _responsivity;
+    private readonly PhotodetectorDescription? _detector;
     private readonly double _timeConstant;
 
     /// <summary>Responsivity in A/W.</summary>
@@ -48,14 +50,18 @@ public class PhotodiodeRcModel : ICompactModel
     /// Optional model parameters (<see cref="ResponsivityKey"/>,
     /// <see cref="TimeConstantKey"/>); missing keys use the defaults.
     /// </param>
-    public PhotodiodeRcModel(IReadOnlyDictionary<string, double>? parameters = null)
+    /// <param name="detector">Explicit absolute detector selection; null preserves normalized defaults.</param>
+    public PhotodiodeRcModel(IReadOnlyDictionary<string, double>? parameters = null,
+        PhotodetectorDescription? detector = null)
     {
-        _responsivity = GetParameter(parameters, ResponsivityKey, DefaultResponsivityAmpsPerWatt);
+        _detector = detector == null ? null : PhotodetectorResolver.Resolve(detector, parameters);
+        _responsivity = _detector?.ResponsivityAmpsPerWatt
+            ?? GetParameter(parameters, ResponsivityKey, DefaultResponsivityAmpsPerWatt);
         _timeConstant = GetParameter(parameters, TimeConstantKey, DefaultRcTimeConstantSeconds);
 
-        if (_responsivity < 0)
+        if (!double.IsFinite(_responsivity) || _responsivity < 0)
             throw new ArgumentOutOfRangeException(nameof(parameters), "Responsivity must be ≥ 0.");
-        if (_timeConstant <= 0)
+        if (!double.IsFinite(_timeConstant) || _timeConstant <= 0)
             throw new ArgumentOutOfRangeException(nameof(parameters), "RC time constant must be > 0.");
     }
 
@@ -73,7 +79,7 @@ public class PhotodiodeRcModel : ICompactModel
             incidentField.Real * incidentField.Real +
             incidentField.Imaginary * incidentField.Imaginary;
 
-        double targetCurrent = _responsivity * incidentPowerWatts;
+        double targetCurrent = _detector?.PhotocurrentAmps(incidentPowerWatts) ?? _responsivity * incidentPowerWatts;
         double current = state.Get(PhotocurrentStateKey);
 
         // Exact solution of the first-order ODE over one step.

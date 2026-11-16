@@ -12,6 +12,9 @@ public sealed record EyeAnalysisRequest(TransientCircuitSnapshot Circuit, Transi
     double BitRateHz, PrbsOrder PrbsOrder, double ThresholdRelative, ImmutableHashSet<Guid>? DesignatedPinIds,
     bool HasMultipleCandidates, EyeTraceMessages Messages)
 {
+    /// <summary>Explicit resolved receiver; absent for legacy normalized eye analysis.</summary>
+    public CAP_Core.LightCalculation.Photodetection.PhotodetectorDescription? Detector { get; init; }
+
     public EyeAnalysisOutcome Solve(CancellationToken cancellationToken = default,
         Func<ISystemMatrixBuilder, ISystemMatrixBuilder>? decorateBuilder = null)
     {
@@ -45,7 +48,7 @@ public sealed record EyeAnalysisRequest(TransientCircuitSnapshot Circuit, Transi
         var selection = EyeTracePolicy.Select(result, Excitation.OutputPinIds, DesignatedPinIds,
             HasMultipleCandidates, peakPower, Messages);
         if (selection.Trace == null) return Error(selection.Error);
-        var noise = new NoiseModel { BandwidthHz = 0.75 * BitRateHz, RinDbPerHz = Excitation.RinDbPerHz };
+        var noise = new NoiseModel { Detector = Detector, BandwidthHz = 0.75 * BitRateHz, RinDbPerHz = Excitation.RinDbPerHz };
         var plotTrace = ReceiverNoiseTrace.Apply(selection.Trace, noise);
         var timeBins = Math.Min(EyeDiagramBuilder.DefaultTimeBins, plan.SamplesPerBit);
         var histogram = EyeDiagramBuilder.Build(plotTrace, time.SampleRateHz, plan.BitPeriodSeconds, timeBins);

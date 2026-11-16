@@ -57,6 +57,7 @@ internal static class RepositoryModelNamespaces
         yield return new("CAP_Core.LightCalculation.BendLoss", RepositoryModules.Domain);
         yield return new("CAP_Core.LightCalculation.LaserSpectrum", RepositoryModules.Domain);
         yield return new("CAP_Core.LightCalculation.MaterialDispersion", RepositoryModules.Domain);
+        yield return new("CAP_Core.LightCalculation.Photodetection", RepositoryModules.Domain);
         yield return new("CAP_Core.LightCalculation.PowerFlow", RepositoryModules.Domain);
         yield return new("CAP_Core.LightCalculation.Snapshots", RepositoryModules.Domain);
         yield return new("CAP_Core.LightCalculation.TimeDomainSimulation", RepositoryModules.Domain);

@@ -10,6 +10,7 @@ public static class ProcessDefinitionCloner
     {
         Name = source.Name,
         Foundry = source.Foundry,
+        Photodetector = source.Photodetector,
         Version = source.Version,
         CoreThicknessNm = source.CoreThicknessNm,
         Layers = source.Layers.Select(l => new ProcessLayer
