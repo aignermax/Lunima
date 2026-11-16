@@ -53,7 +53,12 @@ internal sealed class LunimaSandbox : IAsyncDisposable
         var elapsed = Stopwatch.StartNew();
         while (Directory.Exists(Root))
         {
-            try { Directory.Delete(Root, recursive: true); }
+            try
+            {
+                if (OperatingSystem.IsWindows())
+                    ClearReadOnlyAttributes();
+                Directory.Delete(Root, recursive: true);
+            }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                 && OperatingSystem.IsWindows() && elapsed.Elapsed < DeleteRetryWindow)
             {
@@ -61,5 +66,27 @@ internal sealed class LunimaSandbox : IAsyncDisposable
                 await Task.Delay(DeleteRetryDelay);
             }
         }
+    }
+
+    private void ClearReadOnlyAttributes()
+    {
+        // Windows marks shell folders read-only; waiting for handles does not make them deletable.
+        // Reparse points must not lead cleanup into folders outside this sandbox.
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+            IgnoreInaccessible = false,
+        };
+        ClearReadOnlyAttribute(Root);
+        foreach (var path in Directory.EnumerateFileSystemEntries(Root, "*", options))
+            ClearReadOnlyAttribute(path);
+    }
+
+    private static void ClearReadOnlyAttribute(string path)
+    {
+        var attributes = File.GetAttributes(path);
+        if ((attributes & FileAttributes.ReadOnly) != 0)
+            File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
     }
 }
