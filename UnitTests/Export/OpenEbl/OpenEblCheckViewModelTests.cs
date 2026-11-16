@@ -97,7 +97,7 @@ public class OpenEblCheckViewModelTests
             Status = OpenEblCheckStatus.ToolchainMissing,
             SubmissionChecksPassed = false,
             VerificationPassed = false,
-            ToolchainMessage = "The openEBL check needs a Python toolchain. Install them with: pip install …",
+            ToolchainMessage = OpenEblToolchainRequirements.ToolchainMissingMessage,
         };
         var checker = FakeOpenEblSubmissionChecker.Returning(report);
         var vm = OpenEblCheckTestDoubles.CreateViewModel(
@@ -110,11 +110,13 @@ public class OpenEblCheckViewModelTests
         vm.HasResult.ShouldBeTrue();
         vm.IsToolchainMissing.ShouldBeTrue();
         vm.Headline.ShouldBe("Python toolchain for the check is missing");
-        vm.ToolchainMessage.ShouldContain("pip install");
+        const string expectedCommand = "pip install klayout siepic_ebeam_pdk SiEPIC";
+        vm.ToolchainMessage.ShouldEndWith(expectedCommand);
+        vm.PipInstallCommand.ShouldBe(expectedCommand);
         vm.ShowCheckOutcomes.ShouldBeFalse();
 
         await vm.CopyPipHintCommand.ExecuteAsync(null);
-        copied.ShouldBe(OpenEblPythonLocator.PipInstallHint);
+        copied.ShouldBe(expectedCommand);
     }
 
     [Fact]
