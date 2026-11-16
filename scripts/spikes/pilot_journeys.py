@@ -4,18 +4,23 @@
 Usage::
 
     python3 -I scripts/spikes/pilot_journeys.py <installed-binary> --gds FILE --phase NAME
-        --out RESULT.json [--journeys 1,2,3] [--python EXE] [--klayout EXE] [--timeout S]
+        --out RESULT.json [--journeys 1,2,3] [--venv DIR] [--python EXE] [--klayout EXE]
+        [--timeout S]
 
 The binary is started where the installer put it (nothing is copied), from a sandbox working
 folder with a fresh HOME / APPDATA / LOCALAPPDATA, so neither a repository checkout nor the
 runner's user profile is reachable (``scripts/smoke_published_app.py`` provides the sandbox).
+``--venv`` makes the app see that virtual environment as activated.
 
 Journeys:
 1. ``simulate`` the shipped Mach-Zehnder example and read the port powers.
 2. ``analyze_gds`` + ``import_gds`` a GDS with port labels, then ``get_component`` the pins.
 3. ``export_gds`` the shipped EBeam Add-Drop Ring, ``check_foundry_drc`` it with the shipped
-   Cornerstone deck, and look for an openEBL pre-flight among the CLI tools. As a side
-   measurement (not the CLI) the shipped openEBL script runs on the exported GDS with --python.
+   Cornerstone deck (offering ``--klayout`` via KLAYOUT when the app asks for it), and look for
+   an openEBL pre-flight among the CLI tools. Side measurements, not the CLI: when the CLI
+   wrote only the Nazca script, it is run by hand so the pre-flights still get a GDS; both
+   shipped openEBL scripts run by hand on the GDS; the app's 20 s ``import nazca`` probe is
+   timed cold and warm in a fresh profile.
 
 Each outcome keeps the app's own messages, so the report can say whether the app named a
 missing dependency. Exit code 0 unless the command line is bad (2); verdicts live in --out.
@@ -215,8 +220,11 @@ def gds_by_hand(app: InstalledApp, python: Optional[str]) -> Optional[Path]:
     script = app.sandbox / "export" / EXPORT_SCRIPT_NAME
     if not python or not script.is_file():
         return None
-    subprocess.run([python, script.name], cwd=script.parent, capture_output=True,
-                   timeout=SIDE_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL)
+    try:
+        subprocess.run([python, script.name], cwd=script.parent, capture_output=True,
+                       timeout=SIDE_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        return None
     gds = script.with_suffix(".gds")
     return gds if gds.is_file() else None
 
@@ -259,8 +267,13 @@ def openebl_side_measurement(app: InstalledApp, gds: Optional[Path], python: Opt
         return Outcome(name, "CANNOT_RUN", reason)
     started, verdicts, details = time.monotonic(), [], []
     for script in scripts:
-        done = subprocess.run([python, str(script), str(gds)], cwd=app.sandbox, capture_output=True,
-                              text=True, timeout=SIDE_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL)
+        try:
+            done = subprocess.run([python, str(script), str(gds)], cwd=app.sandbox, capture_output=True,
+                                  text=True, timeout=SIDE_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL)
+        except subprocess.TimeoutExpired:
+            verdicts.append(False)
+            details.append(f"{script.name}: no result within {SIDE_TIMEOUT_SECONDS} s")
+            continue
         lines = done.stdout.strip().splitlines()
         errors = lines[-1].strip() if lines else ""
         verdicts.append(done.returncode == 0 and errors.isdigit())
