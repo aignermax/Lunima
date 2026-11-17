@@ -14,7 +14,8 @@ the published files stay untouched. Every launch gets a sandboxed HOME / XDG_* /
 LOCALAPPDATA, a closed stdin and a timeout.
 
 Checks: ``agent tools`` lists the tools; every design of the bundled examples/examples.json,
-the ISA sample programs and the openEBL scripts sit where the app looks for them;
+the ISA sample programs, the openEBL scripts and the Python helper scripts sit where the app
+looks for them;
 ``get_design_summary`` opens a shipped design; ``simulate`` returns plausible output powers.
 Every stdout must be a single JSON document, so a log line leaking onto it fails the run.
 
@@ -50,6 +51,9 @@ ISA_SAMPLES = ("count-to-5.asm", "add-two-numbers.asm", "multiply-3x4.asm", "mas
 # OpenEblSubmissionChecker runs both from the nearest scripts/openebl/ at or above the binary.
 OPENEBL_DIR = Path("scripts", "openebl")
 OPENEBL_SCRIPTS = ("openebl_submission_check.py", "openebl_verification.py")
+# The Mode Solver and the PDK Import Wizard resolve these from the nearest scripts/ at or above the binary.
+HELPER_SCRIPTS_DIR = Path("scripts")
+HELPER_SCRIPTS = ("mode_solve.py", "parse_pdk.py")
 ROSETTA_PREFIX = ("arch", "-x86_64")
 ROSETTA_PROBE = ("arch", "-x86_64", "/usr/bin/true")
 ROSETTA_PROBE_TIMEOUT_SECONDS = 30
@@ -256,6 +260,7 @@ CHECKS: Tuple[Tuple[str, Callable[[PackagedApp], str]], ...] = (
     ("bundled example designs", check_example_designs),
     ("bundled ISA samples", bundled_files(ISA_SAMPLES_DIR, ISA_SAMPLES)),
     ("bundled openEBL scripts", bundled_files(OPENEBL_DIR, OPENEBL_SCRIPTS)),
+    ("bundled helper scripts", bundled_files(HELPER_SCRIPTS_DIR, HELPER_SCRIPTS)),
     (f"{SUMMARY_TOOL} on {SUMMARY_DESIGN}", check_design_summary),
     (f"{SIMULATE_TOOL} on {SIMULATION_DESIGN}", check_simulation),
 )

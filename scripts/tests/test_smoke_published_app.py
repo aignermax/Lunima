@@ -64,6 +64,8 @@ class SmokeTestCase(unittest.TestCase):
         (self.root / "scripts" / "openebl").mkdir(parents=True)
         for name in smoke.OPENEBL_SCRIPTS:
             (self.root / "scripts" / "openebl" / name).write_text("", encoding="utf-8")
+        for name in smoke.HELPER_SCRIPTS:
+            (self.root / "scripts" / name).write_text("", encoding="utf-8")
         self.binary = self.write_app()
 
     def write_app(self, leak=False, power=0.25, exit_code=0):
@@ -91,6 +93,7 @@ class BundleContentTests(SmokeTestCase):
         self.assertIn("all 2 designs", smoke.check_example_designs(app))
         smoke.bundled_files(smoke.ISA_SAMPLES_DIR, smoke.ISA_SAMPLES)(app)
         smoke.bundled_files(smoke.OPENEBL_DIR, smoke.OPENEBL_SCRIPTS)(app)
+        smoke.bundled_files(smoke.HELPER_SCRIPTS_DIR, smoke.HELPER_SCRIPTS)(app)
 
     def test_a_design_missing_from_the_manifest_is_named(self):
         (self.root / "examples" / smoke.SIMULATION_DESIGN).unlink()
@@ -114,6 +117,13 @@ class BundleContentTests(SmokeTestCase):
             with self.assertRaises(smoke.CheckFailed) as failure:
                 smoke.bundled_files(folder, names)(self.in_place())
             self.assertIn(missing, str(failure.exception))
+
+    def test_missing_helper_script_is_named(self):
+        (self.root / "scripts" / "mode_solve.py").unlink()
+        with self.assertRaises(smoke.CheckFailed) as failure:
+            smoke.bundled_files(smoke.HELPER_SCRIPTS_DIR, smoke.HELPER_SCRIPTS)(self.in_place())
+        self.assertIn("mode_solve.py", str(failure.exception))
+        self.assertNotIn("parse_pdk.py", str(failure.exception))
 
     def test_lookup_never_leaves_the_bundle(self):
         # A repository checkout around the publish folder must not stand in for the bundle.
