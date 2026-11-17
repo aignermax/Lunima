@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - 'CAP.Desktop/**'
+      - 'Connect-A-Pic-Core/Export/**'
       - 'scripts/build_macos_bundle.sh'
       - 'scripts/publish_desktop.sh'
       - 'scripts/smoke_published_app.py'

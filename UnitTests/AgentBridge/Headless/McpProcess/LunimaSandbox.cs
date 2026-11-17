@@ -53,7 +53,12 @@ internal sealed class LunimaSandbox : IAsyncDisposable
         var elapsed = Stopwatch.StartNew();
         while (Directory.Exists(Root))
         {
-            try { Directory.Delete(Root, recursive: true); }
+            try
+            {
+                if (OperatingSystem.IsWindows())
+                    ClearReadOnlyAttributes(new DirectoryInfo(Root));
+                Directory.Delete(Root, recursive: true);
+            }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                 && OperatingSystem.IsWindows() && elapsed.Elapsed < DeleteRetryWindow)
             {
@@ -61,5 +66,17 @@ internal sealed class LunimaSandbox : IAsyncDisposable
                 await Task.Delay(DeleteRetryDelay);
             }
         }
+    }
+
+    private static void ClearReadOnlyAttributes(FileSystemInfo entry)
+    {
+        if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
+            return;
+        // Windows marks shell profile folders read-only; retries cannot make those deletable.
+        if ((entry.Attributes & FileAttributes.ReadOnly) != 0)
+            entry.Attributes &= ~FileAttributes.ReadOnly;
+        if (entry is DirectoryInfo directory)
+            foreach (var child in directory.EnumerateFileSystemInfos())
+                ClearReadOnlyAttributes(child);
     }
 }

@@ -11,6 +11,7 @@ internal static class UnixProcessNative
     internal const int ChildExited = 1;
     internal const int ChildKilled = 2;
     internal const int ChildDumped = 3;
+    private const int LinuxDuplicateCloseOnExec = 1030;
     internal static int WaitOptions => OperatingSystem.IsMacOS() ? 0x4 | 0x20 | 0x1 : 0x4 | 0x01000000 | 0x1;
     internal static int SpawnAttributeBytes => OperatingSystem.IsMacOS() ? nint.Size : 336;
     internal static int SpawnActionBytes => OperatingSystem.IsMacOS() ? nint.Size : 80;
@@ -22,11 +23,23 @@ internal static class UnixProcessNative
     [DllImport("libc", SetLastError = true)] internal static extern int kill(int pid, int signal);
     [DllImport("libc", SetLastError = true)] internal static extern int waitpid(int pid, out int status, int options);
     [DllImport("libc", SetLastError = true)] internal static extern int waitid(int type, uint pid, nint info, int options);
-    // .NET 10's fixed-signature PAL wrapper performs atomic F_DUPFD_CLOEXEC and retries EINTR.
+    internal static nint DuplicateCloseOnExec(nint fd)
+    {
+        if (!OperatingSystem.IsLinux()) return DuplicateCloseOnExecDarwin(fd);
+        // Linux single-file hosts statically link System.Native, so descriptor operations use libc.
+        int duplicate;
+        do { duplicate = LinuxFcntl((int)fd, LinuxDuplicateCloseOnExec, 0); }
+        while (duplicate < 0 && Marshal.GetLastPInvokeError() == Interrupted);
+        return duplicate;
+    }
+
+    [DllImport("libc", EntryPoint = "fcntl", SetLastError = true)]
+    private static extern int LinuxFcntl(int fd, int command, int argument);
+
     // A fixed three-argument libc fcntl import is ABI-incorrect on Darwin ARM64 (variadic arg on stack).
     // https://github.com/dotnet/runtime/blob/v10.0.0/src/native/libs/System.Native/pal_io.c#L328-L343
     [DllImport("System.Native", EntryPoint = "SystemNative_Dup", SetLastError = true)]
-    internal static extern nint DuplicateCloseOnExec(nint fd);
+    private static extern nint DuplicateCloseOnExecDarwin(nint fd);
     [DllImport("libc", SetLastError = true)] internal static extern int close(int fd);
     [DllImport("libc")] internal static extern int posix_spawnattr_init(nint attributes);
     [DllImport("libc")] internal static extern int posix_spawnattr_destroy(nint attributes);
