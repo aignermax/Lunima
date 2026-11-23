@@ -4,9 +4,10 @@
     "prepare",
     "scout",
     "strategist",
-    "critic"
+    "critic",
+    "apply"
   ],
-  "pr": null,
+  "pr": 1661,
   "applied": {
     "I:returning-testers": 1610
   },
