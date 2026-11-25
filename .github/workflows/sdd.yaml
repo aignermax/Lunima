@@ -1,0 +1,37 @@
+name: SDD pilot
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited, labeled, unlabeled, ready_for_review]
+permissions:
+  contents: read
+  issues: read
+concurrency:
+  group: sdd-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  acceptance:
+    if: startsWith(github.head_ref, 'sdd/') || contains(github.event.pull_request.labels.*.name, 'sdd') || contains(github.event.pull_request.body, 'SDD-Spec:')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Check the tracked issue and PR contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          issue=$(python scripts/sdd.py --issue-number "$GITHUB_EVENT_PATH")
+          gh api "repos/$GITHUB_REPOSITORY/issues/$issue" > "$RUNNER_TEMP/sdd-issue.json"
+          python scripts/sdd.py --verify-issue "$RUNNER_TEMP/sdd-issue.json"
+      - run: python -m unittest discover -s scripts/tests -p test_sdd.py
+      - run: python scripts/sdd.py --event "$GITHUB_EVENT_PATH"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdd-${{ github.event.pull_request.head.sha }}
+          path: TestResults/sdd/

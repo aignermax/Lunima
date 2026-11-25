@@ -1,0 +1,21 @@
+{
+  "owner": "Lunima Product Owner",
+  "scope": "Versioned acceptance baseline for GDS import, headless export and the desktop layer picker. The unresolved exact-pin regression #1650 is tracked separately.",
+  "criteria": [
+    {
+      "id": "IMPORT-01",
+      "behavior": "The real gdsfactory MZI fixture yields four instances and three reusable drafts. Its labelled straight, bend and MMI ports are present, and the abutting instances are connected. Exact pin sets belong to #1650.",
+      "test": "UnitTests.Import.Gds.RealGdsFileIntegrationTests.Explode_ImportsFullHierarchy_WithLabelPinsAndReconstructedConnections"
+    },
+    {
+      "id": "AGENT-01",
+      "behavior": "When the exporter reports a placeholder-geometry warning, export_gds preserves it in the JSON warnings and GDS status and the desktop workflow surfaces it.",
+      "test": "UnitTests.AgentBridge.Headless.GdsExportWarningJourneyTests.ExportGds_PreservesRuntimeWarningsInJsonAndExistingDesktopStatus"
+    },
+    {
+      "id": "PICKER-01",
+      "behavior": "Assigning layer (1,0) as waveguide in the GDS layer picker removes the pair from the metal field and adds it to the waveguide field.",
+      "test": "UnitTests.Services.GdsImport.GdsImportDialogLayerPickerTests.PickedAssignment_MovesPairBetweenFields"
+    }
+  ]
+}

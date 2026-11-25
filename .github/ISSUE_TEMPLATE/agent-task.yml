@@ -34,6 +34,12 @@ body:
       required: true
 
   - type: textarea
+    id: sdd-contract
+    attributes:
+      label: SDD pilot contract (optional)
+      description: For pilot work, paste the SDD-Spec line from docs/SDD-FIELD.md and name the decision owner and any required manual evidence.
+
+  - type: textarea
     id: technical-notes
     attributes:
       label: Technical Notes
