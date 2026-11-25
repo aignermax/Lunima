@@ -27,6 +27,18 @@ public class RealGdsFileIntegrationTests
 
     private const string TopCell = "gdsfactory_mzi_like";
 
+    [Theory]
+    [InlineData("straight_", "o1,o2")]
+    [InlineData("mmi1x2_", "o1,o2,o3")]
+    public async Task FullyLabelledCells_ExposeExactlyTheirDeclaredPorts(string prefix, string expected)
+    {
+        var result = await GdsHierarchyImporter.ImportAsync(await ReadLibraryAsync(), TopCell,
+            new GdsHierarchyImportOptions());
+        var draft = result.ImportedCellDrafts.Single(cell => cell.CellName.StartsWith(prefix, StringComparison.Ordinal));
+        var actual = draft.Pins.Select(pin => pin.Name).Order(StringComparer.Ordinal);
+        string.Join(",", actual).ShouldBe(expected);
+    }
+
     // ── Analyze ──────────────────────────────────────────────────────────────
 
     [Fact]

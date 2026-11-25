@@ -3,6 +3,11 @@
   "scope": "Versioned acceptance baseline for GDS import, headless export and the desktop layer picker. The unresolved exact-pin regression #1650 is tracked separately.",
   "criteria": [
     {
+      "id": "PIN-01",
+      "behavior": "Diagnostic for #1650: the fully labelled straight and MMI expose exactly the declared ports. Partial labels are outside this diagnostic.",
+      "test": "UnitTests.Import.Gds.RealGdsFileIntegrationTests.FullyLabelledCells_ExposeExactlyTheirDeclaredPorts"
+    },
+    {
       "id": "IMPORT-01",
       "behavior": "The real gdsfactory MZI fixture yields four instances and three reusable drafts. Its labelled straight, bend and MMI ports are present, and the abutting instances are connected. Exact pin sets belong to #1650.",
       "test": "UnitTests.Import.Gds.RealGdsFileIntegrationTests.Explode_ImportsFullHierarchy_WithLabelPinsAndReconstructedConnections"
