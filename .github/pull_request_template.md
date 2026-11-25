@@ -4,6 +4,8 @@
 
 ## Related issue
 
+<!-- For an SDD pilot add the two standalone pin and issue lines described in docs/SDD-FIELD.md. -->
+
 Closes #
 
 ## Test plan
